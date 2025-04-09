@@ -87,11 +87,14 @@ export function UserMenu({ user }: UserMenuProps) {
         {user.role === 'admin' && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setLocation('/admin/categories')}>
-              Admin: Categorías
+            <DropdownMenuItem onClick={() => setLocation('/admin')}>
+              Panel Administrativo
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/admin/questions')}>
-              Admin: Preguntas
+            <DropdownMenuItem onClick={() => setLocation('/admin/categories')}>
+              Gestionar Categorías
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLocation('/admin/quizzes')}>
+              Gestionar Cuestionarios
             </DropdownMenuItem>
           </>
         )}

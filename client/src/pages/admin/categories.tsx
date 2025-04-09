@@ -7,13 +7,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
-import { PageLayout } from "@/components/layout/page-layout";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
 import { Trash } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Category } from "@/shared/types";
 
 const colorOptions = [
   { value: "primary", label: "Azul (Primario)" },
@@ -34,7 +34,7 @@ export default function CategoriesAdmin() {
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const { data: categories, isLoading } = useQuery({
+  const { data: categories, isLoading } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
 
@@ -49,10 +49,19 @@ export default function CategoriesAdmin() {
 
   const createMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
-      return apiRequest("/api/admin/categories", {
+      const response = await fetch("/api/admin/categories", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(values),
       });
+      
+      if (!response.ok) {
+        throw new Error("Error al crear la categoría");
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
@@ -78,10 +87,19 @@ export default function CategoriesAdmin() {
 
   const updateMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema> & { id: number }) => {
-      return apiRequest(`/api/admin/categories/${values.id}`, {
+      const response = await fetch(`/api/admin/categories/${values.id}`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(values),
       });
+      
+      if (!response.ok) {
+        throw new Error("Error al actualizar la categoría");
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
@@ -108,9 +126,15 @@ export default function CategoriesAdmin() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/admin/categories/${id}`, {
-        method: "DELETE",
+      const response = await fetch(`/api/admin/categories/${id}`, {
+        method: "DELETE"
       });
+      
+      if (!response.ok) {
+        throw new Error("Error al eliminar la categoría");
+      }
+      
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
@@ -137,12 +161,12 @@ export default function CategoriesAdmin() {
     }
   }
 
-  function handleEdit(category: any) {
+  function handleEdit(category: Category) {
     setEditingId(category.id);
     form.reset({
       name: category.name,
       description: category.description,
-      colorClass: category.colorClass,
+      colorClass: category.colorClass || "primary",
     });
   }
 
@@ -162,166 +186,186 @@ export default function CategoriesAdmin() {
   }
 
   return (
-    <PageLayout>
-      <div className="container mx-auto py-8">
-        <h1 className="text-3xl font-bold mb-6">Administración de Categorías</h1>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>{editingId ? "Editar Categoría" : "Nueva Categoría"}</CardTitle>
-                <CardDescription>
-                  {editingId 
-                    ? "Actualiza los detalles de la categoría" 
-                    : "Añade una nueva área temática para los cuestionarios"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nombre</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ej: Estadística" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Descripción</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Describe brevemente los temas que incluye esta área" 
-                              rows={3}
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="colorClass"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Color</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecciona un color" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {colorOptions.map((color) => (
-                                <SelectItem key={color.value} value={color.value}>
-                                  {color.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="flex justify-end gap-2 pt-2">
-                      {editingId && (
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={handleCancelEdit}
-                        >
-                          Cancelar
-                        </Button>
-                      )}
-                      <Button 
-                        type="submit" 
-                        disabled={createMutation.isPending || updateMutation.isPending}
-                      >
-                        {(createMutation.isPending || updateMutation.isPending) && <Spinner className="mr-2 h-4 w-4" />}
-                        {editingId ? "Actualizar" : "Crear"}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="md:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Categorías Existentes</CardTitle>
-                <CardDescription>
-                  Lista de todas las categorías disponibles en el sistema
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex justify-center p-8">
-                    <Spinner className="h-8 w-8" />
-                  </div>
-                ) : categories && categories.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-4">
-                    {categories.map((category: any) => (
-                      <Card key={category.id} className="overflow-hidden">
-                        <div className={`bg-${category.colorClass} h-2 w-full`}></div>
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="text-lg font-semibold">{category.name}</h3>
-                              <p className="text-sm text-gray-500 mt-1">{category.description}</p>
-                            </div>
-                            <div className="flex space-x-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handleEdit(category)}
-                              >
-                                Editar
-                              </Button>
-                              <Button 
-                                variant="destructive" 
-                                size="sm"
-                                onClick={() => handleDelete(category.id)}
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No hay categorías disponibles.
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="text-sm text-muted-foreground">
-                Total: {categories?.length || 0} categorías
-              </CardFooter>
-            </Card>
-          </div>
+    <div className="container mx-auto py-8">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Administración de Categorías</h1>
+          <p className="text-muted-foreground">Gestiona las áreas temáticas de matemáticas</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => window.history.back()}>
+            Volver
+          </Button>
         </div>
       </div>
-    </PageLayout>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-1">
+          <Card className="sticky top-4">
+            <CardHeader className="bg-muted/50">
+              <CardTitle>{editingId ? "Editar Categoría" : "Nueva Categoría"}</CardTitle>
+              <CardDescription>
+                {editingId 
+                  ? "Actualiza los detalles de la categoría" 
+                  : "Añade una nueva área temática para los cuestionarios"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nombre</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ej: Estadística" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Descripción</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Describe brevemente los temas que incluye esta área" 
+                            rows={3}
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="colorClass"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Color</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona un color" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {colorOptions.map((color) => (
+                              <SelectItem key={color.value} value={color.value}>
+                                <div className="flex items-center gap-2">
+                                  <div className={`h-4 w-4 rounded-full bg-${color.value}`}></div>
+                                  <span>{color.label}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="flex justify-end gap-2 pt-4">
+                    {editingId && (
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={handleCancelEdit}
+                      >
+                        Cancelar
+                      </Button>
+                    )}
+                    <Button 
+                      type="submit" 
+                      disabled={createMutation.isPending || updateMutation.isPending}
+                    >
+                      {(createMutation.isPending || updateMutation.isPending) && <Spinner className="mr-2 h-4 w-4" />}
+                      {editingId ? "Actualizar" : "Crear categoría"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="md:col-span-2">
+          <Card>
+            <CardHeader className="bg-muted/50">
+              <CardTitle>Categorías Existentes</CardTitle>
+              <CardDescription>
+                Lista de todas las categorías disponibles en el sistema
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {isLoading ? (
+                <div className="flex justify-center p-8">
+                  <Spinner className="h-8 w-8" />
+                </div>
+              ) : categories && categories.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4">
+                  {categories.map((category: Category) => (
+                    <Card key={category.id} className="overflow-hidden border border-muted">
+                      <div className={`bg-${category.colorClass} h-2 w-full`}></div>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-lg font-semibold">{category.name}</h3>
+                            <p className="text-sm text-muted-foreground mt-1">{category.description}</p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleEdit(category)}
+                            >
+                              Editar
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => handleDelete(category.id)}
+                              title="Eliminar categoría"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 px-4">
+                  <div className="mb-4 rounded-full bg-muted h-12 w-12 flex items-center justify-center mx-auto">
+                    <Trash className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium">No hay categorías disponibles</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Crea tu primera categoría para empezar a organizar los cuestionarios.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className="border-t bg-muted/30 px-6 py-3">
+              <p className="text-sm text-muted-foreground">
+                Total: <strong>{categories?.length || 0}</strong> categorías
+              </p>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }

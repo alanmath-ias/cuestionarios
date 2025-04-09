@@ -1,135 +1,140 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
-import { PageLayout } from "@/components/layout/page-layout";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash, Plus, Minus, Edit, Check, X } from "lucide-react";
+import { Trash, Plus, Check, X, ArrowLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Question, Answer, Quiz } from "@/shared/types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useRoute } from "wouter";
 
-// Definimos los tipos necesarios
-interface Category {
-  id: number;
-  name: string;
-}
+const questionTypeOptions = [
+  { value: "multiple_choice", label: "Opción múltiple" },
+  { value: "text", label: "Texto libre" },
+  { value: "formula", label: "Fórmula matemática" },
+];
 
-interface Quiz {
-  id: number;
-  title: string;
-  categoryId: number;
-}
+const difficultyOptions = [
+  { value: "1", label: "Muy fácil" },
+  { value: "2", label: "Fácil" },
+  { value: "3", label: "Intermedio" },
+  { value: "4", label: "Difícil" },
+  { value: "5", label: "Muy difícil" },
+];
 
-interface Answer {
-  content: string;
-  isCorrect: boolean;
-  explanation?: string;
-}
-
-// Schema para el formulario de creación de preguntas
 const formSchema = z.object({
-  quizId: z.string(),
-  content: z.string().min(5, "El contenido debe tener al menos 5 caracteres"),
-  type: z.string(),
-  difficulty: z.string().transform(val => parseInt(val)),
-  points: z.string().transform(val => parseInt(val)),
+  content: z.string().min(3, { message: "La pregunta debe tener al menos 3 caracteres" }),
+  type: z.string().min(1, { message: "Debes seleccionar un tipo de pregunta" }),
+  difficulty: z.string().min(1, { message: "Debes seleccionar una dificultad" }),
+  points: z.string().min(1, { message: "Debes asignar puntos a la pregunta" }),
   variables: z.string().optional(),
-  answers: z.array(
-    z.object({
-      content: z.string().min(1, "La respuesta no puede estar vacía"),
-      isCorrect: z.boolean(),
-      explanation: z.string().optional()
-    })
-  ).min(2, "Debe haber al menos 2 opciones de respuesta"),
 });
 
 export default function QuestionsAdmin() {
   const { toast } = useToast();
-  const [selectedTab, setSelectedTab] = useState<string>("create");
-  const [selectedQuiz, setSelectedQuiz] = useState<string>("");
-  const [answers, setAnswers] = useState<Answer[]>([
-    { content: "", isCorrect: true, explanation: "" },
-    { content: "", isCorrect: false, explanation: "" },
-  ]);
+  const [, params] = useRoute("/admin/quizzes/:quizId/questions");
+  const quizId = params?.quizId;
+  
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [newAnswer, setNewAnswer] = useState({ content: "", isCorrect: false, explanation: "" });
+  const [currentTab, setCurrentTab] = useState("question");
 
-  // Consultas para obtener datos
-  const { data: categories } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+  const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
+    queryKey: [`/api/quizzes/${quizId}`],
+    enabled: !!quizId,
   });
 
-  const { data: quizzes } = useQuery<Quiz[]>({
-    queryKey: ["/api/quizzes"],
-    enabled: !!categories,
+  const { data: questions, isLoading: loadingQuestions } = useQuery<Question[]>({
+    queryKey: [`/api/quizzes/${quizId}/questions`],
+    enabled: !!quizId,
   });
 
-  const { data: questions, isLoading: questionsLoading, refetch: refetchQuestions } = useQuery({
-    queryKey: ["/api/admin/questions", selectedQuiz],
-    enabled: selectedQuiz !== "",
-  });
+  const isLoading = loadingQuiz || loadingQuestions;
 
-  // Configuración del formulario
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      quizId: "",
       content: "",
       type: "multiple_choice",
-      difficulty: "1",
-      points: "5",
+      difficulty: "3",
+      points: "10",
       variables: "",
-      answers: [
-        { content: "", isCorrect: true, explanation: "" },
-        { content: "", isCorrect: false, explanation: "" },
-      ],
     },
   });
 
-  // Mutaciones para CRUD de preguntas
   const createMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
-      return apiRequest("/api/admin/questions", {
+      const payload = {
+        quizId: quizId,
+        content: values.content,
+        type: values.type,
+        difficulty: parseInt(values.difficulty),
+        points: parseInt(values.points),
+        variables: values.variables ? JSON.parse(values.variables) : null,
+      };
+      
+      const response = await fetch("/api/admin/questions", {
         method: "POST",
-        body: JSON.stringify({
-          ...values,
-          variables: values.variables ? JSON.parse(values.variables) : null,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       });
+      
+      if (!response.ok) {
+        throw new Error("Error al crear la pregunta");
+      }
+      
+      return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/questions", selectedQuiz] });
-      form.reset({
-        quizId: selectedQuiz,
-        content: "",
-        type: "multiple_choice",
-        difficulty: "1",
-        points: "5",
-        variables: "",
-        answers: [
-          { content: "", isCorrect: true, explanation: "" },
-          { content: "", isCorrect: false, explanation: "" },
-        ],
-      });
-      setAnswers([
-        { content: "", isCorrect: true, explanation: "" },
-        { content: "", isCorrect: false, explanation: "" },
-      ]);
-      toast({
-        title: "Pregunta creada",
-        description: "La pregunta ha sido creada exitosamente",
-      });
+    onSuccess: (data: Question) => {
+      // Crear respuestas para esta pregunta
+      if (answers.length > 0) {
+        Promise.all(
+          answers.map(answer => 
+            fetch("/api/admin/answers", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ...answer,
+                questionId: data.id
+              })
+            })
+          )
+        ).then(() => {
+          queryClient.invalidateQueries({ queryKey: [`/api/quizzes/${quizId}/questions`] });
+          resetFormAndState();
+          toast({
+            title: "Pregunta creada",
+            description: "La pregunta y sus respuestas han sido creadas exitosamente",
+          });
+        }).catch(() => {
+          toast({
+            title: "Error",
+            description: "La pregunta se creó pero hubo un problema con las respuestas",
+            variant: "destructive",
+          });
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: [`/api/quizzes/${quizId}/questions`] });
+        resetFormAndState();
+        toast({
+          title: "Pregunta creada",
+          description: "La pregunta ha sido creada exitosamente",
+        });
+      }
     },
     onError: (error) => {
       toast({
@@ -143,12 +148,18 @@ export default function QuestionsAdmin() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/admin/questions/${id}`, {
-        method: "DELETE",
+      const response = await fetch(`/api/admin/questions/${id}`, {
+        method: "DELETE"
       });
+      
+      if (!response.ok) {
+        throw new Error("Error al eliminar la pregunta");
+      }
+      
+      return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/questions", selectedQuiz] });
+      queryClient.invalidateQueries({ queryKey: [`/api/quizzes/${quizId}/questions`] });
       toast({
         title: "Pregunta eliminada",
         description: "La pregunta ha sido eliminada exitosamente",
@@ -164,76 +175,74 @@ export default function QuestionsAdmin() {
     },
   });
 
-  // Funciones de manejo
-  function addAnswer() {
-    setAnswers([...answers, { content: "", isCorrect: false, explanation: "" }]);
-    form.setValue("answers", [...answers, { content: "", isCorrect: false, explanation: "" }]);
-  }
-
-  function removeAnswer(index: number) {
-    if (answers.length <= 2) {
-      toast({
-        title: "Error",
-        description: "Debe haber al menos 2 opciones de respuesta",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const newAnswers = [...answers];
-    newAnswers.splice(index, 1);
-    setAnswers(newAnswers);
-    form.setValue("answers", newAnswers);
-  }
-
-  function updateAnswer(index: number, key: keyof Answer, value: any) {
-    const newAnswers = [...answers];
-    
-    // Si estamos cambiando isCorrect a true, ponemos las demás en false para preguntas tipo radio
-    if (key === "isCorrect" && value === true && form.getValues("type") === "multiple_choice") {
-      newAnswers.forEach((answer, i) => {
-        if (i !== index) {
-          newAnswers[i].isCorrect = false;
-        }
-      });
-    }
-    
-    newAnswers[index][key] = value;
-    setAnswers(newAnswers);
-    form.setValue("answers", newAnswers);
-  }
+  const resetFormAndState = () => {
+    setEditingId(null);
+    setAnswers([]);
+    setNewAnswer({ content: "", isCorrect: false, explanation: "" });
+    setCurrentTab("question");
+    form.reset({
+      content: "",
+      type: "multiple_choice",
+      difficulty: "3",
+      points: "10",
+      variables: "",
+    });
+  };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // Verificar si hay al menos una respuesta correcta
-    const hasCorrectAnswer = values.answers.some(answer => answer.isCorrect);
-    if (!hasCorrectAnswer) {
+    if (form.watch("type") === "multiple_choice" && answers.length === 0) {
+      toast({
+        title: "Error",
+        description: "Debes agregar al menos una respuesta para preguntas de opción múltiple",
+        variant: "destructive",
+      });
+      setCurrentTab("answers");
+      return;
+    }
+
+    // Validar que haya al menos una respuesta correcta
+    if (form.watch("type") === "multiple_choice" && !answers.some(a => a.isCorrect)) {
       toast({
         title: "Error",
         description: "Debe haber al menos una respuesta correcta",
         variant: "destructive",
       });
+      setCurrentTab("answers");
       return;
     }
-    
-    try {
-      // Si hay variables, validar que sean JSON válido
-      if (values.variables) {
-        JSON.parse(values.variables);
-      }
-      
-      createMutation.mutate(values);
-    } catch (error) {
+
+    if (editingId) {
+      // updateMutation.mutate({ ...values, id: editingId });
       toast({
-        title: "Error en formato JSON",
-        description: "El formato de las variables no es un JSON válido",
+        title: "Funcionalidad no disponible",
+        description: "La edición de preguntas estará disponible próximamente",
         variant: "destructive",
       });
+    } else {
+      createMutation.mutate(values);
     }
   }
 
-  function handleQuizChange(value: string) {
-    setSelectedQuiz(value);
-    form.setValue("quizId", value);
+  function handleAddAnswer() {
+    if (!newAnswer.content.trim()) {
+      toast({
+        title: "Error",
+        description: "El contenido de la respuesta no puede estar vacío",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAnswers([...answers, { 
+      ...newAnswer, 
+      id: Math.floor(Math.random() * -1000), // ID temporal negativo
+      questionId: editingId || 0
+    }]);
+    setNewAnswer({ content: "", isCorrect: false, explanation: "" });
+  }
+
+  function handleRemoveAnswer(index: number) {
+    setAnswers(answers.filter((_, i) => i !== index));
   }
 
   function handleDelete(id: number) {
@@ -242,56 +251,68 @@ export default function QuestionsAdmin() {
     }
   }
 
+  function getQuestionTypeName(type: string): string {
+    const option = questionTypeOptions.find(opt => opt.value === type);
+    return option ? option.label : type;
+  }
+
+  function getDifficultyName(level: number): string {
+    const option = difficultyOptions.find(opt => opt.value === String(level));
+    return option ? option.label : String(level);
+  }
+
   return (
-    <PageLayout>
-      <div className="container mx-auto py-8">
-        <h1 className="text-3xl font-bold mb-6">Gestión de Preguntas</h1>
-        
-        <Tabs defaultValue="create" value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="create">Crear Pregunta</TabsTrigger>
-            <TabsTrigger value="list">Ver Preguntas</TabsTrigger>
-          </TabsList>
-          
-          <div className="mt-6">
-            <div className="mb-6">
-              <FormLabel className="text-base">Selecciona un cuestionario</FormLabel>
-              <Select value={selectedQuiz} onValueChange={handleQuizChange}>
-                <SelectTrigger className="w-full md:w-[400px]">
-                  <SelectValue placeholder="Selecciona un cuestionario" />
-                </SelectTrigger>
-                <SelectContent>
-                  {quizzes?.map((quiz) => (
-                    <SelectItem key={quiz.id} value={quiz.id.toString()}>
-                      {quiz.title} - {categories?.find(c => c.id === quiz.categoryId)?.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <TabsContent value="create" className="mt-4">
-            {selectedQuiz ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Nueva Pregunta</CardTitle>
-                  <CardDescription>
-                    Crea una nueva pregunta para el cuestionario seleccionado
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+    <div className="container mx-auto py-8">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Gestión de Preguntas</h1>
+          <p className="text-muted-foreground">
+            {quiz ? `Editando: ${quiz.title}` : "Cargando información..."}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => window.location.href = "/admin/quizzes"}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver a cuestionarios
+          </Button>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-1">
+          <Card className="sticky top-4">
+            <CardHeader className="bg-muted/50">
+              <CardTitle>{editingId ? "Editar Pregunta" : "Nueva Pregunta"}</CardTitle>
+              <CardDescription>
+                {editingId 
+                  ? "Actualiza los detalles de la pregunta" 
+                  : "Añade una nueva pregunta al cuestionario"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <Tabs value={currentTab} onValueChange={setCurrentTab}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="question">Pregunta</TabsTrigger>
+                  <TabsTrigger value="answers" disabled={form.watch("type") !== "multiple_choice"}>
+                    Respuestas
+                    {form.watch("type") === "multiple_choice" && (
+                      <Badge variant="outline" className="ml-2">{answers.length}</Badge>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="question" className="pt-4">
                   <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <form className="space-y-4">
                       <FormField
                         control={form.control}
                         name="content"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Contenido de la pregunta</FormLabel>
+                            <FormLabel>Enunciado de la pregunta</FormLabel>
                             <FormControl>
                               <Textarea 
-                                placeholder="Escribe aquí el enunciado de la pregunta. Usa {variable} para valores dinámicos." 
+                                placeholder="Escribe aquí el enunciado de la pregunta..." 
                                 rows={3}
                                 {...field} 
                               />
@@ -301,33 +322,46 @@ export default function QuestionsAdmin() {
                         )}
                       />
                       
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="type"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tipo</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Tipo de pregunta" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="multiple_choice">Opción múltiple</SelectItem>
-                                  <SelectItem value="checkbox">Selección múltiple</SelectItem>
-                                  <SelectItem value="equation">Ecuación</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
+                      <FormField
+                        control={form.control}
+                        name="type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tipo de pregunta</FormLabel>
+                            <Select
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                // Reset answers when type changes
+                                if (value !== "multiple_choice") {
+                                  setAnswers([]);
+                                }
+                              }}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona un tipo" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {questionTypeOptions.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            {field.value === "formula" && (
+                              <FormDescription>
+                                Las preguntas de fórmula permiten generar variables aleatorias
+                              </FormDescription>
+                            )}
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
                           name="difficulty"
@@ -336,19 +370,19 @@ export default function QuestionsAdmin() {
                               <FormLabel>Dificultad</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
-                                defaultValue={field.value}
+                                value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Nivel de dificultad" />
+                                    <SelectValue placeholder="Nivel" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="1">1 - Fácil</SelectItem>
-                                  <SelectItem value="2">2 - Moderado</SelectItem>
-                                  <SelectItem value="3">3 - Intermedio</SelectItem>
-                                  <SelectItem value="4">4 - Desafiante</SelectItem>
-                                  <SelectItem value="5">5 - Difícil</SelectItem>
+                                  {difficultyOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -362,247 +396,271 @@ export default function QuestionsAdmin() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Puntos</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Puntos por respuesta correcta" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="1">1 punto</SelectItem>
-                                  <SelectItem value="2">2 puntos</SelectItem>
-                                  <SelectItem value="5">5 puntos</SelectItem>
-                                  <SelectItem value="10">10 puntos</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <FormControl>
+                                <Input type="number" min="1" max="100" {...field} />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </div>
                       
-                      <FormField
-                        control={form.control}
-                        name="variables"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Variables (JSON)</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder='{"a": {"min": 1, "max": 10}, "b": {"min": 5, "max": 20}}' 
-                                rows={3}
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Define variables para generar valores aleatorios. Usa formato JSON como en el ejemplo.
-                            </p>
-                          </FormItem>
-                        )}
-                      />
+                      {form.watch("type") === "formula" && (
+                        <FormField
+                          control={form.control}
+                          name="variables"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Variables (JSON)</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder='{"a": {"min": 1, "max": 10}, "b": {"min": 1, "max": 5}}'
+                                  rows={3}
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Define las variables y sus rangos en formato JSON
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
                       
-                      <div>
-                        <div className="flex justify-between items-center mb-2">
-                          <FormLabel className="text-base">Respuestas</FormLabel>
+                      {form.watch("type") === "multiple_choice" && (
+                        <div className="pt-2">
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
-                            onClick={addAnswer}
+                            onClick={() => setCurrentTab("answers")}
                           >
-                            <Plus className="h-4 w-4 mr-1" /> Añadir respuesta
+                            Configurar respuestas
                           </Button>
                         </div>
+                      )}
+                    </form>
+                  </Form>
+                </TabsContent>
+                
+                <TabsContent value="answers" className="pt-4">
+                  <div className="space-y-4">
+                    <div className="bg-muted rounded-lg p-4">
+                      <h3 className="font-medium mb-3">Añadir respuesta</h3>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-sm font-medium">Contenido</label>
+                          <Input
+                            value={newAnswer.content}
+                            onChange={(e) => setNewAnswer({ ...newAnswer, content: e.target.value })}
+                            placeholder="Escribe aquí la respuesta..."
+                          />
+                        </div>
                         
-                        <div className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="is-correct"
+                            checked={newAnswer.isCorrect}
+                            onCheckedChange={(checked) => setNewAnswer({ ...newAnswer, isCorrect: !!checked })}
+                          />
+                          <label
+                            htmlFor="is-correct"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            Respuesta correcta
+                          </label>
+                        </div>
+                        
+                        <div>
+                          <label className="text-sm font-medium">Explicación (opcional)</label>
+                          <Textarea
+                            value={newAnswer.explanation || ""}
+                            onChange={(e) => setNewAnswer({ ...newAnswer, explanation: e.target.value })}
+                            placeholder="Explica por qué esta respuesta es correcta o incorrecta..."
+                            rows={2}
+                          />
+                        </div>
+                        
+                        <Button
+                          type="button"
+                          onClick={handleAddAnswer}
+                          className="w-full"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Añadir respuesta
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {answers.length > 0 ? (
+                      <div>
+                        <h3 className="font-medium mb-2">Respuestas configuradas</h3>
+                        <div className="space-y-2">
                           {answers.map((answer, index) => (
-                            <Card key={index}>
-                              <CardContent className="pt-4 pb-3">
-                                <div className="flex gap-3 items-start">
-                                  <div className="flex-grow">
-                                    <FormItem className="mb-2">
-                                      <FormLabel>Contenido</FormLabel>
-                                      <FormControl>
-                                        <Input 
-                                          value={answer.content}
-                                          onChange={(e) => updateAnswer(index, "content", e.target.value)}
-                                          placeholder="Escribe la respuesta"
-                                        />
-                                      </FormControl>
-                                    </FormItem>
-                                    
-                                    <FormItem>
-                                      <FormLabel>Explicación (opcional)</FormLabel>
-                                      <FormControl>
-                                        <Input 
-                                          value={answer.explanation || ""}
-                                          onChange={(e) => updateAnswer(index, "explanation", e.target.value)}
-                                          placeholder="Explica por qué esta respuesta es correcta/incorrecta"
-                                        />
-                                      </FormControl>
-                                    </FormItem>
-                                  </div>
-                                  
-                                  <div className="flex flex-col items-center space-y-3 pt-8">
-                                    <div className="flex items-center space-x-2">
-                                      <Switch
-                                        checked={answer.isCorrect}
-                                        onCheckedChange={(checked) => updateAnswer(index, "isCorrect", checked)}
-                                      />
-                                      <span className="text-sm">
-                                        {answer.isCorrect ? "Correcta" : "Incorrecta"}
-                                      </span>
-                                    </div>
-                                    
-                                    <Button
-                                      type="button"
-                                      variant="destructive"
-                                      size="sm"
-                                      onClick={() => removeAnswer(index)}
-                                    >
-                                      <Trash className="h-4 w-4" />
-                                    </Button>
-                                  </div>
+                            <div key={index} className="flex items-start justify-between bg-background border rounded-md p-3">
+                              <div className="flex-1">
+                                <div className="flex items-center">
+                                  {answer.isCorrect ? (
+                                    <Badge variant="success" className="mr-2">
+                                      <Check className="h-3 w-3 mr-1" />
+                                      Correcta
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="mr-2">
+                                      <X className="h-3 w-3 mr-1" />
+                                      Incorrecta
+                                    </Badge>
+                                  )}
+                                  <span className="font-medium">{answer.content}</span>
                                 </div>
-                              </CardContent>
-                            </Card>
+                                {answer.explanation && (
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    Explicación: {answer.explanation}
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveAnswer(index)}
+                              >
+                                <Trash className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           ))}
                         </div>
                       </div>
-                      
-                      <div className="flex justify-end">
-                        <Button 
-                          type="submit" 
-                          disabled={createMutation.isPending}
+                    ) : (
+                      <div className="text-center py-6 border border-dashed rounded-lg">
+                        <p className="text-muted-foreground">No hay respuestas configuradas</p>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setCurrentTab("question")}
+                      >
+                        Volver a la pregunta
+                      </Button>
+                      <div>
+                        {answers.length > 0 && !answers.some(a => a.isCorrect) && (
+                          <p className="text-xs text-destructive mb-2">
+                            Debe haber al menos una respuesta correcta
+                          </p>
+                        )}
+                        <Button
+                          type="button"
+                          disabled={createMutation.isPending || answers.length === 0}
+                          onClick={() => form.handleSubmit(onSubmit)()}
                         >
                           {createMutation.isPending && <Spinner className="mr-2 h-4 w-4" />}
-                          Crear Pregunta
+                          Guardar pregunta
                         </Button>
                       </div>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="p-8 text-center">
-                <CardContent>
-                  <h3 className="text-xl font-semibold mb-2">Selecciona un cuestionario</h3>
-                  <p className="text-muted-foreground">
-                    Por favor, selecciona un cuestionario para comenzar a crear preguntas.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="list" className="mt-4">
-            {selectedQuiz ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Preguntas del Cuestionario</CardTitle>
-                  <CardDescription>
-                    Listado de todas las preguntas para el cuestionario seleccionado
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {questionsLoading ? (
-                    <div className="flex justify-center py-8">
-                      <Spinner className="h-8 w-8" />
                     </div>
-                  ) : questions && questions.length > 0 ? (
-                    <ScrollArea className="h-[500px]">
-                      <div className="space-y-4">
-                        {questions.map((question: any) => (
-                          <Card key={question.id} className="overflow-hidden">
-                            <CardContent className="p-4">
-                              <div className="flex justify-between items-start gap-4">
-                                <div className="flex-grow">
-                                  <div className="flex gap-2 mb-2">
-                                    <Badge variant="outline">Tipo: {question.type}</Badge>
-                                    <Badge variant="outline">Dificultad: {question.difficulty}</Badge>
-                                    <Badge variant="outline">Puntos: {question.points}</Badge>
-                                  </div>
-                                  <p className="text-base font-medium mb-3">{question.content}</p>
-                                  
-                                  <Separator className="my-3" />
-                                  
-                                  <div className="space-y-2">
-                                    <h4 className="text-sm font-semibold">Respuestas:</h4>
-                                    {question.answers && question.answers.map((answer: any) => (
-                                      <div 
-                                        key={answer.id} 
-                                        className={`p-2 rounded-md ${answer.isCorrect ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'}`}
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          {answer.isCorrect ? 
-                                            <Check className="h-4 w-4 text-green-600" /> : 
-                                            <X className="h-4 w-4 text-red-600" />
-                                          }
-                                          <span>{answer.content}</span>
-                                        </div>
-                                        {answer.explanation && (
-                                          <p className="text-xs text-muted-foreground mt-1 ml-6">
-                                            {answer.explanation}
-                                          </p>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                                
-                                <div>
-                                  <Button 
-                                    variant="destructive" 
-                                    size="sm"
-                                    onClick={() => handleDelete(question.id)}
-                                  >
-                                    <Trash className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  ) : (
-                    <div className="text-center py-12">
-                      <h3 className="text-lg font-medium mb-2">No hay preguntas</h3>
-                      <p className="text-muted-foreground mb-4">
-                        Este cuestionario aún no tiene preguntas.
-                      </p>
-                      <Button onClick={() => setSelectedTab("create")}>
-                        Crear primera pregunta
-                      </Button>
-                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+              
+              {currentTab === "question" && (
+                <div className="flex justify-end gap-2 pt-4">
+                  {editingId && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={resetFormAndState}
+                    >
+                      Cancelar
+                    </Button>
                   )}
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Total: {questions?.length || 0} preguntas
+                  {form.watch("type") !== "multiple_choice" && (
+                    <Button 
+                      type="button" 
+                      disabled={createMutation.isPending}
+                      onClick={() => form.handleSubmit(onSubmit)()}
+                    >
+                      {createMutation.isPending && <Spinner className="mr-2 h-4 w-4" />}
+                      {editingId ? "Actualizar" : "Guardar pregunta"}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="md:col-span-2">
+          <Card>
+            <CardHeader className="bg-muted/50">
+              <CardTitle>Preguntas Existentes</CardTitle>
+              <CardDescription>
+                Lista de todas las preguntas en este cuestionario
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {isLoading ? (
+                <div className="flex justify-center p-8">
+                  <Spinner className="h-8 w-8" />
+                </div>
+              ) : questions && questions.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4">
+                  {questions.map((question: Question) => (
+                    <Card key={question.id} className="overflow-hidden border border-muted">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline">{getQuestionTypeName(question.type)}</Badge>
+                              <Badge variant="secondary">{getDifficultyName(question.difficulty)}</Badge>
+                              <Badge variant="default">{question.points} puntos</Badge>
+                            </div>
+                            <p className="font-medium">{question.content}</p>
+                          </div>
+                          <div className="flex space-x-2 ml-4">
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => handleDelete(question.id)}
+                              title="Eliminar pregunta"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 px-4">
+                  <div className="mb-4 rounded-full bg-muted h-12 w-12 flex items-center justify-center mx-auto">
+                    <Trash className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium">No hay preguntas disponibles</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Añade tu primera pregunta para completar el cuestionario.
                   </p>
-                  <Button variant="outline" onClick={() => refetchQuestions()}>
-                    Actualizar
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className="border-t bg-muted/30 px-6 py-3">
+              <div className="flex justify-between items-center w-full">
+                <p className="text-sm text-muted-foreground">
+                  Total: <strong>{questions?.length || 0}</strong> preguntas
+                </p>
+                {(questions?.length || 0) > 0 && (
+                  <Button size="sm" variant="outline" onClick={() => window.location.href = `/quizzes/${quizId}`}>
+                    Ver cuestionario
                   </Button>
-                </CardFooter>
-              </Card>
-            ) : (
-              <Card className="p-8 text-center">
-                <CardContent>
-                  <h3 className="text-xl font-semibold mb-2">Selecciona un cuestionario</h3>
-                  <p className="text-muted-foreground">
-                    Por favor, selecciona un cuestionario para ver sus preguntas.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+                )}
+              </div>
+            </CardFooter>
+          </Card>
+        </div>
       </div>
-    </PageLayout>
+    </div>
   );
 }

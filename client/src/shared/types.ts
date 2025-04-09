@@ -1,10 +1,10 @@
-// Tipos compartidos para la aplicación cliente
+// Definiciones de tipos para la aplicación
 
 export interface User {
   id: number;
-  name: string;
   username: string;
-  email?: string;
+  name: string;
+  email?: string | null;
   role?: string;
   createdAt?: Date;
 }
@@ -13,7 +13,7 @@ export interface Category {
   id: number;
   name: string;
   description: string;
-  colorClass: string;
+  colorClass?: string;
 }
 
 export interface Quiz {
@@ -22,20 +22,19 @@ export interface Quiz {
   description: string;
   categoryId: number;
   timeLimit: number;
-  difficulty: string; // "basic", "intermediate", "advanced"
+  difficulty: string;
   totalQuestions: number;
-  isPublic?: boolean;
+  isPublic: boolean | null;
 }
 
 export interface Question {
   id: number;
   content: string;
-  type: string; // "multiple_choice", "equation", etc.
+  type: string;
+  quizId: number;
   difficulty: number;
   points: number;
-  quizId: number;
-  variables?: Record<string, any>;
-  answers?: Answer[];
+  variables?: Record<string, number>;
 }
 
 export interface Answer {
@@ -43,7 +42,7 @@ export interface Answer {
   content: string;
   questionId: number;
   isCorrect: boolean;
-  explanation?: string;
+  explanation?: string | null;
 }
 
 export interface StudentProgress {
@@ -51,21 +50,18 @@ export interface StudentProgress {
   userId: number;
   quizId: number;
   status: 'not_started' | 'in_progress' | 'completed';
-  score?: number;
-  completedQuestions: number;
-  timeSpent?: number;
-  completedAt?: Date;
-  quiz?: Quiz;
+  score: number | null;
+  completedQuestions: number | null;
+  timeSpent: number | null;
+  completedAt: Date | null;
 }
 
 export interface StudentAnswer {
   id: number;
   progressId: number;
   questionId: number;
-  answerId?: number;
-  isCorrect?: boolean;
-  timeSpent?: number;
-  variables?: Record<string, any>;
-  question?: Question;
-  answerDetails?: Answer;
+  answerId: number | null;
+  isCorrect: boolean | null;
+  timeSpent: number | null;
+  variables?: Record<string, number>;
 }
