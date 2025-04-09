@@ -23,7 +23,7 @@ export default function ProfilePage() {
 
   // Obtener los datos del usuario
   const { data: user, isLoading, error } = useQuery<User>({
-    queryKey: ['/api/auth/me'],
+    queryKey: ['/api/user'],
     enabled: true
   });
 
@@ -40,7 +40,7 @@ export default function ProfilePage() {
       const data = await response.json();
       
       // Invalidar consultas para refrescar datos
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       
       toast({
         title: 'Rol actualizado',
@@ -75,7 +75,7 @@ export default function ProfilePage() {
             <CardDescription>No se pudo cargar la información del perfil.</CardDescription>
           </CardHeader>
           <CardFooter>
-            <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] })}>
+            <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/user'] })}>
               Reintentar
             </Button>
           </CardFooter>

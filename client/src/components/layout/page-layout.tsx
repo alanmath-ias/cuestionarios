@@ -36,10 +36,10 @@ export function PageLayout({ children }: PageLayoutProps) {
 
   // Fetch current user
   const { data: user, isLoading, error, refetch } = useQuery<User>({
-    queryKey: ['/api/auth/me'],
+    queryKey: ['/api/user'],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        const res = await fetch('/api/user', { credentials: 'include' });
         if (res.status === 401) {
           return null;
         }
