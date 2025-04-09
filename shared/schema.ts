@@ -9,6 +9,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   name: text("name").notNull(),
   email: text("email"),
+  role: text("role").default("student").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -17,6 +18,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
   name: true,
   email: true,
+  role: true,
 });
 
 // Categories model

@@ -63,7 +63,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Username already exists" });
       }
       
-      const newUser = await storage.createUser(userData);
+      // Asegurarse de que solo los primeros usuarios puedan ser administradores
+      // o que se requiera un código especial para ser administrador 
+      // Esto es solo una forma simple de demostración
+      const userCount = (await storage.getUsers()).length;
+      const isFirstUser = userCount === 0;
+      
+      // Si es el primer usuario, asignarle rol de administrador
+      // de lo contrario, mantener el rol proporcionado o usar "student" por defecto
+      const userWithRole = {
+        ...userData,
+        role: isFirstUser ? 'admin' : (userData.role || 'student')
+      };
+      
+      const newUser = await storage.createUser(userWithRole);
       
       // Auto login
       req.session.userId = newUser.id;
@@ -504,9 +517,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = await storage.getUser(userId);
       
-      // En un sistema real, verificaríamos un campo de rol o permisos
-      // Por ahora, hacemos que el usuario con ID 1 sea administrador
-      if (!user || user.id !== 1) {
+      // Verificamos si el usuario tiene el rol de administrador
+      if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: "Admin access required" });
       }
       
