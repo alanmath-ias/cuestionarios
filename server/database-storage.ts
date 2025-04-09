@@ -48,9 +48,25 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
   
+  async updateCategory(id: number, category: Partial<Category>): Promise<Category> {
+    const result = await db.update(categories)
+      .set(category)
+      .where(eq(categories.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteCategory(id: number): Promise<void> {
+    await db.delete(categories).where(eq(categories.id, id));
+  }
+  
   // Quiz methods
   async getQuizzes(): Promise<Quiz[]> {
     return await db.select().from(quizzes);
+  }
+  
+  async getPublicQuizzes(): Promise<Quiz[]> {
+    return await db.select().from(quizzes).where(eq(quizzes.isPublic, true));
   }
   
   async getQuizzesByCategory(categoryId: number): Promise<Quiz[]> {
@@ -65,6 +81,18 @@ export class DatabaseStorage implements IStorage {
   async createQuiz(quiz: InsertQuiz): Promise<Quiz> {
     const result = await db.insert(quizzes).values(quiz).returning();
     return result[0];
+  }
+  
+  async updateQuiz(id: number, quiz: Partial<Quiz>): Promise<Quiz> {
+    const result = await db.update(quizzes)
+      .set(quiz)
+      .where(eq(quizzes.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteQuiz(id: number): Promise<void> {
+    await db.delete(quizzes).where(eq(quizzes.id, id));
   }
   
   // Question methods
@@ -82,6 +110,18 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
   
+  async updateQuestion(id: number, question: Partial<Question>): Promise<Question> {
+    const result = await db.update(questions)
+      .set(question)
+      .where(eq(questions.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteQuestion(id: number): Promise<void> {
+    await db.delete(questions).where(eq(questions.id, id));
+  }
+  
   // Answer methods
   async getAnswersByQuestion(questionId: number): Promise<Answer[]> {
     return await db.select().from(answers).where(eq(answers.questionId, questionId));
@@ -95,6 +135,18 @@ export class DatabaseStorage implements IStorage {
   async createAnswer(answer: InsertAnswer): Promise<Answer> {
     const result = await db.insert(answers).values(answer).returning();
     return result[0];
+  }
+  
+  async updateAnswer(id: number, answer: Partial<Answer>): Promise<Answer> {
+    const result = await db.update(answers)
+      .set(answer)
+      .where(eq(answers.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteAnswer(id: number): Promise<void> {
+    await db.delete(answers).where(eq(answers.id, id));
   }
   
   // Student Progress methods

@@ -42,6 +42,7 @@ export const quizzes = pgTable("quizzes", {
   timeLimit: integer("time_limit").notNull(), // in minutes
   difficulty: text("difficulty").notNull(), // "basic", "intermediate", "advanced"
   totalQuestions: integer("total_questions").notNull(),
+  isPublic: boolean("is_public").default(false), // Indica si el quiz es público o requiere autenticación
 });
 
 export const insertQuizSchema = createInsertSchema(quizzes).pick({
@@ -51,6 +52,7 @@ export const insertQuizSchema = createInsertSchema(quizzes).pick({
   timeLimit: true,
   difficulty: true,
   totalQuestions: true,
+  isPublic: true,
 });
 
 // Questions model (template questions that can be randomized)

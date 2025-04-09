@@ -134,6 +134,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Ruta para obtener cuestionarios públicos
+  apiRouter.get("/public/quizzes", async (_req: Request, res: Response) => {
+    try {
+      const quizzes = await storage.getPublicQuizzes();
+      res.json(quizzes);
+    } catch (error) {
+      console.error("Public quizzes fetch error:", error);
+      res.status(500).json({ message: "Error fetching public quizzes" });
+    }
+  });
+  
   apiRouter.get("/categories/:categoryId/quizzes", async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.categoryId);
     
@@ -478,6 +489,197 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Results fetch error:", error);
       res.status(500).json({ message: "Error fetching quiz results" });
+    }
+  });
+
+  // Rutas de administración 
+  // Middleware para verificar si el usuario es administrador
+  const requireAdmin = async (req: Request, res: Response, next: () => void) => {
+    const userId = req.session.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const user = await storage.getUser(userId);
+      
+      // En un sistema real, verificaríamos un campo de rol o permisos
+      // Por ahora, hacemos que el usuario con ID 1 sea administrador
+      if (!user || user.id !== 1) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      next();
+    } catch (error) {
+      console.error("Admin check error:", error);
+      res.status(500).json({ message: "Error checking admin permissions" });
+    }
+  };
+  
+  // API para gestionar categorías
+  apiRouter.post("/admin/categories", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const categoryData = req.body;
+      const newCategory = await storage.createCategory(categoryData);
+      res.status(201).json(newCategory);
+    } catch (error) {
+      console.error("Category creation error:", error);
+      res.status(500).json({ message: "Error creating category" });
+    }
+  });
+  
+  apiRouter.put("/admin/categories/:id", requireAdmin, async (req: Request, res: Response) => {
+    const categoryId = parseInt(req.params.id);
+    
+    if (isNaN(categoryId)) {
+      return res.status(400).json({ message: "Invalid category ID" });
+    }
+    
+    try {
+      const categoryData = req.body;
+      const category = await storage.updateCategory(categoryId, categoryData);
+      res.json(category);
+    } catch (error) {
+      console.error("Category update error:", error);
+      res.status(500).json({ message: "Error updating category" });
+    }
+  });
+  
+  apiRouter.delete("/admin/categories/:id", requireAdmin, async (req: Request, res: Response) => {
+    const categoryId = parseInt(req.params.id);
+    
+    if (isNaN(categoryId)) {
+      return res.status(400).json({ message: "Invalid category ID" });
+    }
+    
+    try {
+      await storage.deleteCategory(categoryId);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Category deletion error:", error);
+      res.status(500).json({ message: "Error deleting category" });
+    }
+  });
+  
+  // API para gestionar quizzes
+  apiRouter.post("/admin/quizzes", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const quizData = req.body;
+      const newQuiz = await storage.createQuiz(quizData);
+      res.status(201).json(newQuiz);
+    } catch (error) {
+      console.error("Quiz creation error:", error);
+      res.status(500).json({ message: "Error creating quiz" });
+    }
+  });
+  
+  apiRouter.put("/admin/quizzes/:id", requireAdmin, async (req: Request, res: Response) => {
+    const quizId = parseInt(req.params.id);
+    
+    if (isNaN(quizId)) {
+      return res.status(400).json({ message: "Invalid quiz ID" });
+    }
+    
+    try {
+      const quizData = req.body;
+      const quiz = await storage.updateQuiz(quizId, quizData);
+      res.json(quiz);
+    } catch (error) {
+      console.error("Quiz update error:", error);
+      res.status(500).json({ message: "Error updating quiz" });
+    }
+  });
+  
+  apiRouter.delete("/admin/quizzes/:id", requireAdmin, async (req: Request, res: Response) => {
+    const quizId = parseInt(req.params.id);
+    
+    if (isNaN(quizId)) {
+      return res.status(400).json({ message: "Invalid quiz ID" });
+    }
+    
+    try {
+      await storage.deleteQuiz(quizId);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Quiz deletion error:", error);
+      res.status(500).json({ message: "Error deleting quiz" });
+    }
+  });
+  
+  // API para gestionar preguntas
+  apiRouter.get("/admin/questions", requireAdmin, async (req: Request, res: Response) => {
+    const quizId = parseInt(req.query.quizId as string);
+    
+    if (isNaN(quizId)) {
+      return res.status(400).json({ message: "Invalid quiz ID" });
+    }
+    
+    try {
+      const questions = await storage.getQuestionsByQuiz(quizId);
+      
+      // Obtener respuestas para cada pregunta
+      const questionsWithAnswers = await Promise.all(questions.map(async (question) => {
+        const answers = await storage.getAnswersByQuestion(question.id);
+        return {
+          ...question,
+          answers
+        };
+      }));
+      
+      res.json(questionsWithAnswers);
+    } catch (error) {
+      console.error("Questions fetch error:", error);
+      res.status(500).json({ message: "Error fetching questions" });
+    }
+  });
+  
+  apiRouter.post("/admin/questions", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { answers, ...questionData } = req.body;
+      
+      // Crear pregunta
+      const newQuestion = await storage.createQuestion({
+        ...questionData,
+        quizId: parseInt(questionData.quizId)
+      });
+      
+      // Crear respuestas asociadas
+      const createdAnswers = await Promise.all(answers.map((answer: any) => 
+        storage.createAnswer({
+          ...answer,
+          questionId: newQuestion.id
+        })
+      ));
+      
+      res.status(201).json({
+        ...newQuestion,
+        answers: createdAnswers
+      });
+    } catch (error) {
+      console.error("Question creation error:", error);
+      res.status(500).json({ message: "Error creating question" });
+    }
+  });
+  
+  apiRouter.delete("/admin/questions/:id", requireAdmin, async (req: Request, res: Response) => {
+    const questionId = parseInt(req.params.id);
+    
+    if (isNaN(questionId)) {
+      return res.status(400).json({ message: "Invalid question ID" });
+    }
+    
+    try {
+      // Eliminar respuestas asociadas
+      const answers = await storage.getAnswersByQuestion(questionId);
+      await Promise.all(answers.map(answer => storage.deleteAnswer(answer.id)));
+      
+      // Eliminar la pregunta
+      await storage.deleteQuestion(questionId);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Question deletion error:", error);
+      res.status(500).json({ message: "Error deleting question" });
     }
   });
 

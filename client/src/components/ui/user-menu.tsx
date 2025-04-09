@@ -73,8 +73,15 @@ export function UserMenu({ user }: UserMenuProps) {
         <DropdownMenuItem onClick={() => setLocation('/')}>
           Mis Calificaciones
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setLocation('/settings')}>
-          Configuración
+        <DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>
+          Quizzes Gratuitos
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => setLocation('/admin/categories')}>
+          Admin: Categorías
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setLocation('/admin/questions')}>
+          Admin: Preguntas
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
