@@ -427,81 +427,260 @@ export default function QuizzesAdmin() {
                   <Spinner className="h-8 w-8" />
                 </div>
               ) : quizzes && quizzes.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4">
-                  {quizzes.map((quiz: Quiz) => (
-                    <Card key={quiz.id} className="overflow-hidden border border-muted">
-                      <CardContent className="p-6">
-                        <div className="flex flex-col space-y-4">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-semibold">{quiz.title}</h3>
-                                {quiz.isPublic && (
-                                  <Badge variant="outline" className="ml-2">
-                                    <LinkIcon className="h-3 w-3 mr-1" /> Público
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
+                <>
+                  {categories && categories.length > 0 ? (
+                    <div className="space-y-8">
+                      {categories.map((category) => {
+                        // Obtener cuestionarios de esta categoría
+                        const categoryQuizzes = quizzes.filter(quiz => quiz.categoryId === category.id);
+                        
+                        // Si no hay cuestionarios en esta categoría, no mostrar la sección
+                        if (categoryQuizzes.length === 0) return null;
+                        
+                        return (
+                          <div key={category.id} className="space-y-4">
+                            <div className={`p-2 pl-3 rounded-md border-l-4 border-l-${category.colorClass || 'primary'}`}>
+                              <h3 className="text-xl font-medium">{category.name}</h3>
+                              <p className="text-sm text-muted-foreground">{category.description}</p>
                             </div>
-                            <div className="flex space-x-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handleEdit(quiz)}
-                              >
-                                Editar
-                              </Button>
-                              <Button 
-                                variant="destructive" 
-                                size="sm"
-                                onClick={() => handleDelete(quiz.id)}
-                                title="Eliminar cuestionario"
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
+                            
+                            <div className="grid grid-cols-1 gap-4">
+                              {categoryQuizzes.map((quiz: Quiz) => (
+                                <Card key={quiz.id} className="overflow-hidden border border-muted">
+                                  <CardContent className="p-6">
+                                    <div className="flex flex-col space-y-4">
+                                      <div className="flex justify-between items-start">
+                                        <div>
+                                          <div className="flex items-center gap-2">
+                                            <h3 className="text-lg font-semibold">{quiz.title}</h3>
+                                            {quiz.isPublic && (
+                                              <Badge variant="outline" className="ml-2">
+                                                <LinkIcon className="h-3 w-3 mr-1" /> Público
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
+                                        </div>
+                                        <div className="flex space-x-2">
+                                          <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={() => handleEdit(quiz)}
+                                          >
+                                            Editar
+                                          </Button>
+                                          <Button 
+                                            variant="destructive" 
+                                            size="sm"
+                                            onClick={() => handleDelete(quiz.id)}
+                                            title="Eliminar cuestionario"
+                                          >
+                                            <Trash className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
+                                        <div className="flex items-center">
+                                          <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                                          <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
+                                        </div>
+                                        <div>
+                                          <Badge variant={
+                                            quiz.difficulty === "básico" ? "default" : 
+                                            quiz.difficulty === "intermedio" ? "secondary" : "destructive"
+                                          }>
+                                            {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
+                                          </Badge>
+                                        </div>
+                                        <div>
+                                          <Badge variant="outline" className="bg-primary/10">
+                                            {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                      
+                                      <Separator />
+                                      
+                                      <div className="flex justify-end">
+                                        <Button 
+                                          size="sm" 
+                                          onClick={() => handleManageQuestions(quiz.id)}
+                                        >
+                                          Gestionar preguntas
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
                             </div>
                           </div>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2 text-sm">
-                            <div className="flex items-center">
-                              <BookOpen className="h-4 w-4 mr-2 text-primary" />
-                              <span>{getCategoryName(quiz.categoryId)}</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                              <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
-                            </div>
-                            <div>
-                              <Badge variant={
-                                quiz.difficulty === "básico" ? "default" : 
-                                quiz.difficulty === "intermedio" ? "secondary" : "destructive"
-                              }>
-                                {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
-                              </Badge>
-                            </div>
-                            <div>
-                              <Badge variant="outline" className="bg-primary/10">
-                                {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
-                              </Badge>
-                            </div>
+                        );
+                      })}
+                      
+                      {/* Mostrar cuestionarios sin categoría */}
+                      {quizzes.filter(quiz => !categories.some(cat => cat.id === quiz.categoryId)).length > 0 && (
+                        <div className="space-y-4">
+                          <div className="p-2 pl-3 rounded-md border-l-4 border-l-muted">
+                            <h3 className="text-xl font-medium">Sin categoría</h3>
+                            <p className="text-sm text-muted-foreground">Cuestionarios que no pertenecen a ninguna categoría</p>
                           </div>
                           
-                          <Separator />
-                          
-                          <div className="flex justify-end">
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleManageQuestions(quiz.id)}
-                            >
-                              Gestionar preguntas
-                            </Button>
+                          <div className="grid grid-cols-1 gap-4">
+                            {quizzes
+                              .filter(quiz => !categories.some(cat => cat.id === quiz.categoryId))
+                              .map((quiz: Quiz) => (
+                                <Card key={quiz.id} className="overflow-hidden border border-muted">
+                                  <CardContent className="p-6">
+                                    <div className="flex flex-col space-y-4">
+                                      <div className="flex justify-between items-start">
+                                        <div>
+                                          <div className="flex items-center gap-2">
+                                            <h3 className="text-lg font-semibold">{quiz.title}</h3>
+                                            {quiz.isPublic && (
+                                              <Badge variant="outline" className="ml-2">
+                                                <LinkIcon className="h-3 w-3 mr-1" /> Público
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
+                                        </div>
+                                        <div className="flex space-x-2">
+                                          <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={() => handleEdit(quiz)}
+                                          >
+                                            Editar
+                                          </Button>
+                                          <Button 
+                                            variant="destructive" 
+                                            size="sm"
+                                            onClick={() => handleDelete(quiz.id)}
+                                            title="Eliminar cuestionario"
+                                          >
+                                            <Trash className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
+                                        <div className="flex items-center">
+                                          <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                                          <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
+                                        </div>
+                                        <div>
+                                          <Badge variant={
+                                            quiz.difficulty === "básico" ? "default" : 
+                                            quiz.difficulty === "intermedio" ? "secondary" : "destructive"
+                                          }>
+                                            {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
+                                          </Badge>
+                                        </div>
+                                        <div>
+                                          <Badge variant="outline" className="bg-primary/10">
+                                            {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                      
+                                      <Separator />
+                                      
+                                      <div className="flex justify-end">
+                                        <Button 
+                                          size="sm" 
+                                          onClick={() => handleManageQuestions(quiz.id)}
+                                        >
+                                          Gestionar preguntas
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                            ))}
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4">
+                      {quizzes.map((quiz: Quiz) => (
+                        <Card key={quiz.id} className="overflow-hidden border border-muted">
+                          <CardContent className="p-6">
+                            <div className="flex flex-col space-y-4">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="text-lg font-semibold">{quiz.title}</h3>
+                                    {quiz.isPublic && (
+                                      <Badge variant="outline" className="ml-2">
+                                        <LinkIcon className="h-3 w-3 mr-1" /> Público
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
+                                </div>
+                                <div className="flex space-x-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handleEdit(quiz)}
+                                  >
+                                    Editar
+                                  </Button>
+                                  <Button 
+                                    variant="destructive" 
+                                    size="sm"
+                                    onClick={() => handleDelete(quiz.id)}
+                                    title="Eliminar cuestionario"
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2 text-sm">
+                                <div className="flex items-center">
+                                  <BookOpen className="h-4 w-4 mr-2 text-primary" />
+                                  <span>{getCategoryName(quiz.categoryId)}</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                                  <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
+                                </div>
+                                <div>
+                                  <Badge variant={
+                                    quiz.difficulty === "básico" ? "default" : 
+                                    quiz.difficulty === "intermedio" ? "secondary" : "destructive"
+                                  }>
+                                    {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
+                                  </Badge>
+                                </div>
+                                <div>
+                                  <Badge variant="outline" className="bg-primary/10">
+                                    {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
+                                  </Badge>
+                                </div>
+                              </div>
+                              
+                              <Separator />
+                              
+                              <div className="flex justify-end">
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => handleManageQuestions(quiz.id)}
+                                >
+                                  Gestionar preguntas
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="text-center py-12 px-4">
                   <div className="mb-4 rounded-full bg-muted h-12 w-12 flex items-center justify-center mx-auto">

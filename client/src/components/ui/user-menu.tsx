@@ -77,12 +77,21 @@ export function UserMenu({ user }: UserMenuProps) {
         <DropdownMenuItem onClick={() => setLocation('/profile')}>
           Mi Perfil
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setLocation('/')}>
-          Mis Calificaciones
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>
-          Quizzes Gratuitos
-        </DropdownMenuItem>
+        
+        {user.role === 'admin' ? (
+          <DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>
+            Quizzes Gratuitos
+          </DropdownMenuItem>
+        ) : (
+          <>
+            <DropdownMenuItem onClick={() => setLocation('/')}>
+              Mis Calificaciones
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>
+              Quizzes Gratuitos
+            </DropdownMenuItem>
+          </>
+        )}
         
         {user.role === 'admin' && (
           <>

@@ -652,7 +652,7 @@ export default function QuestionsAdmin() {
                   Total: <strong>{questions?.length || 0}</strong> preguntas
                 </p>
                 {(questions?.length || 0) > 0 && (
-                  <Button size="sm" variant="outline" onClick={() => window.location.href = `/quizzes/${quizId}`}>
+                  <Button size="sm" variant="outline" onClick={() => window.location.href = `/quiz/${quizId}`}>
                     Ver cuestionario
                   </Button>
                 )}
