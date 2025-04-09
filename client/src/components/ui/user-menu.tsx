@@ -43,8 +43,8 @@ export function UserMenu({ user }: UserMenuProps) {
       await apiRequest('POST', '/api/auth/logout', {});
       
       // Invalidar la consulta de usuario para limpiar el estado
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
-      queryClient.setQueryData(['/api/auth/me'], null);
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      queryClient.setQueryData(['/api/user'], null);
       
       toast({
         title: 'Sesión cerrada',
