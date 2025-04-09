@@ -19,8 +19,6 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [_, setLocation] = useLocation();
-  const [isUpdating, setIsUpdating] = useState(false);
-
   // Obtener los datos del usuario
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['/api/user'],
@@ -32,31 +30,6 @@ export default function ProfilePage() {
       setLocation('/auth');
     }
   }, [user, isLoading, error, setLocation]);
-
-  const makeAdmin = async () => {
-    setIsUpdating(true);
-    try {
-      const response = await apiRequest('POST', '/api/auth/make-admin');
-      const data = await response.json();
-      
-      // Invalidar consultas para refrescar datos
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      
-      toast({
-        title: 'Rol actualizado',
-        description: data.message || 'Ahora tienes permisos de administrador.',
-      });
-    } catch (error) {
-      console.error('Error al actualizar el rol:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo actualizar el rol.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -131,26 +104,18 @@ export default function ProfilePage() {
             </div>
           </div>
           
-          {!user.role || user.role !== 'admin' ? (
-            <div className="mt-6 border rounded-lg p-4 bg-gray-50">
-              <h3 className="font-medium mb-2">Actualizar a administrador</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Convertirte en administrador te permitirá crear y gestionar categorías, quizzes y preguntas.
-              </p>
-              <Button 
-                onClick={makeAdmin} 
-                disabled={isUpdating}
-                className="w-full sm:w-auto"
-              >
-                {isUpdating ? <Spinner className="mr-2" size={16} /> : null}
-                Hacerme administrador
-              </Button>
-            </div>
-          ) : (
+          {user.role === 'admin' ? (
             <div className="mt-6 border rounded-lg p-4 bg-green-50">
               <h3 className="font-medium mb-2 text-green-700">Privilegios de administrador</h3>
               <p className="text-sm text-green-600">
-                Ya tienes permisos de administrador. Puedes gestionar el contenido desde las secciones administrativas.
+                Tienes permisos de administrador. Puedes gestionar el contenido desde las secciones administrativas.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-6 border rounded-lg p-4 bg-gray-50">
+              <h3 className="font-medium mb-2">Cuenta de estudiante</h3>
+              <p className="text-sm text-muted-foreground">
+                Tienes una cuenta de estudiante. Solo los administradores pueden gestionar el contenido.
               </p>
             </div>
           )}
