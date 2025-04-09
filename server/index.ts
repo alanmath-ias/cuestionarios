@@ -3,13 +3,16 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import session from "express-session";
 import memorystore from "memorystore";
+import { initializeTestData } from "./init-data";
+import PgSession from "connect-pg-simple";
+import postgres from "postgres";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Session middleware setup
-const MemoryStore = memorystore(session);
+// Session middleware setup usando PostgreSQL
+const PgStore = PgSession(session);
 app.use(session({
   secret: "alanmath-secret-key",
   resave: false,
@@ -18,8 +21,9 @@ app.use(session({
     secure: false,
     maxAge: 86400000 // 1 day
   },
-  store: new MemoryStore({
-    checkPeriod: 86400000 // 1 day
+  store: new PgStore({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: true
   })
 }));
 
@@ -54,6 +58,13 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  try {
+    // Inicializar datos de prueba en la base de datos
+    await initializeTestData();
+  } catch (error) {
+    console.error("Error al inicializar datos:", error);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
