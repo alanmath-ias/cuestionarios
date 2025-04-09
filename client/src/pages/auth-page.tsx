@@ -29,7 +29,8 @@ export default function AuthPage() {
   // Check if user is already logged in
   const { data: user } = useQuery<User>({
     queryKey: ['/api/user'],
-    enabled: true,
+    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutos
   });
 
   // Redirect to dashboard if already logged in - use useEffect for redirection
