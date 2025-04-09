@@ -10,7 +10,7 @@ import {
 import { ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface User {
   id: number;
@@ -41,12 +41,18 @@ export function UserMenu({ user }: UserMenuProps) {
   const handleLogout = async () => {
     try {
       await apiRequest('POST', '/api/auth/logout', {});
+      
+      // Invalidar la consulta de usuario para limpiar el estado
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      queryClient.setQueryData(['/api/auth/me'], null);
+      
       toast({
         title: 'Sesión cerrada',
         description: 'Has cerrado sesión correctamente.'
       });
-      setLocation('/');
-      window.location.reload(); // Refresh to clear state
+      
+      // Redirigir a la página de inicio o login sin recargar
+      setLocation('/auth');
     } catch (error) {
       toast({
         title: 'Error',

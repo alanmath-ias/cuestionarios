@@ -125,6 +125,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  // Endpoint temporal para actualizar el rol del usuario
+  apiRouter.post("/auth/make-admin", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // En un sistema real, esto tendría más validaciones
+      // Actualizar el rol del usuario
+      await storage.updateUser(userId, { role: 'admin' });
+      
+      const updatedUser = await storage.getUser(userId);
+      const { password: _, ...userWithoutPassword } = updatedUser!;
+      
+      res.json({ 
+        message: "Usuario promovido a administrador",
+        user: userWithoutPassword
+      });
+    } catch (error) {
+      console.error("Error actualizando rol de usuario:", error);
+      res.status(500).json({ message: "Error al actualizar el rol" });
+    }
+  });
+  
   // Categories endpoints
   apiRouter.get("/categories", async (_req: Request, res: Response) => {
     try {

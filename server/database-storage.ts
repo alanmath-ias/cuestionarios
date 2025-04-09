@@ -33,6 +33,15 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
   
+  async updateUser(id: number, userData: Partial<User>): Promise<User> {
+    const result = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    return result[0];
+  }
+  
   // Category methods
   async getCategories(): Promise<Category[]> {
     return await db.select().from(categories);
