@@ -116,6 +116,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Add the /user endpoint as well
+  apiRouter.get("/user", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Return user without password
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Auth check error:", error);
+      res.status(500).json({ message: "Error checking authentication" });
+    }
+  });
+  
   apiRouter.post("/auth/logout", (req: Request, res: Response) => {
     req.session.destroy((err: Error | null) => {
       if (err) {
