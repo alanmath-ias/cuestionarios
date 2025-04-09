@@ -10,6 +10,7 @@ import {
 
 export interface IStorage {
   // User methods
+  getUsers(): Promise<User[]>;
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
@@ -84,186 +85,229 @@ export class MemStorage implements IStorage {
     this.initializeData();
   }
   
-  private initializeData() {
-    // Create default admin user
-    this.createUser({
-      username: "admin",
-      password: "admin123",
-      name: "Administrador",
-      email: "admin@alanmath.com"
-    });
+  private async initializeData() {
+    try {
+      // Create default admin user
+      const admin = await this.createUser({
+        username: "admin",
+        password: "admin123",
+        name: "Administrador",
+        email: "admin@alanmath.com"
+      });
+      console.log(`Usuario creado: ${admin.username}, ID: ${admin.id}`);
+      
+      // Create sample student
+      const student = await this.createUser({
+        username: "estudiante",
+        password: "estudiante123",
+        name: "María González",
+        email: "maria@example.com"
+      });
+      console.log(`Usuario creado: ${student.username}, ID: ${student.id}`);
+      
+      // Create categories
+      const algebra = await this.createCategory({
+        name: "Álgebra",
+        description: "Ecuaciones, polinomios y sistemas lineales",
+        colorClass: "primary" // primary color class
+      });
+      console.log(`Categoría creada: ${algebra.name}, ID: ${algebra.id}`);
+      
+      const geometria = await this.createCategory({
+        name: "Geometría",
+        description: "Figuras, ángulos y teoremas básicos",
+        colorClass: "secondary" // secondary color class
+      });
+      console.log(`Categoría creada: ${geometria.name}, ID: ${geometria.id}`);
+      
+      const calculo = await this.createCategory({
+        name: "Cálculo",
+        description: "Límites, derivadas e integrales",
+        colorClass: "accent" // accent color class
+      });
+      console.log(`Categoría creada: ${calculo.name}, ID: ${calculo.id}`);
+      
+      // Create quizzes for Algebra
+      const ecuacionesQuiz = await this.createQuiz({
+        title: "Ecuaciones de primer grado",
+        description: "Resuelve ecuaciones lineales con una incógnita.",
+        categoryId: algebra.id,
+        timeLimit: 15,
+        difficulty: "basic",
+        totalQuestions: 10
+      });
+      console.log(`Quiz creado: ${ecuacionesQuiz.title}, Categoría ID: ${ecuacionesQuiz.categoryId}`);
+      
+      const sistemasQuiz = await this.createQuiz({
+        title: "Sistemas de ecuaciones",
+        description: "Resuelve sistemas lineales de dos ecuaciones.",
+        categoryId: algebra.id,
+        timeLimit: 20,
+        difficulty: "intermediate",
+        totalQuestions: 8
+      });
+      console.log(`Quiz creado: ${sistemasQuiz.title}, Categoría ID: ${sistemasQuiz.categoryId}`);
+      
+      const polinomiosQuiz = await this.createQuiz({
+        title: "Polinomios",
+        description: "Operaciones con polinomios y factorización.",
+        categoryId: algebra.id,
+        timeLimit: 25,
+        difficulty: "intermediate",
+        totalQuestions: 12
+      });
+      console.log(`Quiz creado: ${polinomiosQuiz.title}, Categoría ID: ${polinomiosQuiz.categoryId}`);
+      
+      // Create geometry quizzes
+      const triangulosQuiz = await this.createQuiz({
+        title: "Triángulos",
+        description: "Propiedades y cálculos con triángulos.",
+        categoryId: geometria.id,
+        timeLimit: 20,
+        difficulty: "basic",
+        totalQuestions: 10
+      });
+      console.log(`Quiz creado: ${triangulosQuiz.title}, Categoría ID: ${triangulosQuiz.categoryId}`);
+      
+      const circulosQuiz = await this.createQuiz({
+        title: "Círculos y áreas",
+        description: "Cálculo de áreas y perímetros.",
+        categoryId: geometria.id,
+        timeLimit: 25,
+        difficulty: "intermediate",
+        totalQuestions: 8
+      });
+      console.log(`Quiz creado: ${circulosQuiz.title}, Categoría ID: ${circulosQuiz.categoryId}`);
+      
+      // Create calculus quizzes
+      const limitesQuiz = await this.createQuiz({
+        title: "Límites",
+        description: "Cálculo y propiedades de límites.",
+        categoryId: calculo.id,
+        timeLimit: 30,
+        difficulty: "intermediate",
+        totalQuestions: 10
+      });
+      console.log(`Quiz creado: ${limitesQuiz.title}, Categoría ID: ${limitesQuiz.categoryId}`);
+      
+      const derivadasQuiz = await this.createQuiz({
+        title: "Derivadas",
+        description: "Reglas de derivación y aplicaciones.",
+        categoryId: calculo.id,
+        timeLimit: 35,
+        difficulty: "advanced",
+        totalQuestions: 12
+      });
+      console.log(`Quiz creado: ${derivadasQuiz.title}, Categoría ID: ${derivadasQuiz.categoryId}`);
+      
+    } catch (error) {
+      console.error("Error inicializando datos:", error);
+    }
     
-    // Create sample student
-    this.createUser({
-      username: "estudiante",
-      password: "estudiante123",
-      name: "María González",
-      email: "maria@example.com"
-    });
-    
-    // Create categories
-    const algebra = this.createCategory({
-      name: "Álgebra",
-      description: "Ecuaciones, polinomios y sistemas lineales",
-      colorClass: "primary" // primary color class
-    });
-    
-    const geometria = this.createCategory({
-      name: "Geometría",
-      description: "Figuras, ángulos y teoremas básicos",
-      colorClass: "secondary" // secondary color class
-    });
-    
-    const calculo = this.createCategory({
-      name: "Cálculo",
-      description: "Límites, derivadas e integrales",
-      colorClass: "accent" // accent color class
-    });
-    
-    // Create quizzes for Algebra
-    const ecuacionesQuiz = this.createQuiz({
-      title: "Ecuaciones de primer grado",
-      description: "Resuelve ecuaciones lineales con una incógnita.",
-      categoryId: algebra.id,
-      timeLimit: 15,
-      difficulty: "basic",
-      totalQuestions: 10
-    });
-    
-    this.createQuiz({
-      title: "Sistemas de ecuaciones",
-      description: "Resuelve sistemas lineales de dos ecuaciones.",
-      categoryId: algebra.id,
-      timeLimit: 20,
-      difficulty: "intermediate",
-      totalQuestions: 8
-    });
-    
-    this.createQuiz({
-      title: "Polinomios",
-      description: "Operaciones con polinomios y factorización.",
-      categoryId: algebra.id,
-      timeLimit: 25,
-      difficulty: "intermediate",
-      totalQuestions: 12
-    });
-    
-    // Create geometry quizzes
-    this.createQuiz({
-      title: "Triángulos",
-      description: "Propiedades y cálculos con triángulos.",
-      categoryId: geometria.id,
-      timeLimit: 20,
-      difficulty: "basic",
-      totalQuestions: 10
-    });
-    
-    this.createQuiz({
-      title: "Círculos y áreas",
-      description: "Cálculo de áreas y perímetros.",
-      categoryId: geometria.id,
-      timeLimit: 25,
-      difficulty: "intermediate",
-      totalQuestions: 8
-    });
-    
-    // Create calculus quizzes
-    this.createQuiz({
-      title: "Límites",
-      description: "Cálculo y propiedades de límites.",
-      categoryId: calculo.id,
-      timeLimit: 30,
-      difficulty: "intermediate",
-      totalQuestions: 10
-    });
-    
-    this.createQuiz({
-      title: "Derivadas",
-      description: "Reglas de derivación y aplicaciones.",
-      categoryId: calculo.id,
-      timeLimit: 35,
-      difficulty: "advanced",
-      totalQuestions: 12
-    });
-    
-    // Create sample questions for ecuaciones quiz
-    const q1 = this.createQuestion({
-      quizId: ecuacionesQuiz.id,
-      content: "Resuelve la siguiente ecuación: {a}x + {b} = {c}",
-      type: "equation",
-      difficulty: 1,
-      points: 5,
-      variables: {
-        a: { min: 1, max: 10 },
-        b: { min: 1, max: 20 },
-        c: { min: 10, max: 50 }
+    // Crear preguntas y respuestas para el quiz de ecuaciones
+    try {
+      // Obtenemos el primer quiz (ecuaciones) creado anteriormente
+      const quizzes = await this.getQuizzesByCategory(1); // Álgebra
+      
+      if (quizzes.length > 0) {
+        const ecuacionesQuiz = quizzes[0];
+        
+        // Create sample questions for ecuaciones quiz
+        const q1 = await this.createQuestion({
+          quizId: ecuacionesQuiz.id,
+          content: "Resuelve la siguiente ecuación: {a}x + {b} = {c}",
+          type: "equation",
+          difficulty: 1,
+          points: 5,
+          variables: {
+            a: { min: 1, max: 10 },
+            b: { min: 1, max: 20 },
+            c: { min: 10, max: 50 }
+          }
+        });
+        
+        // Create sample answers for the first question
+        await this.createAnswer({
+          questionId: q1.id,
+          content: "x = {answer}",
+          isCorrect: true,
+          explanation: "Para resolver {a}x + {b} = {c}, despejamos x: {a}x = {c} - {b}, entonces x = ({c} - {b}) / {a}"
+        });
+        
+        await this.createAnswer({
+          questionId: q1.id,
+          content: "x = {wrongAnswer1}",
+          isCorrect: false,
+          explanation: "Esta respuesta es incorrecta. Debes despejar x correctamente."
+        });
+        
+        await this.createAnswer({
+          questionId: q1.id,
+          content: "x = {wrongAnswer2}",
+          isCorrect: false,
+          explanation: "Esta respuesta es incorrecta. Recuerda que debes despejar la variable x."
+        });
+        
+        await this.createAnswer({
+          questionId: q1.id,
+          content: "x = {wrongAnswer3}",
+          isCorrect: false,
+          explanation: "Esta respuesta es incorrecta. Revisa tus cálculos."
+        });
+        
+        // Create more questions for ecuaciones quiz
+        const q2 = await this.createQuestion({
+          quizId: ecuacionesQuiz.id,
+          content: "Resuelve: {a}x - {b} = {c}",
+          type: "equation",
+          difficulty: 1,
+          points: 5,
+          variables: {
+            a: { min: 1, max: 10 },
+            b: { min: 1, max: 20 },
+            c: { min: -10, max: 30 }
+          }
+        });
+        
+        // Create sample progress for the student
+        const estudiantes = await this.getUsers();
+        if (estudiantes.length > 1) { // Asegurar que hay al menos 2 usuarios (admin y María)
+          const maria = estudiantes[1]; // Student María (id 2)
+          
+          await this.createStudentProgress({
+            userId: maria.id,
+            quizId: ecuacionesQuiz.id,
+            status: "completed",
+            score: 90,
+            completedQuestions: 10,
+            timeSpent: 720, // 12 minutes in seconds
+            completedAt: new Date()
+          });
+          
+          const quizzesList = await this.getQuizzes();
+          if (quizzesList.length > 1) {
+            await this.createStudentProgress({
+              userId: maria.id,
+              quizId: quizzesList[1].id, // Sistemas de ecuaciones (id 2)
+              status: "in_progress",
+              completedQuestions: 4,
+              timeSpent: 480, // 8 minutes in seconds
+            });
+          }
+        }
+      } else {
+        console.error("No se encontraron quizzes de álgebra para crear preguntas");
       }
-    });
-    
-    // Create sample answers for the first question
-    this.createAnswer({
-      questionId: q1.id,
-      content: "x = {answer}",
-      isCorrect: true,
-      explanation: "Para resolver {a}x + {b} = {c}, despejamos x: {a}x = {c} - {b}, entonces x = ({c} - {b}) / {a}"
-    });
-    
-    this.createAnswer({
-      questionId: q1.id,
-      content: "x = {wrongAnswer1}",
-      isCorrect: false,
-      explanation: "Esta respuesta es incorrecta. Debes despejar x correctamente."
-    });
-    
-    this.createAnswer({
-      questionId: q1.id,
-      content: "x = {wrongAnswer2}",
-      isCorrect: false,
-      explanation: "Esta respuesta es incorrecta. Recuerda que debes despejar la variable x."
-    });
-    
-    this.createAnswer({
-      questionId: q1.id,
-      content: "x = {wrongAnswer3}",
-      isCorrect: false,
-      explanation: "Esta respuesta es incorrecta. Revisa tus cálculos."
-    });
-    
-    // Create more questions for ecuaciones quiz
-    const q2 = this.createQuestion({
-      quizId: ecuacionesQuiz.id,
-      content: "Resuelve: {a}x - {b} = {c}",
-      type: "equation",
-      difficulty: 1,
-      points: 5,
-      variables: {
-        a: { min: 1, max: 10 },
-        b: { min: 1, max: 20 },
-        c: { min: -10, max: 30 }
-      }
-    });
-    
-    // Create sample progress for the student
-    this.createStudentProgress({
-      userId: 2, // Student María
-      quizId: ecuacionesQuiz.id,
-      status: "completed",
-      score: 90,
-      completedQuestions: 10,
-      timeSpent: 720, // 12 minutes in seconds
-      completedAt: new Date()
-    });
-    
-    this.createStudentProgress({
-      userId: 2, // Student María
-      quizId: 2, // Sistemas de ecuaciones
-      status: "in_progress",
-      completedQuestions: 4,
-      timeSpent: 480, // 8 minutes in seconds
-    });
+    } catch (error) {
+      console.error("Error creando preguntas de muestra:", error);
+    }
   }
 
   // User methods
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+  
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
   }
@@ -307,9 +351,19 @@ export class MemStorage implements IStorage {
   }
   
   async getQuizzesByCategory(categoryId: number): Promise<Quiz[]> {
-    return Array.from(this.quizzes.values()).filter(
-      (quiz) => quiz.categoryId === categoryId
+    // Asegurarse de que categoryId es un número
+    const catId = typeof categoryId === 'string' ? parseInt(categoryId) : categoryId;
+    
+    const result = Array.from(this.quizzes.values()).filter(
+      (quiz) => {
+        const quizCatId = typeof quiz.categoryId === 'string' ? parseInt(quiz.categoryId) : quiz.categoryId;
+        console.log(`Comparando quiz ${quiz.title}: ${quizCatId} con categoría: ${catId}`);
+        return quizCatId === catId;
+      }
     );
+    
+    console.log(`Encontrados ${result.length} quizzes para la categoría ${catId}`);
+    return result;
   }
   
   async getQuiz(id: number): Promise<Quiz | undefined> {
@@ -318,8 +372,11 @@ export class MemStorage implements IStorage {
   
   async createQuiz(quiz: InsertQuiz): Promise<Quiz> {
     const id = this.quizId++;
-    const newQuiz: Quiz = { ...quiz, id };
+    // Asegurarse de que categoryId es un número
+    const categoryId = typeof quiz.categoryId === 'string' ? parseInt(quiz.categoryId) : quiz.categoryId;
+    const newQuiz: Quiz = { ...quiz, id, categoryId };
     this.quizzes.set(id, newQuiz);
+    console.log(`Creando quiz: ${newQuiz.title}, categoryId: ${newQuiz.categoryId}`);
     return newQuiz;
   }
   
