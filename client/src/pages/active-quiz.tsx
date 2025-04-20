@@ -12,6 +12,10 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, ArrowRight, Timer } from 'lucide-react';
 import { shuffleArray } from '@/lib/mathUtils';
 
+ {/*deep seek me ayuda a parsear la pregunta*/}
+ import { QuestionContent } from '@/components/QuestionContent'; // Ajusta la ruta según tu estructura
+{/*fin deep seek*/}
+
 interface Quiz {
   id: number;
   title: string;
@@ -381,15 +385,20 @@ function ActiveQuiz() {
               </div>
             </div>
             
-            <div className="mb-6">
-              <h3 className="text-lg font-medium mb-2">
-                {currentQuestion.type === 'equation' ? 'Resuelve la siguiente ecuación:' : 'Responde la siguiente pregunta:'}
-              </h3>
-              <div className="bg-gray-50 p-4 rounded-lg text-center">
-                <MathDisplay math={currentQuestion.content} display={true} className="text-xl" />
-              </div>
-            </div>
-            
+           
+{/*deep seek me ayuda a parsear la pregunta*/}
+
+<div className="mb-6">
+  <h3 className="text-lg font-medium mb-2">
+    {currentQuestion.type === 'equation' 
+      ? 'Resuelve la siguiente ecuación:' 
+      : 'Responde la siguiente pregunta:'}
+  </h3>
+  <QuestionContent content={currentQuestion.content} />
+</div>
+
+{/*fin deep seek*/}
+
             <div className="space-y-3">
               {shuffledAnswers.map((answer, index) => (
                 <QuizOption
