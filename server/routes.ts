@@ -702,6 +702,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+
+  /* 
   apiRouter.post("/admin/questions", requireAdmin, async (req: Request, res: Response) => {
     try {
       const { answers, ...questionData } = req.body;
@@ -729,7 +731,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error creating question" });
     }
   });
+*/
+//deep seek me ayuda error crear preguntas
+  apiRouter.post("/admin/questions", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { answers = [], ...questionData } = req.body;
   
+      // Validación básica
+      if (!questionData.quizId || isNaN(parseInt(questionData.quizId))) {
+        return res.status(400).json({ message: "Invalid quiz ID" });
+      }
+  
+      if (!['multiple_choice', 'text', 'formula'].includes(questionData.type)) {
+        return res.status(400).json({ message: "Invalid question type" });
+      }
+  
+      // Crear pregunta principal
+      const newQuestion = await storage.createQuestion({
+        ...questionData,
+        quizId: parseInt(questionData.quizId)
+      });
+  
+      // Manejo de respuestas
+      let createdAnswers = [];
+      if (questionData.type === 'multiple_choice' && Array.isArray(answers)) {
+        try {
+          createdAnswers = await Promise.all(
+            answers.map(async (answer) => {
+              try {
+                return await storage.createAnswer({
+                  ...answer,
+                  questionId: newQuestion.id
+                });
+              } catch (error) {
+                console.error(`Failed to create answer: ${answer.content}`, error);
+                return null; // Devuelve null para respuestas fallidas
+              }
+            })
+          );
+          // Filtrar respuestas nulas (las que fallaron)
+          createdAnswers = createdAnswers.filter(answer => answer !== null);
+        } catch (error) {
+          console.error("Error creating answers:", error);
+          // Continuamos aunque falle alguna respuesta
+        }
+      }
+  
+      res.status(201).json({
+        ...newQuestion,
+        answers: createdAnswers
+      });
+  
+    } catch (error) {
+      console.error("Question creation error:", error);
+      res.status(500).json({ 
+        message: "Error creating question",
+        error: error.message 
+      });
+    }
+  });
+  //fin deep seek me ayuda error crear preguntas
+
   apiRouter.delete("/admin/questions/:id", requireAdmin, async (req: Request, res: Response) => {
     const questionId = parseInt(req.params.id);
     

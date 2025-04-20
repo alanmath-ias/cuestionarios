@@ -74,7 +74,7 @@ export default function QuestionsAdmin() {
     },
   });
 
-  const createMutation = useMutation({
+ /* const createMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
       const payload = {
         quizId: quizId,
@@ -98,7 +98,38 @@ export default function QuestionsAdmin() {
       }
       
       return response.json();
-    },
+    },*/
+
+//deep seek me ayuda con lo del error en la creacion de preguntas
+const createMutation = useMutation({
+  mutationFn: async (values: z.infer<typeof formSchema>) => {
+    const payload = {
+      quizId: quizId,
+      content: values.content,
+      type: values.type,
+      difficulty: parseInt(values.difficulty),
+      points: parseInt(values.points),
+      variables: values.variables ? JSON.parse(values.variables) : null,
+      answers: values.type === 'multiple_choice' ? answers : [] // <-- Envía array vacío si no es opción múltiple
+    };
+    
+    const response = await fetch("/api/admin/questions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json(); // <-- Lee el mensaje de error del backend
+      throw new Error(errorData.message || errorData.error || "Error al crear la pregunta");
+    }
+    
+    return response.json();
+  },
+//fin de la parte de deep seek
+
     onSuccess: (data: Question) => {
       // Crear respuestas para esta pregunta
       if (answers.length > 0) {
