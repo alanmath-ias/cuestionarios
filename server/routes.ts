@@ -8,6 +8,11 @@ import {
   insertStudentAnswerSchema 
 } from "@shared/schema";
 import * as expressSession from "express-session";
+import { eq } from "drizzle-orm";
+
+import { db } from "./db";
+import { userCategories, categories } from "../shared/schema";
+import { users } from "../shared/schema";
 
 // Extend the SessionData interface to include userId
 declare module "express-session" {
@@ -107,13 +112,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
+      
       // Return user without password
-      const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      //const { password: _, ...userWithoutPassword } = user;
+      //res.json(userWithoutPassword);
+      // Return user without password but WITH role
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({
+      ...userWithoutPassword,
+      role: user.role // Asegúrate de incluir el rol
+    });
     } catch (error) {
       console.error("Auth check error:", error);
       res.status(500).json({ message: "Error checking authentication" });
-    }
+
+      
+    }//fin deep seek
   });
   
   // Add the /user endpoint as well
@@ -630,6 +644,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+// API para gestionar usuarios por categorias
+//deep seek nuevo intento categorias por usuarios
+// Middleware para verificar rol de administrador
+/*export function checkAdmin(req: Request, res: Response, next: NextFunction) {
+  // Verifica si el usuario está autenticado
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "No autenticado" });
+  }
+  
+  // Verifica si el usuario es admin
+  if (req.session.role !== 'admin') {
+    return res.status(403).json({ message: "Acceso no autorizado. Se requiere rol de administrador" });
+  }
+  
+  next();
+}
+*/
+// User Categories endpoints
+
+//apiRouter.get("/users/:userId/categories", checkAdmin, async (req, res) => {
+
+apiRouter.get("/users/:userId/categories", requireAdmin, async (req, res) => {
+  const userId = parseInt(req.params.userId);
+  console.log("🧪 userId recibido1:", req.params.userId, "➡️ convertido a:", userId);
+  if (isNaN(userId)) {
+    return res.status(400).json({ message: "ID de usuario inválido" });
+  }
+  
+  try {
+    const userCats = await db
+      .select()
+      .from(userCategories)
+      .where(eq(userCategories.userId, userId))
+      .leftJoin(categories, eq(userCategories.categoryId, categories.id));
+    
+    res.json(userCats || []); // Siempre devuelve un array
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ 
+      message: "Error al obtener categorías",
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+apiRouter.put("/users/:userId/categories", async (req: Request, res: Response) => {
+  const userId = parseInt(req.params.userId);
+  const { categoryIds } = req.body;
+  console.log("🧪 userId recibido2:", req.params.userId, "➡️ convertido a:", userId);
+  if (isNaN(userId)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+  
+  if (!Array.isArray(categoryIds)) {
+    return res.status(400).json({ message: "categoryIds must be an array" });
+  }
+  
+  try {
+    // Transaction para asegurar consistencia
+    await db.transaction(async (tx) => {
+      // Eliminar relaciones existentes
+      await tx
+        .delete(userCategories)
+        .where(eq(userCategories.userId, userId));
+      
+      // Insertar nuevas relaciones si hay categorías seleccionadas
+      if (categoryIds.length > 0) {
+        const inserts = categoryIds.map(categoryId => ({
+          userId,
+          categoryId
+        }));
+        
+        await tx.insert(userCategories).values(inserts);
+      }
+    });
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error("User categories update error:", error);
+    res.status(500).json({ message: "Error updating user categories" });
+  }
+});
+//fin deep seek
+
+//turno chatgpt
+apiRouter.get("/admin/users-with-categories", requireAdmin, async (req, res) => {
+  try {
+    // Obtener todos los usuarios
+    const allUsers = await db.select().from(users);
+
+    // Obtener todas las relaciones usuario-categoría
+    const userCats = await db
+      .select()
+      .from(userCategories)
+      .leftJoin(categories, eq(userCategories.categoryId, categories.id));
+
+    // Agrupar categorías por usuario
+    const userMap = new Map<number, any[]>();
+
+    for (const uc of userCats) {
+      const uid = uc.user_categories.userId;
+      const cat = uc.categories;
+
+      if (!userMap.has(uid)) {
+        userMap.set(uid, []);
+      }
+
+      if (cat) {
+        userMap.get(uid)!.push(cat);
+      }
+    }
+
+    // Combinar usuarios con sus categorías
+    const result = allUsers.map(user => ({
+      user,
+      categories: userMap.get(user.id) || []
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error al obtener usuarios con categorías:", error);
+    res.status(500).json({ message: "Error al obtener usuarios con categorías" });
+  }
+});
+
+//fin chatgpt
+
+
+
   // API para gestionar quizzes
   apiRouter.post("/admin/quizzes", requireAdmin, async (req: Request, res: Response) => {
     try {

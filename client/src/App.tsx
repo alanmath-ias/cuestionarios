@@ -18,6 +18,9 @@ import { PageLayout } from "@/components/layout/page-layout";
 import { useQuery } from "@tanstack/react-query";
 import { User } from "@/shared/types";
 import { useEffect } from "react";
+import UserCategoriesAdmin from './pages/admin/UserCategoriesAdmin';
+import AllUsersCategoriesAdmin from './pages/admin/AllUsersCategoriesAdmin';
+
 
 function ProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
   const { data: user, isLoading } = useQuery<User>({
@@ -126,6 +129,27 @@ function Router() {
       <Route path="/admin/quizzes/:quizId/questions">
         {(params) => <AdminProtectedRoute component={QuestionsAdmin} path={`/admin/quizzes/${params.quizId}/questions`} />}
       </Route>
+
+      //deep seek nuevo intento categorias por usuarios
+{/* Nueva ruta para administración de categorías por usuario */}
+<Route path="/admin/users/:userId/categories">
+  {(params) => (
+    <AdminProtectedRoute 
+      component={UserCategoriesAdmin} 
+      path={`/admin/users/${params.userId}/categories`} 
+    />
+  )}
+</Route>
+      //fin deep seek
+
+      <Route path="/admin/users-categories">
+  <AdminProtectedRoute 
+    component={AllUsersCategoriesAdmin}
+    path="/admin/users-categories" 
+  />
+</Route>
+
+
 
       {/* Ruta de 404 */}
       <Route>

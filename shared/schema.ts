@@ -1,4 +1,5 @@
-import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+//import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, jsonb, timestamp, unique } from "drizzle-orm/pg-core";//deep seek nuevo intento categorias por usuarios
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -134,6 +135,25 @@ export const insertStudentAnswerSchema = createInsertSchema(studentAnswers).pick
   variables: true,
   timeSpent: true,
 });
+
+//deepseek nuevo intento categorias por usuarios
+// User-Categories relation (many-to-many)
+export const userCategories = pgTable("user_categories", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  categoryId: integer("category_id").notNull().references(() => categories.id),
+}, (table) => ({
+  unq: unique("user_category_unique").on(table.userId, table.categoryId)
+}));
+
+export const insertUserCategorySchema = createInsertSchema(userCategories).pick({
+  userId: true,
+  categoryId: true,
+});
+
+export type UserCategory = typeof userCategories.$inferSelect;
+export type InsertUserCategory = z.infer<typeof insertUserCategorySchema>;
+//fin deep seek
 
 // Types exports
 export type User = typeof users.$inferSelect;
