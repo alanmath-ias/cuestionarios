@@ -18,6 +18,16 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+//chat gpt quices a usuarios
+// client/src/types/index.ts
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+//fin chat gpt quices a usuarios
+
 
 // Session middleware setup usando PostgreSQL
 const PgStore = PgSession(session);

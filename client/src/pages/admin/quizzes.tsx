@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useEffect, useState } from "react"; // asegúrate de importar useState y useEffect aquí
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -18,6 +18,19 @@ import { Category, Quiz } from "@/shared/types";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
+import { User } from '@/shared/types';
+
+//deep seek me ayuda a organizar categorías y cuestionarios
+//import React, { useEffect } from 'react';
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from "@/components/ui/accordion";
+//fin deep seek
+
+
 const difficultyOptions = [
   { value: "básico", label: "Básico" },
   { value: "intermedio", label: "Intermedio" },
@@ -34,6 +47,45 @@ const formSchema = z.object({
 });
 
 export default function QuizzesAdmin() {
+
+//chat gpt quiz a usuario
+// Agrega esto donde estás mostrando cada quiz
+
+const [allUsers, setAllUsers] = useState<User[]>([]);
+const [assignedUsers, setAssignedUsers] = useState<number[]>([]);
+
+const fetchUsers = async () => {
+  const res = await fetch('/api/admin/users');
+  const data = await res.json();
+  setAllUsers(data);
+};
+
+const fetchAssignedUsers = async (quizId: number) => {
+  const res = await fetch(`/api/admin/users/quizzes/${quizId}`);
+  const data = await res.json();
+  setAssignedUsers(data.map((user: User) => user.id));
+};
+
+const toggleQuizAssignment = async (quizId: number, userId: number, isAssigned: boolean) => {
+  const method = isAssigned ? 'DELETE' : 'POST';
+  const res = await fetch(`/api/admin/users/quizzes`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userId, quizId })
+  });
+
+  if (res.ok) {
+    fetchAssignedUsers(quizId);
+  }
+};
+
+useEffect(() => {
+  fetchUsers();
+}, []);
+//chat gpt quiz a usuario fin
+
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -428,182 +480,217 @@ export default function QuizzesAdmin() {
                 </div>
               ) : quizzes && quizzes.length > 0 ? (
                 <>
-                  {categories && categories.length > 0 ? (
-                    <div className="space-y-8">
-                      {categories.map((category) => {
-                        // Obtener cuestionarios de esta categoría
-                        const categoryQuizzes = quizzes.filter(quiz => quiz.categoryId === category.id);
-                        
-                        // Si no hay cuestionarios en esta categoría, no mostrar la sección
-                        if (categoryQuizzes.length === 0) return null;
-                        
-                        return (
-                          <div key={category.id} className="space-y-4">
-                            <div className={`p-2 pl-3 rounded-md border-l-4 border-l-${category.colorClass || 'primary'}`}>
-                              <h3 className="text-xl font-medium">{category.name}</h3>
-                              <p className="text-sm text-muted-foreground">{category.description}</p>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 gap-4">
-                              {categoryQuizzes.map((quiz: Quiz) => (
-                                <Card key={quiz.id} className="overflow-hidden border border-muted">
-                                  <CardContent className="p-6">
-                                    <div className="flex flex-col space-y-4">
-                                      <div className="flex justify-between items-start">
-                                        <div>
-                                          <div className="flex items-center gap-2">
-                                            <h3 className="text-lg font-semibold">{quiz.title}</h3>
-                                            {quiz.isPublic && (
-                                              <Badge variant="outline" className="ml-2">
-                                                <LinkIcon className="h-3 w-3 mr-1" /> Público
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                          <Button 
-                                            variant="outline" 
-                                            size="sm" 
-                                            onClick={() => handleEdit(quiz)}
-                                          >
-                                            Editar
-                                          </Button>
-                                          <Button 
-                                            variant="destructive" 
-                                            size="sm"
-                                            onClick={() => handleDelete(quiz.id)}
-                                            title="Eliminar cuestionario"
-                                          >
-                                            <Trash className="h-4 w-4" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                      
-                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
-                                        <div className="flex items-center">
-                                          <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                                          <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
-                                        </div>
-                                        <div>
-                                          <Badge variant={
-                                            quiz.difficulty === "básico" ? "default" : 
-                                            quiz.difficulty === "intermedio" ? "secondary" : "destructive"
-                                          }>
-                                            {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
-                                          </Badge>
-                                        </div>
-                                        <div>
-                                          <Badge variant="outline" className="bg-primary/10">
-                                            {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                      
-                                      <Separator />
-                                      
-                                      <div className="flex justify-end">
-                                        <Button 
-                                          size="sm" 
-                                          onClick={() => handleManageQuestions(quiz.id)}
-                                        >
-                                          Gestionar preguntas
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              ))}
-                            </div>
+                {categories && categories.length > 0 ? (
+                <Accordion type="multiple" className="space-y-4">
+                  {categories.map((category) => {
+                    const categoryQuizzes = quizzes.filter(quiz => quiz.categoryId === category.id);
+      if (categoryQuizzes.length === 0) return null;
+      
+      return (
+        <AccordionItem 
+          key={category.id} 
+          value={category.id.toString()}
+          className={`border rounded-md overflow-hidden ${category.colorClass ? `border-l-4 border-l-${category.colorClass}` : ''}`}
+        >
+          <AccordionTrigger className="hover:no-underline px-4 py-3">
+            <div className="flex-1 text-left">
+              <h3 className="text-lg font-medium">{category.name}</h3>
+              <p className="text-sm text-muted-foreground">{category.description}</p>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-0">
+            <div className="grid grid-cols-1 gap-4 pt-4">
+              {categoryQuizzes.map((quiz: Quiz) => (
+                <Card key={quiz.id} className="overflow-hidden border border-muted">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold">{quiz.title}</h3>
+                            {quiz.isPublic && (
+                              <Badge variant="outline" className="ml-2">
+                                <LinkIcon className="h-3 w-3 mr-1" /> Público
+                              </Badge>
+                            )}
                           </div>
-                        );
-                      })}
-                      
-                      {/* Mostrar cuestionarios sin categoría */}
-                      {quizzes.filter(quiz => !categories.some(cat => cat.id === quiz.categoryId)).length > 0 && (
-                        <div className="space-y-4">
-                          <div className="p-2 pl-3 rounded-md border-l-4 border-l-muted">
-                            <h3 className="text-xl font-medium">Sin categoría</h3>
-                            <p className="text-sm text-muted-foreground">Cuestionarios que no pertenecen a ninguna categoría</p>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 gap-4">
-                            {quizzes
-                              .filter(quiz => !categories.some(cat => cat.id === quiz.categoryId))
-                              .map((quiz: Quiz) => (
-                                <Card key={quiz.id} className="overflow-hidden border border-muted">
-                                  <CardContent className="p-6">
-                                    <div className="flex flex-col space-y-4">
-                                      <div className="flex justify-between items-start">
-                                        <div>
-                                          <div className="flex items-center gap-2">
-                                            <h3 className="text-lg font-semibold">{quiz.title}</h3>
-                                            {quiz.isPublic && (
-                                              <Badge variant="outline" className="ml-2">
-                                                <LinkIcon className="h-3 w-3 mr-1" /> Público
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                          <Button 
-                                            variant="outline" 
-                                            size="sm" 
-                                            onClick={() => handleEdit(quiz)}
-                                          >
-                                            Editar
-                                          </Button>
-                                          <Button 
-                                            variant="destructive" 
-                                            size="sm"
-                                            onClick={() => handleDelete(quiz.id)}
-                                            title="Eliminar cuestionario"
-                                          >
-                                            <Trash className="h-4 w-4" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                      
-                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
-                                        <div className="flex items-center">
-                                          <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                                          <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
-                                        </div>
-                                        <div>
-                                          <Badge variant={
-                                            quiz.difficulty === "básico" ? "default" : 
-                                            quiz.difficulty === "intermedio" ? "secondary" : "destructive"
-                                          }>
-                                            {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
-                                          </Badge>
-                                        </div>
-                                        <div>
-                                          <Badge variant="outline" className="bg-primary/10">
-                                            {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                      
-                                      <Separator />
-                                      
-                                      <div className="flex justify-end">
-                                        <Button 
-                                          size="sm" 
-                                          onClick={() => handleManageQuestions(quiz.id)}
-                                        >
-                                          Gestionar preguntas
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                            ))}
-                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
                         </div>
-                      )}
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleEdit(quiz)}
+                          >
+                            Editar
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => handleDelete(quiz.id)}
+                            title="Eliminar cuestionario"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      // Chat gpt quiz a usuario Dentro del render de cada quiz añade esto para el botón de gestión:
+<Button size="sm" variant="secondary" onClick={() => fetchAssignedUsers(quiz.id)}>
+  Asignar usuarios
+</Button>
+
+{assignedUsers.length > 0 && (
+  <div className="mt-4">
+    <p className="font-semibold">Usuarios asignados:</p>
+    <ul className="list-disc ml-6">
+      {allUsers.map(user => (
+        <li key={user.id}>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={assignedUsers.includes(user.id)}
+              onChange={() => toggleQuizAssignment(quiz.id, user.id, assignedUsers.includes(user.id))}
+            />
+            {user.name} ({user.email})
+          </label>
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
+
+//chat gpt quiz a ususario fin
+
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                          <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
+                        </div>
+                        <div>
+                          <Badge variant={
+                            quiz.difficulty === "básico" ? "default" : 
+                            quiz.difficulty === "intermedio" ? "secondary" : "destructive"
+                          }>
+                            {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
+                          </Badge>
+                        </div>
+                        <div>
+                          <Badge variant="outline" className="bg-primary/10">
+                            {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="flex justify-end">
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleManageQuestions(quiz.id)}
+                        >
+                          Gestionar preguntas
+                        </Button>
+                      </div>
                     </div>
-                  ) : (
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      );
+    })}
+    
+    {/* Cuestionarios sin categoría */}
+    {quizzes.filter(quiz => !categories.some(cat => cat.id === quiz.categoryId)).length > 0 && (
+      <AccordionItem value="uncategorized" className="border rounded-md overflow-hidden">
+        <AccordionTrigger className="hover:no-underline px-4 py-3">
+          <div className="flex-1 text-left">
+            <h3 className="text-lg font-medium">Sin categoría</h3>
+            <p className="text-sm text-muted-foreground">Cuestionarios que no pertenecen a ninguna categoría</p>
+          </div>
+        </AccordionTrigger>
+        <AccordionContent className="px-4 pb-0">
+          <div className="grid grid-cols-1 gap-4 pt-4">
+            {quizzes
+              .filter(quiz => !categories.some(cat => cat.id === quiz.categoryId))
+              .map((quiz: Quiz) => (
+                <Card key={quiz.id} className="overflow-hidden border border-muted">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold">{quiz.title}</h3>
+                            {quiz.isPublic && (
+                              <Badge variant="outline" className="ml-2">
+                                <LinkIcon className="h-3 w-3 mr-1" /> Público
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleEdit(quiz)}
+                          >
+                            Editar
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => handleDelete(quiz.id)}
+                            title="Eliminar cuestionario"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                          <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
+                        </div>
+                        <div>
+                          <Badge variant={
+                            quiz.difficulty === "básico" ? "default" : 
+                            quiz.difficulty === "intermedio" ? "secondary" : "destructive"
+                          }>
+                            {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
+                          </Badge>
+                        </div>
+                        <div>
+                          <Badge variant="outline" className="bg-primary/10">
+                            {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="flex justify-end">
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleManageQuestions(quiz.id)}
+                        >
+                          Gestionar preguntas
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    )}
+  </Accordion>
+) : (
+  
                     <div className="grid grid-cols-1 gap-4">
                       {quizzes.map((quiz: Quiz) => (
                         <Card key={quiz.id} className="overflow-hidden border border-muted">

@@ -818,6 +818,11 @@ apiRouter.get("/admin/users-with-categories", requireAdmin, async (req, res) => 
     }
   });
   
+//deep seek me ayuda a asignar cuestionarios a los usuarios
+// 1. Endpoint para obtener usuarios con sus cuestionarios asignados
+
+//fin deep seek me ayuda a asignar cuestionarios a los usuarios
+
   // API para gestionar preguntas
   apiRouter.get("/admin/questions", requireAdmin, async (req: Request, res: Response) => {
     const quizId = parseInt(req.query.quizId as string);
