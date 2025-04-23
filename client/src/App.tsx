@@ -142,10 +142,10 @@ function Router() {
 </Route>
       //fin deep seek
 
-      <Route path="/admin/users-categories">
+      <Route path="/admin/urlusercategories">
   <AdminProtectedRoute 
     component={AllUsersCategoriesAdmin}
-    path="/admin/users-categories" 
+    path="/admin/urlusercategories" 
   />
 </Route>
 
