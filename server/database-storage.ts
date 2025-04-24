@@ -11,6 +11,10 @@ import {
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import { IStorage } from "./storage";
+import { userQuizzes } from '@shared/schema';
+import { drizzle } from "drizzle-orm/postgres-js";
+
+
 
 export class DatabaseStorage implements IStorage {
   // User methods
@@ -104,6 +108,54 @@ export class DatabaseStorage implements IStorage {
     await db.delete(quizzes).where(eq(quizzes.id, id));
   }
   
+  //chat gpt cuestionarios a usuarios
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users);
+  }
+  
+  async getUserQuizzes(userId: number): Promise<Quiz[]> {
+    const result = await db
+      .select()
+      .from(quizzes)
+      .innerJoin(studentProgress, eq(quizzes.id, studentProgress.quizId))
+      .where(eq(studentProgress.userId, userId));
+      
+    // Como devuelve un array de objetos con .quizzes y .studentProgress, sacamos solo los quices
+    return result.map(row => row.quizzes);
+  }
+   
+  constructor(private readonly db: ReturnType<typeof drizzle>) {}
+
+  async assignQuizToUser(userId: number, quizId: number) {
+    try {
+      await this.db.insert(userQuizzes).values({ userId, quizId }).onConflictDoNothing();
+    } catch (error) {
+      console.error("DB Error in assignQuizToUser:", error);
+      throw error;
+    }
+  }
+  
+  
+  async removeQuizFromUser(userId: number, quizId: number) {
+    await db.delete(userQuizzes).where(
+      and(eq(userQuizzes.userId, userId), eq(userQuizzes.quizId, quizId))
+    );
+  }
+  
+
+  async getUsersAssignedToQuiz(quizId: number) {
+    const result = await this.db
+      .select()
+      .from(userQuizzes)
+      .where(eq(userQuizzes.quizId, quizId));
+    return result;
+  }
+
+
+
+  //fin chat gpt cuestionarios a usuarios
+
   // Question methods
   async getQuestionsByQuiz(quizId: number): Promise<Question[]> {
     return await db.select().from(questions).where(eq(questions.quizId, quizId));

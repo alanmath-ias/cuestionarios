@@ -48,6 +48,16 @@ export const quizzes = pgTable("quizzes", {
   isPublic: boolean("is_public").default(false), // Indica si el quiz es público o requiere autenticación
 });
 
+//chat gpt cuestionarios a usuarios
+
+
+export const userQuizzes = pgTable("user_quizzes", {
+  userId: integer("user_id").notNull().references(() => users.id),
+  quizId: integer("quiz_id").notNull().references(() => quizzes.id),
+});
+
+//fin chat gpt cuestionarios a usuarios
+
 export const insertQuizSchema = createInsertSchema(quizzes).pick({
   title: true,
   description: true,

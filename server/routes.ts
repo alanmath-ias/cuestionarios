@@ -13,6 +13,15 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { userCategories, categories } from "../shared/schema";
 import { users } from "../shared/schema";
+import { getUsersAssignedToQuiz } from './storage'; // Ajusta la ruta según dónde esté definido
+
+
+
+//chat gpt cuestionarios a usuarios
+import { DatabaseStorage } from './database-storage';
+
+const storage = new DatabaseStorage(db);
+//fin chat gpt cuestionarios a usuarios
 
 // Extend the SessionData interface to include userId
 declare module "express-session" {
@@ -579,25 +588,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware para verificar si el usuario es administrador
   const requireAdmin = async (req: Request, res: Response, next: () => void) => {
     const userId = req.session.userId;
-    
+    console.log("🧩 Session userId:", userId);
+  
     if (!userId) {
+      console.warn("⚠️ Usuario no autenticado");
       return res.status(401).json({ message: "Authentication required" });
     }
-    
+  
     try {
       const user = await storage.getUser(userId);
-      
-      // Verificamos si el usuario tiene el rol de administrador
+      console.log("👤 Usuario autenticado:", user);
+  
       if (!user || user.role !== 'admin') {
+        console.warn("⛔ No tiene rol de administrador");
         return res.status(403).json({ message: "Admin access required" });
       }
-      
+  
       next();
     } catch (error) {
-      console.error("Admin check error:", error);
+      console.error("❌ Admin check error:", error);
       res.status(500).json({ message: "Error checking admin permissions" });
     }
   };
+  
   
   // API para gestionar categorías
   apiRouter.post("/admin/categories", requireAdmin, async (req: Request, res: Response) => {
@@ -817,11 +830,72 @@ apiRouter.get("/admin/users-with-categories", requireAdmin, async (req, res) => 
       res.status(500).json({ message: "Error deleting quiz" });
     }
   });
-  
-//deep seek me ayuda a asignar cuestionarios a los usuarios
-// 1. Endpoint para obtener usuarios con sus cuestionarios asignados
+ //chat gpt asignar cuestionarios a usuarios
+// Obtener los quizzes asignados a un usuario
+apiRouter.get("/admin/users", requireAdmin, async (req, res) => {
+  try {
+    const users = await storage.getAllUsers();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching users" });
+  }
+});
 
-//fin deep seek me ayuda a asignar cuestionarios a los usuarios
+
+// Asignar un quiz a un usuario
+apiRouter.post("/admin/users/quizzes", requireAdmin, async (req, res) => {
+  console.log("📥 Body recibido en POST /admin/users/quizzes:", req.body);
+  const { userId, quizId } = req.body;
+  if (!userId || !quizId) return res.status(400).json({ message: "Missing data" });
+
+  try {
+    console.log(req.body)
+    await storage.assignQuizToUser(userId, quizId);
+    res.status(204).end();
+  } catch (err) {
+    console.error("Error assigning quiz:", err); // <-- Esto lo va a mostrar en consola
+    res.status(500).json({ message: "Error assigning quiz", error: String(err) }); // <-- Mostramos el error
+  }
+});
+
+
+// Quitar un quiz de un usuario
+apiRouter.delete("/admin/users/quizzes", requireAdmin, async (req, res) => {
+  const { userId, quizId } = req.body;
+  if (!userId || !quizId) return res.status(400).json({ message: "Missing data" });
+
+  try {
+    await storage.removeQuizFromUser(userId, quizId);
+    res.status(204).end();
+  } catch (err) {
+    console.error("Error removing quiz:", err);
+    res.status(500).json({ message: "Error removing quiz" });
+  }
+});
+
+// Suponiendo que estás usando Express en tu backend
+
+app.get('/api/admin/users/quizzes/:quizId', async (req, res) => {
+  const quizId = Number(req.params.quizId);
+
+  if (isNaN(quizId)) {
+    return res.status(400).json({ message: "Invalid quiz ID" });
+  }
+  
+  try {
+    // Aquí deberías hacer una consulta a la base de datos para obtener los usuarios asignados a este quiz
+    const usersAssigned = await getUsersAssignedToQuiz(quizId);  // Asume que esta función obtiene los usuarios desde tu base de datos
+
+    // Devuelve la lista de usuarios asignados
+    res.json(usersAssigned);
+  } catch (error) {
+    console.error('Error fetching assigned users:', error);
+    res.status(500).json({ message: 'Error fetching assigned users' });
+  }
+});
+
+
+ //fin chat gpt asignar cuestionarios a usuarios
 
   // API para gestionar preguntas
   apiRouter.get("/admin/questions", requireAdmin, async (req: Request, res: Response) => {

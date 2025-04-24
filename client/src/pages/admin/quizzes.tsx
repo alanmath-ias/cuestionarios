@@ -51,35 +51,85 @@ export default function QuizzesAdmin() {
 //chat gpt quiz a usuario
 // Agrega esto donde estás mostrando cada quiz
 
-const [allUsers, setAllUsers] = useState<User[]>([]);
-const [assignedUsers, setAssignedUsers] = useState<number[]>([]);
+const [assignedUsers, setAssignedUsers] = useState<number[]>([]); // Para los usuarios asignados
+const [visibleQuizId, setVisibleQuizId] = useState<number | null>(null); // Para mostrar los usuarios de un quiz específico
+const [allUsers, setAllUsers] = useState<User[]>([]); // Lista de todos los usuarios
+
+useEffect(() => {
+  // Cargar todos los usuarios (solo una vez)
+  const loadUsers = async () => {
+    try {
+      const res = await fetch("/api/admin/users");
+      const data = await res.json();
+      setAllUsers(data);
+    } catch (error) {
+      console.error("Error loading users:", error);
+    }
+  };
+
+  loadUsers();
+}, []);
+
 
 const fetchUsers = async () => {
-  const res = await fetch('/api/admin/users');
-  const data = await res.json();
-  setAllUsers(data);
+  try {
+    const res = await fetch('/api/admin/users');
+    const data = await res.json();
+    console.log("Usuarios recibidos (todos):", data);
+    if (Array.isArray(data)) {
+      setAllUsers(data);
+    } else {
+      console.warn("Respuesta inesperada en fetchUsers:", data);
+      setAllUsers([]);
+    }
+  } catch (err) {
+    console.error("Error en fetchUsers:", err);
+    setAllUsers([]);
+  }
 };
 
 const fetchAssignedUsers = async (quizId: number) => {
-  const res = await fetch(`/api/admin/users/quizzes/${quizId}`);
-  const data = await res.json();
-  setAssignedUsers(data.map((user: User) => user.id));
-};
-
-const toggleQuizAssignment = async (quizId: number, userId: number, isAssigned: boolean) => {
-  const method = isAssigned ? 'DELETE' : 'POST';
-  const res = await fetch(`/api/admin/users/quizzes`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ userId, quizId })
-  });
-
-  if (res.ok) {
-    fetchAssignedUsers(quizId);
+  try {
+    const res = await fetch(`/api/admin/users/quizzes/${quizId}`);
+    if (!res.ok) {
+      console.error("Error fetching assigned users:", res.status);
+      return;
+    }
+    const data = await res.json(); // ← Aquí debe venir como array de usuarios o de objetos con user.id
+    console.log("📥 Usuarios asignados recibidos:", data);
+    setAssignedUsers(data.map((user: any) => user.userId ?? user.id)); // por si devuelve {userId: X}//esto soluciono el problema de los checkboxes chat gpt genial
+  } catch (error) {
+    console.error("Error in fetchAssignedUsers:", error);
   }
 };
+
+
+const toggleQuizAssignment = async (
+  quizId: number,
+  userId: number,
+  isAssigned: boolean
+) => {
+  const method = isAssigned ? "DELETE" : "POST"; // Si ya está asignado, elimina; si no, asigna
+  try {
+    const res = await fetch(`/api/admin/users/quizzes`, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userId, quizId }),
+    });
+
+    if (res.ok) {
+      fetchAssignedUsers(quizId); // Refresca la lista de usuarios asignados
+    } else {
+      console.error("Error in toggleQuizAssignment:", res.status);
+    }
+  } catch (error) {
+    console.error("Error in toggleQuizAssignment:", error);
+  }
+};
+
+
 
 useEffect(() => {
   fetchUsers();
@@ -536,21 +586,34 @@ useEffect(() => {
                       </div>
 
                       // Chat gpt quiz a usuario Dentro del render de cada quiz añade esto para el botón de gestión:
-<Button size="sm" variant="secondary" onClick={() => fetchAssignedUsers(quiz.id)}>
+  <Button
+  size="sm"
+  variant="secondary"
+  onClick={() => {
+    setVisibleQuizId(quiz.id);
+    fetchAssignedUsers(quiz.id);
+  }}
+>
   Asignar usuarios
 </Button>
 
-{assignedUsers.length > 0 && (
+{visibleQuizId === quiz.id && (
   <div className="mt-4">
     <p className="font-semibold">Usuarios asignados:</p>
     <ul className="list-disc ml-6">
-      {allUsers.map(user => (
+      {allUsers.map((user) => (
         <li key={user.id}>
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
-              checked={assignedUsers.includes(user.id)}
-              onChange={() => toggleQuizAssignment(quiz.id, user.id, assignedUsers.includes(user.id))}
+              checked={assignedUsers.includes(user.id)} // Marca el checkbox si el usuario está asignado
+              onChange={() =>
+                toggleQuizAssignment(
+                  quiz.id,
+                  user.id,
+                  assignedUsers.includes(user.id) // Si está asignado, elimina; si no, asigna
+                )
+              }
             />
             {user.name} ({user.email})
           </label>
@@ -559,6 +622,10 @@ useEffect(() => {
     </ul>
   </div>
 )}
+
+
+//chat gpt ahora me paso oto codigo auch
+
 
 //chat gpt quiz a ususario fin
 

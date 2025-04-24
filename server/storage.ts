@@ -7,6 +7,7 @@ import {
   studentProgress, StudentProgress, InsertStudentProgress,
   studentAnswers, StudentAnswer, InsertStudentAnswer
 } from "@shared/schema";
+import { db } from './db';
 
 export interface IStorage {
   // User methods
@@ -31,6 +32,22 @@ export interface IStorage {
   createQuiz(quiz: InsertQuiz): Promise<Quiz>;
   updateQuiz(id: number, quiz: Partial<Quiz>): Promise<Quiz>;
   deleteQuiz(id: number): Promise<void>;
+
+  
+//chat gpt quices a usuarios
+getUserQuizzes(userId: number): Promise<Quiz[]>;
+assignQuizToUser(userId: number, quizId: number): Promise<void>;
+
+removeQuizFromUser(userId: number, quizId: number): Promise<void>;
+
+
+
+//const storage = new DatabaseStorage(db);
+
+// Función para obtener los usuarios asignados a un quiz
+
+
+//fin chat gpt quices a usuarios
   
   // Question methods
   getQuestionsByQuiz(quizId: number): Promise<Question[]>;
@@ -55,6 +72,8 @@ export interface IStorage {
   // Student Answer methods
   getStudentAnswersByProgress(progressId: number): Promise<StudentAnswer[]>;
   createStudentAnswer(answer: InsertStudentAnswer): Promise<StudentAnswer>;
+
+
 }
 
 export class MemStorage implements IStorage {
@@ -488,4 +507,14 @@ export class MemStorage implements IStorage {
 import { DatabaseStorage } from "./database-storage";
 
 // Usar almacenamiento de base de datos en lugar de memoria
-export const storage = new DatabaseStorage();
+export const storage = new DatabaseStorage(db);
+
+export const getUsersAssignedToQuiz = async (quizId: number) => {
+  try {
+    return await storage.getUsersAssignedToQuiz(quizId);
+  } catch (error) {
+    console.error("Error in getUsersAssignedToQuiz:", error);
+    throw error;
+  }
+};
+
