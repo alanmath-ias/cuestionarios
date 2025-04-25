@@ -1,6 +1,6 @@
 import express, { type Express, Request as ExpressRequest, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+//import { storage } from "./storage";
 import { z } from "zod";
 import { 
   insertUserSchema, 
@@ -15,13 +15,29 @@ import { userCategories, categories } from "../shared/schema";
 import { users } from "../shared/schema";
 import { getUsersAssignedToQuiz } from './storage'; // Ajusta la ruta según dónde esté definido
 
-
+//chat gpt dashboar personalizado
+import { requireAuth } from "./middleware/requireAuth";
+//fin chat gpt dashboar personalizado
 
 //chat gpt cuestionarios a usuarios
 import { DatabaseStorage } from './database-storage';
 
 const storage = new DatabaseStorage(db);
 //fin chat gpt cuestionarios a usuarios
+
+
+//chat gpt dashboar personalizado
+import { User } from '@/shared/types'; // Asegúrate de importar correctamente tu tipo de usuario
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
+  }
+}
+
+//fin chat gpt
 
 // Extend the SessionData interface to include userId
 declare module "express-session" {
@@ -162,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error checking authentication" });
     }
   });
-  
+  /*
   apiRouter.post("/auth/logout", (req: Request, res: Response) => {
     req.session.destroy((err: Error | null) => {
       if (err) {
@@ -170,7 +186,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.status(200).json({ message: "Logged out successfully" });
     });
+  });*/
+  //chat gpt cierra sesion totalmente sin cookies
+  apiRouter.post("/auth/logout", (req: Request, res: Response) => {
+    req.session.destroy((err: Error | null) => {
+      if (err) {
+        return res.status(500).json({ message: "Error during logout" });
+      }
+  
+      // Elimina la cookie de sesión en el navegador
+      res.clearCookie("connect.sid", {
+        path: "/",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+      });
+  
+      res.status(200).json({ message: "Logged out successfully" });
+    });
   });
+  
+  //fin chat gpt cierra sesion totalmente sin cookies
   
   // Endpoint temporal para actualizar el rol del usuario
   apiRouter.post("/auth/make-admin", async (req: Request, res: Response) => {
@@ -881,7 +917,7 @@ app.get('/api/admin/users/quizzes/:quizId', async (req, res) => {
   if (isNaN(quizId)) {
     return res.status(400).json({ message: "Invalid quiz ID" });
   }
-  
+
   try {
     // Aquí deberías hacer una consulta a la base de datos para obtener los usuarios asignados a este quiz
     const usersAssigned = await getUsersAssignedToQuiz(quizId);  // Asume que esta función obtiene los usuarios desde tu base de datos
@@ -896,6 +932,44 @@ app.get('/api/admin/users/quizzes/:quizId', async (req, res) => {
 
 
  //fin chat gpt asignar cuestionarios a usuarios
+
+//chat gpt dashboard personalizado
+// Obtener categorías asignadas al usuario autenticado
+app.get("/api/user/categories", requireAuth, async (req, res) => {
+  try {
+
+    if (!req.user) {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+    
+        
+    const userId = req.user.id;
+    const categories = await storage.getCategoriesByUserId(userId);
+    res.json(categories);
+  } catch (error) {
+    console.error("Error al obtener categorías del usuario:", error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+});
+
+// Obtener cuestionarios asignados al usuario autenticado
+app.get("/api/user/quizzes", requireAuth, async (req, res) => {
+  try {
+
+    if (!req.user) {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+    
+       
+    const userId = req.user.id;
+    const quizzes = await storage.getQuizzesByUserId(userId);
+    res.json(quizzes);
+  } catch (error) {
+    console.error("Error al obtener quizzes del usuario:", error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+});
+//fin chat gpt
 
   // API para gestionar preguntas
   apiRouter.get("/admin/questions", requireAdmin, async (req: Request, res: Response) => {

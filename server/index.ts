@@ -10,6 +10,7 @@ import postgres from "postgres";
 import dotenv from 'dotenv';
 dotenv.config();
 
+
 console.log("Current working directory:", process.cwd());
 console.log("DATABASE_URL:", process.env.DATABASE_URL);
 
@@ -17,16 +18,6 @@ console.log("DATABASE_URL:", process.env.DATABASE_URL);
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-
-//chat gpt quices a usuarios
-// client/src/types/index.ts
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-}
-
-//fin chat gpt quices a usuarios
 
 
 // Session middleware setup usando PostgreSQL

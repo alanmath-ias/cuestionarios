@@ -518,3 +518,23 @@ export const getUsersAssignedToQuiz = async (quizId: number) => {
   }
 };
 
+//chat gpt dashboard personalizado
+export const getCategoriesByUserId = async (userId: number) => {
+  try {
+    return await storage.getCategoriesByUserId(userId);
+  } catch (error) {
+    console.error("Error en getCategoriesByUserId:", error);
+    throw error;
+  }
+};
+
+export const getQuizzesByUserId = async (userId: number) => {
+  try {
+    return await storage.getQuizzesByUserId(userId);
+  } catch (error) {
+    console.error("Error en getQuizzesByUserId:", error);
+    throw error;
+  }
+};
+
+//fin chat gpt dashboard personalizado

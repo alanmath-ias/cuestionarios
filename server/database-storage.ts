@@ -15,6 +15,10 @@ import { userQuizzes } from '@shared/schema';
 import { drizzle } from "drizzle-orm/postgres-js";
 
 
+//chat gpt dashboard personalizado
+import { userCategories } from "../shared/schema";
+//fin chat gpt dashboard personalizado
+
 
 export class DatabaseStorage implements IStorage {
   // User methods
@@ -155,6 +159,37 @@ export class DatabaseStorage implements IStorage {
 
 
   //fin chat gpt cuestionarios a usuarios
+
+//chat gpt dashboar personalizado
+async getCategoriesByUserId(userId: number) {
+  const result = await this.db
+    .select({
+      id: categories.id,
+      name: categories.name,
+    })
+    .from(userCategories)
+    .innerJoin(categories, eq(userCategories.categoryId, categories.id))
+    .where(eq(userCategories.userId, userId));
+
+  return result;
+}
+
+async getQuizzesByUserId(userId: number) {
+  const result = await this.db
+    .select({
+      id: quizzes.id,
+      title: quizzes.title,
+      categoryId: quizzes.categoryId,
+      difficulty: quizzes.difficulty,
+    })
+    .from(userQuizzes)
+    .innerJoin(quizzes, eq(userQuizzes.quizId, quizzes.id))
+    .where(eq(userQuizzes.userId, userId));
+
+  return result;
+}
+
+//fin chat gpt dashboard
 
   // Question methods
   async getQuestionsByQuiz(quizId: number): Promise<Question[]> {
