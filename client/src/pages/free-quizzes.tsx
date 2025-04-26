@@ -58,7 +58,7 @@ export default function FreeQuizzes() {
   }
   
   return (
-    <PageLayout>
+    //<PageLayout>
       <div className="container mx-auto py-8">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Cuestionarios Públicos</h1>
@@ -163,6 +163,6 @@ export default function FreeQuizzes() {
           </div>
         </div>
       </div>
-    </PageLayout>
+    //</PageLayout>
   );
 }

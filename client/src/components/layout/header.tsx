@@ -31,9 +31,11 @@ export function Header({ user }: HeaderProps) {
               <Link href="/">
                 <span className="hover:text-white/80 transition-colors cursor-pointer">Dashboard</span>
               </Link>
-              <Link href="/free-quizzes">
+            {/*quices gratuitos desabilitado temporalmente*/}  
+              {/*<Link href="/free-quizzes">
                 <span className="hover:text-white/80 transition-colors cursor-pointer">Quizzes Gratuitos</span>
-              </Link>
+              </Link>*/}
+            
             </nav>
           )}
         </div>

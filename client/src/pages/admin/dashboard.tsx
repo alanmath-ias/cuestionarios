@@ -1,24 +1,25 @@
-
 import { useQuery } from "@tanstack/react-query";
-import { Spinner } from "@/components/ui/spinner";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
+import { Spinner } from "@/components/ui/spinner";
 import { Category, Quiz } from "@/shared/types";
-import { ChevronRight } from "lucide-react";
+import { BookOpen, ListChecks, ChevronRight } from "lucide-react";
+import { Link } from "wouter";
 
-// Función que realiza la petición para obtener categorías
 async function fetchCategories() {
-  const response = await fetch("/api/user/categories");
+  const response = await fetch("/api/user/categories", {
+    credentials: "include",
+  });
   if (!response.ok) {
     throw new Error("Error al obtener categorías");
   }
   return response.json();
 }
 
-// Función que realiza la petición para obtener cuestionarios
 async function fetchQuizzes() {
-  const response = await fetch("/api/user/quizzes");
+  const response = await fetch("/api/user/quizzes", {
+    credentials: "include",
+  });
   if (!response.ok) {
     throw new Error("Error al obtener cuestionarios");
   }
@@ -26,103 +27,75 @@ async function fetchQuizzes() {
 }
 
 export default function UserDashboard() {
-  // Realizamos las consultas para categorías y cuestionarios
-  const { data: categories, isLoading: loadingCategories, error: categoriesError } = useQuery<Category[]>({
-    queryKey: ["/api/user/categories"],
+  const { data: categories, isLoading: loadingCategories } = useQuery<Category[]>({
+    queryKey: ["user-categories"],
     queryFn: fetchCategories,
   });
 
-  const { data: quizzes, isLoading: loadingQuizzes, error: quizzesError } = useQuery<Quiz[]>({
-    queryKey: ["/api/user/quizzes"],
+  const { data: quizzes, isLoading: loadingQuizzes } = useQuery<Quiz[]>({
+    queryKey: ["user-quizzes"],
     queryFn: fetchQuizzes,
   });
 
   const isLoading = loadingCategories || loadingQuizzes;
-  const error = categoriesError || quizzesError;
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[300px]">
+        <Spinner className="h-12 w-12" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard del Usuario</h1>
-        </div>
+      <h1 className="text-3xl font-bold mb-4">Bienvenido a tu Panel</h1>
+      <p className="text-muted-foreground mb-6">Aquí puedes acceder a tus categorías y cuestionarios asignados</p>
+
+      <h2 className="text-xl font-semibold mb-3">Tus Categorías</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        {categories?.map((category) => (
+          <Card key={category.id}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <div>
+                <CardTitle className="text-lg">{category.name}</CardTitle>
+                <CardDescription className="text-sm">Categoría asignada</CardDescription>
+              </div>
+              <BookOpen className="h-6 w-6 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <Link href={`/category/${category.id}`}>
+                <Button variant="link" className="text-primary">
+                  Ver cuestionarios <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center p-12">
-          <Spinner className="h-12 w-12" />
-        </div>
-      ) : error ? (
-        <div className="text-red-500">{error.message}</div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            {/* Mostramos el número de categorías asignadas */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm">Categorías Asignadas</p>
-                    <h3 className="text-3xl font-bold">{categories?.length || 0}</h3>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Link href="/user/categories">
-                    <Button variant="ghost" className="p-0 h-auto text-xs text-primary" size="sm">
-                      Gestionar <ChevronRight className="h-3 w-3 ml-1" />
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Mostramos el número de cuestionarios asignados */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm">Cuestionarios Asignados</p>
-                    <h3 className="text-3xl font-bold">{quizzes?.length || 0}</h3>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Link href="/user/quizzes">
-                    <Button variant="ghost" className="p-0 h-auto text-xs text-cyan-500" size="sm">
-                      Gestionar <ChevronRight className="h-3 w-3 ml-1" />
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Visualización de las categorías asignadas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h2 className="text-xl font-bold mb-4">Categorías Asignadas</h2>
-              <div className="grid grid-cols-1 gap-6">
-                {categories?.map((category) => (
-                  <div key={category.id}>
-                    <h4>{category.name}</h4>
-                  </div>
-                ))}
+      <h2 className="text-xl font-semibold mb-3">Tus Cuestionarios</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {quizzes?.map((quiz) => (
+          <Card key={quiz.id}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <div>
+                <CardTitle className="text-lg">{quiz.title}</CardTitle>
+                <CardDescription className="text-sm capitalize">{quiz.difficulty}</CardDescription>
               </div>
-            </div>
-
-            {/* Visualización de los cuestionarios asignados */}
-            <div>
-              <h2 className="text-xl font-bold mb-4">Cuestionarios Asignados</h2>
-              <div className="grid grid-cols-1 gap-6">
-                {quizzes?.map((quiz) => (
-                  <div key={quiz.id}>
-                    <h4>{quiz.name}</h4>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+              <ListChecks className="h-6 w-6 text-cyan-500" />
+            </CardHeader>
+            <CardContent>
+              <Link href={`/quiz/${quiz.id}`}>
+                <Button variant="link" className="text-cyan-500">
+                  Resolver <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
+
