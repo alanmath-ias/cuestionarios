@@ -69,6 +69,14 @@ export default function UserDashboard() {
                   Ver cuestionarios <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
+
+              <Link href={`/training/${category.id}`}>
+  <Button variant="ghost" className="text-green-600">
+    Entrenamiento <ChevronRight className="ml-1 h-4 w-4" />
+  </Button>
+</Link>
+
+
             </CardContent>
           </Card>
         ))}

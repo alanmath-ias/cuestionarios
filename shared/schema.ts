@@ -175,8 +175,14 @@ export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Quiz = typeof quizzes.$inferSelect;
 export type InsertQuiz = z.infer<typeof insertQuizSchema>;
 
-export type Question = typeof questions.$inferSelect;
+//export type Question = typeof questions.$inferSelect;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
+
+//chat gpt entrenamiento
+
+export type Question = typeof questions.$inferSelect; // Para SELECTs
+export type NewQuestion = typeof questions.$inferInsert; // Para INSERTs
+//fin chat gpt entrenamiento
 
 export type Answer = typeof answers.$inferSelect;
 export type InsertAnswer = z.infer<typeof insertAnswerSchema>;

@@ -583,9 +583,7 @@ useEffect(() => {
                             <Trash className="h-4 w-4" />
                           </Button>
                         </div>
-                      </div>
-
-                      // Chat gpt quiz a usuario Dentro del render de cada quiz añade esto para el botón de gestión:
+                      </div>                    
   <Button
   size="sm"
   variant="secondary"
@@ -623,11 +621,6 @@ useEffect(() => {
   </div>
 )}
 
-
-//chat gpt ahora me paso oto codigo auch
-
-
-//chat gpt quiz a ususario fin
 
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
                         <div className="flex items-center">

@@ -8,12 +8,15 @@ import {
   insertStudentAnswerSchema 
 } from "@shared/schema";
 import * as expressSession from "express-session";
-import { eq } from "drizzle-orm";
+import { eq,sql } from "drizzle-orm";
 
 import { db } from "./db";
-import { userCategories, categories } from "../shared/schema";
+import { userCategories, categories, quizzes } from "../shared/schema";
 import { users } from "../shared/schema";
 import { getUsersAssignedToQuiz } from './storage'; // Ajusta la ruta según dónde esté definido
+//chat gpt entrenamiento
+import { questions as questionsTable } from "@shared/schema";
+import { inArray } from "drizzle-orm";
 
 //chat gpt dashboar personalizado
 import { requireAuth } from "./middleware/requireAuth";
@@ -970,6 +973,47 @@ app.get("/api/user/quizzes", requireAuth, async (req, res) => {
   }
 });
 //fin chat gpt
+
+//chat gpt me ayuda entrenamiento
+// En routes.ts
+apiRouter.get("/api/training/:categoryId", async (req: Request, res: Response) => {
+  const user = req.session.user;
+  if (!user) return res.status(401).json({ message: "No autorizado" });
+
+  const categoryId = Number(req.params.categoryId);
+  if (isNaN(categoryId)) return res.status(400).json({ message: "ID inválido" });
+
+  try {
+    // 1. Buscar IDs de quizzes que pertenecen a la categoría
+    const quizzesInCategory = await db
+      .select({ id: quizzes.id })
+      .from(quizzes)
+      .where(eq(quizzes.categoryId, categoryId));
+
+    const quizIds = quizzesInCategory.map((q) => q.id);
+    if (quizIds.length === 0) {
+      return res.status(404).json({ message: "No hay quizzes para esta categoría" });
+    }
+
+    // 2. Buscar preguntas de esos quizzes
+    const questionsInCategory = await db
+      .select()
+      .from(questionsTable)
+      .where(inArray(questionsTable.quizId, quizIds));
+
+    // 3. Seleccionar 20 preguntas aleatorias
+    const shuffled = questionsInCategory.sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 20);
+
+    res.json({ questions: selected });
+  } catch (err) {
+    console.error("Error en entrenamiento:", err);
+    res.status(500).json({ message: "Error al obtener preguntas de entrenamiento" });
+  }
+});
+
+
+//fin chat gpt me ayuda entrenamiento
 
   // API para gestionar preguntas
   apiRouter.get("/admin/questions", requireAdmin, async (req: Request, res: Response) => {

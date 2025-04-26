@@ -19,3 +19,20 @@ declare global {
 }
 
 export {}; // Esto evita que sea tratado como un módulo global
+
+//chat gpt entrenamiento
+// types/express-session.d.ts
+import "express-session";
+
+declare module "express-session" {
+  interface SessionData {
+    user: {
+      id: number;
+      username: string;
+      role: string;
+      // agrega más campos si los usas
+    };
+  }
+}
+
+//fin chat gpt entrenamiento
