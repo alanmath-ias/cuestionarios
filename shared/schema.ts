@@ -88,14 +88,28 @@ export const insertQuestionSchema = createInsertSchema(questions).pick({
   variables: true,
 });
 
-// Answers model
+{/*// Answers model
 export const answers = pgTable("answers", {
   id: serial("id").primaryKey(),
   questionId: integer("question_id").notNull(),
   content: text("content").notNull(), // Can include placeholders like {a}, {b} for randomization
   isCorrect: boolean("is_correct").notNull(),
   explanation: text("explanation"),
+});*/}
+//deep seek entrenamiento
+// En tu archivo de schema (db/schema.ts)
+
+
+export const answers = pgTable("answers", {
+  id: serial("id").primaryKey(),
+  //questionId: integer("question_id").references(() => questionsTable.id), // Asegura la relación
+  questionId: integer("question_id").notNull().references(() => questions.id),
+  content: text("content").notNull(),
+  isCorrect: boolean("is_correct").notNull(),
+  explanation: text("explanation")
 });
+//fin deep seek entrenamiento
+
 
 export const insertAnswerSchema = createInsertSchema(answers).pick({
   questionId: true,
@@ -113,9 +127,11 @@ export const studentProgress = pgTable("student_progress", {
   score: integer("score"),
   completedQuestions: integer("completed_questions").default(0),
   timeSpent: integer("time_spent"), // in seconds
-  completedAt: timestamp("completed_at"),
+  //completedAt: timestamp("completed_at"),//deep seek mejora active-quiz:
+  completedAt: timestamp("completed_at", { mode: 'date' }), // Asegura el modo date
 });
 
+{/*
 export const insertStudentProgressSchema = createInsertSchema(studentProgress).pick({
   userId: true,
   quizId: true,
@@ -125,17 +141,31 @@ export const insertStudentProgressSchema = createInsertSchema(studentProgress).p
   timeSpent: true,
   completedAt: true,
 });
+*/}
+//deep seek mejora active-quiz
+export const insertStudentProgressSchema = createInsertSchema(studentProgress, {
+  completedAt: z.date()
+    .or(z.string().datetime().transform(str => new Date(str)))
+    .or(z.null())
+    .optional()
+    .transform(val => val === null ? undefined : val)
+}).omit({ id: true });
+//fin deep seek mejora active-quiz
 
 // Student Answers model
 export const studentAnswers = pgTable("student_answers", {
   id: serial("id").primaryKey(),
   progressId: integer("progress_id").notNull(),
-  questionId: integer("question_id").notNull(),
-  answerId: integer("answer_id"),
+  //questionId: integer("question_id").notNull(),
+  //answerId: integer("answer_id"),
+  questionId: integer("question_id").notNull().references(() => questions.id),
+  answerId: integer("answer_id").references(() => answers.id),
   isCorrect: boolean("is_correct"),
   variables: jsonb("variables"), // The actual variables used in this instance of the question
   timeSpent: integer("time_spent"), // in seconds
 });
+
+
 
 export const insertStudentAnswerSchema = createInsertSchema(studentAnswers).pick({
   progressId: true,

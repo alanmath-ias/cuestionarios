@@ -20,7 +20,7 @@ interface Quiz {
   difficulty: string;
   totalQuestions: number;
 }
-
+{/*}
 interface Progress {
   id: number;
   userId: number;
@@ -30,6 +30,20 @@ interface Progress {
   completedQuestions: number;
   timeSpent?: number;
 }
+*/}
+
+//deepseek mejora active-quiz
+interface Progress {
+  id: number;
+  userId: number;
+  quizId: number;
+  status: 'not_started' | 'in_progress' | 'completed';
+  score?: number;
+  completedQuestions: number;
+  timeSpent?: number;
+  completedAt?: Date | string; // Añadir este campo
+}
+//fin deepseek mejora active-quiz
 
 function QuizList() {
   const { categoryId } = useParams<{ categoryId: string }>();

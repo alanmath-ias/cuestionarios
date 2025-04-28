@@ -128,7 +128,7 @@ const handleLogout = async () => {
             <DropdownMenuItem onClick={() => setLocation('/admin')}>
               Panel Administrativo
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/admin/categories')}>
+            <DropdownMenuItem onClick={() => setLocation('@pages/dashboard')}>
               Gestionar Categorías
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLocation('/admin/quizzes')}>

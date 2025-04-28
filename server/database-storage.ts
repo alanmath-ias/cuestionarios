@@ -13,7 +13,7 @@ import { eq, and } from "drizzle-orm";
 import { IStorage } from "./storage";
 import { userQuizzes } from '@shared/schema';
 import { drizzle } from "drizzle-orm/postgres-js";
-
+import type { QuizResult } from "../shared/quiz-types";
 
 //chat gpt dashboard personalizado
 import { userCategories } from "../shared/schema";
@@ -261,20 +261,44 @@ async getQuizzesByUserId(userId: number) {
   }
   
   async createStudentProgress(progress: InsertStudentProgress): Promise<StudentProgress> {
-    const result = await db.insert(studentProgress).values(progress).returning();
+    // Preparar los datos para Drizzle
+    const insertData = {
+      ...progress,
+      // Asegurar que completedAt sea Date o null
+      completedAt: progress.completedAt instanceof Date 
+        ? progress.completedAt 
+        : progress.completedAt
+          ? new Date(progress.completedAt)
+          : null
+    };
+  
+    const result = await db.insert(studentProgress)
+      .values(insertData)
+      .returning();
+    
     return result[0];
   }
   
   async updateStudentProgress(id: number, progress: Partial<StudentProgress>): Promise<StudentProgress> {
-    // Asegurarse de que el progreso existe
+    // Verificar que el progreso existe
     const existingProgress = await this.getStudentProgress(id);
     if (!existingProgress) {
       throw new Error(`Student progress with id ${id} not found`);
     }
     
-    // Actualizar el progreso
+    // Preparar los datos para Drizzle
+    const updateData = {
+      ...progress,
+      // Asegurar que completedAt sea Date o null
+      completedAt: progress.completedAt instanceof Date 
+        ? progress.completedAt 
+        : progress.completedAt
+          ? new Date(progress.completedAt)
+          : null
+    };
+  
     const result = await db.update(studentProgress)
-      .set(progress)
+      .set(updateData)
       .where(eq(studentProgress.id, id))
       .returning();
     
@@ -290,4 +314,47 @@ async getQuizzesByUserId(userId: number) {
     const result = await db.insert(studentAnswers).values(answer).returning();
     return result[0];
   }
+
+//deep seek respuestas correctas en quiz-results
+async getQuizResults(progressId: number): Promise<QuizResult | null> {
+  // Obtener progreso con relaciones
+  const progressWithRelations = await db.query.studentProgress.findFirst({
+    where: eq(studentProgress.id, progressId),
+    with: {
+      quiz: true,
+      answers: {
+        with: {
+          question: true,
+          answerDetails: true
+        }
+      }
+    }
+  });
+
+  if (!progressWithRelations) return null;
+
+  // Enriquecer respuestas con respuestas correctas
+  const enrichedAnswers = await Promise.all(
+    progressWithRelations.answers.map(async (answer) => {
+      const correctAnswer = await db.query.answers.findFirst({
+        where: and(
+          eq(answers.questionId, answer.questionId),
+          eq(answers.isCorrect, true)
+        )
+      });
+      return {
+        ...answer,
+        correctAnswer
+      };
+    })
+  );
+
+  return {
+    progress: progressWithRelations,
+    quiz: progressWithRelations.quiz,
+    answers: enrichedAnswers
+  };
+}
+//fin deep seek respuestas correctas en quiz-results
+
 }

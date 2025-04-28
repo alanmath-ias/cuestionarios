@@ -17,6 +17,9 @@ import { getUsersAssignedToQuiz } from './storage'; // Ajusta la ruta según dó
 //chat gpt entrenamiento
 import { questions as questionsTable } from "@shared/schema";
 import { inArray } from "drizzle-orm";
+//deep seek entrenamiento:
+import { answers } from "@shared/schema"; // Asegúrate de importar correctamente
+
 
 //chat gpt dashboar personalizado
 import { requireAuth } from "./middleware/requireAuth";
@@ -512,6 +515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  {/*
   apiRouter.post("/progress", async (req: Request, res: Response) => {
     const userId = req.session.userId;
     
@@ -545,7 +549,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error creating/updating progress" });
     }
   });
+  */}
+//deep seek mejora active-quiz:
+apiRouter.post("/progress", async (req: Request, res: Response) => {
+  const userId = req.session.userId;
   
+  if (!userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  
+  try {
+    // Parsear y validar los datos
+    const progressData = insertStudentProgressSchema.parse({
+      ...req.body,
+      userId
+    });
+
+    // Verificar progreso existente
+    const existingProgress = await storage.getStudentProgressByQuiz(userId, progressData.quizId);
+    
+    if (existingProgress) {
+      // Actualizar progreso existente
+      const updatedProgress = await storage.updateStudentProgress(
+        existingProgress.id, 
+        progressData
+      );
+      return res.json(updatedProgress);
+    }
+    
+    // Crear nuevo progreso
+    const newProgress = await storage.createStudentProgress(progressData);
+    res.status(201).json(newProgress);
+    
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        message: "Invalid progress data",
+        errors: error.errors
+      });
+    }
+    console.error("Progress creation error:", error);
+    res.status(500).json({ 
+      message: "Error creating/updating progress",
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+// fin deep seek mejora active-quiz
+
   // Student answers endpoint
   apiRouter.post("/answers", async (req: Request, res: Response) => {
     const userId = req.session.userId;
@@ -976,12 +1027,17 @@ app.get("/api/user/quizzes", requireAuth, async (req, res) => {
 
 //chat gpt me ayuda entrenamiento
 // En routes.ts
-apiRouter.get("/api/training/:categoryId", async (req: Request, res: Response) => {
-  const user = req.session.user;
-  if (!user) return res.status(401).json({ message: "No autorizado" });
+// Ahora sí, el endpoint correcto:
+{/*app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Response) => {
+  console.log("🔵 Ingreso a /api/training/:categoryId");
 
+  const user = req.session.user!;
+ 
   const categoryId = Number(req.params.categoryId);
-  if (isNaN(categoryId)) return res.status(400).json({ message: "ID inválido" });
+  if (isNaN(categoryId)) {
+    console.log("🔴 ID inválido:", req.params.categoryId);
+    return res.status(400).json({ message: "ID inválido" });
+  }
 
   try {
     // 1. Buscar IDs de quizzes que pertenecen a la categoría
@@ -990,8 +1046,12 @@ apiRouter.get("/api/training/:categoryId", async (req: Request, res: Response) =
       .from(quizzes)
       .where(eq(quizzes.categoryId, categoryId));
 
+    console.log("🟢 Quizzes encontrados:", quizzesInCategory);
+
     const quizIds = quizzesInCategory.map((q) => q.id);
+
     if (quizIds.length === 0) {
+      console.log("🟡 No hay quizzes en esta categoría:", categoryId);
       return res.status(404).json({ message: "No hay quizzes para esta categoría" });
     }
 
@@ -1001,19 +1061,91 @@ apiRouter.get("/api/training/:categoryId", async (req: Request, res: Response) =
       .from(questionsTable)
       .where(inArray(questionsTable.quizId, quizIds));
 
+    console.log("🟢 Preguntas encontradas:", questionsInCategory.length);
+
+    if (questionsInCategory.length === 0) {
+      console.log("🟡 No hay preguntas en estos quizzes.");
+      return res.status(404).json({ message: "No hay preguntas en esta categoría" });
+    }
+
     // 3. Seleccionar 20 preguntas aleatorias
     const shuffled = questionsInCategory.sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 20);
+
+    console.log(`🟢 Retornando ${selected.length} preguntas aleatorias.`);
+
+    res.json({ questions: selected });
+  } catch (err) {
+    console.error("🔴 Error en entrenamiento:", err);
+    res.status(500).json({ message: "Error al obtener preguntas de entrenamiento" });
+  }
+});
+*/}
+//fin chat gpt me ayuda entrenamiento
+
+//deep seek entrenamiento estilo active-quiz
+
+app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const categoryId = Number(req.params.categoryId);
+    if (isNaN(categoryId)) return res.status(400).json({ message: "ID inválido" });
+
+    // 1. Obtener quizzes de la categoría
+    const quizzesInCategory = await db
+      .select({ id: quizzes.id })
+      .from(quizzes)
+      .where(eq(quizzes.categoryId, categoryId));
+
+    if (quizzesInCategory.length === 0) {
+      return res.status(404).json({ message: "No hay quizzes para esta categoría" });
+    }
+
+    const quizIds = quizzesInCategory.map(q => q.id);
+
+    // 2. Obtener preguntas con sus respuestas (usando la tabla answers)
+    const questionsWithAnswers = await db.transaction(async (tx) => {
+      const questions = await tx
+        .select()
+        .from(questionsTable)
+        .where(inArray(questionsTable.quizId, quizIds));
+
+      const questionsData = await Promise.all(
+        questions.map(async (question) => {
+          const answersList = await tx
+            .select()
+            .from(answers)
+            .where(eq(answers.questionId, question.id));
+
+          return {
+            ...question,
+            options: answersList.map(a => ({
+              id: a.id,
+              text: a.content, // Mapea content → text para el frontend
+              isCorrect: a.isCorrect,
+              explanation: a.explanation
+            }))
+          };
+        })
+      );
+
+      return questionsData;
+    });
+
+    // 3. Seleccionar 20 preguntas aleatorias
+    const shuffled = questionsWithAnswers.sort(() => 0.5 - Math.random());
     const selected = shuffled.slice(0, 20);
 
     res.json({ questions: selected });
   } catch (err) {
     console.error("Error en entrenamiento:", err);
-    res.status(500).json({ message: "Error al obtener preguntas de entrenamiento" });
+    res.status(500).json({ 
+      code: "TRAINING_ERROR",
+      message: "Error al obtener preguntas",
+      details: err.message 
+    });
   }
 });
-
-
-//fin chat gpt me ayuda entrenamiento
+//fin deep seek entrenamiento estilo active-quiz
 
   // API para gestionar preguntas
   apiRouter.get("/admin/questions", requireAdmin, async (req: Request, res: Response) => {

@@ -21,6 +21,11 @@ import { useEffect } from "react";
 import UserCategoriesAdmin from './pages/admin/UserCategoriesAdmin';
 import AllUsersCategoriesAdmin from './pages/admin/AllUsersCategoriesAdmin';
 
+//chat gpt entrenamiento
+import TrainingPage from "@/pages/training/[categoryId]";
+
+//chat gpt ruta para entrenamiento por categoria mejorado
+import TrainingSession from "@/pages/training-session"; // importa el componente
 
 function ProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
   const { data: user, isLoading } = useQuery<User>({
@@ -149,6 +154,21 @@ function Router() {
   />
 </Route>
 
+
+
+//chat gpt entrenamiento viejo funciona perfecto pero muy simple
+<Route path="/training/:categoryId">
+  {(params) => <TrainingPage categoryId={params.categoryId} />}
+</Route>
+//fin chat gpt entrenamiento
+
+{/*}
+//chat gpt 2 ruta para entrenamiento por categoria mejorado, esto no ha funcionado y se relaciona con la pagina /pages/trainning-session.tsx
+// Luego en tu router (ejemplo si usas wouter + switch de rutas):
+<Route path="/training-session" component={TrainingSession} />
+
+//fin
+*/}
 
 
       {/* Ruta de 404 */}
