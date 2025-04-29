@@ -1,4 +1,3 @@
-// src/shared/quiz-types.ts
 import type { StudentProgress, Quiz, Question, Answer } from "@shared/schema";
 
 export interface QuizAnswerResult {
@@ -10,12 +9,14 @@ export interface QuizAnswerResult {
   variables: Record<string, number>;
   timeSpent: number;
   question: Question;
-  answerDetails: Answer | null;
+  answerDetails: (Answer & { isCorrect?: boolean }) | null;
   correctAnswer: Answer | null;
 }
 
 export interface QuizResult {
-  progress: StudentProgress;
+  progress: Omit<StudentProgress, 'createdAt'> & {
+    completedAt?: string; // Convertir Date a string para el frontend
+  };
   quiz: Quiz;
   answers: QuizAnswerResult[];
 }

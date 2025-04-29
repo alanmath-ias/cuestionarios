@@ -13,7 +13,8 @@ import { eq, and } from "drizzle-orm";
 import { IStorage } from "./storage";
 import { userQuizzes } from '@shared/schema';
 import { drizzle } from "drizzle-orm/postgres-js";
-import type { QuizResult } from "../shared/quiz-types";
+import type { QuizResult } from "@/shared/quiz-types";
+import type { QuizAnswerResult } from "@/shared/quiz-types"
 
 //chat gpt dashboard personalizado
 import { userCategories } from "../shared/schema";
@@ -317,7 +318,50 @@ async getQuizzesByUserId(userId: number) {
 
 //deep seek respuestas correctas en quiz-results
 async getQuizResults(progressId: number): Promise<QuizResult | null> {
-  // Obtener progreso con relaciones
+  // 1. Definir tipo explícito para la consulta
+  type ProgressWithRelations = {
+    id: number;
+    userId: number;
+    quizId: number;
+    status: 'not_started' | 'in_progress' | 'completed';
+    score?: number;
+    completedQuestions: number;
+    timeSpent?: number;
+    completedAt?: Date;
+    quiz: {
+      id: number;
+      title: string;
+      description: string;
+      categoryId: number;
+      timeLimit: number;
+      difficulty: string;
+      totalQuestions: number;
+    };
+    answers: Array<{
+      id: number;
+      progressId: number;
+      questionId: number;
+      answerId: number | null;
+      isCorrect: boolean;
+      variables: Record<string, number>;
+      timeSpent: number;
+      question: {
+        id: number;
+        content: string;
+        type: string;
+        difficulty: number;
+        points: number;
+      };
+      answerDetails: {
+        id: number;
+        content: string;
+        isCorrect: boolean;
+        explanation?: string;
+      } | null;
+    }>;
+  };
+
+  // 2. Realizar consulta con tipo explícito
   const progressWithRelations = await db.query.studentProgress.findFirst({
     where: eq(studentProgress.id, progressId),
     with: {
@@ -329,28 +373,41 @@ async getQuizResults(progressId: number): Promise<QuizResult | null> {
         }
       }
     }
-  });
+  }) as unknown as ProgressWithRelations | null;
 
-  if (!progressWithRelations) return null;
+  if (!progressWithRelations || !progressWithRelations.answers) return null;
 
-  // Enriquecer respuestas con respuestas correctas
-  const enrichedAnswers = await Promise.all(
-    progressWithRelations.answers.map(async (answer) => {
+  // 3. Procesar respuestas con tipo seguro
+  const enrichedAnswers: QuizAnswerResult[] = await Promise.all(
+    progressWithRelations.answers.map(async (answer): Promise<QuizAnswerResult> => {
       const correctAnswer = await db.query.answers.findFirst({
         where: and(
           eq(answers.questionId, answer.questionId),
           eq(answers.isCorrect, true)
         )
       });
+
       return {
         ...answer,
+        question: answer.question,
+        answerDetails: answer.answerDetails,
         correctAnswer
       };
     })
   );
 
+  // 4. Retornar estructura tipada correctamente
   return {
-    progress: progressWithRelations,
+    progress: {
+      id: progressWithRelations.id,
+      userId: progressWithRelations.userId,
+      quizId: progressWithRelations.quizId,
+      status: progressWithRelations.status,
+      score: progressWithRelations.score,
+      completedQuestions: progressWithRelations.completedQuestions,
+      timeSpent: progressWithRelations.timeSpent,
+      completedAt: progressWithRelations.completedAt
+    },
     quiz: progressWithRelations.quiz,
     answers: enrichedAnswers
   };

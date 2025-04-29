@@ -6,6 +6,7 @@ import { Category, Quiz } from "@/shared/types";
 import { BookOpen, ListChecks, ChevronRight, Repeat } from "lucide-react";
 import { Link } from "wouter";
 
+
 async function fetchCategories() {
   const response = await fetch("/api/user/categories", {
     credentials: "include",
@@ -68,17 +69,27 @@ export default function UserDashboard() {
             <CardContent>
   <div className="flex flex-col sm:flex-row gap-2">
     <Link href={`/category/${category.id}`} className="w-full sm:w-auto">
-      <Button variant="link" className="text-primary w-full sm:w-auto">
-        Ver cuestionarios <ChevronRight className="ml-1 h-4 w-4" />
+      <Button
+        variant="outline"
+        className="w-full sm:w-auto flex items-center justify-center font-semibold"
+      >
+        Ver cuestionarios
+        <ChevronRight className="ml-2 h-4 w-4" />
       </Button>
     </Link>
 
-    <Link href={`/training/${category.id}`}>
-  <Button variant="outline">Entrenamiento</Button>
-</Link>
-
+    <Link href={`/training/${category.id}`} className="w-full sm:w-auto">
+      <Button
+        variant="default" // color principal del sistema
+        className="w-full sm:w-auto flex items-center justify-center font-semibold"
+      >
+        Entrenamiento
+      </Button>
+    </Link>
   </div>
 </CardContent>
+
+
 {/*fin chat gpt entrenamiento*/}
 
           </Card>

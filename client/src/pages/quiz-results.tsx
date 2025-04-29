@@ -301,6 +301,12 @@ function QuizResults() {
     queryKey: [`/api/results/${progressId}`],
   });
   
+ useEffect(() => {
+    if (results) {
+      console.log("Results received in QuizResults:", results);
+    }
+  }, [results]);
+
   // Calculate statistics
   const correctAnswers = results?.answers.filter(a => a.isCorrect).length || 0;
   const totalQuestions = results?.answers.length || 0;
@@ -447,9 +453,11 @@ function QuizResults() {
                   </div>
                   <div className="p-4">
                     <div className="mb-3">
-                      {renderQuestionContent(answer.question.content)}
+                      {renderQuestionContent(answer.question.content)}{/*comento esto cuando sale error*/}
+                      {/*{answer.question?.content ? renderQuestionContent(answer.question.content) : null}*/}
                     </div>
                     
+                    {/*
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className={`border rounded p-3 ${answer.isCorrect 
                         ? 'bg-green-50 border-green-500' 
@@ -469,7 +477,44 @@ function QuizResults() {
                         </div>
                       )}
                     </div>
-                    
+                    */}
+{/*intento2 deep seek respuestas correctas:*/}
+{/* Dentro del mapeo de respuestas en quiz-results.tsx */}
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  {/* Tu respuesta */}
+  <div className={`border rounded p-3 ${
+    answer.isCorrect 
+      ? 'bg-green-50 border-green-500' 
+      : 'bg-red-50 border-red-500'
+  }`}>
+    <div className="text-sm font-medium mb-1">Tu respuesta:</div>
+    {answer.answerDetails ? (
+      <MathDisplay math={answer.answerDetails.content} />
+    ) : (
+      <span className="text-gray-500">No respondida</span>
+    )}
+  </div>
+
+  {/* Respuesta correcta (mostrar siempre, no solo cuando es incorrecta) */}
+  {answer.correctAnswer && (
+    <div className="border rounded p-3 bg-green-50 border-green-500">
+      <div className="text-sm font-medium mb-1">Respuesta correcta:</div>
+      <MathDisplay math={answer.correctAnswer.content} />
+      {answer.correctAnswer.explanation && (
+        <div className="mt-2 text-xs text-green-700">
+          {answer.correctAnswer.explanation}
+        </div>
+      )}
+    </div>
+  )}
+</div>
+{/*fin intento2*/}
+                    {(answer.answerDetails?.explanation || answer.correctAnswer?.explanation) && (
+                      <div className="mt-3 p-3 bg-gray-50 rounded border text-sm">
+                        <strong>Explicación:</strong> {answer.answerDetails?.explanation || answer.correctAnswer?.explanation}
+                      </div>
+                    )}
+
                     {(answer.answerDetails?.explanation || answer.correctAnswer?.explanation) && (
                       <div className="mt-3 p-3 bg-gray-50 rounded border text-sm">
                         <strong>Explicación:</strong> {answer.answerDetails?.explanation || answer.correctAnswer?.explanation}
