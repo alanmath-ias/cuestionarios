@@ -626,7 +626,7 @@ apiRouter.post("/progress", async (req: Request, res: Response) => {
       res.status(500).json({ message: "Error submitting answer" });
     }
   });
-  
+  {/*
   apiRouter.get("/results/:progressId", async (req: Request, res: Response) => {
     const userId = req.session.userId;
     const progressId = parseInt(req.params.progressId);
@@ -647,7 +647,38 @@ apiRouter.post("/progress", async (req: Request, res: Response) => {
       if (!progress) {
         return res.status(403).json({ message: "Not authorized to view these results" });
       }
+      */}
+
+      //chat gpt calificar. chat modifica el endpoint anterior que funcionaba perfecto para el estudiante
+      {/*apiRouter.get("/results/:progressId", async (req: Request, res: Response) => {
+        const userId = req.session.userId;
+        const isAdmin = req.session.role === "admin";
+        const progressId = parseInt(req.params.progressId);
       
+        if (!userId) {
+          return res.status(401).json({ message: "Authentication required" });
+        }
+      
+        if (isNaN(progressId)) {
+          return res.status(400).json({ message: "Invalid progress ID" });
+        }
+      
+        try {
+          let progress;
+      
+          if (isAdmin) {
+            // El admin puede ver cualquier progreso
+            progress = await storage.getProgressById(progressId);
+          } else {
+            // El estudiante solo puede ver su propio progreso
+            const allProgresses = await storage.getStudentProgress(userId);
+            progress = allProgresses.find(p => p.id === progressId);
+          }
+      
+          if (!progress) {
+            return res.status(403).json({ message: "Not authorized to view these results" });
+          }
+
       const quiz = await storage.getQuiz(progress.quizId);
       const answers = await storage.getStudentAnswersByProgress(progressId);
       
@@ -672,7 +703,64 @@ apiRouter.post("/progress", async (req: Request, res: Response) => {
       console.error("Results fetch error:", error);
       res.status(500).json({ message: "Error fetching quiz results" });
     }
+  });*/}  OJO:// HASTA AQUI FUNCIONA PERFECTO ESTE CODIGO PARA EL ESTUDIANTE, SOLO PROBLEMAS PARA QUE ADMIN VEA QUIZ-RESULTS
+
+  apiRouter.get("/results/:progressId", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    const role = req.session.role; // Asegúrate que esto está disponible en tu sesión
+    const progressId = parseInt(req.params.progressId);
+  
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+  
+    if (isNaN(progressId)) {
+      return res.status(400).json({ message: "Invalid progress ID" });
+    }
+  
+    try {
+      let progress;
+  
+      if (role === "admin") {
+        // Admin puede ver cualquier progreso
+        const allProgresses = await storage.getAllProgresses(); // Este método debe existir en storage
+        progress = allProgresses.find(p => p.id === progressId);
+      } else {
+        // Usuario solo puede ver sus propios progresos
+        const userProgresses = await storage.getStudentProgress(userId);
+        progress = userProgresses.find(p => p.id === progressId);
+      }
+  
+      if (!progress) {
+        return res.status(403).json({ message: "Not authorized to view these results" });
+      }
+  
+      const quiz = await storage.getQuiz(progress.quizId);
+      const answers = await storage.getStudentAnswersByProgress(progressId);
+  
+      // Get question details for each answer
+      const detailedAnswers = await Promise.all(answers.map(async (answer) => {
+        const question = await storage.getQuestion(answer.questionId);
+        const answerDetails = answer.answerId ? await storage.getAnswer(answer.answerId) : null;
+  
+        return {
+          ...answer,
+          question,
+          answerDetails
+        };
+      }));
+  
+      res.json({
+        progress,
+        quiz,
+        answers: detailedAnswers
+      });
+    } catch (error) {
+      console.error("Results fetch error:", error);
+      res.status(500).json({ message: "Error fetching quiz results" });
+    }
   });
+  
 
   // Rutas de administración 
   // Middleware para verificar si el usuario es administrador
@@ -1284,6 +1372,78 @@ app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Resp
       res.status(500).json({ message: "Error deleting question" });
     }
   });
+
+  //chat gpt calificaciones
+    // Dentro de setupRoutes(app, storage)
+//active-quiz entrega datos del quiz recien hecho:
+app.post("/api/quiz-submission", async (req, res) => {
+  const { userId, quizId, score } = req.body;
+
+  if (!userId || !quizId || typeof score !== "number") {
+    return res.status(400).json({ error: "Datos incompletos o inválidos" });
+  }
+
+  try {
+    await storage.saveQuizSubmission({ userId, quizId, score });
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Error guardando quiz submission:", error);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+//y ahora Calificaciones pide los datos anteriormente creados:
+app.get("/api/admin/quiz-submissions", async (req, res) => {
+  try {
+    const submissions = await storage.getQuizSubmissionsForAdmin(); // Lo implementamos en storage
+    res.json(submissions);
+  } catch (error) {
+    console.error("Error al obtener submissions:", error);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+//recoge todo lo que debe calificar y lo lleva al componente calificaciones
+app.get("/api/quiz-submissions", async (req, res) => {
+  try {
+    const submissions = await storage.getAllQuizSubmissions();
+    res.status(200).json(submissions);
+  } catch (error) {
+    console.error("Error obteniendo quiz submissions:", error);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+
+//retroalimentacion por medio de un prompt
+// En routes.ts
+app.post("/api/quiz-feedback", async (req, res) => {
+  const { userId, quizId, feedback } = req.body;
+
+  if (!userId || !quizId || !feedback) {
+    return res.status(400).json({ error: "Datos incompletos o inválidos" });
+  }
+
+  try {
+    await storage.saveQuizFeedback({ userId, quizId, feedback });
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Error guardando el feedback:", error);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+//mostrar el feedback a los usuarios
+app.get("/api/quiz-feedback/:quizId", async (req, res) => {
+  const { quizId } = req.params;
+
+  try {
+    const feedback = await storage.getQuizFeedback(Number(quizId));
+    res.status(200).json(feedback);
+  } catch (error) {
+    console.error("Error obteniendo el feedback:", error);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+
+
+  //fin chat gpt calificaciones
 
   const httpServer = createServer(app);
   return httpServer;

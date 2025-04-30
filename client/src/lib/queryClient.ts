@@ -7,7 +7,9 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(
+
+//chat gpt calificaciones me hace cambiar esto para que calificaciones funcione
+{/*export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
@@ -22,6 +24,35 @@ export async function apiRequest(
   await throwIfResNotOk(res);
   return res;
 }
+*/}
+
+//Y puso esta:
+export async function apiRequest(
+  method: string,
+  url: string,
+  data?: unknown | undefined,
+): Promise<Response> {
+  // Crear un objeto de configuración para la solicitud
+  const options: RequestInit = {
+    method,
+    headers: data ? { "Content-Type": "application/json" } : {},
+    credentials: "include",  // Añadido para que se mantengan las cookies de sesión
+  };
+
+  // Solo agregamos el cuerpo si no es una solicitud GET
+  if (method !== "GET" && data) {
+    options.body = JSON.stringify(data);
+  }
+
+  // Hacer la solicitud fetch
+  const res = await fetch(url, options);
+
+  // Verificar si la respuesta es exitosa
+  await throwIfResNotOk(res);
+
+  return res;
+}
+
 
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {

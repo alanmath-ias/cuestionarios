@@ -21,11 +21,11 @@ import { useEffect } from "react";
 import UserCategoriesAdmin from './pages/admin/UserCategoriesAdmin';
 import AllUsersCategoriesAdmin from './pages/admin/AllUsersCategoriesAdmin';
 
-//chat gpt entrenamiento
+{/*chat gpt entrenamiento*/}
 import TrainingPage from "@/pages/training/[categoryId]";
 
-//chat gpt ruta para entrenamiento por categoria mejorado
-import TrainingSession from "@/pages/training-session"; // importa el componente
+{/*chat gpt calificar*/}
+import Calificar from "@/pages/admin/Calificar";
 
 function ProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
   const { data: user, isLoading } = useQuery<User>({
@@ -68,7 +68,7 @@ function AdminProtectedRoute({ component: Component, ...rest }: { component: any
   const [_, navigate] = useLocation();
 
   useEffect(() => {
-    // Verificar si el usuario no está autenticado o no es admin
+    {/* Verificar si el usuario no está autenticado o no es admin*/}
     if (!isLoading) {
       if (!user) {
         navigate('/auth');
@@ -134,8 +134,16 @@ function Router() {
       <Route path="/admin/quizzes/:quizId/questions">
         {(params) => <AdminProtectedRoute component={QuestionsAdmin} path={`/admin/quizzes/${params.quizId}/questions`} />}
       </Route>
+     
+<Route path="/admin/calificar">
+  {() => <AdminProtectedRoute component={Calificar} path="/admin/calificar" />}
+</Route>
+       
+{/*chat gpt calificar ruta para el boton que lleva a quiz-results*/}
+<AdminProtectedRoute path="/admin/quiz-results/:progressId" component={QuizResults} />
+{/*chat gpt*/}
 
-      //deep seek nuevo intento categorias por usuarios
+
 {/* Nueva ruta para administración de categorías por usuario */}
 <Route path="/admin/users/:userId/categories">
   {(params) => (
@@ -145,8 +153,7 @@ function Router() {
     />
   )}
 </Route>
-      //fin deep seek
-
+     
       <Route path="/admin/urlusercategories">
   <AdminProtectedRoute 
     component={AllUsersCategoriesAdmin}
@@ -156,20 +163,11 @@ function Router() {
 
 
 
-//chat gpt entrenamiento viejo funciona perfecto pero muy simple
+{/*chat gpt entrenamiento viejo funciona perfecto pero muy simple*/}
 <Route path="/training/:categoryId">
   {(params) => <TrainingPage categoryId={params.categoryId} />}
 </Route>
-//fin chat gpt entrenamiento
-
-{/*}
-//chat gpt 2 ruta para entrenamiento por categoria mejorado, esto no ha funcionado y se relaciona con la pagina /pages/trainning-session.tsx
-// Luego en tu router (ejemplo si usas wouter + switch de rutas):
-<Route path="/training-session" component={TrainingSession} />
-
-//fin
-*/}
-
+{/*fin chat gpt entrenamiento*/}
 
       {/* Ruta de 404 */}
       <Route>
@@ -187,5 +185,6 @@ function App() {
     </QueryClientProvider>
   );
 }
+
 
 export default App;

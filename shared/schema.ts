@@ -1,7 +1,14 @@
-//import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
-import { pgTable, text, serial, integer, boolean, jsonb, timestamp, unique } from "drizzle-orm/pg-core";//deep seek nuevo intento categorias por usuarios
+
+import { pgTable, text, uuid, serial, integer, boolean, jsonb, json, timestamp, unique, foreignKey } from "drizzle-orm/pg-core";//deep seek nuevo intento categorias por usuarios
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+//session model
+export const session = pgTable("session", {
+  sid: text("sid").primaryKey(), // character varying → text en Drizzle
+  sess: json("sess").notNull(),  // json
+  expire: timestamp("expire", { withTimezone: false }).notNull(), // timestamp sin zona horaria
+});
 
 // User model
 export const users = pgTable("users", {
@@ -48,15 +55,12 @@ export const quizzes = pgTable("quizzes", {
   isPublic: boolean("is_public").default(false), // Indica si el quiz es público o requiere autenticación
 });
 
-//chat gpt cuestionarios a usuarios
-
 
 export const userQuizzes = pgTable("user_quizzes", {
   userId: integer("user_id").notNull().references(() => users.id),
   quizId: integer("quiz_id").notNull().references(() => quizzes.id),
 });
 
-//fin chat gpt cuestionarios a usuarios
 
 export const insertQuizSchema = createInsertSchema(quizzes).pick({
   title: true,
@@ -88,18 +92,7 @@ export const insertQuestionSchema = createInsertSchema(questions).pick({
   variables: true,
 });
 
-{/*// Answers model
-export const answers = pgTable("answers", {
-  id: serial("id").primaryKey(),
-  questionId: integer("question_id").notNull(),
-  content: text("content").notNull(), // Can include placeholders like {a}, {b} for randomization
-  isCorrect: boolean("is_correct").notNull(),
-  explanation: text("explanation"),
-});*/}
-//deep seek entrenamiento
-// En tu archivo de schema (db/schema.ts)
-
-
+// Answers model (for each question)
 export const answers = pgTable("answers", {
   id: serial("id").primaryKey(),
   //questionId: integer("question_id").references(() => questionsTable.id), // Asegura la relación
@@ -108,7 +101,6 @@ export const answers = pgTable("answers", {
   isCorrect: boolean("is_correct").notNull(),
   explanation: text("explanation")
 });
-//fin deep seek entrenamiento
 
 
 export const insertAnswerSchema = createInsertSchema(answers).pick({
@@ -131,18 +123,7 @@ export const studentProgress = pgTable("student_progress", {
   completedAt: timestamp("completed_at", { mode: 'date' }), // Asegura el modo date
 });
 
-{/*
-export const insertStudentProgressSchema = createInsertSchema(studentProgress).pick({
-  userId: true,
-  quizId: true,
-  status: true,
-  score: true,
-  completedQuestions: true,
-  timeSpent: true,
-  completedAt: true,
-});
-*/}
-//deep seek mejora active-quiz
+
 export const insertStudentProgressSchema = createInsertSchema(studentProgress, {
   completedAt: z.date()
     .or(z.string().datetime().transform(str => new Date(str)))
@@ -150,7 +131,7 @@ export const insertStudentProgressSchema = createInsertSchema(studentProgress, {
     .optional()
     .transform(val => val === null ? undefined : val)
 }).omit({ id: true });
-//fin deep seek mejora active-quiz
+
 
 // Student Answers model
 export const studentAnswers = pgTable("student_answers", {
@@ -166,7 +147,6 @@ export const studentAnswers = pgTable("student_answers", {
 });
 
 
-
 export const insertStudentAnswerSchema = createInsertSchema(studentAnswers).pick({
   progressId: true,
   questionId: true,
@@ -176,7 +156,6 @@ export const insertStudentAnswerSchema = createInsertSchema(studentAnswers).pick
   timeSpent: true,
 });
 
-//deepseek nuevo intento categorias por usuarios
 // User-Categories relation (many-to-many)
 export const userCategories = pgTable("user_categories", {
   id: serial("id").primaryKey(),
@@ -191,9 +170,33 @@ export const insertUserCategorySchema = createInsertSchema(userCategories).pick(
   categoryId: true,
 });
 
-export type UserCategory = typeof userCategories.$inferSelect;
-export type InsertUserCategory = z.infer<typeof insertUserCategorySchema>;
-//fin deep seek
+// chat gpt calificaciones quiz
+// Quiz Submissions model (for tracking quiz completions and scores)
+export const quizSubmissions = pgTable("quiz_submissions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  quizId: integer("quiz_id").references(() => quizzes.id, { onDelete: "cascade" }),
+
+  completedAt: timestamp("completed_at", { withTimezone: false }).notNull(),
+  score: integer("score").notNull(),
+
+  feedback: text("feedback"),
+  reviewed: boolean("reviewed").default(false),
+});
+
+// Asegúrate de que las claves externas sean las correctas para las tablas 'users' y 'quizzes'
+export const quizFeedback = pgTable("quizFeedback", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId")
+    .notNull()
+    .references(() => users.id),  // Definir la referencia a la tabla `users`
+  quizId: integer("quizId")
+    .notNull()
+    .references(() => quizzes.id), // Definir la referencia a la tabla `quizzes`
+  feedback: text("feedback").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
 
 // Types exports
 export type User = typeof users.$inferSelect;
@@ -208,11 +211,9 @@ export type InsertQuiz = z.infer<typeof insertQuizSchema>;
 //export type Question = typeof questions.$inferSelect;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
 
-//chat gpt entrenamiento
 
 export type Question = typeof questions.$inferSelect; // Para SELECTs
 export type NewQuestion = typeof questions.$inferInsert; // Para INSERTs
-//fin chat gpt entrenamiento
 
 export type Answer = typeof answers.$inferSelect;
 export type InsertAnswer = z.infer<typeof insertAnswerSchema>;
@@ -222,3 +223,6 @@ export type InsertStudentProgress = z.infer<typeof insertStudentProgressSchema>;
 
 export type StudentAnswer = typeof studentAnswers.$inferSelect;
 export type InsertStudentAnswer = z.infer<typeof insertStudentAnswerSchema>;
+
+export type UserCategory = typeof userCategories.$inferSelect;
+export type InsertUserCategory = z.infer<typeof insertUserCategorySchema>;

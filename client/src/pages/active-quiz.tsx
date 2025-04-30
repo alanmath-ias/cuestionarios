@@ -299,6 +299,21 @@ function ActiveQuiz() {
   
       await createProgressMutation.mutateAsync(progressUpdate);
       
+//chat gpt calificaciones
+ // 🔔 NUEVO: Enviar registro a la tabla quiz_submissions
+ const score = Math.round((earnedPoints / totalPoints) * 10);
+
+ await fetch("/api/quiz-submission", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    userId: session?.userId,
+    quizId: quiz?.id,
+    score,
+  }),
+});
+//fin chat gpt calificaciones
+
       setQuizResults({
         score: earnedPoints,
         totalPoints,
@@ -319,51 +334,6 @@ function ActiveQuiz() {
 
   const currentQuestion = questions?.[currentQuestionIndex];
   const isLoading = loadingQuiz || loadingQuestions || loadingProgress;
-{/*
-  // Show results if quiz is completed
-  if (quizResults) {
-    return (
-      <div className="max-w-2xl mx-auto p-6 space-y-6">
-        <Card>
-          <CardHeader className="text-center">
-            <h1 className="text-2xl font-bold">¡Cuestionario completado!</h1>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-xl">
-              Puntuación: <span className="font-bold">{quizResults.score}/{quizResults.totalPoints} puntos</span>
-            </p>
-            <p>
-              Porcentaje: <span className="font-bold">{quizResults.percentage}%</span>
-            </p>
-            <p>
-              Respuestas correctas: <span className="font-bold">{quizResults.correctAnswers}/{quizResults.totalQuestions}</span>
-            </p>
-            <Progress 
-              value={quizResults.percentage} 
-              className="h-4"
-            />
-          </CardContent>
-          <CardFooter className="flex justify-center gap-4">
-            <Button onClick={() => setLocation(`/category/${quiz?.categoryId}`)}>
-              Volver a categorías
-            </Button>
-            <Button variant="outline" onClick={() => {
-              setQuizResults(null);
-              setCurrentQuestionIndex(0);
-              setSelectedAnswerId(null);
-              setAnsweredQuestions({});
-              setStudentAnswers([]);
-              resetTimer();
-              startTimer();
-            }}>
-              Reintentar
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-  */}
 
   return (
     <div id="activeQuiz">

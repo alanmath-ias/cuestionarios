@@ -137,6 +137,9 @@ const handleLogout = async () => {
             <DropdownMenuItem onClick={() => setLocation('/admin/urlusercategories')}>
               Gestionar Usuarios
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLocation('/admin/Calificar')}>
+             Calificar
+            </DropdownMenuItem>
           </>
         )}
         <DropdownMenuSeparator />

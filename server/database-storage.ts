@@ -16,6 +16,9 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import type { QuizResult } from "@/shared/quiz-types";
 import type { QuizAnswerResult } from "@/shared/quiz-types"
 
+//chat gpt calificaciones
+import { quizSubmissions } from "@shared/schema"; // Asegúrate que esté importado
+import { quizFeedback } from "@shared/schema"; 
 //chat gpt dashboard personalizado
 import { userCategories } from "../shared/schema";
 //fin chat gpt dashboard personalizado
@@ -316,7 +319,7 @@ async getQuizzesByUserId(userId: number) {
     return result[0];
   }
 
-//deep seek respuestas correctas en quiz-results
+//deep seek respuestas correctas en quiz-results creo que puedo eliminar esto porque al final se uso el endppint de quiz
 async getQuizResults(progressId: number): Promise<QuizResult | null> {
   // 1. Definir tipo explícito para la consulta
   type ProgressWithRelations = {
@@ -412,6 +415,93 @@ async getQuizResults(progressId: number): Promise<QuizResult | null> {
     answers: enrichedAnswers
   };
 }
-//fin deep seek respuestas correctas en quiz-results
+//fin deep seek respuestas correctas en quiz-results creo que puedo eliminar esto porque al final se uso el endppint de quiz
+
+//chat gpt calificaciones
+//guardar la entrega del quiz desde active-quiz.tsx
+async saveQuizSubmission({ userId, quizId, score }: { userId: number, quizId: number, score: number }) {
+  await this.db.insert(quizSubmissions).values({
+    userId,
+    quizId,
+    score,
+    completedAt: new Date(),
+  });
+}
+//recoger la entrega del quiz desde Calificar
+async getQuizSubmissionsForAdmin() {
+  return await this.db
+    .select({
+      progressId: quizSubmissions.id,  // Cambiar nombre del id
+      userId: quizSubmissions.userId,
+      quizId: quizSubmissions.quizId,
+      score: quizSubmissions.score,
+      completedAt: quizSubmissions.completedAt,
+      userName: users.name,
+      quizTitle: quizzes.title,
+    })
+    .from(quizSubmissions)
+    .innerJoin(users, eq(quizSubmissions.userId, users.id))
+    .innerJoin(quizzes, eq(quizSubmissions.quizId, quizzes.id))
+    .then(submissions => submissions.map(submission => ({
+      progress: {
+        id: submission.progressId, // Asignar el id de progress
+        userId: submission.userId,
+        timeSpent: 0,  // Esto puede ser ajustado si quieres traer ese dato
+        score: submission.score,
+      },
+      quiz: {
+        id: submission.quizId,
+        title: submission.quizTitle,
+      },
+      user: {
+        id: submission.userId,
+        name: submission.userName,
+      },
+      completedAt: submission.completedAt,
+    })));
+}
+//ver el progreso del estudiante en cuestion:
+async getProgressById(progressId: number) {
+  return await db.query.studentProgress.findFirst({
+    where: (p, { eq }) => eq(p.id, progressId),
+  });
+}
+
+
+//recoger todas las entregas del quiz desde Calificar
+// En DatabaseStorage.ts
+
+async getAllQuizSubmissions() {
+  return await this.db.select().from(quizSubmissions);
+}
+//funcion para la retroalimentacion de los quiz por medio de un prompt
+//insertar el feed back en la base de datos
+async saveQuizFeedback({
+  userId,
+  quizId,
+  feedback,
+}: {
+  userId: number;
+  quizId: number;
+  feedback: string;
+}) {
+  await this.db.insert(quizFeedback).values({
+    userId,
+    quizId,
+    feedback,
+    createdAt: new Date(),
+  });
+}
+//funcion para que los usuarios vean el feedback:
+async getQuizFeedback(quizId: number) {
+  const feedbacks = await this.db
+    .select()
+    .from(quizFeedback)
+    .where(quizFeedback.quizId.eq(quizId));
+  return feedbacks;
+}
+
+
+//fin chat gpt calificaciones
 
 }

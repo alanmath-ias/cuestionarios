@@ -35,4 +35,14 @@ declare module "express-session" {
   }
 }
 
+import "express-session";
+
+declare module "express-session" {
+  interface SessionData {
+    userId: number;
+    role?: "admin" | "user";
+  }
+}
+
+
 //fin chat gpt entrenamiento
