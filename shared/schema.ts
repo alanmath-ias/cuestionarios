@@ -2,6 +2,10 @@
 import { pgTable, text, uuid, serial, integer, boolean, jsonb, json, timestamp, unique, foreignKey } from "drizzle-orm/pg-core";//deep seek nuevo intento categorias por usuarios
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { drizzle } from "drizzle-orm/postgres-js";
+import * as schema from './schema'; // Asegúrate de importar tus esquemas
+
+//const db = drizzle(connection, { schema });
 
 //session model
 export const session = pgTable("session", {
@@ -123,6 +127,10 @@ export const studentProgress = pgTable("student_progress", {
   completedAt: timestamp("completed_at", { mode: 'date' }), // Asegura el modo date
 });
 
+import { InferModel } from "drizzle-orm";
+
+export type Progress = InferModel<typeof studentProgress>;
+
 
 export const insertStudentProgressSchema = createInsertSchema(studentProgress, {
   completedAt: z.date()
@@ -178,24 +186,22 @@ export const quizSubmissions = pgTable("quiz_submissions", {
   userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
   quizId: integer("quiz_id").references(() => quizzes.id, { onDelete: "cascade" }),
 
+  progressId: integer("progress_id").references(() => studentProgress.id, { onDelete: "set null" }),
+
   completedAt: timestamp("completed_at", { withTimezone: false }).notNull(),
   score: integer("score").notNull(),
 
   feedback: text("feedback"),
   reviewed: boolean("reviewed").default(false),
+  
 });
 
 // Asegúrate de que las claves externas sean las correctas para las tablas 'users' y 'quizzes'
-export const quizFeedback = pgTable("quizFeedback", {
+export const quizFeedback = pgTable("quiz_feedback", {
   id: serial("id").primaryKey(),
-  userId: integer("userId")
-    .notNull()
-    .references(() => users.id),  // Definir la referencia a la tabla `users`
-  quizId: integer("quizId")
-    .notNull()
-    .references(() => quizzes.id), // Definir la referencia a la tabla `quizzes`
-  feedback: text("feedback").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  progressId: uuid("progress_id").notNull().references(() => quizSubmissions.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Types exports

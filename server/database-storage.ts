@@ -419,47 +419,52 @@ async getQuizResults(progressId: number): Promise<QuizResult | null> {
 
 //chat gpt calificaciones
 //guardar la entrega del quiz desde active-quiz.tsx
-async saveQuizSubmission({ userId, quizId, score }: { userId: number, quizId: number, score: number }) {
-  await this.db.insert(quizSubmissions).values({
+async saveQuizSubmission({ userId, quizId, score, progressId }: {
+  userId: number;
+  quizId: number;
+  score: number;
+  progressId: number;
+}) {
+  await db.insert(quizSubmissions).values({
     userId,
     quizId,
     score,
     completedAt: new Date(),
+    progressId,
   });
 }
+
 //recoger la entrega del quiz desde Calificar
 async getQuizSubmissionsForAdmin() {
-  return await this.db
+  const results = await db
     .select({
-      progressId: quizSubmissions.id,  // Cambiar nombre del id
+      id: quizSubmissions.id,
       userId: quizSubmissions.userId,
       quizId: quizSubmissions.quizId,
       score: quizSubmissions.score,
       completedAt: quizSubmissions.completedAt,
-      userName: users.name,
-      quizTitle: quizzes.title,
-    })
-    .from(quizSubmissions)
-    .innerJoin(users, eq(quizSubmissions.userId, users.id))
-    .innerJoin(quizzes, eq(quizSubmissions.quizId, quizzes.id))
-    .then(submissions => submissions.map(submission => ({
-      progress: {
-        id: submission.progressId, // Asignar el id de progress
-        userId: submission.userId,
-        timeSpent: 0,  // Esto puede ser ajustado si quieres traer ese dato
-        score: submission.score,
+      reviewed: quizSubmissions.reviewed,
+      feedback: quizSubmissions.feedback,
+      progressId: quizSubmissions.progressId, // <-- Agregado
+      user: {
+        name: users.name,
       },
       quiz: {
-        id: submission.quizId,
-        title: submission.quizTitle,
+        title: quizzes.title,
       },
-      user: {
-        id: submission.userId,
-        name: submission.userName,
+      progress: {
+        id: studentProgress.id,
+        score: studentProgress.score,
       },
-      completedAt: submission.completedAt,
-    })));
+    })
+    .from(quizSubmissions)
+    .leftJoin(users, eq(users.id, quizSubmissions.userId))
+    .leftJoin(quizzes, eq(quizzes.id, quizSubmissions.quizId))
+    .leftJoin(studentProgress, eq(studentProgress.id, quizSubmissions.progressId));
+
+  return results;
 }
+
 //ver el progreso del estudiante en cuestion:
 async getProgressById(progressId: number) {
   return await db.query.studentProgress.findFirst({
@@ -477,34 +482,60 @@ async getAllQuizSubmissions() {
 //funcion para la retroalimentacion de los quiz por medio de un prompt
 //insertar el feed back en la base de datos
 async saveQuizFeedback({
-  userId,
-  quizId,
-  feedback,
+  progressId,
+  text,
 }: {
-  userId: number;
-  quizId: number;
-  feedback: string;
+  progressId: number;
+  text: string;
 }) {
   await this.db.insert(quizFeedback).values({
-    userId,
-    quizId,
-    feedback,
+    progressId,
+    text,
     createdAt: new Date(),
   });
 }
+
 //funcion para que los usuarios vean el feedback:
 async getQuizFeedback(quizId: number) {
-  const feedbacks = await this.db
-    .select()
-    .from(quizFeedback)
-    .where(quizFeedback.quizId.eq(quizId));
-  return feedbacks;
+  const [feedback] = await this.db
+  .select()
+  .from(quizFeedback)
+  .where(eq(quizFeedback.progressId, progressId));
+return feedback;
 }
 
 async getAllProgresses() {
   const progresses = await this.db.select().from(studentProgress);
   return progresses;
 }
+
+//chat gpt metodos para adminquizresults:
+/*async getProgressById(progressId: number) {
+  return await this.db.query.studentProgress.findFirst({
+    where: (p, { eq }) => eq(p.id, progressId),
+  });
+}*/
+
+
+
+async getStudentAnswers(progressId: number) {
+  return await this.db
+    .select({
+      id: studentAnswers.id,
+      questionId: studentAnswers.questionId,
+      questionContent: questions.content,
+      answerId: studentAnswers.answerId,
+      answerContent: answers.content,
+      answerExplanation: answers.explanation,
+      isCorrect: studentAnswers.isCorrect,
+      timeSpent: studentAnswers.timeSpent,
+    })
+    .from(studentAnswers)
+    .leftJoin(questions, eq(studentAnswers.questionId, questions.id))
+    .leftJoin(answers, eq(studentAnswers.answerId, answers.id))
+    .where(eq(studentAnswers.progressId, progressId));
+}
+
 
 //fin chat gpt calificaciones
 

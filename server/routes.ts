@@ -1156,20 +1156,21 @@ app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Resp
     // Dentro de setupRoutes(app, storage)
 //active-quiz entrega datos del quiz recien hecho:
 app.post("/api/quiz-submission", async (req, res) => {
-  const { userId, quizId, score } = req.body;
+  const { userId, quizId, score, progressId } = req.body;
 
-  if (!userId || !quizId || typeof score !== "number") {
+  if (!userId || !quizId || typeof score !== "number" || !progressId) {
     return res.status(400).json({ error: "Datos incompletos o inválidos" });
   }
 
   try {
-    await storage.saveQuizSubmission({ userId, quizId, score });
+    await storage.saveQuizSubmission({ userId, quizId, score, progressId });
     res.status(200).json({ success: true });
   } catch (error) {
     console.error("Error guardando quiz submission:", error);
     res.status(500).json({ error: "Error interno" });
   }
 });
+
 //y ahora Calificaciones pide los datos anteriormente creados:
 app.get("/api/admin/quiz-submissions", async (req, res) => {
   try {

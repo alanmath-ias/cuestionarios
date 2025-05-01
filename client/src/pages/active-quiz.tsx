@@ -310,6 +310,7 @@ function ActiveQuiz() {
     userId: session?.userId,
     quizId: quiz?.id,
     score,
+    progressId: progress.id, // <-- nuevo campo
   }),
 });
 //fin chat gpt calificaciones
