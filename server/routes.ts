@@ -514,42 +514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error fetching quiz progress" });
     }
   });
-  
-  {/*
-  apiRouter.post("/progress", async (req: Request, res: Response) => {
-    const userId = req.session.userId;
-    
-    if (!userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
-    try {
-      const progressData = insertStudentProgressSchema.parse({
-        ...req.body,
-        userId
-      });
-      
-      // Check if there's existing progress
-      const existingProgress = await storage.getStudentProgressByQuiz(userId, progressData.quizId);
-      
-      if (existingProgress) {
-        // Update existing progress
-        const updatedProgress = await storage.updateStudentProgress(existingProgress.id, progressData);
-        return res.json(updatedProgress);
-      }
-      
-      // Create new progress
-      const newProgress = await storage.createStudentProgress(progressData);
-      res.status(201).json(newProgress);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid progress data", errors: error.errors });
-      }
-      console.error("Progress creation error:", error);
-      res.status(500).json({ message: "Error creating/updating progress" });
-    }
-  });
-  */}
+ 
 //deep seek mejora active-quiz:
 apiRouter.post("/progress", async (req: Request, res: Response) => {
   const userId = req.session.userId;
@@ -626,85 +591,7 @@ apiRouter.post("/progress", async (req: Request, res: Response) => {
       res.status(500).json({ message: "Error submitting answer" });
     }
   });
-  {/*
-  apiRouter.get("/results/:progressId", async (req: Request, res: Response) => {
-    const userId = req.session.userId;
-    const progressId = parseInt(req.params.progressId);
-    
-    if (!userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
-    if (isNaN(progressId)) {
-      return res.status(400).json({ message: "Invalid progress ID" });
-    }
-    
-    try {
-      // Verify progress belongs to user
-      const progress = await storage.getStudentProgress(userId)
-        .then(progresses => progresses.find(p => p.id === progressId));
-      
-      if (!progress) {
-        return res.status(403).json({ message: "Not authorized to view these results" });
-      }
-      */}
-
-      //chat gpt calificar. chat modifica el endpoint anterior que funcionaba perfecto para el estudiante
-      {/*apiRouter.get("/results/:progressId", async (req: Request, res: Response) => {
-        const userId = req.session.userId;
-        const isAdmin = req.session.role === "admin";
-        const progressId = parseInt(req.params.progressId);
-      
-        if (!userId) {
-          return res.status(401).json({ message: "Authentication required" });
-        }
-      
-        if (isNaN(progressId)) {
-          return res.status(400).json({ message: "Invalid progress ID" });
-        }
-      
-        try {
-          let progress;
-      
-          if (isAdmin) {
-            // El admin puede ver cualquier progreso
-            progress = await storage.getProgressById(progressId);
-          } else {
-            // El estudiante solo puede ver su propio progreso
-            const allProgresses = await storage.getStudentProgress(userId);
-            progress = allProgresses.find(p => p.id === progressId);
-          }
-      
-          if (!progress) {
-            return res.status(403).json({ message: "Not authorized to view these results" });
-          }
-
-      const quiz = await storage.getQuiz(progress.quizId);
-      const answers = await storage.getStudentAnswersByProgress(progressId);
-      
-      // Get question details for each answer
-      const detailedAnswers = await Promise.all(answers.map(async (answer) => {
-        const question = await storage.getQuestion(answer.questionId);
-        const answerDetails = answer.answerId ? await storage.getAnswer(answer.answerId) : null;
-        
-        return {
-          ...answer,
-          question,
-          answerDetails
-        };
-      }));
-      
-      res.json({
-        progress,
-        quiz,
-        answers: detailedAnswers
-      });
-    } catch (error) {
-      console.error("Results fetch error:", error);
-      res.status(500).json({ message: "Error fetching quiz results" });
-    }
-  });*/}  OJO:// HASTA AQUI FUNCIONA PERFECTO ESTE CODIGO PARA EL ESTUDIANTE, SOLO PROBLEMAS PARA QUE ADMIN VEA QUIZ-RESULTS
-
+ 
   apiRouter.get("/results/:progressId", async (req: Request, res: Response) => {
     const userId = req.session.userId;
     const role = req.session.role; // Asegúrate que esto está disponible en tu sesión
@@ -835,27 +722,6 @@ apiRouter.post("/progress", async (req: Request, res: Response) => {
     }
   });
   
-// API para gestionar usuarios por categorias
-//deep seek nuevo intento categorias por usuarios
-// Middleware para verificar rol de administrador
-/*export function checkAdmin(req: Request, res: Response, next: NextFunction) {
-  // Verifica si el usuario está autenticado
-  if (!req.session.userId) {
-    return res.status(401).json({ message: "No autenticado" });
-  }
-  
-  // Verifica si el usuario es admin
-  if (req.session.role !== 'admin') {
-    return res.status(403).json({ message: "Acceso no autorizado. Se requiere rol de administrador" });
-  }
-  
-  next();
-}
-*/
-// User Categories endpoints
-
-//apiRouter.get("/users/:userId/categories", checkAdmin, async (req, res) => {
-
 apiRouter.get("/users/:userId/categories", requireAdmin, async (req, res) => {
   const userId = parseInt(req.params.userId);
   console.log("🧪 userId recibido1:", req.params.userId, "➡️ convertido a:", userId);
@@ -1113,64 +979,6 @@ app.get("/api/user/quizzes", requireAuth, async (req, res) => {
 });
 //fin chat gpt
 
-//chat gpt me ayuda entrenamiento
-// En routes.ts
-// Ahora sí, el endpoint correcto:
-{/*app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Response) => {
-  console.log("🔵 Ingreso a /api/training/:categoryId");
-
-  const user = req.session.user!;
- 
-  const categoryId = Number(req.params.categoryId);
-  if (isNaN(categoryId)) {
-    console.log("🔴 ID inválido:", req.params.categoryId);
-    return res.status(400).json({ message: "ID inválido" });
-  }
-
-  try {
-    // 1. Buscar IDs de quizzes que pertenecen a la categoría
-    const quizzesInCategory = await db
-      .select({ id: quizzes.id })
-      .from(quizzes)
-      .where(eq(quizzes.categoryId, categoryId));
-
-    console.log("🟢 Quizzes encontrados:", quizzesInCategory);
-
-    const quizIds = quizzesInCategory.map((q) => q.id);
-
-    if (quizIds.length === 0) {
-      console.log("🟡 No hay quizzes en esta categoría:", categoryId);
-      return res.status(404).json({ message: "No hay quizzes para esta categoría" });
-    }
-
-    // 2. Buscar preguntas de esos quizzes
-    const questionsInCategory = await db
-      .select()
-      .from(questionsTable)
-      .where(inArray(questionsTable.quizId, quizIds));
-
-    console.log("🟢 Preguntas encontradas:", questionsInCategory.length);
-
-    if (questionsInCategory.length === 0) {
-      console.log("🟡 No hay preguntas en estos quizzes.");
-      return res.status(404).json({ message: "No hay preguntas en esta categoría" });
-    }
-
-    // 3. Seleccionar 20 preguntas aleatorias
-    const shuffled = questionsInCategory.sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, 20);
-
-    console.log(`🟢 Retornando ${selected.length} preguntas aleatorias.`);
-
-    res.json({ questions: selected });
-  } catch (err) {
-    console.error("🔴 Error en entrenamiento:", err);
-    res.status(500).json({ message: "Error al obtener preguntas de entrenamiento" });
-  }
-});
-*/}
-//fin chat gpt me ayuda entrenamiento
-
 //deep seek entrenamiento estilo active-quiz
 
 app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Response) => {
@@ -1263,35 +1071,6 @@ app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Resp
   });
   
 
-  /* 
-  apiRouter.post("/admin/questions", requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const { answers, ...questionData } = req.body;
-      
-      // Crear pregunta
-      const newQuestion = await storage.createQuestion({
-        ...questionData,
-        quizId: parseInt(questionData.quizId)
-      });
-      
-      // Crear respuestas asociadas
-      const createdAnswers = await Promise.all(answers.map((answer: any) => 
-        storage.createAnswer({
-          ...answer,
-          questionId: newQuestion.id
-        })
-      ));
-      
-      res.status(201).json({
-        ...newQuestion,
-        answers: createdAnswers
-      });
-    } catch (error) {
-      console.error("Question creation error:", error);
-      res.status(500).json({ message: "Error creating question" });
-    }
-  });
-*/
 //deep seek me ayuda error crear preguntas
   apiRouter.post("/admin/questions", requireAdmin, async (req: Request, res: Response) => {
     try {

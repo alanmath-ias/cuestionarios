@@ -501,6 +501,10 @@ async getQuizFeedback(quizId: number) {
   return feedbacks;
 }
 
+async getAllProgresses() {
+  const progresses = await this.db.select().from(studentProgress);
+  return progresses;
+}
 
 //fin chat gpt calificaciones
 
