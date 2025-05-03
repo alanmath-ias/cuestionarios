@@ -199,8 +199,8 @@ export const quizSubmissions = pgTable("quiz_submissions", {
 // Asegúrate de que las claves externas sean las correctas para las tablas 'users' y 'quizzes'
 export const quizFeedback = pgTable("quiz_feedback", {
   id: serial("id").primaryKey(),
-  progressId: uuid("progress_id").notNull().references(() => quizSubmissions.id, { onDelete: "cascade" }),
-  text: text("text").notNull(),
+  progressId: integer("progress_id").notNull(), // ahora es entero
+  feedback: text("feedback").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

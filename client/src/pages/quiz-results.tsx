@@ -23,10 +23,24 @@ function QuizResults() {
     queryKey: [`/api/quizzes/${results?.quiz.id}/questions`],
     enabled: !!results?.quiz.id // Only fetch if we have a quiz ID
   });
+//Consultas para feedback:
+const { data: feedback, isLoading: loadingFeedback } = useQuery({
+  queryKey: ['quiz-feedback', progressId],
+  queryFn: async () => {
+    const res = await fetch(`/api/quiz-feedback/${progressId}`);
+    if (!res.ok) return null;
+    return res.json();
+  },
+  enabled: !!progressId,
+});
+
+
+
+
 
 //chat gpt constante para admin ver quiz-results
 const [locationPath] = useLocation();
-const isAdminView = locationPath.includes('/admin/quiz-results');
+//const isAdminView = locationPath.includes('/admin/quiz-results');
 
 
   // Debug: Log data structure
@@ -108,7 +122,7 @@ const isAdminView = locationPath.includes('/admin/quiz-results');
     <div id="quizResults" className="max-w-4xl mx-auto">
       <div className="mb-6 flex items-center">
 
-      
+ {/*}     
 <Button 
   variant="ghost" 
   size="icon" 
@@ -116,7 +130,7 @@ const isAdminView = locationPath.includes('/admin/quiz-results');
   onClick={() => setLocation(isAdminView ? '/admin/calificar' : '/')}
 >
   <ArrowLeft className="h-5 w-5" />
-</Button>
+</Button>*/}
         
         <h2 className="text-2xl font-semibold">Resultados del Cuestionario</h2>
       </div>
@@ -234,6 +248,22 @@ const isAdminView = locationPath.includes('/admin/quiz-results');
               })}
             </div>
             
+            {!loadingFeedback && (
+  <Card className="mt-6">
+    <CardContent className="p-6">
+      <h4 className="text-lg font-semibold mb-2">Retroalimentación del profesor</h4>
+      {feedback?.feedback ? (
+        <p className="text-gray-700 whitespace-pre-wrap">{feedback.feedback}</p>
+      ) : (
+        <p className="text-gray-500 italic">Tu profesor aún no ha enviado comentarios.</p>
+      )}
+    </CardContent>
+  </Card>
+)}
+
+
+
+
             <div className="flex justify-center">
               <Button
                 variant="outline"
@@ -253,4 +283,4 @@ const isAdminView = locationPath.includes('/admin/quiz-results');
   );
 }
 
-export default QuizResults; //Este quiz-results comentado esta excelente para solo estudiantes pero le falta para admin veamos a ver si el siguiente lo resuelve:
+export default QuizResults; //Este quiz-results comentado esta excelente para solo estudiantes pero le falta para admin veamos a ver si el siguiente lo resuelve:*/}

@@ -481,28 +481,31 @@ async getAllQuizSubmissions() {
 }
 //funcion para la retroalimentacion de los quiz por medio de un prompt
 //insertar el feed back en la base de datos
-async saveQuizFeedback({
-  progressId,
-  text,
-}: {
-  progressId: number;
-  text: string;
-}) {
-  await this.db.insert(quizFeedback).values({
-    progressId,
-    text,
-    createdAt: new Date(),
-  });
+async saveQuizFeedback({ progressId, text }: { progressId: string; text: string }) {
+  try {
+    await this.db.insert(quizFeedback).values({
+      progressId: Number(progressId),   // Convertir a número
+      feedback: text,                   // Usar la clave correcta
+      createdAt: new Date(),
+    });
+  } catch (err) {
+    console.error("❌ Error al insertar feedback:", err);
+    throw err;
+  }
 }
 
+
+
+
 //funcion para que los usuarios vean el feedback:
-async getQuizFeedback(quizId: number) {
+async getQuizFeedback(progressId: number) {
   const [feedback] = await this.db
-  .select()
-  .from(quizFeedback)
-  .where(eq(quizFeedback.progressId, progressId));
-return feedback;
+    .select()
+    .from(quizFeedback)
+    .where(eq(quizFeedback.progressId, progressId));
+  return feedback;
 }
+
 
 async getAllProgresses() {
   const progresses = await this.db.select().from(studentProgress);

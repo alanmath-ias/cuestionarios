@@ -1,15 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MathDisplay } from '@/components/ui/math-display';
 import { ArrowLeft, Clock, CheckCircle, XCircle } from 'lucide-react';
 import type { QuizResult } from '@/shared/quiz-types';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 
 function AdminQuizReview() {
   const { progressId } = useParams<{ progressId: string }>();
   const [_, setLocation] = useLocation();
+  const [feedbackText, setFeedbackText] = useState('');
 
   const { data: results, isLoading: loadingResults } = useQuery<QuizResult>({
     queryKey: [`/api/results/${progressId}`],
@@ -19,6 +22,41 @@ function AdminQuizReview() {
     queryKey: [`/api/quizzes/${results?.quiz.id}/questions`],
     enabled: !!results?.quiz.id,
   });
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      console.log("Enviando feedback para progressId:", progressId);
+
+      const res = await fetch('/api/quiz-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          progressId,
+          text: feedbackText,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Error al guardar feedback');
+      }
+    },
+    onSuccess: () => {
+      toast.success('Feedback enviado correctamente');
+      setFeedbackText('');
+    },
+    onError: (error) => {
+      toast.error('Error al enviar el feedback: ' + error.message);
+    },
+  });
+  
+
+  const handleSendFeedback = () => {
+    if (!feedbackText.trim()) {
+      toast.warning('Escribe algo de feedback antes de enviarlo');
+      return;
+    }
+    mutation.mutate();
+  };
 
   useEffect(() => {
     console.log("🧩 Admin Review Results:", results);
@@ -97,10 +135,10 @@ function AdminQuizReview() {
 
             <h4 className="font-semibold text-lg mb-4">Resumen de preguntas</h4>
 
-            <div className="space-y-4">
+            <div className="space-y-4 mb-10">
               {results.answers.map((answer, index) => {
                 const correctContent = getCorrectAnswerContent(answer);
-
+                const question = quizQuestions?.find((q) => q.id === answer.question.id);
                 return (
                   <div key={answer.id} className="border rounded-lg overflow-hidden">
                     <div className="bg-gray-50 p-3 flex justify-between items-center">
@@ -117,8 +155,9 @@ function AdminQuizReview() {
                     </div>
 
                     <div className="p-4">
-                      {/* Aquí mostramos el contenido de la pregunta */}
-                      <div className="mb-3">{renderQuestionContent(answer.question.content)}</div>
+                      <div className="mb-3">
+                        {question ? renderQuestionContent(question.content) : 'Contenido no disponible'}
+                      </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className={`border rounded p-3 ${answer.isCorrect ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`}>
@@ -146,6 +185,17 @@ function AdminQuizReview() {
                 );
               })}
             </div>
+
+            <h4 className="font-semibold text-lg mb-2">Retroalimentación para el estudiante</h4>
+            <Textarea
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              placeholder="Escribe aquí tu retroalimentación general para el estudiante..."
+              className="mb-4"
+            />
+            <Button onClick={handleSendFeedback} disabled={mutation.isLoading}>
+              {mutation.isLoading ? 'Enviando...' : 'Enviar Feedback'}
+            </Button>
           </CardContent>
         </Card>
       ) : (

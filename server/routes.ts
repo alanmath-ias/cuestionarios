@@ -1215,6 +1215,15 @@ app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Resp
 app.post("/api/quiz-submission", async (req, res) => {
   const { userId, quizId, score, progressId } = req.body;
 
+
+  console.log("📥 Datos recibidos en /api/quiz-submission:", {
+    userId,
+    quizId,
+    score,
+    progressId,
+    typeofScore: typeof score,
+  });
+
   if (!userId || !quizId || typeof score !== "number" || !progressId) {
     return res.status(400).json({ error: "Datos incompletos o inválidos" });
   }
@@ -1252,32 +1261,34 @@ app.get("/api/quiz-submissions", async (req, res) => {
 //retroalimentacion por medio de un prompt
 // En routes.ts
 app.post("/api/quiz-feedback", async (req, res) => {
-  const { userId, quizId, feedback } = req.body;
+  const { progressId, text } = req.body;
 
-  if (!userId || !quizId || !feedback) {
+  if (!progressId || !text) {
     return res.status(400).json({ error: "Datos incompletos o inválidos" });
   }
 
   try {
-    await storage.saveQuizFeedback({ userId, quizId, feedback });
+    await storage.saveQuizFeedback({ progressId, text });
     res.status(200).json({ success: true });
   } catch (error) {
     console.error("Error guardando el feedback:", error);
     res.status(500).json({ error: "Error interno" });
   }
 });
+
 //mostrar el feedback a los usuarios
-app.get("/api/quiz-feedback/:quizId", async (req, res) => {
-  const { quizId } = req.params;
+app.get("/api/quiz-feedback/:progressId", async (req, res) => {
+  const { progressId } = req.params;
 
   try {
-    const feedback = await storage.getQuizFeedback(Number(quizId));
+    const feedback = await storage.getQuizFeedback(Number(progressId));
     res.status(200).json(feedback);
   } catch (error) {
     console.error("Error obteniendo el feedback:", error);
     res.status(500).json({ error: "Error interno" });
   }
 });
+
 
 
   //fin chat gpt calificaciones
