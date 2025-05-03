@@ -18,8 +18,9 @@ import { PageLayout } from "@/components/layout/page-layout";
 import { useQuery } from "@tanstack/react-query";
 import { User } from "@/shared/types";
 import { useEffect } from "react";
-import UserCategoriesAdmin from './pages/admin/UserCategoriesAdmin';
 import AllUsersCategoriesAdmin from './pages/admin/AllUsersCategoriesAdmin';
+import UserCategoriesAdmin from './pages/admin/UserCategoriesAdmin';
+import AdminQuizReview from './pages/admin/AdminQuizReview';
 
 {/*chat gpt entrenamiento*/}
 import TrainingPage from "@/pages/training/[categoryId]";
@@ -134,14 +135,20 @@ function Router() {
       <Route path="/admin/quizzes/:quizId/questions">
         {(params) => <AdminProtectedRoute component={QuestionsAdmin} path={`/admin/quizzes/${params.quizId}/questions`} />}
       </Route>
-     
-<Route path="/admin/calificar">
-  {() => <AdminProtectedRoute component={Calificar} path="/admin/calificar" />}
+      <Route path="/admin/calificar">
+        {() => <AdminProtectedRoute component={Calificar} path="/admin/calificar" />}
+      </Route>
+      <Route path="/admin/review/:progressId">
+  {() => <AdminProtectedRoute component={AdminQuizReview} path="/admin/review/:progressId" />}
 </Route>
+
        
 {/*chat gpt calificar ruta para el boton que lleva a quiz-results*/}
 <AdminProtectedRoute path="/admin/quiz-results/:progressId" component={QuizResults} />
 {/*chat gpt*/}
+
+
+
 
 
 {/* Nueva ruta para administración de categorías por usuario */}

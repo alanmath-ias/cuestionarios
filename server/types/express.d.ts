@@ -1,7 +1,8 @@
-import { User } from "../../shared/types";
+/*import { User } from "../../shared/types";
 
 //chat gpt dashboard personalizado
 import "express";
+import "express-session";
 
 declare module "express" {
   export interface Request {
@@ -22,7 +23,7 @@ export {}; // Esto evita que sea tratado como un módulo global
 
 //chat gpt entrenamiento
 // types/express-session.d.ts
-import "express-session";
+
 
 declare module "express-session" {
   interface SessionData {
@@ -35,7 +36,6 @@ declare module "express-session" {
   }
 }
 
-import "express-session";
 
 declare module "express-session" {
   interface SessionData {
@@ -45,4 +45,28 @@ declare module "express-session" {
 }
 
 
-//fin chat gpt entrenamiento
+*///funcinaba bien esto antes de adminquizreview
+// types/express-session.d.ts
+import "express";
+import "express-session";
+import { User } from "@/shared/types"; // Ajusta el path si es necesario
+
+// Agrega propiedad `user` al objeto Request de Express (si la usas para guardar información del usuario)
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
+  }
+}
+
+// Extiende los datos de sesión de express-session
+declare module "express-session" {
+  interface SessionData {
+    userId?: number;
+    role?: "admin" | "user" | "student"; // puedes agregar otros roles si los usas
+    username?: string;
+  }
+}
+
+export {}; // evita conflicto de ámbito global

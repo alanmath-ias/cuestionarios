@@ -58,19 +58,22 @@ const Calificar = () => {
           {submissions.map((submission, index) => (
             <Card key={index} className="shadow-md rounded-xl p-4">
               <CardContent>
-                <p><strong>Estudiante:</strong> {submission.user.name}</p>
-                <p><strong>Quiz:</strong> {submission.quiz.title}</p>
-                <p><strong>Puntaje:</strong> {submission.progress ? submission.progress.score : "No disponible"}</p>
-                <p><strong>Fecha:</strong> {new Date(submission.completedAt).toLocaleString()}</p>
-                <p><strong>ID Progreso:</strong> {submission.progress ? submission.progress.id : "N/A"}</p>
-                {submission.progress && (
-                  <div className="mt-4">
-                    <Button onClick={() => setLocation(`/admin/quiz-results/${submission.progress.id}`)}>
-                      Ver detalles
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
+  <p><strong>Estudiante:</strong> {submission.user.name}</p>
+  <p><strong>Quiz:</strong> {submission.quiz.title}</p>
+  <p><strong>Puntaje:</strong> {submission.progress ? submission.progress.score : "No disponible"}</p>
+  <p><strong>Fecha:</strong> {new Date(submission.completedAt).toLocaleString()}</p>
+  <p><strong>ID Progreso:</strong> {submission.progress ? submission.progress.id : "N/A"}</p>
+  {submission.progress && (
+  <div className="mt-4">
+    <Button onClick={() => setLocation(`/admin/review/${submission.progress.id}`)}>
+  Ver detalles
+</Button>
+
+
+  </div>
+)}
+</CardContent>
+
             </Card>
           ))}
         </div>

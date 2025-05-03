@@ -77,9 +77,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       
-      // Authenticate user (simple for demo)
+      // Authenticate user
       req.session.userId = user.id;
-      
+  
+      const validRoles = ["admin", "user", "student"] as const;
+      if (validRoles.includes(user.role as any)) {
+        req.session.role = user.role as typeof validRoles[number];
+      } else {
+        req.session.role = "student"; // o un valor por defecto
+      }
+  
       // Send user info without password
       const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
@@ -89,6 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  /*
   apiRouter.post("/auth/register", async (req: Request, res: Response) => {
     try {
       const userData = insertUserSchema.parse(req.body);
@@ -116,8 +124,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto login
       req.session.userId = newUser.id;
-      
+      req.session.role = user.role; // ← asegúrate de que este campo se esté seteando correctamente
       // Return user without password
+      const { password: _, ...userWithoutPassword } = newUser;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid user data", errors: error.errors });
+      }
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Error during registration" });
+    }
+  });*/ //esta anterior auth register funcionaba bien sin calificar
+  
+  apiRouter.post("/auth/register", async (req: Request, res: Response) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+  
+      const existingUser = await storage.getUserByUsername(userData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+  
+      const userCount = (await storage.getUsers()).length;
+      const isFirstUser = userCount === 0;
+  
+      const assignedRole = isFirstUser ? "admin" : (userData.role || "student");
+  
+      const validRoles = ["admin", "user", "student"] as const;
+      const safeRole = validRoles.includes(assignedRole as any)
+        ? assignedRole as typeof validRoles[number]
+        : "student";
+  
+      const userWithRole = {
+        ...userData,
+        role: safeRole,
+      };
+  
+      const newUser = await storage.createUser(userWithRole);
+  
+      // Auto login con validación de rol
+      req.session.userId = newUser.id;
+      req.session.role = safeRole;
+  
       const { password: _, ...userWithoutPassword } = newUser;
       res.status(201).json(userWithoutPassword);
     } catch (error) {
@@ -129,6 +178,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  
+
   apiRouter.get("/auth/me", async (req: Request, res: Response) => {
     const userId = req.session.userId;
     
@@ -606,11 +657,17 @@ apiRouter.post("/progress", async (req: Request, res: Response) => {
     }
   
     try {
+      console.log("User ID:", userId);
+console.log("Role:", role);
+console.log("Requested progressId:", progressId);
+
+
       let progress;
   
       if (role === "admin") {
         // Admin puede ver cualquier progreso
         const allProgresses = await storage.getAllProgresses(); // Este método debe existir en storage
+        console.log("Total progresses found:", allProgresses.length);
         progress = allProgresses.find(p => p.id === progressId);
       } else {
         // Usuario solo puede ver sus propios progresos
