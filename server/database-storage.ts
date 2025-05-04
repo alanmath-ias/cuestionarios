@@ -101,6 +101,13 @@ export class DatabaseStorage implements IStorage {
     return db.delete(subcategories).where(eq(subcategories.id, id));
   }
   
+  async updateSubcategory(id: number, name: string) {
+    await db
+      .update(subcategories)
+      .set({ name })
+      .where(eq(subcategories.id, id));
+  }
+  
 
   // Quiz methods
   async getQuizzes(): Promise<Quiz[]> {

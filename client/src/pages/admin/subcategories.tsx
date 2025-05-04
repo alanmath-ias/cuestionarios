@@ -1,7 +1,5 @@
-// client/src/pages/admin/subcategories.tsx
-
 import { useEffect, useState } from "react";
-import axios from "axios";
+import { FiChevronDown, FiChevronUp } from "react-icons/fi"; // Para las flechas
 
 type Category = {
   id: number;
@@ -12,7 +10,6 @@ type Subcategory = {
   id: number;
   name: string;
   categoryId: number;
-  categoryName: string;
 };
 
 export default function SubcategoriesPage() {
@@ -24,6 +21,7 @@ export default function SubcategoriesPage() {
   const [editingName, setEditingName] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [openCategoryIds, setOpenCategoryIds] = useState<number[]>([]); // Estado para manejar las categorías abiertas
 
   useEffect(() => {
     fetchCategories();
@@ -31,13 +29,35 @@ export default function SubcategoriesPage() {
   }, []);
 
   const fetchCategories = async () => {
-    const res = await axios.get("/api/categories");
-    setCategories(res.data);
+    try {
+      const response = await fetch("/api/categories");
+      if (!response.ok) throw new Error("Error fetching categories");
+      const data = await response.json();
+      setCategories(data);
+    } catch (err) {
+      setError("Error al cargar categorías");
+      console.error(err);
+    }
   };
 
   const fetchSubcategories = async () => {
-    const res = await axios.get("/api/subcategories");
-    setSubcategories(res.data);
+    try {
+      const response = await fetch("/api/admin/subcategories");
+      if (!response.ok) throw new Error("Error fetching subcategories");
+      const data = await response.json();
+
+      // Formateamos los datos para acceder correctamente a la categoría
+      const formattedData = data.map((item: any) => ({
+        id: item.subcategories.id,
+        name: item.subcategories.name,
+        categoryId: item.subcategories.categoryId,
+      }));
+
+      setSubcategories(formattedData); // Actualizamos el estado con los datos formateados
+    } catch (err) {
+      setError("Error al cargar subcategorías");
+      console.error(err);
+    }
   };
 
   const handleCreate = async () => {
@@ -50,25 +70,41 @@ export default function SubcategoriesPage() {
     }
 
     try {
-      await axios.post("/api/subcategories", {
-        name: newSubcategoryName.trim(),
-        categoryId: selectedCategoryId,
+      const response = await fetch("/api/admin/subcategories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: newSubcategoryName.trim(),
+          categoryId: selectedCategoryId,
+        }),
       });
+
+      if (!response.ok) throw new Error("Error creating subcategory");
+
       setSuccess("Subcategoría creada con éxito.");
       setNewSubcategoryName("");
       setSelectedCategoryId(null);
       fetchSubcategories();
     } catch (err) {
       setError("Error al crear subcategoría.");
+      console.error(err);
     }
   };
 
   const handleDelete = async (id: number) => {
     try {
-      await axios.delete(`/api/subcategories/${id}`);
+      const response = await fetch(`/api/admin/subcategories/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) throw new Error("Error deleting subcategory");
+
       fetchSubcategories();
-    } catch {
+    } catch (err) {
       setError("Error al eliminar subcategoría.");
+      console.error(err);
     }
   };
 
@@ -86,17 +122,43 @@ export default function SubcategoriesPage() {
     }
 
     try {
-      await axios.put(`/api/subcategories/${editingId}`, {
-        name: editingName.trim(),
+      const response = await fetch(`/api/admin/subcategories/${editingId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: editingName.trim(),
+        }),
       });
+
+      if (!response.ok) throw new Error("Error updating subcategory");
+
       setSuccess("Subcategoría actualizada.");
       setEditingId(null);
       setEditingName("");
       fetchSubcategories();
-    } catch {
+    } catch (err) {
       setError("Error al actualizar subcategoría.");
+      console.error(err);
     }
   };
+
+  const toggleCategory = (categoryId: number) => {
+    setOpenCategoryIds((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  // Agrupamos las subcategorías por categoría
+  const groupedSubcategories = categories.reduce((acc, category) => {
+    acc[category.id] = subcategories.filter(
+      (sub) => sub.categoryId === category.id
+    );
+    return acc;
+  }, {} as { [key: number]: Subcategory[] });
 
   return (
     <div className="p-6">
@@ -133,64 +195,84 @@ export default function SubcategoriesPage() {
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold mb-2">Lista de subcategorías</h2>
-        <ul className="space-y-2">
-          {subcategories.map((sub) => (
-            <li
-              key={sub.id}
-              className="border p-3 rounded flex justify-between items-center"
+        {categories.map((category) => (
+          <div key={category.id} className="mb-4">
+            <div
+              onClick={() => toggleCategory(category.id)}
+              className="cursor-pointer bg-gray-100 p-4 rounded-md shadow-md hover:bg-gray-200 flex justify-between items-center"
             >
-              {editingId === sub.id ? (
-                <div className="flex items-center gap-2 w-full">
-                  <input
-                    type="text"
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    className="border p-2 rounded w-full"
-                  />
-                  <button
-                    onClick={handleUpdate}
-                    className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
-                  >
-                    Guardar
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditingId(null);
-                      setEditingName("");
-                    }}
-                    className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <p className="font-medium">{sub.name}</p>
-                    <p className="text-sm text-gray-600">
-                      Categoría: {sub.categoryName}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEdit(sub.id, sub.name)}
-                      className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(sub.id)}
-                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
+              <h2 className="text-xl font-semibold">{category.name}</h2>
+              <div className="flex items-center">
+                {openCategoryIds.includes(category.id) ? (
+                  <FiChevronUp />
+                ) : (
+                  <FiChevronDown />
+                )}
+              </div>
+            </div>
+
+            {openCategoryIds.includes(category.id) && (
+              <div className="mt-4">
+                {groupedSubcategories[category.id]?.length === 0 ? (
+                  <p className="text-gray-500">Esta categoría está vacía.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {groupedSubcategories[category.id]?.map((sub) => (
+                      <li
+                        key={sub.id}
+                        className="border p-3 rounded flex justify-between items-center"
+                      >
+                        {editingId === sub.id ? (
+                          <div className="flex items-center gap-2 w-full">
+                            <input
+                              type="text"
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              className="border p-2 rounded w-full"
+                            />
+                            <button
+                              onClick={handleUpdate}
+                              className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingId(null);
+                                setEditingName("");
+                              }}
+                              className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="font-medium">{sub.name}</p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleEdit(sub.id, sub.name)}
+                                className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => handleDelete(sub.id)}
+                                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
