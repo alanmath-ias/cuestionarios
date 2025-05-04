@@ -19,7 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { User } from "@/shared/types";
 import { useEffect } from "react";
 import AllUsersCategoriesAdmin from './pages/admin/AllUsersCategoriesAdmin';
-import UserCategoriesAdmin from './pages/admin/UserCategoriesAdmin';
+
 import AdminQuizReview from './pages/admin/AdminQuizReview';
 
 {/*chat gpt entrenamiento*/}
@@ -27,6 +27,7 @@ import TrainingPage from "@/pages/training/[categoryId]";
 
 {/*chat gpt calificar*/}
 import Calificar from "@/pages/admin/Calificar";
+import subcategories from "./pages/admin/subcategories";
 
 function ProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
   const { data: user, isLoading } = useQuery<User>({
@@ -152,19 +153,19 @@ function Router() {
 
 
 {/* Nueva ruta para administración de categorías por usuario */}
-<Route path="/admin/users/:userId/categories">
-  {(params) => (
-    <AdminProtectedRoute 
-      component={UserCategoriesAdmin} 
-      path={`/admin/users/${params.userId}/categories`} 
-    />
-  )}
-</Route>
      
       <Route path="/admin/urlusercategories">
   <AdminProtectedRoute 
     component={AllUsersCategoriesAdmin}
     path="/admin/urlusercategories" 
+  />
+</Route>
+
+{/*Ruta para subcategorias*/}
+<Route path="/admin/subcategories">
+  <AdminProtectedRoute 
+    component={subcategories}
+    path="/admin/subcategories" 
   />
 </Route>
 

@@ -14,4 +14,11 @@ export type Question = {
     }[];
   };
 
+  export type Subcategory = {
+    id: number;
+    name: string;
+    description: string;
+    categoryId: number;
+  };
+  
   

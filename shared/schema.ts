@@ -1,5 +1,5 @@
 
-import { pgTable, text, uuid, serial, integer, boolean, jsonb, json, timestamp, unique, foreignKey } from "drizzle-orm/pg-core";//deep seek nuevo intento categorias por usuarios
+import { pgTable, text, uuid, serial, integer, boolean, jsonb, json, timestamp, unique, foreignKey, varchar } from "drizzle-orm/pg-core";//deep seek nuevo intento categorias por usuarios
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -177,6 +177,16 @@ export const insertUserCategorySchema = createInsertSchema(userCategories).pick(
   userId: true,
   categoryId: true,
 });
+// Subcategorias Model
+// @shared/schema.ts o donde tengas tus esquemas
+export const subcategories = pgTable("subcategories", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  categoryId: integer("category_id").references(() => categories.id).notNull(),
+});
+
+
 
 // chat gpt calificaciones quiz
 // Quiz Submissions model (for tracking quiz completions and scores)
@@ -232,3 +242,7 @@ export type InsertStudentAnswer = z.infer<typeof insertStudentAnswerSchema>;
 
 export type UserCategory = typeof userCategories.$inferSelect;
 export type InsertUserCategory = z.infer<typeof insertUserCategorySchema>;
+
+export type Subcategory = typeof subcategories.$inferSelect;
+
+

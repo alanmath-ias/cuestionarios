@@ -309,6 +309,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  //Subcategories endpoints
+// Obtener todas las subcategorías
+app.get('/api/admin/subcategories', async (req, res) => {
+  const subcategories = await storage.getAllSubcategories();
+  res.json(subcategories);
+});
+
+// Crear una nueva subcategoría
+app.post('/api/admin/subcategories', async (req, res) => {
+  const { name, categoryId } = req.body;
+  const subcategory = await storage.createSubcategory({ name, categoryId });
+  res.json(subcategory);
+});
+
+// Obtener subcategorías por categoría
+app.get('/api/admin/subcategories/by-category/:categoryId', async (req, res) => {
+  const categoryId = Number(req.params.categoryId);
+  const subcategories = await storage.getSubcategoriesByCategory(categoryId);
+  res.json(subcategories);
+});
+//Borrar una subcategoria
+app.delete('/api/admin/subcategories/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  await storage.deleteSubcategory(id);
+  res.json({ success: true });
+});
+
+
   // Quizzes endpoints
   apiRouter.get("/quizzes", async (_req: Request, res: Response) => {
     try {

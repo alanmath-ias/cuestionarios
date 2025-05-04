@@ -6,7 +6,8 @@ import {
   type Question, type InsertQuestion,
   type Answer, type InsertAnswer,
   type StudentProgress, type InsertStudentProgress,
-  type StudentAnswer, type InsertStudentAnswer
+  type StudentAnswer, type InsertStudentAnswer,
+  
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -23,7 +24,9 @@ import { quizFeedback } from "@shared/schema";
 import { userCategories } from "../shared/schema";
 //fin chat gpt dashboard personalizado
 import { sql } from 'drizzle-orm';
+import { subcategories, Subcategory } from "../shared/schema";
 
+ // Asegúrate que esté importado
 
 export class DatabaseStorage implements IStorage {
   // User methods
@@ -81,7 +84,24 @@ export class DatabaseStorage implements IStorage {
   async deleteCategory(id: number): Promise<void> {
     await db.delete(categories).where(eq(categories.id, id));
   }
+  //subcategory methods
+  async getAllSubcategories() {
+    return db.select().from(subcategories).leftJoin(categories, eq(subcategories.categoryId, categories.id));
+  }
   
+  async getSubcategoriesByCategory(categoryId: number) {
+    return db.select().from(subcategories).where(eq(subcategories.categoryId, categoryId));
+  }
+  
+  async createSubcategory({ name, categoryId }: { name: string; categoryId: number }) {
+    return db.insert(subcategories).values({ name, categoryId }).returning();
+  }
+  
+  async deleteSubcategory(id: number) {
+    return db.delete(subcategories).where(eq(subcategories.id, id));
+  }
+  
+
   // Quiz methods
   async getQuizzes(): Promise<Quiz[]> {
     return await db.select().from(quizzes);
