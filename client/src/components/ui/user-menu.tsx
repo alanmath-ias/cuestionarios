@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,31 +40,6 @@ export function UserMenu({ user }: UserMenuProps) {
       .join('')
       .toUpperCase();
   };
-/*
-  const handleLogout = async () => {
-    try {
-      await apiRequest('POST', '/api/auth/logout', {});
-      
-      // Invalidar la consulta de usuario para limpiar el estado
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      queryClient.setQueryData(['/api/user'], null);
-      
-      toast({
-        title: 'Sesión cerrada',
-        description: 'Has cerrado sesión correctamente.'
-      });
-      
-      // Redirigir a la página de inicio o login sin recargar
-      setLocation('/auth');
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'No se pudo cerrar la sesión.',
-        variant: 'destructive'
-      });
-    }
-  };
-*/
 
 //chat gpt cierra sesion completamente
 const handleLogout = async () => {

@@ -35,6 +35,7 @@ const storage = new DatabaseStorage(db);
 //chat gpt dashboar personalizado
 import { User } from '@/shared/types'; // Asegúrate de importar correctamente tu tipo de usuario
 
+
 declare global {
   namespace Express {
     interface Request {
@@ -1289,7 +1290,28 @@ app.get("/api/quiz-feedback/:progressId", async (req, res) => {
   }
 });
 
+//Notificaciones y borrado en las card:
+// PATCH: Marcar como revisado
+app.patch('/api/quiz-submissions/:progressId/reviewed', async (req: ExpressRequest, res: Response) => {
+  const progressId = Number(req.params.progressId);
+  await storage.markSubmissionAsReviewed(progressId);
+  res.json({ success: true });
+});
 
+
+// DELETE /api/quiz-submissions/:progressId
+app.delete('/api/quiz-submissions/:progressId', async (req: ExpressRequest, res: Response) => {
+  const progressId = Number(req.params.progressId);
+  await storage.deleteSubmissionByProgressId(progressId);
+  res.json({ success: true });
+});
+
+//contar revisiones pendientes:
+app.get('/api/admin/pending-review-count', async (req: ExpressRequest, res: Response) => {
+  const count = await storage.getPendingReviewCount();
+  res.json({ count });
+});
+//esto es solo para el dashboard
 
   //fin chat gpt calificaciones
 

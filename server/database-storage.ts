@@ -22,6 +22,7 @@ import { quizFeedback } from "@shared/schema";
 //chat gpt dashboard personalizado
 import { userCategories } from "../shared/schema";
 //fin chat gpt dashboard personalizado
+import { sql } from 'drizzle-orm';
 
 
 export class DatabaseStorage implements IStorage {
@@ -538,6 +539,31 @@ async getStudentAnswers(progressId: number) {
     .leftJoin(answers, eq(studentAnswers.answerId, answers.id))
     .where(eq(studentAnswers.progressId, progressId));
 }
+
+//notificaciones y borrado de las card:
+async markSubmissionAsReviewed(progressId: number) {
+  await db
+    .update(quizSubmissions)
+    .set({ reviewed: true })
+    .where(eq(quizSubmissions.progressId, progressId));
+}
+
+async deleteSubmissionByProgressId(progressId: number) {
+  await db
+    .delete(quizSubmissions)
+    .where(eq(quizSubmissions.progressId, progressId));
+}
+
+//contador de pendientes por revisar
+async getPendingReviewCount(): Promise<number> {
+  const result = await this.db.select({
+    count: sql<number>`count(*)`
+  }).from(quizSubmissions)
+    .where(eq(quizSubmissions.reviewed, false));
+
+  return result[0]?.count || 0;
+}
+
 
 
 //fin chat gpt calificaciones

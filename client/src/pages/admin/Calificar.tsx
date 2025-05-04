@@ -20,6 +20,7 @@ type QuizSubmission = {
     name: string;
   };
   completedAt: string;
+  reviewed: boolean;
 };
 
 const Calificar = () => {
@@ -45,6 +46,33 @@ const Calificar = () => {
     fetchSubmissions();
   }, []);
 
+ 
+  const markAsReviewed = async (progressId: number) => {
+    await fetch(`/api/quiz-submissions/${progressId}/reviewed`, {
+      method: 'PATCH',
+      credentials: 'include',
+    });
+  
+    setSubmissions((prev) =>
+      prev.map((s) =>
+        s.progress.id === progressId ? { ...s, reviewed: true } : s
+      )
+    );
+  };
+  
+  const handleDiscard = async (progressId: number) => {
+    await fetch(`/api/quiz-submissions/${progressId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  
+    setSubmissions((prev) =>
+      prev.filter((s) => s.progress && s.progress.id !== progressId)
+    );
+    
+  };
+  
+  
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Presentaciones de Cuestionarios</h1>
@@ -58,6 +86,16 @@ const Calificar = () => {
           {submissions.map((submission, index) => (
             <Card key={index} className="shadow-md rounded-xl p-4">
               <CardContent>
+
+
+              <p><strong>Estado:</strong> {submission.reviewed ? (
+  <span className="text-green-600 font-semibold">✔️ Revisado</span>
+) : (
+  <span className="text-yellow-600 font-semibold">🕒 Pendiente</span>
+)}</p>
+
+
+
   <p><strong>Estudiante:</strong> {submission.user.name}</p>
   <p><strong>Quiz:</strong> {submission.quiz.title}</p>
   <p><strong>Puntaje:</strong> {submission.progress ? submission.progress.score : "No disponible"}</p>
@@ -65,8 +103,24 @@ const Calificar = () => {
   <p><strong>ID Progreso:</strong> {submission.progress ? submission.progress.id : "N/A"}</p>
   {submission.progress && (
   <div className="mt-4">
-    <Button onClick={() => setLocation(`/admin/review/${submission.progress.id}`)}>
+    
+    
+    <Button
+  onClick={async () => {
+    await markAsReviewed(submission.progress.id);
+    setLocation(`/admin/review/${submission.progress.id}`);
+  }}
+>
   Ver detalles
+</Button>
+
+
+<Button
+  variant="destructive"
+  onClick={() => handleDiscard(submission.progress.id)}
+  className="ml-2"
+>
+  Descartar
 </Button>
 
 
