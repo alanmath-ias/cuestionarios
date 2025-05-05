@@ -21,6 +21,7 @@ export interface Quiz {
   title: string;
   description: string;
   categoryId: number;
+  subcategoryId: number;
   timeLimit: number;
   difficulty: string;
   totalQuestions: number;

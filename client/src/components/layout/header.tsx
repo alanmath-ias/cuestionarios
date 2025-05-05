@@ -1,4 +1,4 @@
-{/*
+
 import { Link } from 'wouter';
 import { UserMenu } from '@/components/ui/user-menu';
 import { Parentheses } from 'lucide-react';
@@ -44,8 +44,8 @@ export function Header({ user }: HeaderProps) {
     </header>
   );
 }
-*/}//header anterior perfecto antes del contador de revisiones pendientes notificaciones
-import { Link } from 'wouter';
+//header siguiente no terminado de implementear para el contador de revisiones pendientes notificaciones
+{/*import { Link } from 'wouter';
 import { UserMenu } from '@/components/ui/user-menu';
 import { Parentheses } from 'lucide-react';
 
@@ -103,4 +103,4 @@ export function Header({ user, pendingCount }: HeaderProps) {
     </header>
   );
 }
-
+*/}

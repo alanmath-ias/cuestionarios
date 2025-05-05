@@ -52,11 +52,12 @@ export const quizzes = pgTable("quizzes", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  categoryId: integer("category_id").notNull(),
-  timeLimit: integer("time_limit").notNull(), // in minutes
-  difficulty: text("difficulty").notNull(), // "basic", "intermediate", "advanced"
+  categoryId: integer("category_id").references(() => categories.id).notNull(),
+  subcategoryId: integer("subcategory_id").references(() => subcategories.id),
+  timeLimit: integer("time_limit").notNull(),
+  difficulty: text("difficulty").notNull(),
   totalQuestions: integer("total_questions").notNull(),
-  isPublic: boolean("is_public").default(false), // Indica si el quiz es público o requiere autenticación
+  isPublic: boolean("is_public").default(false),
 });
 
 
@@ -178,14 +179,13 @@ export const insertUserCategorySchema = createInsertSchema(userCategories).pick(
   categoryId: true,
 });
 // Subcategorias Model
-// @shared/schema.ts o donde tengas tus esquemas
 export const subcategories = pgTable("subcategories", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
+  name: text("name").notNull(),
   description: text("description"),
   categoryId: integer("category_id").references(() => categories.id).notNull(),
+  colorClass: text("color_class"),
 });
-
 
 
 // chat gpt calificaciones quiz

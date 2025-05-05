@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react"; // asegúrate de importar useState y useEffect aquí
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -41,6 +42,7 @@ const formSchema = z.object({
   title: z.string().min(3, { message: "El título debe tener al menos 3 caracteres" }),
   description: z.string().min(10, { message: "La descripción debe tener al menos 10 caracteres" }),
   categoryId: z.string().min(1, { message: "Debes seleccionar una categoría" }),
+  subcategoryId: z.string().min(1, { message: "Debes seleccionar una subcategoría" }), // NUEVO
   timeLimit: z.string().min(1, { message: "Debes establecer un tiempo límite" }),
   difficulty: z.string().min(1, { message: "Debes seleccionar una dificultad" }),
   isPublic: z.boolean().default(false),
@@ -54,6 +56,8 @@ export default function QuizzesAdmin() {
 const [assignedUsers, setAssignedUsers] = useState<number[]>([]); // Para los usuarios asignados
 const [visibleQuizId, setVisibleQuizId] = useState<number | null>(null); // Para mostrar los usuarios de un quiz específico
 const [allUsers, setAllUsers] = useState<User[]>([]); // Lista de todos los usuarios
+const [subcategories, setSubcategories] = useState<{ id: number; name: string; categoryId: number }[]>([]);
+
 
 useEffect(() => {
   // Cargar todos los usuarios (solo una vez)
@@ -161,11 +165,39 @@ useEffect(() => {
     },
   });
 
+  useEffect(() => {
+    const categoryId = form.watch("categoryId");
+    if (!categoryId) {
+      setSubcategories([]);
+      return;
+    }
+  
+    const fetchSubcategories = async () => {
+      try {
+        const res = await fetch(`/api/admin/subcategories/by-category/${categoryId}`);
+        if (!res.ok) throw new Error(res.statusText);
+        const data = await res.json();
+        setSubcategories(data);
+      } catch (error) {
+        console.error("Error fetching subcategories:", error);
+        // Opcional: mostrar notificación al usuario
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las subcategorías",
+          variant: "destructive",
+        });
+      }
+    };
+  
+    fetchSubcategories();
+  }, [form.watch("categoryId")]); // Se ejecuta solo cuando cambia la categoría
+
   const createMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
       const payload = {
         ...values,
         categoryId: parseInt(values.categoryId),
+        subcategoryId: parseInt(values.subcategoryId), // NUEVO
         timeLimit: parseInt(values.timeLimit),
         totalQuestions: 0, // Se actualizará cuando se añadan preguntas
       };
@@ -214,6 +246,7 @@ useEffect(() => {
       const payload = {
         ...values,
         categoryId: parseInt(values.categoryId),
+        subcategoryId: parseInt(values.subcategoryId), // NUEVO
         timeLimit: parseInt(values.timeLimit),
       };
       
@@ -300,6 +333,7 @@ useEffect(() => {
       title: quiz.title,
       description: quiz.description,
       categoryId: String(quiz.categoryId),
+      subcategoryId: String(quiz.subcategoryId ?? ""), // NUEVO
       timeLimit: String(quiz.timeLimit),
       difficulty: quiz.difficulty,
       isPublic: quiz.isPublic === true,
@@ -423,6 +457,41 @@ useEffect(() => {
                     )}
                   />
                   
+<FormField
+  control={form.control}
+  name="subcategoryId"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Subcategoría</FormLabel>
+      <Select
+        onValueChange={field.onChange}
+        value={field.value}
+        disabled={!form.watch("categoryId") || subcategories.length === 0}
+      >
+        <FormControl>
+          <SelectTrigger>
+            <SelectValue placeholder={
+              form.watch("categoryId") 
+                ? "Selecciona una subcategoría" 
+                : "Primero selecciona una categoría"
+            } />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent>
+          {subcategories.map((sub) => (
+            <SelectItem key={sub.id} value={String(sub.id)}>
+              {sub.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+
+
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
