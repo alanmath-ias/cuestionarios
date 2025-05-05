@@ -53,7 +53,7 @@ export const quizzes = pgTable("quizzes", {
   title: text("title").notNull(),
   description: text("description").notNull(),
   categoryId: integer("category_id").references(() => categories.id).notNull(),
-  subcategoryId: integer("subcategory_id").references(() => subcategories.id),
+  subcategoryId: integer("subcategory_id").references(() => subcategories.id).notNull(),
   timeLimit: integer("time_limit").notNull(),
   difficulty: text("difficulty").notNull(),
   totalQuestions: integer("total_questions").notNull(),

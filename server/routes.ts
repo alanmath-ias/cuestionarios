@@ -322,6 +322,7 @@ app.get('/api/admin/subcategories', async (req, res) => {
   }
 });
 
+
 // Crear una nueva subcategoría
 app.post('/api/admin/subcategories', async (req, res) => {
   const { name, categoryId } = req.body;
@@ -1007,6 +1008,12 @@ apiRouter.get("/admin/users-with-categories", requireAdmin, async (req, res) => 
       console.error("Quiz deletion error:", error);
       res.status(500).json({ message: "Error deleting quiz" });
     }
+  });
+
+  apiRouter.get("/quizzes/by-subcategory/:subcategoryId", async (req, res) => {
+    const subcategoryId = parseInt(req.params.subcategoryId);
+    const quizzes = await storage.getQuizzesBySubcategory(subcategoryId);
+    res.json(quizzes);
   });
  //chat gpt asignar cuestionarios a usuarios
 // Obtener los quizzes asignados a un usuario

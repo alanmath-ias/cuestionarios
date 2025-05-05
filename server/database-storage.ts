@@ -28,6 +28,11 @@ import { subcategories, Subcategory } from "../shared/schema";
 
  // Asegúrate que esté importado
 
+ interface QuizWithRelations extends Quiz {
+  category?: Category | null;
+  subcategory?: Subcategory | null;
+}
+
 export class DatabaseStorage implements IStorage {
   // User methods
   async getUsers(): Promise<User[]> {
@@ -110,8 +115,34 @@ export class DatabaseStorage implements IStorage {
   
 
   // Quiz methods
-  async getQuizzes(): Promise<Quiz[]> {
+  /*async getQuizzes(): Promise<Quiz[]> {
     return await db.select().from(quizzes);
+  }*///esta funcionaba perfecto antes de la navegacion con subcategorias
+  async getQuizzes(): Promise<QuizWithRelations[]> {
+    const results = await db.select({
+      id: quizzes.id,
+      title: quizzes.title,
+      description: quizzes.description,
+      categoryId: quizzes.categoryId,
+      subcategoryId: quizzes.subcategoryId,
+      timeLimit: quizzes.timeLimit,
+      difficulty: quizzes.difficulty,
+      totalQuestions: quizzes.totalQuestions,
+      isPublic: quizzes.isPublic,
+      category: categories,
+      subcategory: subcategories
+    })
+    .from(quizzes)
+    .leftJoin(categories, eq(quizzes.categoryId, categories.id))
+    .leftJoin(subcategories, eq(quizzes.subcategoryId, subcategories.id));
+  
+    return results;
+  }
+
+  async getQuizzesBySubcategory(subcategoryId: number): Promise<Quiz[]> {
+    return await db.select()
+      .from(quizzes)
+      .where(eq(quizzes.subcategoryId, subcategoryId));
   }
   
   async getPublicQuizzes(): Promise<Quiz[]> {
