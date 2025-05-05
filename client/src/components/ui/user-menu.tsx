@@ -92,9 +92,9 @@ const handleLogout = async () => {
             <DropdownMenuItem onClick={() => setLocation('/')}>
               Mis Calificaciones
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>
-              Quizzes Gratuitos
-            </DropdownMenuItem>
+            {/*<DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>*/}
+              {/*Quizzes Gratuitos*/}
+            {/*</DropdownMenuItem>*/}
           </>
         )}
         
@@ -107,6 +107,9 @@ const handleLogout = async () => {
             <DropdownMenuItem onClick={() => setLocation('/admin/categories')}>
               Gestionar Categorías
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLocation('/admin/subcategories')}>
+            Subcategorías
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLocation('/admin/quizzes')}>
               Gestionar Cuestionarios
             </DropdownMenuItem>
@@ -116,9 +119,7 @@ const handleLogout = async () => {
             <DropdownMenuItem onClick={() => setLocation('/admin/Calificar')}>
              Calificar
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/admin/subcategories')}>
-            Subcategorías
-            </DropdownMenuItem>
+            
 
           </>
         )}

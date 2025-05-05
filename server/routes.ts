@@ -44,8 +44,6 @@ declare global {
   }
 }
 
-//fin chat gpt
-
 // Extend the SessionData interface to include userId
 declare module "express-session" {
   interface SessionData {
@@ -97,47 +95,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  /*
-  apiRouter.post("/auth/register", async (req: Request, res: Response) => {
-    try {
-      const userData = insertUserSchema.parse(req.body);
-      
-      // Check if username already exists
-      const existingUser = await storage.getUserByUsername(userData.username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-      
-      // Asegurarse de que solo los primeros usuarios puedan ser administradores
-      // o que se requiera un código especial para ser administrador 
-      // Esto es solo una forma simple de demostración
-      const userCount = (await storage.getUsers()).length;
-      const isFirstUser = userCount === 0;
-      
-      // Si es el primer usuario, asignarle rol de administrador
-      // de lo contrario, mantener el rol proporcionado o usar "student" por defecto
-      const userWithRole = {
-        ...userData,
-        role: isFirstUser ? 'admin' : (userData.role || 'student')
-      };
-      
-      const newUser = await storage.createUser(userWithRole);
-      
-      // Auto login
-      req.session.userId = newUser.id;
-      req.session.role = user.role; // ← asegúrate de que este campo se esté seteando correctamente
-      // Return user without password
-      const { password: _, ...userWithoutPassword } = newUser;
-      res.status(201).json(userWithoutPassword);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid user data", errors: error.errors });
-      }
-      console.error("Registration error:", error);
-      res.status(500).json({ message: "Error during registration" });
-    }
-  });*/ //esta anterior auth register funcionaba bien sin calificar
-  
+    
   apiRouter.post("/auth/register", async (req: Request, res: Response) => {
     try {
       const userData = insertUserSchema.parse(req.body);
@@ -179,8 +137,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  
-
   apiRouter.get("/auth/me", async (req: Request, res: Response) => {
     const userId = req.session.userId;
     
@@ -195,10 +151,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      
-      // Return user without password
-      //const { password: _, ...userWithoutPassword } = user;
-      //res.json(userWithoutPassword);
       // Return user without password but WITH role
     const { password: _, ...userWithoutPassword } = user;
     res.json({
@@ -208,9 +160,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Auth check error:", error);
       res.status(500).json({ message: "Error checking authentication" });
-
-      
-    }//fin deep seek
+  
+    }
   });
   
   // Add the /user endpoint as well
@@ -236,16 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error checking authentication" });
     }
   });
-  /*
-  apiRouter.post("/auth/logout", (req: Request, res: Response) => {
-    req.session.destroy((err: Error | null) => {
-      if (err) {
-        return res.status(500).json({ message: "Error during logout" });
-      }
-      res.status(200).json({ message: "Logged out successfully" });
-    });
-  });*/
-  //chat gpt cierra sesion totalmente sin cookies
+
   apiRouter.post("/auth/logout", (req: Request, res: Response) => {
     req.session.destroy((err: Error | null) => {
       if (err) {
@@ -264,7 +206,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
-  //fin chat gpt cierra sesion totalmente sin cookies
   
   // Endpoint temporal para actualizar el rol del usuario
   apiRouter.post("/auth/make-admin", async (req: Request, res: Response) => {
@@ -280,8 +221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
-      // En un sistema real, esto tendría más validaciones
+          
       // Actualizar el rol del usuario
       await storage.updateUser(userId, { role: 'admin' });
       
@@ -297,7 +237,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error al actualizar el rol" });
     }
   });
+  //Obtener el nombre del usuario
+  app.get("/api/me", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Usuario no autenticado" });
+      }
   
+      const userId = req.user.id;
+  
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+  
+      res.json({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+      });
+    } catch (error) {
+      console.error("Error al obtener datos del usuario:", error);
+      res.status(500).json({ error: "Error interno del servidor" });
+    }
+  });
+  
+
   // Categories endpoints
   apiRouter.get("/categories", async (_req: Request, res: Response) => {
     try {

@@ -10,7 +10,7 @@ import {
   
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { IStorage } from "./storage";
 import { userQuizzes } from '@shared/schema';
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -43,6 +43,16 @@ export class DatabaseStorage implements IStorage {
     const result = await db.select().from(users).where(eq(users.id, id));
     return result.length > 0 ? result[0] : undefined;
   }
+
+  async getUserById(userId: number) {
+    const result = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+  
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.username, username));
@@ -244,13 +254,24 @@ async getQuizzesByUserId(userId: number) {
       title: quizzes.title,
       categoryId: quizzes.categoryId,
       difficulty: quizzes.difficulty,
+      status: studentProgress.status,
+      reviewed: quizSubmissions.reviewed,
     })
     .from(userQuizzes)
     .innerJoin(quizzes, eq(userQuizzes.quizId, quizzes.id))
+    .leftJoin(studentProgress, and(
+      eq(studentProgress.userId, userId),
+      eq(studentProgress.quizId, quizzes.id)
+    ))
+    .leftJoin(quizSubmissions, and(
+      eq(quizSubmissions.userId, userId),
+      eq(quizSubmissions.quizId, quizzes.id)
+    ))
     .where(eq(userQuizzes.userId, userId));
-
+   // .orderBy(desc(quizzes.id)) la idea es que sean llevados en orden, revisar esto mas adelante
   return result;
 }
+
 
 //fin chat gpt dashboard
 
