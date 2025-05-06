@@ -8,7 +8,7 @@ import {
   insertStudentAnswerSchema 
 } from "@shared/schema";
 import * as expressSession from "express-session";
-import { eq,sql } from "drizzle-orm";
+import { eq,sql, and, or, isNull, isNotNull } from "drizzle-orm";
 
 import { db } from "./db";
 import { userCategories, categories, quizzes } from "../shared/schema";
@@ -34,6 +34,7 @@ const storage = new DatabaseStorage(db);
 
 //chat gpt dashboar personalizado
 import { User } from '@/shared/types'; // Asegúrate de importar correctamente tu tipo de usuario
+import { userQuizzes, studentProgress, quizSubmissions } from "@shared/schema";
 
 
 declare global {
@@ -1361,6 +1362,47 @@ app.get('/api/admin/pending-review-count', async (req: ExpressRequest, res: Resp
   res.json({ count });
 });
 //esto es solo para el dashboard
+
+app.get("/api/user/alerts", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "No autenticado" });
+    }
+
+    const pendingTasks = await db
+  .select()
+  .from(userQuizzes)
+  .leftJoin(studentProgress, and(
+    eq(studentProgress.quizId, userQuizzes.quizId),
+    eq(studentProgress.userId, userId)
+  ))
+  .where(and(
+    eq(userQuizzes.userId, userId),
+    or(
+      isNull(studentProgress.status),
+      eq(studentProgress.status, 'in_progress')
+    )
+  ));
+
+    const feedbacks = await db
+      .select()
+      .from(quizSubmissions)
+      .where(and(
+        eq(quizSubmissions.userId, userId),
+        isNotNull(quizSubmissions.feedback)
+      ));
+
+    res.json({
+      hasPendingTasks: pendingTasks.length > 0,
+      hasFeedback: feedbacks.length > 0,
+    });
+  } catch (error) {
+    console.error("Error al obtener alertas:", error);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+
 
   //fin chat gpt calificaciones
 

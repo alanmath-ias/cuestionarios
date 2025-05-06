@@ -131,6 +131,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Category, Quiz } from "@/shared/types";
+import { UserQuiz } from "@shared/schema";
 import {
   BookOpen,
   ListChecks,
@@ -139,6 +140,8 @@ import {
   CheckCircle2,
   ClipboardList,
   ClipboardCheck,
+  MessageCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -173,6 +176,13 @@ async function fetchQuizzes() {
   return response.json();
 }
 
+async function fetchAlerts() {
+  const res = await fetch("/api/user/alerts", { credentials: "include" });
+  if (!res.ok) throw new Error("Error al obtener alertas");
+  return res.json();
+}
+
+
 export default function UserDashboard() {
   const { data: currentUser, isLoading: loadingUser } = useQuery({
     queryKey: ["current-user"],
@@ -184,12 +194,18 @@ export default function UserDashboard() {
     queryFn: fetchCategories,
   });
 
-  const { data: quizzes, isLoading: loadingQuizzes } = useQuery<Quiz[]>({
+  const { data: quizzes, isLoading: loadingQuizzes } = useQuery<UserQuiz[]>({
     queryKey: ["user-quizzes"],
     queryFn: fetchQuizzes,
   });
 
   const isLoading = loadingUser || loadingCategories || loadingQuizzes;
+
+  const { data: alerts } = useQuery({
+    queryKey: ["user-alerts"],
+    queryFn: fetchAlerts,
+  });
+  
 
   if (isLoading) {
     return (
@@ -202,9 +218,25 @@ export default function UserDashboard() {
   const completedQuizzes = quizzes?.filter((q) => q.status === "completed") || [];
   const pendingQuizzes = quizzes?.filter((q) => q.status !== "completed") || [];
 
+  
+
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-4">Hola {currentUser?.name}</h1>
+      {alerts?.hasPendingTasks && (
+  <div className="mb-4 p-4 rounded-lg bg-yellow-100 text-yellow-800 flex items-center gap-2">
+    <AlertTriangle className="w-5 h-5" />
+    Tienes tareas pendientes por resolver.
+  </div>
+)}
+
+{alerts?.hasFeedback && (
+  <div className="mb-4 p-4 rounded-lg bg-green-100 text-green-800 flex items-center gap-2">
+    <MessageCircle className="w-5 h-5" />
+    Has recibido retroalimentación en uno o más cuestionarios.
+  </div>
+)}
+
       <p className="text-muted-foreground mb-6">
         Aquí puedes acceder a tus categorías y cuestionarios asignados
       </p>
