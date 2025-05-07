@@ -39,6 +39,7 @@ const formSchema = z.object({
   difficulty: z.string().min(1, { message: "Debes seleccionar una dificultad" }),
   points: z.string().min(1, { message: "Debes asignar puntos a la pregunta" }),
   variables: z.string().optional(),
+  imageUrl: z.string().url().optional(), // 👈 agrégalo aquí
 });
 
 export default function QuestionsAdmin() {
@@ -71,6 +72,7 @@ export default function QuestionsAdmin() {
       difficulty: "3",
       points: "10",
       variables: "",
+      imageUrl: "", // 👈 también en defaultValues
     },
   });
 
@@ -110,7 +112,8 @@ const createMutation = useMutation({
       difficulty: parseInt(values.difficulty),
       points: parseInt(values.points),
       variables: values.variables ? JSON.parse(values.variables) : null,
-      answers: values.type === 'multiple_choice' ? answers : [] // <-- Envía array vacío si no es opción múltiple
+      answers: values.type === 'multiple_choice' ? answers : [], // <-- Envía array vacío si no es opción múltiple
+      imageUrl: values.imageUrl || null, // ✅ Aquí lo agregas  
     };
     
     const response = await fetch("/api/admin/questions", {
@@ -353,6 +356,26 @@ const createMutation = useMutation({
                         )}
                       />
                       
+                     {/* URL de imagen */}
+      <FormField
+        control={form.control}
+        name="imageUrl"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>URL de la imagen (opcional)</FormLabel>
+            <FormControl>
+              <input 
+                type="text"
+                placeholder="https://ejemplo.com/imagen.png"
+                className="input w-full"
+                {...field}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
                       <FormField
                         control={form.control}
                         name="type"

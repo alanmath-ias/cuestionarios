@@ -1278,6 +1278,8 @@ app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Resp
 
 //deep seek me ayuda error crear preguntas
   apiRouter.post("/admin/questions", requireAdmin, async (req: Request, res: Response) => {
+    console.log("📦 Datos recibidos en el body:", req.body);
+
     try {
       const { answers = [], ...questionData } = req.body;
   

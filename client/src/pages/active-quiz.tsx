@@ -36,6 +36,7 @@ interface Question {
   points: number;
   answers: Answer[];
   variables: Record<string, number>;
+  imageUrl?: string; // 👈 nueva propiedad opcional
 }
 
 interface Answer {
@@ -390,6 +391,17 @@ function ActiveQuiz() {
                   : 'Responde la siguiente pregunta:'}
               </h3>
               <QuestionContent content={currentQuestion.content} />
+
+              {currentQuestion.imageUrl && (
+    <div className="mt-4">
+      <img 
+        src={currentQuestion.imageUrl} 
+        alt="Imagen de la pregunta" 
+        className="max-w-full h-auto rounded border"
+      />
+    </div>
+  )}
+
             </div>
 
             <div className="space-y-3">

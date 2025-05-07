@@ -86,6 +86,8 @@ export const questions = pgTable("questions", {
   difficulty: integer("difficulty").notNull(), // 1-5 difficulty rating
   points: integer("points").notNull().default(5),
   variables: jsonb("variables"), // JSON structure defining variable ranges, e.g. {"a": {"min": 1, "max": 10}}
+  imageUrl: text("image_url"), // ✅
+
 });
 
 export const insertQuestionSchema = createInsertSchema(questions).pick({
@@ -95,6 +97,7 @@ export const insertQuestionSchema = createInsertSchema(questions).pick({
   difficulty: true,
   points: true,
   variables: true,
+  imageUrl: true, // ✅ Agrega esta línea
 });
 
 // Answers model (for each question)
@@ -186,6 +189,15 @@ export const subcategories = pgTable("subcategories", {
   categoryId: integer("category_id").references(() => categories.id).notNull(),
   colorClass: text("color_class"),
 });
+
+export type UserQuiz = {
+  id: number;
+  title: string;
+  categoryId: number;
+  difficulty: string;
+  status?: "not_started" | "in_progress" | "completed"; // Puede ser opcional
+  reviewed?: boolean;
+};
 
 
 // chat gpt calificaciones quiz
