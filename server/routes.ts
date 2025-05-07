@@ -292,11 +292,11 @@ app.get('/api/admin/subcategories', async (req, res) => {
 
 // Crear una nueva subcategoría
 app.post('/api/admin/subcategories', async (req, res) => {
-  const { name, categoryId } = req.body;
+  const { name, categoryId, description } = req.body;
   console.log("📦 Creando subcategoría con:", { name, categoryId });
 
   try {
-    const subcategory = await storage.createSubcategory({ name, categoryId });
+    const subcategory = await storage.createSubcategory({ name, categoryId, description });
     console.log("✅ Subcategoría creada:", subcategory);
     res.json(subcategory);
   } catch (err) {
@@ -337,14 +337,16 @@ app.delete('/api/admin/subcategories/:id', async (req, res) => {
 
 app.put('/api/admin/subcategories/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const { name } = req.body;
+  const { name, description } = req.body;
+
 
   if (!name || isNaN(id)) {
     return res.status(400).json({ error: "Datos inválidos" });
   }
 
   try {
-    await storage.updateSubcategory(id, name);
+    await storage.updateSubcategory(id, name, description);
+
     console.log(`✅ Subcategoría ${id} actualizada a: ${name}`);
     res.json({ success: true });
   } catch (err) {
@@ -352,6 +354,101 @@ app.put('/api/admin/subcategories/:id', async (req, res) => {
     res.status(500).json({ error: "Error al actualizar subcategoría" });
   }
 });
+
+//Entrenamiento por Subcategorías:
+app.get('/api/training-subcategory/:categoryId/:subcategoryId', async (req, res) => {
+  // 1. Log de los parámetros recibidos en bruto
+  console.log('📥 Parámetros recibidos:', {
+    rawParams: req.params,
+    rawQuery: req.query,
+    rawBody: req.body
+  });
+
+  const categoryId = Number(req.params.categoryId);
+  const subcategoryId = Number(req.params.subcategoryId);
+
+  // 2. Log de conversión numérica
+  console.log('🔄 Conversión a números:', {
+    categoryId: {
+      raw: req.params.categoryId,
+      converted: categoryId,
+      isValid: !isNaN(categoryId)
+    },
+    subcategoryId: {
+      raw: req.params.subcategoryId,
+      converted: subcategoryId,
+      isValid: !isNaN(subcategoryId)
+    }
+  });
+
+  if (isNaN(categoryId) || isNaN(subcategoryId)) {
+    console.error('❌ IDs inválidos:', {
+      categoryId,
+      subcategoryId,
+      rawParams: req.params
+    });
+    return res.status(400).json({ 
+      error: "IDs inválidos",
+      details: {
+        received: req.params,
+        converted: { categoryId, subcategoryId }
+      }
+    });
+  }
+
+  try {
+    // 3. Log antes de hacer la consulta a la DB
+    console.log('🔍 Buscando preguntas para:', {
+      categoryId,
+      subcategoryId,
+      timestamp: new Date().toISOString()
+    });
+
+    const questions = await storage.getTrainingQuestionsByCategoryAndSubcategory(categoryId, subcategoryId);
+
+    // 4. Log del resultado
+    console.log('✅ Resultado encontrado:', {
+      categoryId,
+      subcategoryId,
+      questionCount: questions.length,
+      sampleQuestion: questions.length > 0 ? questions[0] : null
+    });
+
+    res.json({ 
+      questions,
+      metadata: {
+        categoryId,
+        subcategoryId,
+        questionCount: questions.length
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Error al obtener preguntas:', {
+      error: err,
+      stack: err.stack,
+      params: req.params,
+      timestamp: new Date().toISOString()
+    });
+    
+    res.status(500).json({ 
+      error: "Error al obtener preguntas",
+      details: {
+        categoryId,
+        subcategoryId,
+        internalError: process.env.NODE_ENV === 'development' ? err.message : undefined
+      }
+    });
+  } finally {
+    // 5. Log final de la ejecución
+    console.log('🏁 Fin de la solicitud para:', {
+      categoryId,
+      subcategoryId,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 
   // Quizzes endpoints
   apiRouter.get("/quizzes", async (_req: Request, res: Response) => {

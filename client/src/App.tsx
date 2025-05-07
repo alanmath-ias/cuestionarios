@@ -24,6 +24,7 @@ import AdminQuizReview from './pages/admin/AdminQuizReview';
 
 {/*chat gpt entrenamiento*/}
 import TrainingPage from "@/pages/training/[categoryId]";
+import TrainingPageSub from "@/pages/training2/[categoryId]/[subcategoryId]";
 
 {/*chat gpt calificar*/}
 import Calificar from "@/pages/admin/Calificar";
@@ -175,6 +176,11 @@ function Router() {
 <Route path="/training/:categoryId">
   {(params) => <TrainingPage categoryId={params.categoryId} />}
 </Route>
+
+<Route path="/training2/:categoryId/:subcategoryId">
+  <TrainingPageSub /> {/* Sin pasar props manualmente */}
+</Route>
+
 {/*fin chat gpt entrenamiento*/}
 
       {/* Ruta de 404 */}

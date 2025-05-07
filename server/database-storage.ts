@@ -10,7 +10,7 @@ import {
   
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { IStorage } from "./storage";
 import { userQuizzes } from '@shared/schema';
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -108,19 +108,94 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(subcategories).where(eq(subcategories.categoryId, categoryId));
   }
   
-  async createSubcategory({ name, categoryId }: { name: string; categoryId: number }) {
-    return db.insert(subcategories).values({ name, categoryId }).returning();
+  async createSubcategory({ name, categoryId, description }: { name: string; categoryId: number; description?: string }) {
+    return db.insert(subcategories).values({ name, categoryId, description }).returning();
   }
+  
   
   async deleteSubcategory(id: number) {
     return db.delete(subcategories).where(eq(subcategories.id, id));
   }
   
-  async updateSubcategory(id: number, name: string) {
+  async updateSubcategory(id: number, name: string, description?: string) {
     await db
       .update(subcategories)
-      .set({ name })
+      .set({ name, description })
       .where(eq(subcategories.id, id));
+  }
+  
+  //Entrenamiento por subcategorias:
+  async getTrainingQuestionsByCategoryAndSubcategory(categoryId: number, subcategoryId: number) {
+    console.log('🔍 Verificando quizzes para:', { categoryId, subcategoryId });
+    
+    const quizzesInCategoryAndSubcategory = await db
+      .select({ id: quizzes.id })
+      .from(quizzes)
+      .where(
+        and(
+          eq(quizzes.categoryId, categoryId),
+          eq(quizzes.subcategoryId, subcategoryId)
+        )
+      )
+      .catch(err => {
+        console.error('❌ Error en consulta quizzes:', err);
+        throw err;
+      });
+  
+    console.log('📊 Quizzes encontrados:', quizzesInCategoryAndSubcategory);
+  
+    if (quizzesInCategoryAndSubcategory.length === 0) {
+      console.warn('⚠️ No hay quizzes para:', { categoryId, subcategoryId });
+      return [];
+    }
+  
+    const quizIds = quizzesInCategoryAndSubcategory.map(q => q.id);
+  
+    // 2. Obtener preguntas asociadas a esos quizzes
+    const questionsList = await db
+      .select({
+        id: questions.id,
+        content: questions.content,
+        type: questions.type,
+        difficulty: questions.difficulty,
+        points: questions.points,
+        quizId: questions.quizId, // Asegurarnos de incluir quizId
+      })
+      .from(questions)
+      .where(inArray(questions.quizId, quizIds));
+  
+    if (questionsList.length === 0) {
+      return [];
+    }
+  
+    // 3. Obtener opciones de student_answers
+    const questionIds = questionsList.map(q => q.id);
+    const optionsRaw = await db
+      .select({
+        id: answers.id,
+        questionId: answers.questionId,
+        text: answers.content,
+        isCorrect: answers.isCorrect,
+      })
+      .from(answers)
+      .where(inArray(answers.questionId, questionIds));
+  
+    // 4. Asociar opciones a cada pregunta
+    const questionsWithOptions = questionsList.map(q => ({
+      ...q,
+      options: optionsRaw
+        .filter(opt => opt.questionId === q.id)
+        .map(opt => ({
+          id: opt.id,
+          text: opt.text,
+          isCorrect: opt.isCorrect,
+        })),
+    }));
+  
+    // 5. Aleatorizar y limitar a 20 preguntas
+    return questionsWithOptions
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 20);
   }
   
 

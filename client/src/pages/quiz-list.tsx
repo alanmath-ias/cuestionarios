@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { QuizCard } from '@/components/dashboard/quiz-card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Dumbbell } from 'lucide-react';
 import { useParams, useLocation } from 'wouter';
 import { calculatePercentage } from '@/lib/mathUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,8 +47,7 @@ interface Progress {
 function QuizList() {
   const { categoryId } = useParams<{ categoryId: string }>();
   const [_, setLocation] = useLocation();
-  
-  // Fetch category details
+
   const { data: category, isLoading: loadingCategory } = useQuery<Category>({
     queryKey: [`/api/categories/${categoryId}`],
     queryFn: async () => {
@@ -56,8 +55,7 @@ function QuizList() {
       return categories.find((c: Category) => c.id === parseInt(categoryId));
     },
   });
-  
-  // Fetch subcategories for this category
+
   const { data: subcategories, isLoading: loadingSubcategories } = useQuery<Subcategory[]>({
     queryKey: [`/api/categories/${categoryId}/subcategories`],
     queryFn: async () => {
@@ -65,45 +63,44 @@ function QuizList() {
       return res.json();
     },
   });
-  
-  // Fetch all quizzes for this category
+
   const { data: quizzes, isLoading: loadingQuizzes } = useQuery<Quiz[]>({
     queryKey: [`/api/categories/${categoryId}/quizzes`],
   });
-  
-  // Fetch student progress
+
   const { data: progress, isLoading: loadingProgress } = useQuery<Progress[]>({
     queryKey: ['/api/progress'],
   });
-  
-  // Organize quizzes by subcategory
+
   const quizzesBySubcategory = subcategories?.map(subcategory => ({
     ...subcategory,
-    quizzes: quizzes?.filter(quiz => quiz.subcategoryId === subcategory.id) || []
+    quizzes: quizzes?.filter(quiz => quiz.subcategoryId === subcategory.id) || [],
   })) || [];
-  
-  // Quizzes without subcategory
+
   const quizzesWithoutSubcategory = quizzes?.filter(quiz => !quiz.subcategoryId) || [];
-  
-  // Get progress for a specific quiz
+
   const getQuizProgress = (quizId: number) => {
     if (!progress) return null;
     return progress.find(p => p.quizId === quizId);
   };
-  
-  // Handler for quiz actions
+
   const handleQuizAction = (quizId: number) => {
     setLocation(`/quiz/${quizId}`);
   };
-  
+
+  const handleTraining = (subcategoryId: number) => {
+    setLocation(`/training2/${categoryId}/${subcategoryId}`);
+    //setLocation(`/training/${subcategoryId}`);
+  };
+
   const isLoading = loadingCategory || loadingSubcategories || loadingQuizzes || loadingProgress;
 
   return (
     <div id="quizSection" className="container mx-auto px-4 py-6 max-w-6xl">
       <div className="flex items-center mb-6">
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           className="mr-3"
           onClick={() => setLocation('/')}
         >
@@ -113,7 +110,7 @@ function QuizList() {
           {loadingCategory ? 'Cargando...' : category?.name}
         </h2>
       </div>
-      
+
       {isLoading ? (
         <div className="space-y-8">
           {[1, 2, 3].map((_, index) => (
@@ -129,19 +126,26 @@ function QuizList() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Subcategorías con cuestionarios */}
+          {/* Subcategorías */}
           {quizzesBySubcategory.map(subcategory => (
             <div key={subcategory.id} className="space-y-4">
-              {/* Card grande azul para la subcategoría */}
               <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center justify-between">
+                  <CardTitle className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-3">
                       <span className="text-blue-800 dark:text-blue-200">{subcategory.name}</span>
                       <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
                         {subcategory.quizzes.length} cuestionario(s)
                       </Badge>
                     </div>
+                    <Button
+                      variant="default"
+                      className="bg-blue-600 text-white hover:bg-blue-700"
+                      onClick={() => handleTraining(subcategory.id)}
+                    >
+                      <Dumbbell className="w-4 h-4 mr-2" />
+                      Entrenamiento
+                    </Button>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -150,16 +154,15 @@ function QuizList() {
                   </p>
                 </CardContent>
               </Card>
-              
-              {/* Cuestionarios de la subcategoría */}
+
               {subcategory.quizzes.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {subcategory.quizzes.map(quiz => {
                     const quizProgress = getQuizProgress(quiz.id);
                     const status = quizProgress?.status || 'not_started';
-                    const progressPercentage = quizProgress ? 
+                    const progressPercentage = quizProgress ?
                       calculatePercentage(quizProgress.completedQuestions, quiz.totalQuestions) : 0;
-                    
+
                     return (
                       <QuizCard
                         key={quiz.id}
@@ -169,13 +172,13 @@ function QuizList() {
                         questionCount={quiz.totalQuestions}
                         timeLimit={quiz.timeLimit}
                         difficulty={quiz.difficulty}
-                        status={status as 'not_started' | 'in_progress' | 'completed'}
+                        status={status}
                         progress={progressPercentage}
                         score={quizProgress?.score}
                         onStart={() => handleQuizAction(quiz.id)}
                         onContinue={() => handleQuizAction(quiz.id)}
                         onRetry={() => handleQuizAction(quiz.id)}
-                        className="h-full" // Asegura misma altura
+                        className="h-full"
                       />
                     );
                   })}
@@ -189,11 +192,10 @@ function QuizList() {
               )}
             </div>
           ))}
-          
-          {/* Cuestionarios sin subcategoría (solo si existen) */}
+
+          {/* Sin subcategoría */}
           {quizzesWithoutSubcategory.length > 0 && (
             <div className="space-y-4">
-              {/* Card grande para cuestionarios sin subcategoría */}
               <Card className="border-gray-200 bg-gray-50 dark:bg-gray-900/20">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center justify-between">
@@ -211,14 +213,14 @@ function QuizList() {
                   </p>
                 </CardContent>
               </Card>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {quizzesWithoutSubcategory.map(quiz => {
                   const quizProgress = getQuizProgress(quiz.id);
                   const status = quizProgress?.status || 'not_started';
-                  const progressPercentage = quizProgress ? 
+                  const progressPercentage = quizProgress ?
                     calculatePercentage(quizProgress.completedQuestions, quiz.totalQuestions) : 0;
-                  
+
                   return (
                     <QuizCard
                       key={quiz.id}
@@ -228,21 +230,21 @@ function QuizList() {
                       questionCount={quiz.totalQuestions}
                       timeLimit={quiz.timeLimit}
                       difficulty={quiz.difficulty}
-                      status={status as 'not_started' | 'in_progress' | 'completed'}
+                      status={status}
                       progress={progressPercentage}
                       score={quizProgress?.score}
                       onStart={() => handleQuizAction(quiz.id)}
                       onContinue={() => handleQuizAction(quiz.id)}
                       onRetry={() => handleQuizAction(quiz.id)}
-                      className="h-full" // Asegura misma altura
+                      className="h-full"
                     />
                   );
                 })}
               </div>
             </div>
           )}
-          
-          {/* Mensaje cuando no hay nada */}
+
+          {/* Sin nada */}
           {quizzesBySubcategory.length === 0 && quizzesWithoutSubcategory.length === 0 && (
             <Card className="text-center py-10">
               <CardContent>
