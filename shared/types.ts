@@ -25,4 +25,3 @@ export type Question = {
 //ANTES SOLO LE DABA CTRL+S Y LISTO IBA GUARDANDO Y AL FINAL SI HACIA COMMIT
 //que hago???sdf
 //cds
-hola

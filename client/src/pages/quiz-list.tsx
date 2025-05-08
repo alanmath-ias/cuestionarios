@@ -90,7 +90,7 @@ function QuizList() {
 
   const handleTraining = (subcategoryId: number) => {
     setLocation(`/training2/${categoryId}/${subcategoryId}`);
-    //setLocation(`/training/${subcategoryId}`);
+    
   };
 
   const isLoading = loadingCategory || loadingSubcategories || loadingQuizzes || loadingProgress;
