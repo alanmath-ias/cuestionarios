@@ -8,7 +8,7 @@ import {
   insertStudentAnswerSchema 
 } from "@shared/schema";
 import * as expressSession from "express-session";
-import { eq,sql, and, or, isNull, isNotNull } from "drizzle-orm";
+import { eq,sql } from "drizzle-orm";
 
 import { db } from "./db";
 import { userCategories, categories, quizzes } from "../shared/schema";
@@ -17,8 +17,9 @@ import { getUsersAssignedToQuiz } from './storage'; // Ajusta la ruta según dó
 //chat gpt entrenamiento
 import { questions as questionsTable } from "@shared/schema";
 import { inArray } from "drizzle-orm";
-//deep seek entrenamiento:
-import { answers } from "@shared/schema"; // Asegúrate de importar correctamente
+//deep seek respuestas correctas para quiz-results.tsx:
+import { studentProgress, studentAnswers, answers } from "@shared/schema"; // o la ruta correcta
+import { and } from "drizzle-orm"; // operadores de consulta
 
 
 //chat gpt dashboar personalizado
@@ -34,8 +35,6 @@ const storage = new DatabaseStorage(db);
 
 //chat gpt dashboar personalizado
 import { User } from '@/shared/types'; // Asegúrate de importar correctamente tu tipo de usuario
-import { userQuizzes, studentProgress, quizSubmissions } from "@shared/schema";
-
 
 declare global {
   namespace Express {
@@ -44,6 +43,8 @@ declare global {
     }
   }
 }
+
+//fin chat gpt
 
 // Extend the SessionData interface to include userId
 declare module "express-session" {
@@ -77,16 +78,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       
-      // Authenticate user
+      // Authenticate user (simple for demo)
       req.session.userId = user.id;
-  
-      const validRoles = ["admin", "user", "student"] as const;
-      if (validRoles.includes(user.role as any)) {
-        req.session.role = user.role as typeof validRoles[number];
-      } else {
-        req.session.role = "student"; // o un valor por defecto
-      }
-  
+      
       // Send user info without password
       const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
@@ -96,37 +90,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-    
   apiRouter.post("/auth/register", async (req: Request, res: Response) => {
     try {
       const userData = insertUserSchema.parse(req.body);
-  
+      
+      // Check if username already exists
       const existingUser = await storage.getUserByUsername(userData.username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
-  
+      
+      // Asegurarse de que solo los primeros usuarios puedan ser administradores
+      // o que se requiera un código especial para ser administrador 
+      // Esto es solo una forma simple de demostración
       const userCount = (await storage.getUsers()).length;
       const isFirstUser = userCount === 0;
-  
-      const assignedRole = isFirstUser ? "admin" : (userData.role || "student");
-  
-      const validRoles = ["admin", "user", "student"] as const;
-      const safeRole = validRoles.includes(assignedRole as any)
-        ? assignedRole as typeof validRoles[number]
-        : "student";
-  
+      
+      // Si es el primer usuario, asignarle rol de administrador
+      // de lo contrario, mantener el rol proporcionado o usar "student" por defecto
       const userWithRole = {
         ...userData,
-        role: safeRole,
+        role: isFirstUser ? 'admin' : (userData.role || 'student')
       };
-  
+      
       const newUser = await storage.createUser(userWithRole);
-  
-      // Auto login con validación de rol
+      
+      // Auto login
       req.session.userId = newUser.id;
-      req.session.role = safeRole;
-  
+      
+      // Return user without password
       const { password: _, ...userWithoutPassword } = newUser;
       res.status(201).json(userWithoutPassword);
     } catch (error) {
@@ -152,6 +144,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
+      
+      // Return user without password
+      //const { password: _, ...userWithoutPassword } = user;
+      //res.json(userWithoutPassword);
       // Return user without password but WITH role
     const { password: _, ...userWithoutPassword } = user;
     res.json({
@@ -161,8 +157,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Auth check error:", error);
       res.status(500).json({ message: "Error checking authentication" });
-  
-    }
+
+      
+    }//fin deep seek
   });
   
   // Add the /user endpoint as well
@@ -188,7 +185,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error checking authentication" });
     }
   });
-
+ 
+  //chat gpt cierra sesion totalmente sin cookies
   apiRouter.post("/auth/logout", (req: Request, res: Response) => {
     req.session.destroy((err: Error | null) => {
       if (err) {
@@ -207,6 +205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  //fin chat gpt cierra sesion totalmente sin cookies
   
   // Endpoint temporal para actualizar el rol del usuario
   apiRouter.post("/auth/make-admin", async (req: Request, res: Response) => {
@@ -222,7 +221,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-          
+      
+      // En un sistema real, esto tendría más validaciones
       // Actualizar el rol del usuario
       await storage.updateUser(userId, { role: 'admin' });
       
@@ -238,33 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error al actualizar el rol" });
     }
   });
-  //Obtener el nombre del usuario
-  app.get("/api/me", requireAuth, async (req, res) => {
-    try {
-      if (!req.user) {
-        return res.status(401).json({ error: "Usuario no autenticado" });
-      }
   
-      const userId = req.user.id;
-  
-      const user = await storage.getUserById(userId);
-      if (!user) {
-        return res.status(404).json({ error: "Usuario no encontrado" });
-      }
-  
-      res.json({
-        id: user.id,
-        name: user.name,
-        username: user.username,
-        email: user.email,
-      });
-    } catch (error) {
-      console.error("Error al obtener datos del usuario:", error);
-      res.status(500).json({ error: "Error interno del servidor" });
-    }
-  });
-  
-
   // Categories endpoints
   apiRouter.get("/categories", async (_req: Request, res: Response) => {
     try {
@@ -276,180 +250,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  //Subcategories endpoints
-// Obtener todas las subcategorías
-app.get('/api/admin/subcategories', async (req, res) => {
-  try {
-    const subcategories = await storage.getAllSubcategories();
-    console.log("✅ Subcategorías obtenidas:", subcategories);
-    res.json(subcategories);
-  } catch (err) {
-    console.error("❌ Error al obtener subcategorías:", err);
-    res.status(500).json({ error: "Error al obtener subcategorías" });
-  }
-});
-
-
-// Crear una nueva subcategoría
-app.post('/api/admin/subcategories', async (req, res) => {
-  const { name, categoryId, description } = req.body;
-  console.log("📦 Creando subcategoría con:", { name, categoryId });
-
-  try {
-    const subcategory = await storage.createSubcategory({ name, categoryId, description });
-    console.log("✅ Subcategoría creada:", subcategory);
-    res.json(subcategory);
-  } catch (err) {
-    console.error("❌ Error al crear subcategoría:", err);
-    res.status(500).json({ error: "Error al crear subcategoría" });
-  }
-});
-
-// Obtener subcategorías por categoría
-app.get('/api/admin/subcategories/by-category/:categoryId', async (req, res) => {
-  const categoryId = Number(req.params.categoryId);
-  console.log("🔍 Buscando subcategorías de la categoría:", categoryId);
-
-  try {
-    const subcategories = await storage.getSubcategoriesByCategory(categoryId);
-    console.log(`✅ Subcategorías para categoría ${categoryId}:`, subcategories);
-    res.json(subcategories);
-  } catch (err) {
-    console.error("❌ Error al obtener subcategorías por categoría:", err);
-    res.status(500).json({ error: "Error al obtener subcategorías por categoría" });
-  }
-});
-
-// Eliminar una subcategoría
-app.delete('/api/admin/subcategories/:id', async (req, res) => {
-  const id = Number(req.params.id);
-  console.log("🗑️ Eliminando subcategoría con ID:", id);
-
-  try {
-    await storage.deleteSubcategory(id);
-    console.log("✅ Subcategoría eliminada");
-    res.json({ success: true });
-  } catch (err) {
-    console.error("❌ Error al eliminar subcategoría:", err);
-    res.status(500).json({ error: "Error al eliminar subcategoría" });
-  }
-});
-
-app.put('/api/admin/subcategories/:id', async (req, res) => {
-  const id = Number(req.params.id);
-  const { name, description } = req.body;
-
-
-  if (!name || isNaN(id)) {
-    return res.status(400).json({ error: "Datos inválidos" });
-  }
-
-  try {
-    await storage.updateSubcategory(id, name, description);
-
-    console.log(`✅ Subcategoría ${id} actualizada a: ${name}`);
-    res.json({ success: true });
-  } catch (err) {
-    console.error("❌ Error al actualizar subcategoría:", err);
-    res.status(500).json({ error: "Error al actualizar subcategoría" });
-  }
-});
-
-//Entrenamiento por Subcategorías:
-app.get('/api/training-subcategory/:categoryId/:subcategoryId', async (req, res) => {
-  // 1. Log de los parámetros recibidos en bruto
-  console.log('📥 Parámetros recibidos:', {
-    rawParams: req.params,
-    rawQuery: req.query,
-    rawBody: req.body
-  });
-
-  const categoryId = Number(req.params.categoryId);
-  const subcategoryId = Number(req.params.subcategoryId);
-
-  // 2. Log de conversión numérica
-  console.log('🔄 Conversión a números:', {
-    categoryId: {
-      raw: req.params.categoryId,
-      converted: categoryId,
-      isValid: !isNaN(categoryId)
-    },
-    subcategoryId: {
-      raw: req.params.subcategoryId,
-      converted: subcategoryId,
-      isValid: !isNaN(subcategoryId)
-    }
-  });
-
-  if (isNaN(categoryId) || isNaN(subcategoryId)) {
-    console.error('❌ IDs inválidos:', {
-      categoryId,
-      subcategoryId,
-      rawParams: req.params
-    });
-    return res.status(400).json({ 
-      error: "IDs inválidos",
-      details: {
-        received: req.params,
-        converted: { categoryId, subcategoryId }
-      }
-    });
-  }
-
-  try {
-    // 3. Log antes de hacer la consulta a la DB
-    console.log('🔍 Buscando preguntas para:', {
-      categoryId,
-      subcategoryId,
-      timestamp: new Date().toISOString()
-    });
-
-    const questions = await storage.getTrainingQuestionsByCategoryAndSubcategory(categoryId, subcategoryId);
-
-    // 4. Log del resultado
-    console.log('✅ Resultado encontrado:', {
-      categoryId,
-      subcategoryId,
-      questionCount: questions.length,
-      sampleQuestion: questions.length > 0 ? questions[0] : null
-    });
-
-    res.json({ 
-      questions,
-      metadata: {
-        categoryId,
-        subcategoryId,
-        questionCount: questions.length
-      }
-    });
-
-  } catch (err) {
-    console.error('❌ Error al obtener preguntas:', {
-      error: err,
-      stack: err.stack,
-      params: req.params,
-      timestamp: new Date().toISOString()
-    });
-    
-    res.status(500).json({ 
-      error: "Error al obtener preguntas",
-      details: {
-        categoryId,
-        subcategoryId,
-        internalError: process.env.NODE_ENV === 'development' ? err.message : undefined
-      }
-    });
-  } finally {
-    // 5. Log final de la ejecución
-    console.log('🏁 Fin de la solicitud para:', {
-      categoryId,
-      subcategoryId,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-
   // Quizzes endpoints
   apiRouter.get("/quizzes", async (_req: Request, res: Response) => {
     try {
@@ -784,71 +584,90 @@ apiRouter.post("/progress", async (req: Request, res: Response) => {
       res.status(500).json({ message: "Error submitting answer" });
     }
   });
- 
-  apiRouter.get("/results/:progressId", async (req: Request, res: Response) => {
-    const userId = req.session.userId;
-    const role = req.session.role; // Asegúrate que esto está disponible en tu sesión
-    const progressId = parseInt(req.params.progressId);
   
-    if (!userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-  
-    if (isNaN(progressId)) {
-      return res.status(400).json({ message: "Invalid progress ID" });
-    }
-  
-    try {
-      console.log("User ID:", userId);
-console.log("Role:", role);
-console.log("Requested progressId:", progressId);
+//deep seek corrige respuestas en quiz-results.tsx
+// En tu archivo routes.ts
+apiRouter.get("/results/:progressId", async (req: Request, res: Response) => {
+  const progressId = parseInt(req.params.progressId);
 
+  if (isNaN(progressId)) {
+    console.error("Invalid progress ID:", req.params.progressId);
+    return res.status(400).json({ message: "Invalid progress ID" });
+  }
 
-      let progress;
-  
-      if (role === "admin") {
-        // Admin puede ver cualquier progreso
-        const allProgresses = await storage.getAllProgresses(); // Este método debe existir en storage
-        console.log("Total progresses found:", allProgresses.length);
-        progress = allProgresses.find(p => p.id === progressId);
-      } else {
-        // Usuario solo puede ver sus propios progresos
-        const userProgresses = await storage.getStudentProgress(userId);
-        progress = userProgresses.find(p => p.id === progressId);
-      }
-  
-      if (!progress) {
-        return res.status(403).json({ message: "Not authorized to view these results" });
-      }
-  
-      const quiz = await storage.getQuiz(progress.quizId);
-      const answers = await storage.getStudentAnswersByProgress(progressId);
-  
-      // Get question details for each answer
-      const detailedAnswers = await Promise.all(answers.map(async (answer) => {
-        const question = await storage.getQuestion(answer.questionId);
-        const answerDetails = answer.answerId ? await storage.getAnswer(answer.answerId) : null;
-  
+  try {
+    console.log("Fetching progress for ID:", progressId);
+
+    const progress = await db.query.studentProgress.findFirst({
+      where: eq(studentProgress.id, progressId),
+    });
+
+    if (!progress) {
+      console.error("Progress not found for ID:", progressId);
+      return res.status(404).json({ message: "Progress record not found" });
+    }
+
+    console.log("Progress found:", progress);
+
+    // Cargar el quiz aparte (por separado)
+    const quiz = await db.query.quizzes.findFirst({
+      where: eq(quizzes.id, progress.quizId),
+    });
+
+    if (!quiz) {
+      console.error("Quiz not found for progress ID:", progressId);
+      return res.status(404).json({ message: "Quiz not found for this progress" });
+    }
+
+    const studentAnswersList = await db.query.studentAnswers.findMany({
+      where: eq(studentAnswers.progressId, progressId),
+    });
+
+    console.log(`Found ${studentAnswersList.length} student answers.`);
+
+    const enrichedAnswers = await Promise.all(
+      studentAnswersList.map(async (answer) => {
+        const question = await db.query.questions.findFirst({
+          where: eq(questions.id, answer.questionId),
+        });
+
+        const answerDetails = await db.query.answers.findFirst({
+          where: eq(answers.id, answer.answerId),
+        });
+
+        const correctAnswer = await db.query.answers.findFirst({
+          where: and(
+            eq(answers.questionId, answer.questionId),
+            eq(answers.isCorrect, true)
+          ),
+        });
+
+        console.log(`Question ID ${answer.questionId} - Correct answer:`, correctAnswer);
+
         return {
-          ...answer,
-          question,
-          answerDetails
+          id: answer.id,
+          question: question || null,
+          answerDetails: answerDetails || null,
+          correctAnswer: correctAnswer || null,
         };
-      }));
-  
-      res.json({
-        progress,
-        quiz,
-        answers: detailedAnswers
-      });
-    } catch (error) {
-      console.error("Results fetch error:", error);
-      res.status(500).json({ message: "Error fetching quiz results" });
-    }
-  });
-  
+      })
+    );
 
-  // Rutas de administración 
+    res.json({
+      progress,
+      quiz,
+      answers: enrichedAnswers,
+    });
+
+  } catch (error) {
+    console.error("Error fetching quiz results:", error);
+    res.status(500).json({ message: "Error fetching quiz results" });
+  }
+});
+
+//fin deep seek corrige respuestas en quiz-results.tsx
+  
+// Rutas de administración 
   // Middleware para verificar si el usuario es administrador
   const requireAdmin = async (req: Request, res: Response, next: () => void) => {
     const userId = req.session.userId;
@@ -921,6 +740,11 @@ console.log("Requested progressId:", progressId);
     }
   });
   
+// API para gestionar usuarios por categorias
+// User Categories endpoints
+
+//apiRouter.get("/users/:userId/categories", checkAdmin, async (req, res) => {
+
 apiRouter.get("/users/:userId/categories", requireAdmin, async (req, res) => {
   const userId = parseInt(req.params.userId);
   console.log("🧪 userId recibido1:", req.params.userId, "➡️ convertido a:", userId);
@@ -1073,12 +897,6 @@ apiRouter.get("/admin/users-with-categories", requireAdmin, async (req, res) => 
       res.status(500).json({ message: "Error deleting quiz" });
     }
   });
-
-  apiRouter.get("/quizzes/by-subcategory/:subcategoryId", async (req, res) => {
-    const subcategoryId = parseInt(req.params.subcategoryId);
-    const quizzes = await storage.getQuizzesBySubcategory(subcategoryId);
-    res.json(quizzes);
-  });
  //chat gpt asignar cuestionarios a usuarios
 // Obtener los quizzes asignados a un usuario
 apiRouter.get("/admin/users", requireAdmin, async (req, res) => {
@@ -1184,6 +1002,7 @@ app.get("/api/user/quizzes", requireAuth, async (req, res) => {
 });
 //fin chat gpt
 
+
 //deep seek entrenamiento estilo active-quiz
 
 app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Response) => {
@@ -1275,11 +1094,8 @@ app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Resp
     }
   });
   
-
 //deep seek me ayuda error crear preguntas
   apiRouter.post("/admin/questions", requireAdmin, async (req: Request, res: Response) => {
-    console.log("📦 Datos recibidos en el body:", req.body);
-
     try {
       const { answers = [], ...questionData } = req.body;
   
@@ -1358,152 +1174,6 @@ app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Resp
       res.status(500).json({ message: "Error deleting question" });
     }
   });
-
-  //chat gpt calificaciones
-    // Dentro de setupRoutes(app, storage)
-//active-quiz entrega datos del quiz recien hecho:
-app.post("/api/quiz-submission", async (req, res) => {
-  const { userId, quizId, score, progressId } = req.body;
-
-
-  console.log("📥 Datos recibidos en /api/quiz-submission:", {
-    userId,
-    quizId,
-    score,
-    progressId,
-    typeofScore: typeof score,
-  });
-
-  if (!userId || !quizId || typeof score !== "number" || !progressId) {
-    return res.status(400).json({ error: "Datos incompletos o inválidos" });
-  }
-
-  try {
-    await storage.saveQuizSubmission({ userId, quizId, score, progressId });
-    res.status(200).json({ success: true });
-  } catch (error) {
-    console.error("Error guardando quiz submission:", error);
-    res.status(500).json({ error: "Error interno" });
-  }
-});
-
-//y ahora Calificaciones pide los datos anteriormente creados:
-app.get("/api/admin/quiz-submissions", async (req, res) => {
-  try {
-    const submissions = await storage.getQuizSubmissionsForAdmin(); // Lo implementamos en storage
-    res.json(submissions);
-  } catch (error) {
-    console.error("Error al obtener submissions:", error);
-    res.status(500).json({ error: "Error interno" });
-  }
-});
-//recoge todo lo que debe calificar y lo lleva al componente calificaciones
-app.get("/api/quiz-submissions", async (req, res) => {
-  try {
-    const submissions = await storage.getAllQuizSubmissions();
-    res.status(200).json(submissions);
-  } catch (error) {
-    console.error("Error obteniendo quiz submissions:", error);
-    res.status(500).json({ error: "Error interno" });
-  }
-});
-
-//retroalimentacion por medio de un prompt
-// En routes.ts
-app.post("/api/quiz-feedback", async (req, res) => {
-  const { progressId, text } = req.body;
-
-  if (!progressId || !text) {
-    return res.status(400).json({ error: "Datos incompletos o inválidos" });
-  }
-
-  try {
-    await storage.saveQuizFeedback({ progressId, text });
-    res.status(200).json({ success: true });
-  } catch (error) {
-    console.error("Error guardando el feedback:", error);
-    res.status(500).json({ error: "Error interno" });
-  }
-});
-
-//mostrar el feedback a los usuarios
-app.get("/api/quiz-feedback/:progressId", async (req, res) => {
-  const { progressId } = req.params;
-
-  try {
-    const feedback = await storage.getQuizFeedback(Number(progressId));
-    res.status(200).json(feedback);
-  } catch (error) {
-    console.error("Error obteniendo el feedback:", error);
-    res.status(500).json({ error: "Error interno" });
-  }
-});
-
-//Notificaciones y borrado en las card:
-// PATCH: Marcar como revisado
-app.patch('/api/quiz-submissions/:progressId/reviewed', async (req: ExpressRequest, res: Response) => {
-  const progressId = Number(req.params.progressId);
-  await storage.markSubmissionAsReviewed(progressId);
-  res.json({ success: true });
-});
-
-
-// DELETE /api/quiz-submissions/:progressId
-app.delete('/api/quiz-submissions/:progressId', async (req: ExpressRequest, res: Response) => {
-  const progressId = Number(req.params.progressId);
-  await storage.deleteSubmissionByProgressId(progressId);
-  res.json({ success: true });
-});
-
-//contar revisiones pendientes:
-app.get('/api/admin/pending-review-count', async (req: ExpressRequest, res: Response) => {
-  const count = await storage.getPendingReviewCount();
-  res.json({ count });
-});
-//esto es solo para el dashboard
-
-app.get("/api/user/alerts", requireAuth, async (req, res) => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "No autenticado" });
-    }
-
-    const pendingTasks = await db
-  .select()
-  .from(userQuizzes)
-  .leftJoin(studentProgress, and(
-    eq(studentProgress.quizId, userQuizzes.quizId),
-    eq(studentProgress.userId, userId)
-  ))
-  .where(and(
-    eq(userQuizzes.userId, userId),
-    or(
-      isNull(studentProgress.status),
-      eq(studentProgress.status, 'in_progress')
-    )
-  ));
-
-    const feedbacks = await db
-      .select()
-      .from(quizSubmissions)
-      .where(and(
-        eq(quizSubmissions.userId, userId),
-        isNotNull(quizSubmissions.feedback)
-      ));
-
-    res.json({
-      hasPendingTasks: pendingTasks.length > 0,
-      hasFeedback: feedbacks.length > 0,
-    });
-  } catch (error) {
-    console.error("Error al obtener alertas:", error);
-    res.status(500).json({ error: "Error interno" });
-  }
-});
-
-
-  //fin chat gpt calificaciones
 
   const httpServer = createServer(app);
   return httpServer;

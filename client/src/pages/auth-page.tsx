@@ -233,7 +233,7 @@ export default function AuthPage() {
               </div>
             </form>
           )}
-          
+          {/*}
           <div className="mt-6 text-center text-sm text-gray-500">
             <p>Credenciales de demostración:</p>
             <p className="font-semibold">Para administrador:</p>
@@ -241,6 +241,7 @@ export default function AuthPage() {
             <p className="font-semibold mt-1">Para estudiante:</p>
             <p>Usuario: estudiante / Contraseña: estudiante123</p>
           </div>
+          */}
         </div>
       </div>
     </div>

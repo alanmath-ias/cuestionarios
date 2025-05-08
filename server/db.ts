@@ -10,3 +10,5 @@ const client = postgres(connectionString, { max: 1 });
 
 // Cliente de Drizzle
 export const db = drizzle(client, { schema });
+
+export type DbClient = typeof db;//anadido por deepseek para adminquizresults

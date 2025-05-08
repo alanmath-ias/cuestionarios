@@ -39,6 +39,7 @@ const formSchema = z.object({
   difficulty: z.string().min(1, { message: "Debes seleccionar una dificultad" }),
   points: z.string().min(1, { message: "Debes asignar puntos a la pregunta" }),
   variables: z.string().optional(),
+  imageUrl: z.string().url().optional(), // 👈 agrégalo aquí
 });
 
 export default function QuestionsAdmin() {
@@ -71,10 +72,11 @@ export default function QuestionsAdmin() {
       difficulty: "3",
       points: "10",
       variables: "",
+      imageUrl: "", // 👈 también en defaultValues
     },
   });
 
-  const createMutation = useMutation({
+ /* const createMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
       const payload = {
         quizId: quizId,
@@ -98,7 +100,39 @@ export default function QuestionsAdmin() {
       }
       
       return response.json();
-    },
+    },*/
+
+//deep seek me ayuda con lo del error en la creacion de preguntas
+const createMutation = useMutation({
+  mutationFn: async (values: z.infer<typeof formSchema>) => {
+    const payload = {
+      quizId: quizId,
+      content: values.content,
+      type: values.type,
+      difficulty: parseInt(values.difficulty),
+      points: parseInt(values.points),
+      variables: values.variables ? JSON.parse(values.variables) : null,
+      answers: values.type === 'multiple_choice' ? answers : [], // <-- Envía array vacío si no es opción múltiple
+      imageUrl: values.imageUrl || null, // ✅ Aquí lo agregas  
+    };
+    
+    const response = await fetch("/api/admin/questions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json(); // <-- Lee el mensaje de error del backend
+      throw new Error(errorData.message || errorData.error || "Error al crear la pregunta");
+    }
+    
+    return response.json();
+  },
+//fin de la parte de deep seek
+
     onSuccess: (data: Question) => {
       // Crear respuestas para esta pregunta
       if (answers.length > 0) {
@@ -322,6 +356,26 @@ export default function QuestionsAdmin() {
                         )}
                       />
                       
+                     {/* URL de imagen */}
+      <FormField
+        control={form.control}
+        name="imageUrl"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>URL de la imagen (opcional)</FormLabel>
+            <FormControl>
+              <input 
+                type="text"
+                placeholder="https://ejemplo.com/imagen.png"
+                className="input w-full"
+                {...field}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
                       <FormField
                         control={form.control}
                         name="type"

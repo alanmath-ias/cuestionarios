@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,6 +12,8 @@ import { ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+//import { useNavigate } from "wouter";
+
 
 interface User {
   id: number;
@@ -38,29 +41,31 @@ export function UserMenu({ user }: UserMenuProps) {
       .toUpperCase();
   };
 
-  const handleLogout = async () => {
-    try {
-      await apiRequest('POST', '/api/auth/logout', {});
-      
-      // Invalidar la consulta de usuario para limpiar el estado
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      queryClient.setQueryData(['/api/user'], null);
-      
-      toast({
-        title: 'Sesión cerrada',
-        description: 'Has cerrado sesión correctamente.'
-      });
-      
-      // Redirigir a la página de inicio o login sin recargar
-      setLocation('/auth');
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'No se pudo cerrar la sesión.',
-        variant: 'destructive'
-      });
-    }
-  };
+//chat gpt cierra sesion completamente
+const handleLogout = async () => {
+  try {
+    await apiRequest("POST", "/api/auth/logout", {});
+
+    // Limpia toda la caché de React Query
+    queryClient.clear();
+
+    toast({
+      title: "Sesión cerrada",
+      description: "Has cerrado sesión correctamente.",
+    });
+
+    // Redirige al login
+    setLocation('/auth');
+  } catch (error) {
+    console.error("Error cerrando sesión:", error);
+    toast({
+      title: "Error",
+      description: "No se pudo cerrar sesión.",
+      variant: "destructive",
+    });
+  }
+};
+// fin chat gpt cierra sesion completamente
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -87,9 +92,9 @@ export function UserMenu({ user }: UserMenuProps) {
             <DropdownMenuItem onClick={() => setLocation('/')}>
               Mis Calificaciones
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>
-              Quizzes Gratuitos
-            </DropdownMenuItem>
+            {/*<DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>*/}
+              {/*Quizzes Gratuitos*/}
+            {/*</DropdownMenuItem>*/}
           </>
         )}
         
@@ -102,9 +107,20 @@ export function UserMenu({ user }: UserMenuProps) {
             <DropdownMenuItem onClick={() => setLocation('/admin/categories')}>
               Gestionar Categorías
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLocation('/admin/subcategories')}>
+            Subcategorías
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLocation('/admin/quizzes')}>
               Gestionar Cuestionarios
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLocation('/admin/urlusercategories')}>
+              Gestionar Usuarios
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLocation('/admin/Calificar')}>
+             Calificar
+            </DropdownMenuItem>
+            
+
           </>
         )}
         <DropdownMenuSeparator />

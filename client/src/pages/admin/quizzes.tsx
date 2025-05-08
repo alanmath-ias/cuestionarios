@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -17,6 +17,13 @@ import { Switch } from "@/components/ui/switch";
 import { Category, Quiz } from "@/shared/types";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { User } from '@/shared/types';
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from "@/components/ui/accordion";
 
 const difficultyOptions = [
   { value: "básico", label: "Básico" },
@@ -28,24 +35,43 @@ const formSchema = z.object({
   title: z.string().min(3, { message: "El título debe tener al menos 3 caracteres" }),
   description: z.string().min(10, { message: "La descripción debe tener al menos 10 caracteres" }),
   categoryId: z.string().min(1, { message: "Debes seleccionar una categoría" }),
-  timeLimit: z.string().min(1, { message: "Debes establecer un tiempo límite" }),
+  subcategoryId: z.string().min(1, { message: "Debes seleccionar una subcategoría" }),
+  timeLimit: z.coerce.number().int().positive().default(3600), // Valor por defecto 3600
   difficulty: z.string().min(1, { message: "Debes seleccionar una dificultad" }),
   isPublic: z.boolean().default(false),
 });
 
 export default function QuizzesAdmin() {
+  const [assignedUsers, setAssignedUsers] = useState<number[]>([]);
+  const [visibleQuizId, setVisibleQuizId] = useState<number | null>(null);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
+
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<number | null>(null);
 
+  // Cargar todas las categorías
   const { data: categories, isLoading: loadingCategories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
 
+  // Cargar todos los cuestionarios
   const { data: quizzes, isLoading: loadingQuizzes } = useQuery<Quiz[]>({
     queryKey: ["/api/quizzes"],
   });
 
-  const isLoading = loadingCategories || loadingQuizzes;
+  // Cargar todas las subcategorías con formato corregido
+  const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = useQuery({
+    queryKey: ["/api/admin/subcategories"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/subcategories");
+      const data = await res.json();
+      // Extraer solo las subcategorías del formato anidado
+      return data.map((item: any) => item.subcategories);
+    }
+  });
+
+  const isLoading = loadingCategories || loadingQuizzes || loadingSubcategoriesList;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -53,19 +79,165 @@ export default function QuizzesAdmin() {
       title: "",
       description: "",
       categoryId: "",
-      timeLimit: "300",
+      subcategoryId: "",
+      timeLimit: undefined, // Campo vacío inicialmente
       difficulty: "intermedio",
       isPublic: false,
     },
   });
+
+  const categoryId = form.watch("categoryId");
+
+  // Efecto para cargar subcategorías específicas cuando cambia la categoría seleccionada en el formulario
+  useEffect(() => {
+    const fetchSubcategories = async () => {
+      if (!categoryId) {
+        form.setValue("subcategoryId", "");
+        return;
+      }
+
+      setLoadingSubcategories(true);
+      try {
+        const res = await fetch(`/api/admin/subcategories/by-category/${categoryId}`);
+        if (!res.ok) throw new Error(res.statusText);
+        
+        const data = await res.json();
+        
+        if (!Array.isArray(data)) {
+          throw new Error("Formato de datos inválido");
+        }
+        
+        // Si estamos editando y la subcategoría actual pertenece a esta categoría, la mantenemos
+        if (editingId && form.getValues("subcategoryId")) {
+          const currentSub = data.find((sub: any) => sub.id === Number(form.getValues("subcategoryId")));
+          if (!currentSub) {
+            form.setValue("subcategoryId", "");
+          }
+        } else {
+          form.setValue("subcategoryId", "");
+        }
+      } catch (error) {
+        console.error("Error fetching subcategories:", error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las subcategorías",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingSubcategories(false);
+      }
+    };
+
+    fetchSubcategories();
+  }, [categoryId, editingId, form, toast]);
+
+  // Función para organizar los datos jerárquicamente
+  const organizeQuizzesHierarchically = () => {
+    if (!quizzes || !categories || !subcategoriesResponse) return [];
+    
+    console.log("Datos para estructura jerárquica:", {
+      quizzes: quizzes.length,
+      categories: categories.length,
+      subcategories: subcategoriesResponse.length
+    });
+
+    // 1. Agrupar quizzes por subcategoría
+    const quizzesBySubcategory = quizzes.reduce((acc, quiz) => {
+      const subcatId = quiz.subcategoryId;
+      if (!subcatId) return acc;
+      
+      if (!acc[subcatId]) {
+        acc[subcatId] = [];
+      }
+      acc[subcatId].push(quiz);
+      return acc;
+    }, {} as Record<number, Quiz[]>);
+
+    // 2. Crear la estructura jerárquica final
+    const result = categories.map(category => {
+      // Filtrar subcategorías que pertenecen a esta categoría
+      const categorySubcategories = subcategoriesResponse
+        .filter((sub: any) => sub.categoryId === category.id)
+        .map((sub: any) => ({
+          ...sub,
+          quizzes: quizzesBySubcategory[sub.id] || []
+        }));
+
+      return {
+        ...category,
+        subcategories: categorySubcategories
+      };
+    });
+
+    console.log("Estructura jerárquica resultante:", result);
+    return result;
+  };
+
+  const hierarchicalData = organizeQuizzesHierarchically();
+  const quizzesWithoutClassification = quizzes?.filter(q => !q.categoryId || !q.subcategoryId) || [];
+
+  // Cargar usuarios asignados
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const res = await fetch("/api/admin/users");
+        const data = await res.json();
+        setAllUsers(data);
+      } catch (error) {
+        console.error("Error loading users:", error);
+      }
+    };
+
+    loadUsers();
+  }, []);
+
+  const fetchAssignedUsers = async (quizId: number) => {
+    try {
+      const res = await fetch(`/api/admin/users/quizzes/${quizId}`);
+      if (!res.ok) {
+        console.error("Error fetching assigned users:", res.status);
+        return;
+      }
+      const data = await res.json();
+      setAssignedUsers(data.map((user: any) => user.userId ?? user.id));
+    } catch (error) {
+      console.error("Error in fetchAssignedUsers:", error);
+    }
+  };
+
+  const toggleQuizAssignment = async (
+    quizId: number,
+    userId: number,
+    isAssigned: boolean
+  ) => {
+    const method = isAssigned ? "DELETE" : "POST";
+    try {
+      const res = await fetch(`/api/admin/users/quizzes`, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId, quizId }),
+      });
+
+      if (res.ok) {
+        fetchAssignedUsers(quizId);
+      } else {
+        console.error("Error in toggleQuizAssignment:", res.status);
+      }
+    } catch (error) {
+      console.error("Error in toggleQuizAssignment:", error);
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
       const payload = {
         ...values,
         categoryId: parseInt(values.categoryId),
-        timeLimit: parseInt(values.timeLimit),
-        totalQuestions: 0, // Se actualizará cuando se añadan preguntas
+        subcategoryId: parseInt(values.subcategoryId),
+        // timeLimit ya tiene el valor por defecto si no se especificó
+        totalQuestions: 0,
       };
       
       const response = await fetch("/api/admin/quizzes", {
@@ -84,14 +256,7 @@ export default function QuizzesAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/quizzes"] });
-      form.reset({
-        title: "",
-        description: "",
-        categoryId: "",
-        timeLimit: "300",
-        difficulty: "intermedio",
-        isPublic: false,
-      });
+      form.reset();
       toast({
         title: "Cuestionario creado",
         description: "El cuestionario ha sido creado exitosamente",
@@ -112,7 +277,8 @@ export default function QuizzesAdmin() {
       const payload = {
         ...values,
         categoryId: parseInt(values.categoryId),
-        timeLimit: parseInt(values.timeLimit),
+        subcategoryId: parseInt(values.subcategoryId),
+        // timeLimit ya tiene el valor por defecto si no se especificó
       };
       
       const response = await fetch(`/api/admin/quizzes/${values.id}`, {
@@ -132,14 +298,7 @@ export default function QuizzesAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/quizzes"] });
       setEditingId(null);
-      form.reset({
-        title: "",
-        description: "",
-        categoryId: "",
-        timeLimit: "300",
-        difficulty: "intermedio",
-        isPublic: false,
-      });
+      form.reset();
       toast({
         title: "Cuestionario actualizado",
         description: "El cuestionario ha sido actualizado exitosamente",
@@ -198,7 +357,8 @@ export default function QuizzesAdmin() {
       title: quiz.title,
       description: quiz.description,
       categoryId: String(quiz.categoryId),
-      timeLimit: String(quiz.timeLimit),
+      subcategoryId: String(quiz.subcategoryId ?? ""),
+      timeLimit: quiz.timeLimit === 3600 ? undefined : quiz.timeLimit, // Mostrar vacío si es el valor por defecto
       difficulty: quiz.difficulty,
       isPublic: quiz.isPublic === true,
     });
@@ -206,14 +366,7 @@ export default function QuizzesAdmin() {
 
   function handleCancelEdit() {
     setEditingId(null);
-    form.reset({
-      title: "",
-      description: "",
-      categoryId: "",
-      timeLimit: "300",
-      difficulty: "intermedio",
-      isPublic: false,
-    });
+    form.reset();
   }
 
   function handleDelete(id: number) {
@@ -224,12 +377,6 @@ export default function QuizzesAdmin() {
   
   function handleManageQuestions(quizId: number) {
     window.location.href = `/admin/quizzes/${quizId}/questions`;
-  }
-
-  function getCategoryName(categoryId: number): string {
-    if (!categories) return "";
-    const category = categories.find(cat => cat.id === categoryId);
-    return category ? category.name : "";
   }
 
   return (
@@ -321,6 +468,48 @@ export default function QuizzesAdmin() {
                     )}
                   />
                   
+                  <FormField
+                    control={form.control}
+                    name="subcategoryId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subcategoría</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={!categoryId || loadingSubcategories}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              {loadingSubcategories ? (
+                                <div className="flex items-center gap-2">
+                                  <Spinner className="h-4 w-4" />
+                                  <span>Cargando...</span>
+                                </div>
+                              ) : (
+                                <SelectValue placeholder={
+                                  !categoryId
+                                    ? "Primero selecciona una categoría"
+                                    : "Selecciona una subcategoría"
+                                } />
+                              )}
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {subcategoriesResponse
+                              ?.filter((sub: any) => sub.categoryId === Number(categoryId))
+                              .map((sub: any) => (
+                                <SelectItem key={sub.id} value={String(sub.id)}>
+                                  {sub.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -329,10 +518,16 @@ export default function QuizzesAdmin() {
                         <FormItem>
                           <FormLabel>Tiempo límite (segundos)</FormLabel>
                           <FormControl>
-                            <Input type="number" min="30" {...field} />
+                            <Input 
+                              type="number" 
+                              min="30" 
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                              placeholder="300 (valor por defecto: 5 minutos)"
+                            />
                           </FormControl>
                           <FormDescription className="text-xs">
-                            {parseInt(field.value) > 0 ? `${Math.floor(parseInt(field.value) / 60)} min ${parseInt(field.value) % 60} seg` : ""}
+                            {field.value ? `${Math.floor(field.value / 60)} min ${field.value % 60} seg` : "5 min (valor por defecto)"}
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -427,260 +622,277 @@ export default function QuizzesAdmin() {
                   <Spinner className="h-8 w-8" />
                 </div>
               ) : quizzes && quizzes.length > 0 ? (
-                <>
-                  {categories && categories.length > 0 ? (
-                    <div className="space-y-8">
-                      {categories.map((category) => {
-                        // Obtener cuestionarios de esta categoría
-                        const categoryQuizzes = quizzes.filter(quiz => quiz.categoryId === category.id);
-                        
-                        // Si no hay cuestionarios en esta categoría, no mostrar la sección
-                        if (categoryQuizzes.length === 0) return null;
-                        
-                        return (
-                          <div key={category.id} className="space-y-4">
-                            <div className={`p-2 pl-3 rounded-md border-l-4 border-l-${category.colorClass || 'primary'}`}>
-                              <h3 className="text-xl font-medium">{category.name}</h3>
-                              <p className="text-sm text-muted-foreground">{category.description}</p>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 gap-4">
-                              {categoryQuizzes.map((quiz: Quiz) => (
-                                <Card key={quiz.id} className="overflow-hidden border border-muted">
-                                  <CardContent className="p-6">
-                                    <div className="flex flex-col space-y-4">
-                                      <div className="flex justify-between items-start">
-                                        <div>
-                                          <div className="flex items-center gap-2">
-                                            <h3 className="text-lg font-semibold">{quiz.title}</h3>
-                                            {quiz.isPublic && (
-                                              <Badge variant="outline" className="ml-2">
-                                                <LinkIcon className="h-3 w-3 mr-1" /> Público
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                          <Button 
-                                            variant="outline" 
-                                            size="sm" 
-                                            onClick={() => handleEdit(quiz)}
-                                          >
-                                            Editar
-                                          </Button>
-                                          <Button 
-                                            variant="destructive" 
-                                            size="sm"
-                                            onClick={() => handleDelete(quiz.id)}
-                                            title="Eliminar cuestionario"
-                                          >
-                                            <Trash className="h-4 w-4" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                      
-                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
-                                        <div className="flex items-center">
-                                          <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                                          <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
-                                        </div>
-                                        <div>
-                                          <Badge variant={
-                                            quiz.difficulty === "básico" ? "default" : 
-                                            quiz.difficulty === "intermedio" ? "secondary" : "destructive"
-                                          }>
-                                            {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
-                                          </Badge>
-                                        </div>
-                                        <div>
-                                          <Badge variant="outline" className="bg-primary/10">
-                                            {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                      
-                                      <Separator />
-                                      
-                                      <div className="flex justify-end">
-                                        <Button 
-                                          size="sm" 
-                                          onClick={() => handleManageQuestions(quiz.id)}
-                                        >
-                                          Gestionar preguntas
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                      
-                      {/* Mostrar cuestionarios sin categoría */}
-                      {quizzes.filter(quiz => !categories.some(cat => cat.id === quiz.categoryId)).length > 0 && (
-                        <div className="space-y-4">
-                          <div className="p-2 pl-3 rounded-md border-l-4 border-l-muted">
-                            <h3 className="text-xl font-medium">Sin categoría</h3>
-                            <p className="text-sm text-muted-foreground">Cuestionarios que no pertenecen a ninguna categoría</p>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 gap-4">
-                            {quizzes
-                              .filter(quiz => !categories.some(cat => cat.id === quiz.categoryId))
-                              .map((quiz: Quiz) => (
-                                <Card key={quiz.id} className="overflow-hidden border border-muted">
-                                  <CardContent className="p-6">
-                                    <div className="flex flex-col space-y-4">
-                                      <div className="flex justify-between items-start">
-                                        <div>
-                                          <div className="flex items-center gap-2">
-                                            <h3 className="text-lg font-semibold">{quiz.title}</h3>
-                                            {quiz.isPublic && (
-                                              <Badge variant="outline" className="ml-2">
-                                                <LinkIcon className="h-3 w-3 mr-1" /> Público
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                          <Button 
-                                            variant="outline" 
-                                            size="sm" 
-                                            onClick={() => handleEdit(quiz)}
-                                          >
-                                            Editar
-                                          </Button>
-                                          <Button 
-                                            variant="destructive" 
-                                            size="sm"
-                                            onClick={() => handleDelete(quiz.id)}
-                                            title="Eliminar cuestionario"
-                                          >
-                                            <Trash className="h-4 w-4" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                      
-                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
-                                        <div className="flex items-center">
-                                          <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                                          <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
-                                        </div>
-                                        <div>
-                                          <Badge variant={
-                                            quiz.difficulty === "básico" ? "default" : 
-                                            quiz.difficulty === "intermedio" ? "secondary" : "destructive"
-                                          }>
-                                            {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
-                                          </Badge>
-                                        </div>
-                                        <div>
-                                          <Badge variant="outline" className="bg-primary/10">
-                                            {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                      
-                                      <Separator />
-                                      
-                                      <div className="flex justify-end">
-                                        <Button 
-                                          size="sm" 
-                                          onClick={() => handleManageQuestions(quiz.id)}
-                                        >
-                                          Gestionar preguntas
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                            ))}
-                          </div>
+                <Accordion type="multiple" className="space-y-4">
+                  {/* 1. Categorías con subcategorías */}
+                  {hierarchicalData.map((category) => (
+                    <AccordionItem key={category.id} value={`cat-${category.id}`} className="border rounded-md">
+                      <AccordionTrigger className="hover:no-underline px-4 py-3 bg-muted/50">
+                        <div className="flex-1 text-left">
+                          <h3 className="text-lg font-medium">{category.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {category.subcategories.reduce((acc: number, sub: any) => acc + sub.quizzes.length, 0)} cuestionario(s)
+                          </p>
                         </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-4">
-                      {quizzes.map((quiz: Quiz) => (
-                        <Card key={quiz.id} className="overflow-hidden border border-muted">
-                          <CardContent className="p-6">
-                            <div className="flex flex-col space-y-4">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="text-lg font-semibold">{quiz.title}</h3>
-                                    {quiz.isPublic && (
-                                      <Badge variant="outline" className="ml-2">
-                                        <LinkIcon className="h-3 w-3 mr-1" /> Público
-                                      </Badge>
-                                    )}
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-0 pt-2">
+                        <Accordion type="multiple" className="space-y-2">
+                          {category.subcategories.map((subcategory: any) => (
+                            subcategory.quizzes.length > 0 && (
+                              <AccordionItem 
+                                key={subcategory.id} 
+                                value={`subcat-${subcategory.id}`}
+                                className="border rounded-md"
+                              >
+                                <AccordionTrigger className="hover:no-underline px-4 py-2">
+                                  <div className="flex-1 text-left">
+                                    <h4 className="text-md font-medium">{subcategory.name}</h4>
+                                    <p className="text-xs text-muted-foreground">
+                                      {subcategory.quizzes.length} cuestionario(s)
+                                    </p>
                                   </div>
-                                  <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
-                                </div>
-                                <div className="flex space-x-2">
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => handleEdit(quiz)}
-                                  >
-                                    Editar
-                                  </Button>
-                                  <Button 
-                                    variant="destructive" 
+                                </AccordionTrigger>
+                                <AccordionContent className="px-4 pb-0 pt-2">
+                                  <div className="grid grid-cols-1 gap-3">
+                                    {subcategory.quizzes.map((quiz: Quiz) => (
+                                      <Card key={quiz.id} className="overflow-hidden border border-muted">
+                                        <CardContent className="p-6">
+                                          <div className="flex flex-col space-y-4">
+                                            <div className="flex justify-between items-start">
+                                              <div>
+                                                <div className="flex items-center gap-2">
+                                                  <h3 className="text-lg font-semibold">{quiz.title}</h3>
+                                                  {quiz.isPublic && (
+                                                    <Badge variant="outline" className="ml-2">
+                                                      <LinkIcon className="h-3 w-3 mr-1" /> Público
+                                                    </Badge>
+                                                  )}
+                                                </div>
+                                                <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
+                                              </div>
+                                              <div className="flex space-x-2">
+                                                <Button 
+                                                  variant="outline" 
+                                                  size="sm" 
+                                                  onClick={() => handleEdit(quiz)}
+                                                >
+                                                  Editar
+                                                </Button>
+                                                <Button 
+                                                  variant="destructive" 
+                                                  size="sm"
+                                                  onClick={() => handleDelete(quiz.id)}
+                                                  title="Eliminar cuestionario"
+                                                >
+                                                  <Trash className="h-4 w-4" />
+                                                </Button>
+                                              </div>
+                                            </div>
+                                            
+                                            <Button
+                                              size="sm"
+                                              variant="secondary"
+                                              onClick={() => {
+                                                setVisibleQuizId(quiz.id);
+                                                fetchAssignedUsers(quiz.id);
+                                              }}
+                                            >
+                                              Asignar usuarios
+                                            </Button>
+
+                                            {visibleQuizId === quiz.id && (
+                                              <div className="mt-4">
+                                                <p className="font-semibold">Usuarios asignados:</p>
+                                                <ul className="list-disc ml-6">
+                                                  {allUsers.map((user) => (
+                                                    <li key={user.id}>
+                                                      <label className="flex items-center gap-2">
+                                                        <input
+                                                          type="checkbox"
+                                                          checked={assignedUsers.includes(user.id)}
+                                                          onChange={() =>
+                                                            toggleQuizAssignment(
+                                                              quiz.id,
+                                                              user.id,
+                                                              assignedUsers.includes(user.id)
+                                                            )
+                                                          }
+                                                        />
+                                                        {user.name} ({user.email})
+                                                      </label>
+                                                    </li>
+                                                  ))}
+                                                </ul>
+                                              </div>
+                                            )}
+
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
+                                              <div className="flex items-center">
+                                                <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                                                <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
+                                              </div>
+                                              <div>
+                                                <Badge variant={
+                                                  quiz.difficulty === "básico" ? "default" : 
+                                                  quiz.difficulty === "intermedio" ? "secondary" : "destructive"
+                                                }>
+                                                  {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
+                                                </Badge>
+                                              </div>
+                                              <div>
+                                                <Badge variant="outline" className="bg-primary/10">
+                                                  {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
+                                                </Badge>
+                                              </div>
+                                            </div>
+                                            
+                                            <Separator />
+                                            
+                                            <div className="flex justify-end">
+                                              <Button 
+                                                size="sm" 
+                                                onClick={() => handleManageQuestions(quiz.id)}
+                                              >
+                                                Gestionar preguntas
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        </CardContent>
+                                      </Card>
+                                    ))}
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            )
+                          ))}
+                        </Accordion>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+
+                  {/* 2. Quizzes sin categoría/subcategoría */}
+                  {quizzesWithoutClassification.length > 0 && (
+                    <AccordionItem value="uncategorized" className="border rounded-md">
+                      <AccordionTrigger className="hover:no-underline px-4 py-3 bg-muted/50">
+                        <div className="flex-1 text-left">
+                          <h3 className="text-lg font-medium">Sin categoría/subcategoría</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {quizzesWithoutClassification.length} cuestionario(s) no clasificado(s)
+                          </p>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-0 pt-2">
+                        <div className="grid grid-cols-1 gap-3">
+                          {quizzesWithoutClassification.map((quiz) => (
+                            <Card key={quiz.id} className="overflow-hidden border border-muted">
+                              <CardContent className="p-6">
+                                <div className="flex flex-col space-y-4">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <h3 className="text-lg font-semibold">{quiz.title}</h3>
+                                        {quiz.isPublic && (
+                                          <Badge variant="outline" className="ml-2">
+                                            <LinkIcon className="h-3 w-3 mr-1" /> Público
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
+                                    </div>
+                                    <div className="flex space-x-2">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => handleEdit(quiz)}
+                                      >
+                                        Editar
+                                      </Button>
+                                      <Button 
+                                        variant="destructive" 
+                                        size="sm"
+                                        onClick={() => handleDelete(quiz.id)}
+                                        title="Eliminar cuestionario"
+                                      >
+                                        <Trash className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  
+                                  <Button
                                     size="sm"
-                                    onClick={() => handleDelete(quiz.id)}
-                                    title="Eliminar cuestionario"
+                                    variant="secondary"
+                                    onClick={() => {
+                                      setVisibleQuizId(quiz.id);
+                                      fetchAssignedUsers(quiz.id);
+                                    }}
                                   >
-                                    <Trash className="h-4 w-4" />
+                                    Asignar usuarios
                                   </Button>
+
+                                  {visibleQuizId === quiz.id && (
+                                    <div className="mt-4">
+                                      <p className="font-semibold">Usuarios asignados:</p>
+                                      <ul className="list-disc ml-6">
+                                        {allUsers.map((user) => (
+                                          <li key={user.id}>
+                                            <label className="flex items-center gap-2">
+                                              <input
+                                                type="checkbox"
+                                                checked={assignedUsers.includes(user.id)}
+                                                onChange={() =>
+                                                  toggleQuizAssignment(
+                                                    quiz.id,
+                                                    user.id,
+                                                    assignedUsers.includes(user.id)
+                                                  )
+                                                }
+                                              />
+                                              {user.name} ({user.email})
+                                            </label>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+
+                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
+                                    <div className="flex items-center">
+                                      <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                                      <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
+                                    </div>
+                                    <div>
+                                      <Badge variant={
+                                        quiz.difficulty === "básico" ? "default" : 
+                                        quiz.difficulty === "intermedio" ? "secondary" : "destructive"
+                                      }>
+                                        {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
+                                      </Badge>
+                                    </div>
+                                    <div>
+                                      <Badge variant="outline" className="bg-primary/10">
+                                        {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                  
+                                  <Separator />
+                                  
+                                  <div className="flex justify-end">
+                                    <Button 
+                                      size="sm" 
+                                      onClick={() => handleManageQuestions(quiz.id)}
+                                    >
+                                      Gestionar preguntas
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                              
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2 text-sm">
-                                <div className="flex items-center">
-                                  <BookOpen className="h-4 w-4 mr-2 text-primary" />
-                                  <span>{getCategoryName(quiz.categoryId)}</span>
-                                </div>
-                                <div className="flex items-center">
-                                  <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                                  <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
-                                </div>
-                                <div>
-                                  <Badge variant={
-                                    quiz.difficulty === "básico" ? "default" : 
-                                    quiz.difficulty === "intermedio" ? "secondary" : "destructive"
-                                  }>
-                                    {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
-                                  </Badge>
-                                </div>
-                                <div>
-                                  <Badge variant="outline" className="bg-primary/10">
-                                    {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
-                                  </Badge>
-                                </div>
-                              </div>
-                              
-                              <Separator />
-                              
-                              <div className="flex justify-end">
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => handleManageQuestions(quiz.id)}
-                                >
-                                  Gestionar preguntas
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
                   )}
-                </>
+                </Accordion>
               ) : (
                 <div className="text-center py-12 px-4">
                   <div className="mb-4 rounded-full bg-muted h-12 w-12 flex items-center justify-center mx-auto">

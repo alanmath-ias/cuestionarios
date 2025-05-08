@@ -1,102 +1,99 @@
-import { useEffect, useState } from 'react';
+
+//Este anterior quiz-results esta super, ahora chat gpt lo modifica para que admin lo pueda ver y calificar, y que el admin pueda ver los resultados de todos los estudiantes, no solo de uno.
+import { useEffect } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MathDisplay } from '@/components/ui/math-display';
-import { ArrowLeft, Download, RefreshCw, Clock, CheckCircle, XCircle } from 'lucide-react';
-import { formatTime } from '@/lib/mathUtils';
-
-interface QuizResult {
-  progress: {
-    id: number;
-    userId: number;
-    quizId: number;
-    status: 'not_started' | 'in_progress' | 'completed';
-    score?: number;
-    completedQuestions: number;
-    timeSpent?: number;
-    completedAt?: string;
-  };
-  quiz: {
-    id: number;
-    title: string;
-    description: string;
-    categoryId: number;
-    timeLimit: number;
-    difficulty: string;
-    totalQuestions: number;
-  };
-  answers: Array<{
-    id: number;
-    progressId: number;
-    questionId: number;
-    answerId: number | null;
-    isCorrect: boolean;
-    variables: Record<string, number>;
-    timeSpent: number;
-    question: {
-      id: number;
-      content: string;
-      type: string;
-      difficulty: number;
-      points: number;
-    };
-    answerDetails: {
-      id: number;
-      content: string;
-      isCorrect: boolean;
-      explanation?: string;
-    } | null;
-  }>;
-}
+import { ArrowLeft, Download, Clock, CheckCircle, XCircle } from 'lucide-react';
+import type { QuizResult } from '@/shared/quiz-types';
 
 function QuizResults() {
   const { progressId } = useParams<{ progressId: string }>();
   const [_, setLocation] = useLocation();
   
-  // Fetch quiz results
-  const { data: results, isLoading } = useQuery<QuizResult>({
+  // 1. Fetch quiz results
+  const { data: results, isLoading: loadingResults } = useQuery<QuizResult>({
     queryKey: [`/api/results/${progressId}`],
   });
-  
-  // Calculate statistics
+
+  // 2. Fetch complete quiz questions with answers
+  const { data: quizQuestions, isLoading: loadingQuestions } = useQuery({
+    queryKey: [`/api/quizzes/${results?.quiz.id}/questions`],
+    enabled: !!results?.quiz.id // Only fetch if we have a quiz ID
+  });
+//Consultas para feedback:
+const { data: feedback, isLoading: loadingFeedback } = useQuery({
+  queryKey: ['quiz-feedback', progressId],
+  queryFn: async () => {
+    const res = await fetch(`/api/quiz-feedback/${progressId}`);
+    if (!res.ok) return null;
+    return res.json();
+  },
+  enabled: !!progressId,
+});
+
+
+
+
+
+//chat gpt constante para admin ver quiz-results
+const [locationPath] = useLocation();
+//const isAdminView = locationPath.includes('/admin/quiz-results');
+
+
+  // Debug: Log data structure
+  useEffect(() => {
+    if (results) {
+      console.log("Quiz results data:", results);
+    }
+    if (quizQuestions) {
+      console.log("Quiz questions data:", quizQuestions);
+    }
+  }, [results, quizQuestions]);
+
+  const isLoading = loadingResults || loadingQuestions;
   const correctAnswers = results?.answers.filter(a => a.isCorrect).length || 0;
   const totalQuestions = results?.answers.length || 0;
-  const averageTimePerQuestion = results?.progress.timeSpent 
-    ? Math.floor((results.progress.timeSpent / totalQuestions) / 60) : 0;
-  const averageTimeSeconds = results?.progress.timeSpent 
-    ? Math.floor((results.progress.timeSpent / totalQuestions) % 60) : 0;
-  
-  // Format time spent as mm:ss
-  const formatTimeSpent = (seconds?: number) => {
+
+  const formatTimeSpent = (seconds?: number | null) => {
     if (!seconds) return '0:00';
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
-  
-  // Handle retry quiz
-  const handleRetryQuiz = () => {
-    if (results?.quiz.id) {
-      setLocation(`/quiz/${results.quiz.id}`);
-    }
+
+  // 3. Improved correct answer lookup
+  const getCorrectAnswerContent = (answer: any): string | undefined => {
+    if (!quizQuestions) return undefined;
+    
+    const fullQuestion = quizQuestions.find((q: any) => q.id === answer.question.id);
+    const correctAnswer = fullQuestion?.answers.find((a: any) => a.isCorrect);
+    return correctAnswer?.content;
   };
-  
-  // Handle download results
+
+  const renderQuestionContent = (content: string) => {
+    return content.split('*').map((part, i) => {
+      if (i % 2 === 0) {
+        return <span key={i}>{part}</span>;
+      } else {
+        return <MathDisplay key={i} math={part.trim()} inline />;
+      }
+    });
+  };
+
   const handleDownloadResults = () => {
     if (!results) return;
     
-    // Create CSV content
-    const headers = ['Pregunta', 'Respuesta', 'Correcta', 'Tiempo'];
+    const headers = ['Pregunta', 'Tu Respuesta', 'Respuesta Correcta', 'Tiempo'];
     const rows = results.answers.map((answer, index) => [
       `Pregunta ${index + 1}`,
       answer.answerDetails?.content || 'No respondida',
-      answer.isCorrect ? 'Sí' : 'No',
+      getCorrectAnswerContent(answer) || 'No disponible',
       formatTimeSpent(answer.timeSpent)
     ]);
     
-    // Add summary row
     rows.push([
       `Puntuación: ${results.progress.score?.toFixed(1)}/10`,
       `Correctas: ${correctAnswers}/${totalQuestions}`,
@@ -104,7 +101,6 @@ function QuizResults() {
       ''
     ]);
     
-    // Convert to CSV
     const csvContent = [
       `Resultados: ${results.quiz.title}`,
       '',
@@ -112,29 +108,30 @@ function QuizResults() {
       ...rows.map(row => row.join(','))
     ].join('\n');
     
-    // Create download link
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
     link.setAttribute('download', `resultados_${results.quiz.title.replace(/\s+/g, '_')}.csv`);
-    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
-  
+
   return (
-    <div id="quizResults">
+    <div id="quizResults" className="max-w-4xl mx-auto">
       <div className="mb-6 flex items-center">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="mr-3"
-          onClick={() => setLocation('/')}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
+
+ {/*}     
+<Button 
+  variant="ghost" 
+  size="icon" 
+  className="mr-3"
+  onClick={() => setLocation(isAdminView ? '/admin/calificar' : '/')}
+>
+  <ArrowLeft className="h-5 w-5" />
+</Button>*/}
+        
         <h2 className="text-2xl font-semibold">Resultados del Cuestionario</h2>
       </div>
       
@@ -175,7 +172,10 @@ function QuizResults() {
               <div className="bg-gray-50 rounded-lg p-4 text-center">
                 <div className="text-sm font-medium text-gray-500 mb-1">Tiempo promedio</div>
                 <div className="text-3xl font-bold text-teal-500">
-                  {averageTimePerQuestion}<span className="text-lg text-gray-500">:{averageTimeSeconds.toString().padStart(2, '0')}</span>
+                  {Math.floor((results.progress.timeSpent || 0) / totalQuestions / 60)}
+                  <span className="text-lg text-gray-500">
+                    :{Math.floor((results.progress.timeSpent || 0) / totalQuestions % 60).toString().padStart(2, '0')}
+                  </span>
                 </div>
                 <div className="text-xs text-gray-500">minutos por pregunta</div>
               </div>
@@ -184,60 +184,87 @@ function QuizResults() {
             <h4 className="font-semibold text-lg mb-4">Resumen de preguntas</h4>
             
             <div className="space-y-4 mb-6">
-              {results.answers.map((answer, index) => (
-                <div key={answer.id} className="border rounded-lg overflow-hidden">
-                  <div className="bg-gray-50 p-3 flex justify-between items-center">
-                    <div className="font-medium">Pregunta {index + 1}</div>
-                    {answer.isCorrect ? (
-                      <div className="text-green-500 font-medium flex items-center">
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Correcta
-                      </div>
-                    ) : (
-                      <div className="text-red-500 font-medium flex items-center">
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Incorrecta
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <div className="mb-3">
-                      <MathDisplay math={answer.question.content} display={true} />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {answer.answerDetails && (
-                        <div className={`border rounded p-3 ${answer.isCorrect 
-                          ? 'bg-green-50 border-green-500' 
-                          : 'bg-red-50 border-red-500'}`}>
-                          <div className="text-sm font-medium mb-1">Tu respuesta:</div>
-                          <MathDisplay math={answer.answerDetails.content} />
+              {results.answers.map((answer, index) => {
+                const correctContent = getCorrectAnswerContent(answer);
+                
+                return (
+                  <div key={answer.id} className="border rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 p-3 flex justify-between items-center">
+                      <div className="font-medium">Pregunta {index + 1}</div>
+                      {answer.isCorrect ? (
+                        <div className="text-green-500 font-medium flex items-center">
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Correcta
                         </div>
-                      )}
-                      
-                      {/* Find correct answer */}
-                      {!answer.isCorrect && (
-                        <div className="border rounded p-3 bg-green-50 border-green-500">
-                          <div className="text-sm font-medium mb-1">Respuesta correcta:</div>
-                          <MathDisplay 
-                            math={results.answers
-                              .find(a => a.questionId === answer.questionId)
-                              ?.answerDetails?.content || 'No disponible'} 
-                          />
+                      ) : (
+                        <div className="text-red-500 font-medium flex items-center">
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Incorrecta
                         </div>
                       )}
                     </div>
                     
-                    {answer.answerDetails?.explanation && (
-                      <div className="mt-3 p-3 bg-gray-50 rounded border text-sm">
-                        <strong>Explicación:</strong> {answer.answerDetails.explanation}
+                    <div className="p-4">
+                      <div className="mb-3">
+                        {renderQuestionContent(answer.question.content)}
                       </div>
-                    )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className={`border rounded p-3 ${
+                          answer.isCorrect 
+                            ? 'bg-green-50 border-green-500' 
+                            : 'bg-red-50 border-red-500'
+                        }`}>
+                          <div className="text-sm font-medium mb-1">Tu respuesta:</div>
+                          {answer.answerDetails ? (
+                            <MathDisplay math={answer.answerDetails.content} />
+                          ) : (
+                            <span className="text-gray-500">No respondida</span>
+                          )}
+                        </div>
+
+                        {!answer.isCorrect && (
+                          <div className="border rounded p-3 bg-green-50 border-green-500">
+                            <div className="text-sm font-medium mb-1">Respuesta correcta:</div>
+                            {correctContent ? (
+                              <MathDisplay math={correctContent} />
+                            ) : (
+                              <span className="text-gray-500">
+                                {loadingQuestions ? 'Cargando...' : 'No disponible'}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {(answer.answerDetails?.explanation || answer.correctAnswer?.explanation) && (
+                        <div className="mt-3 p-3 bg-gray-50 rounded border text-sm">
+                          <strong>Explicación:</strong> {answer.answerDetails?.explanation || answer.correctAnswer?.explanation}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             
-            <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+            {!loadingFeedback && (
+  <Card className="mt-6">
+    <CardContent className="p-6">
+      <h4 className="text-lg font-semibold mb-2">Retroalimentación del profesor</h4>
+      {feedback?.feedback ? (
+        <p className="text-gray-700 whitespace-pre-wrap">{feedback.feedback}</p>
+      ) : (
+        <p className="text-gray-500 italic">Tu profesor aún no ha enviado comentarios.</p>
+      )}
+    </CardContent>
+  </Card>
+)}
+
+
+
+
+            <div className="flex justify-center">
               <Button
                 variant="outline"
                 className="flex items-center"
@@ -246,31 +273,14 @@ function QuizResults() {
                 <Download className="mr-2 h-4 w-4" />
                 Descargar resultados
               </Button>
-              <Button
-                className="flex items-center"
-                onClick={handleRetryQuiz}
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Intentar de nuevo
-              </Button>
             </div>
           </CardContent>
         </Card>
       ) : (
-        <Card className="mb-6">
-          <CardContent className="p-6 text-center">
-            <p>No se encontraron resultados para este cuestionario.</p>
-            <Button
-              className="mt-4"
-              onClick={() => setLocation('/')}
-            >
-              Volver al inicio
-            </Button>
-          </CardContent>
-        </Card>
+        <div>No se encontraron resultados.</div>
       )}
     </div>
   );
 }
 
-export default QuizResults;
+export default QuizResults; //Este quiz-results comentado esta excelente para solo estudiantes pero le falta para admin veamos a ver si el siguiente lo resuelve:*/}

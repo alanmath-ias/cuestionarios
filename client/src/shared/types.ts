@@ -21,12 +21,12 @@ export interface Quiz {
   title: string;
   description: string;
   categoryId: number;
+  subcategoryId: number;
   timeLimit: number;
   difficulty: string;
   totalQuestions: number;
   isPublic: boolean | null;
 }
-
 export interface Question {
   id: number;
   content: string;
@@ -35,7 +35,9 @@ export interface Question {
   difficulty: number;
   points: number;
   variables?: Record<string, number>;
+  imageUrl?: string; // 👈 nueva propiedad opcional
 }
+
 
 export interface Answer {
   id: number;

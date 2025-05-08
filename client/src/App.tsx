@@ -18,6 +18,17 @@ import { PageLayout } from "@/components/layout/page-layout";
 import { useQuery } from "@tanstack/react-query";
 import { User } from "@/shared/types";
 import { useEffect } from "react";
+import AllUsersCategoriesAdmin from './pages/admin/AllUsersCategoriesAdmin';
+
+import AdminQuizReview from './pages/admin/AdminQuizReview';
+
+{/*chat gpt entrenamiento*/}
+import TrainingPage from "@/pages/training/[categoryId]";
+import TrainingPageSub from "@/pages/training2/[categoryId]/[subcategoryId]";
+
+{/*chat gpt calificar*/}
+import Calificar from "@/pages/admin/Calificar";
+import subcategories from "./pages/admin/subcategories";
 
 function ProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
   const { data: user, isLoading } = useQuery<User>({
@@ -60,7 +71,7 @@ function AdminProtectedRoute({ component: Component, ...rest }: { component: any
   const [_, navigate] = useLocation();
 
   useEffect(() => {
-    // Verificar si el usuario no está autenticado o no es admin
+    {/* Verificar si el usuario no está autenticado o no es admin*/}
     if (!isLoading) {
       if (!user) {
         navigate('/auth');
@@ -126,6 +137,51 @@ function Router() {
       <Route path="/admin/quizzes/:quizId/questions">
         {(params) => <AdminProtectedRoute component={QuestionsAdmin} path={`/admin/quizzes/${params.quizId}/questions`} />}
       </Route>
+      <Route path="/admin/calificar">
+        {() => <AdminProtectedRoute component={Calificar} path="/admin/calificar" />}
+      </Route>
+      <Route path="/admin/review/:progressId">
+  {() => <AdminProtectedRoute component={AdminQuizReview} path="/admin/review/:progressId" />}
+</Route>
+
+       
+{/*chat gpt calificar ruta para el boton que lleva a quiz-results*/}
+<AdminProtectedRoute path="/admin/quiz-results/:progressId" component={QuizResults} />
+{/*chat gpt*/}
+
+
+
+
+
+{/* Nueva ruta para administración de categorías por usuario */}
+     
+      <Route path="/admin/urlusercategories">
+  <AdminProtectedRoute 
+    component={AllUsersCategoriesAdmin}
+    path="/admin/urlusercategories" 
+  />
+</Route>
+
+{/*Ruta para subcategorias*/}
+<Route path="/admin/subcategories">
+  <AdminProtectedRoute 
+    component={subcategories}
+    path="/admin/subcategories" 
+  />
+</Route>
+
+
+
+{/*chat gpt entrenamiento viejo funciona perfecto pero muy simple*/}
+<Route path="/training/:categoryId">
+  {(params) => <TrainingPage categoryId={params.categoryId} />}
+</Route>
+
+<Route path="/training2/:categoryId/:subcategoryId">
+  <TrainingPageSub /> {/* Sin pasar props manualmente */}
+</Route>
+
+{/*fin chat gpt entrenamiento*/}
 
       {/* Ruta de 404 */}
       <Route>
@@ -143,5 +199,6 @@ function App() {
     </QueryClientProvider>
   );
 }
+
 
 export default App;
