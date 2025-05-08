@@ -10,11 +10,9 @@ import postgres from "postgres";
 import dotenv from 'dotenv';
 dotenv.config();
 
-
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-
 
 // Session middleware setup usando PostgreSQL
 const PgStore = PgSession(session);
@@ -31,20 +29,6 @@ app.use(session({
     createTableIfMissing: true
   })
 }));
-
-/*app.use(session({
-  secret: DATABASE_URL, // Usa la clave del entorno o una por defecto
-  resave: false,
-  saveUninitialized: false,
-  cookie: { 
-    secure: false,
-    maxAge: 3600 //86400000 // 1 day
-  },
-  store: new PgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: true
-  })
-}));*/
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -84,9 +68,7 @@ app.use((req, res, next) => {
     console.error("Error al inicializar datos:", error);
   }
 
-  //const server = await registerRoutes(app); comente esto y puse la siguiente linea:
-  registerRoutes(app);  // Solo registras las rutas
-
+  registerRoutes(app);  // Registro de rutas
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -96,52 +78,22 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // Configuración de Vite en desarrollo
   if (app.get("env") === "development") {
-    //await setupVite(app, server); lo cambie por esto:
     await setupVite(app);
-
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  
-  /*server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });borre esto y puse el bloque:*/
+  // Configuración del puerto para Railway/Render
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080; // 8080 para Railway, 5000 para desarrollo local
 
-  /*
-  const port = 5000;
-  app.listen(port, 'localhost', () => {
-    log(`serving on http://localhost:${port}`);
-  });*///   ESTA FUNCIONA PERFECTO LOCALMENTE, O SEA PARA VISUALSTUDIO, PERO NO EN RENDER, ENTONCES:
-  
-  
-  // Reemplaza todo el bloque final con esto:
+  if (isNaN(port)) {
+    console.error('Invalid PORT environment variable');
+    process.exit(1);
+  }
 
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
-
-if (isNaN(port)) {
-  console.error('Invalid PORT environment variable');
-  process.exit(1);
-}
-
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Server running on ${process.env.NODE_ENV === 'production' ? 'Render' : 'localhost'}:${port}`);
-});
-  
-
+  app.listen(port, '0.0.0.0', () => {
+    console.log(`Server running on ${process.env.NODE_ENV === 'production' ? 'Railway' : 'localhost'}:${port}`);
+  });
 })();
-
-/*server.listen(port, 'localhost', () => {
-  log(`serving on http://localhost:${port}`);
-});*/
