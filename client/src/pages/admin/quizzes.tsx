@@ -36,7 +36,7 @@ const formSchema = z.object({
   description: z.string().min(10, { message: "La descripción debe tener al menos 10 caracteres" }),
   categoryId: z.string().min(1, { message: "Debes seleccionar una categoría" }),
   subcategoryId: z.string().min(1, { message: "Debes seleccionar una subcategoría" }),
-  timeLimit: z.string().min(1, { message: "Debes establecer un tiempo límite" }),
+  timeLimit: z.coerce.number().int().positive().default(3600), // Valor por defecto 3600
   difficulty: z.string().min(1, { message: "Debes seleccionar una dificultad" }),
   isPublic: z.boolean().default(false),
 });
@@ -80,7 +80,7 @@ export default function QuizzesAdmin() {
       description: "",
       categoryId: "",
       subcategoryId: "",
-      timeLimit: "300",
+      timeLimit: undefined, // Campo vacío inicialmente
       difficulty: "intermedio",
       isPublic: false,
     },
@@ -236,7 +236,7 @@ export default function QuizzesAdmin() {
         ...values,
         categoryId: parseInt(values.categoryId),
         subcategoryId: parseInt(values.subcategoryId),
-        timeLimit: parseInt(values.timeLimit),
+        // timeLimit ya tiene el valor por defecto si no se especificó
         totalQuestions: 0,
       };
       
@@ -278,7 +278,7 @@ export default function QuizzesAdmin() {
         ...values,
         categoryId: parseInt(values.categoryId),
         subcategoryId: parseInt(values.subcategoryId),
-        timeLimit: parseInt(values.timeLimit),
+        // timeLimit ya tiene el valor por defecto si no se especificó
       };
       
       const response = await fetch(`/api/admin/quizzes/${values.id}`, {
@@ -358,7 +358,7 @@ export default function QuizzesAdmin() {
       description: quiz.description,
       categoryId: String(quiz.categoryId),
       subcategoryId: String(quiz.subcategoryId ?? ""),
-      timeLimit: String(quiz.timeLimit),
+      timeLimit: quiz.timeLimit === 3600 ? undefined : quiz.timeLimit, // Mostrar vacío si es el valor por defecto
       difficulty: quiz.difficulty,
       isPublic: quiz.isPublic === true,
     });
@@ -518,10 +518,16 @@ export default function QuizzesAdmin() {
                         <FormItem>
                           <FormLabel>Tiempo límite (segundos)</FormLabel>
                           <FormControl>
-                            <Input type="number" min="30" {...field} />
+                            <Input 
+                              type="number" 
+                              min="30" 
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                              placeholder="300 (valor por defecto: 5 minutos)"
+                            />
                           </FormControl>
                           <FormDescription className="text-xs">
-                            {parseInt(field.value) > 0 ? `${Math.floor(parseInt(field.value) / 60)} min ${parseInt(field.value) % 60} seg` : ""}
+                            {field.value ? `${Math.floor(field.value / 60)} min ${field.value % 60} seg` : "5 min (valor por defecto)"}
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

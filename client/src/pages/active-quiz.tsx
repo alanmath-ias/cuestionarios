@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -14,16 +13,14 @@ import { ArrowLeft, ArrowRight, Timer } from 'lucide-react';
 import { shuffleArray } from '@/lib/mathUtils';
 import { Badge } from '@/components/ui/badge';
 import { QuestionContent } from '@/components/QuestionContent';
-import { insertStudentProgressSchema } from '@shared/schema'
-import { useSession } from '../hooks/useSession'; // Asegúrate de tener este hook
-
+import { useSession } from '../hooks/useSession';
 
 interface Quiz {
   id: number;
   title: string;
   description: string;
   categoryId: number;
-  timeLimit: number;
+  timeLimit: number; // Ahora es obligatorio
   difficulty: string;
   totalQuestions: number;
 }
@@ -36,7 +33,7 @@ interface Question {
   points: number;
   answers: Answer[];
   variables: Record<string, number>;
-  imageUrl?: string; // 👈 nueva propiedad opcional
+  imageUrl?: string;
 }
 
 interface Answer {
@@ -55,7 +52,6 @@ interface Progress {
   score?: number;
   completedQuestions: number;
   timeSpent?: number;
-  //completedAt?: string;
   completedAt?: string | Date;
 }
 
@@ -73,6 +69,7 @@ function ActiveQuiz() {
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
   const { session } = useSession();
+  
   // State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswerId, setSelectedAnswerId] = useState<number | null>(null);
@@ -86,7 +83,8 @@ function ActiveQuiz() {
     correctAnswers: number;
     totalQuestions: number;
   } | null>(null);
-  
+  const [timerInitialized, setTimerInitialized] = useState(false);
+
   // Fetch quiz details
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${quizId}`],
@@ -102,10 +100,62 @@ function ActiveQuiz() {
     queryKey: [`/api/progress/${quizId}`],
   });
   
+  // Timer setup - Inicializado con 0 (será configurado después)
+  const { 
+    timeRemaining, 
+    elapsedTime, 
+    formattedTime, 
+    start: startTimer, 
+    pause: pauseTimer,
+    reset: resetTimer
+  } = useTimer({
+    initialTime: 0,
+    onTimeUp: () => handleFinishQuiz(),
+  });
+
+  // Efecto para inicializar el timer cuando los datos estén disponibles
+  useEffect(() => {
+    if (!quiz || timerInitialized) return;
+
+    // Calcular el tiempo total en segundos
+    const totalSeconds = quiz.timeLimit;
+    
+    // Si hay progreso previo, calcular tiempo restante
+    const initialTime = progress?.timeSpent 
+      ? Math.max(0, totalSeconds - progress.timeSpent)
+      : totalSeconds;
+
+    resetTimer(initialTime);
+    setTimerInitialized(true);
+    
+    // Iniciar el timer si es un quiz en progreso
+    if (progress?.status === 'in_progress') {
+      startTimer();
+    }
+  }, [quiz, progress, timerInitialized]);
+
+  // Efecto para manejar el estado del quiz
+  useEffect(() => {
+    if (!quiz || !progress || !timerInitialized) return;
+
+    if (progress.status === 'completed') {
+      toast({
+        title: 'Cuestionario completado',
+        description: 'Ya has completado este cuestionario anteriormente.',
+      });
+      setLocation(`/results/${progress.id}`);
+    } else if (progress.status === 'in_progress') {
+      if (progress.completedQuestions > 0) {
+        setCurrentQuestionIndex(progress.completedQuestions);
+      }
+    } else {
+      initializeProgress();
+    }
+  }, [quiz, progress, timerInitialized]);
+
   // Create or update progress
   const createProgressMutation = useMutation({
     mutationFn: async (progressData: Progress) => {
-      // Convertir completedAt a string ISO si es una fecha
       const dataToSend = {
         ...progressData,
         completedAt: progressData.completedAt instanceof Date 
@@ -126,47 +176,6 @@ function ActiveQuiz() {
       return apiRequest('POST', '/api/answers', answerData);
     },
   });
-  
-  // Timer setup
-  const { 
-    timeRemaining, 
-    elapsedTime, 
-    formattedTime, 
-    start: startTimer, 
-    pause: pauseTimer,
-    reset: resetTimer
-  } = useTimer({
-    initialTime: quiz?.timeLimit ? quiz.timeLimit * 60 : 1800,
-    onTimeUp: () => handleFinishQuiz(),
-  });
-  
-  // Initialize or continue quiz
-  useEffect(() => {
-    if (quiz && progress && !loadingProgress) {
-      if (progress.status === 'completed') {
-        toast({
-          title: 'Cuestionario completado',
-          description: 'Ya has completado este cuestionario anteriormente.',
-        });
-        setLocation(`/results/${progress.id}`);
-      } else if (progress.status === 'in_progress') {
-        if (progress.completedQuestions > 0) {
-          setCurrentQuestionIndex(progress.completedQuestions);
-        }
-        
-        if (progress.timeSpent && quiz.timeLimit) {
-          const remainingTime = Math.max(0, quiz.timeLimit * 60 - progress.timeSpent);
-          resetTimer(remainingTime);
-        }
-        
-        startTimer();
-      } else {
-        initializeProgress();
-      }
-    } else if (quiz && !progress && !loadingProgress) {
-      initializeProgress();
-    }
-  }, [quiz, progress, loadingProgress]);
   
   // Shuffle answers when question changes
   useEffect(() => {
@@ -202,9 +211,7 @@ function ActiveQuiz() {
   // Handle answer selection and immediate validation
   const handleSelectAnswer = async (answerId: number) => {
     if (!questions || !progress?.id) return;
-    if (session?.userId === 1) {
-      return; // No guardes progreso si es el administrador
-    }
+    if (session?.userId === 1) return; // No guardes progreso si es el administrador
     
     setSelectedAnswerId(answerId);
     
@@ -212,7 +219,6 @@ function ActiveQuiz() {
     const selectedAnswer = currentQuestion.answers.find(a => a.id === answerId);
     const isCorrect = selectedAnswer?.isCorrect || false;
 
-    // Record student answer
     const studentAnswer: StudentAnswer = {
       progressId: progress.id,
       questionId: currentQuestion.id,
@@ -245,12 +251,9 @@ function ActiveQuiz() {
   // Move to next question
   const handleNextQuestion = async () => {
     if (!questions || !progress) return;
-    if (session?.userId === 1) {
-      return; // No guardes progreso si es el administrador
-    }
+    if (session?.userId === 1) return; // No guardes progreso si es el administrador
     
     try {
-      // Solo actualizar el progreso si estamos avanzando más allá del progreso guardado
       const newCompletedQuestions = Math.max(progress.completedQuestions, currentQuestionIndex + 1);
       
       await createProgressMutation.mutateAsync({
@@ -279,42 +282,36 @@ function ActiveQuiz() {
   // Finish quiz and calculate score
   const handleFinishQuiz = async () => {
     if (!progress || !questions) return;
-    if (session?.userId === 1) {
-      return; // No guardes progreso si es el administrador
-    }
+    if (session?.userId === 1) return; // No guardes progreso si es el administrador
     
     const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
     const earnedPoints = studentAnswers
       .filter(a => a.isCorrect)
       .reduce((sum, a) => sum + (questions.find(q => q.id === a.questionId)?.points || 0), 0);
-  
+
     try {
       const progressUpdate = {
         ...progress,
-        //status: 'completed',
         status: 'completed' as const,
         score: Math.round((earnedPoints / totalPoints) * 10),
         timeSpent: elapsedTime,
-        completedAt: new Date() // Enviar como Date directamente
+        completedAt: new Date()
       };
-  
+
       await createProgressMutation.mutateAsync(progressUpdate);
       
-//chat gpt calificaciones
- // 🔔 NUEVO: Enviar registro a la tabla quiz_submissions
- const score = Math.round((earnedPoints / totalPoints) * 10);
-
- await fetch("/api/quiz-submission", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    userId: session?.userId,
-    quizId: quiz?.id,
-    score,
-    progressId: progress.id, // <-- nuevo campo
-  }),
-});
-//fin chat gpt calificaciones
+      // Registrar envío del quiz
+      const score = Math.round((earnedPoints / totalPoints) * 10);
+      await fetch("/api/quiz-submission", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: session?.userId,
+          quizId: quiz?.id,
+          score,
+          progressId: progress.id,
+        }),
+      });
 
       setQuizResults({
         score: earnedPoints,
@@ -323,7 +320,6 @@ function ActiveQuiz() {
         correctAnswers: studentAnswers.filter(a => a.isCorrect).length,
         totalQuestions: questions.length
       });
-  
     } catch (error) {
       console.error('Error finishing quiz:', error);
       toast({
@@ -336,6 +332,18 @@ function ActiveQuiz() {
 
   const currentQuestion = questions?.[currentQuestionIndex];
   const isLoading = loadingQuiz || loadingQuestions || loadingProgress;
+
+  if (isLoading) {
+    return (
+      <div className="animate-pulse">
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="h-64 bg-gray-200 rounded"></div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div id="activeQuiz">
@@ -353,7 +361,7 @@ function ActiveQuiz() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h2 className="text-2xl font-semibold">
-            {loadingQuiz ? 'Cargando...' : quiz?.title}
+            {quiz?.title || 'Cuestionario'}
           </h2>
         </div>
         <div className="flex items-center bg-gray-100 rounded-lg px-3 py-1.5">
@@ -364,15 +372,7 @@ function ActiveQuiz() {
         </div>
       </div>
       
-      {isLoading ? (
-        <div className="animate-pulse">
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="h-64 bg-gray-200 rounded"></div>
-            </CardContent>
-          </Card>
-        </div>
-      ) : currentQuestion ? (
+      {currentQuestion ? (
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="flex justify-between items-center mb-4">
@@ -385,23 +385,19 @@ function ActiveQuiz() {
             </div>
             
             <div className="mb-6">
-              <h3 className="text-lg font-medium mb-2">
-                {currentQuestion.type === 'equation' 
-                  ? 'Resuelve la siguiente ecuación:' 
-                  : 'Responde la siguiente pregunta:'}
-              </h3>
-              <QuestionContent content={currentQuestion.content} />
-
               {currentQuestion.imageUrl && (
-    <div className="mt-4">
-      <img 
-        src={currentQuestion.imageUrl} 
-        alt="Imagen de la pregunta" 
-        className="max-w-full h-auto rounded border"
-      />
-    </div>
-  )}
+                <div className="mt-4 flex justify-center">
+                  <div className="bg-gray-100 border rounded-lg shadow p-4 max-w-md w-full">
+                    <img 
+                      src={currentQuestion.imageUrl} 
+                      alt="Imagen de la pregunta" 
+                      className="max-w-full max-h-[300px] mx-auto object-contain rounded"
+                    />
+                  </div>
+                </div>
+              )}
 
+              <QuestionContent content={currentQuestion.content} />
             </div>
 
             <div className="space-y-3">
@@ -428,8 +424,11 @@ function ActiveQuiz() {
             {(selectedAnswerId !== null || answeredQuestions[currentQuestionIndex]) && (
               <div className="mt-4 p-4 rounded-lg bg-gray-50 border">
                 <h4 className="font-medium mb-2">Explicación:</h4>
-                <p>{currentQuestion.answers.find(a => a.id === (selectedAnswerId || studentAnswers.find(sa => sa.questionId === currentQuestion.id)?.answerId))?.explanation || 
-                    "No hay explicación disponible para esta respuesta."}</p>
+                <p>
+                  {currentQuestion.answers.find(a => a.id === (selectedAnswerId || 
+                    studentAnswers.find(sa => sa.questionId === currentQuestion.id)?.answerId))?.explanation || 
+                    "No hay explicación disponible para esta respuesta."}
+                </p>
               </div>
             )}
             
@@ -444,9 +443,7 @@ function ActiveQuiz() {
                 Anterior
               </Button>
               
-              <Button 
-                onClick={handleNextQuestion}
-              >
+              <Button onClick={handleNextQuestion}>
                 {currentQuestionIndex >= (questions?.length || 0) - 1 ? 'Finalizar' : 'Siguiente'}
                 {currentQuestionIndex < (questions?.length || 0) - 1 && (
                   <ArrowRight className="ml-1 h-4 w-4" />

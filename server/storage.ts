@@ -411,6 +411,7 @@ export class MemStorage implements IStorage {
     return this.quizzes.get(id);
   }
   
+  
   async createQuiz(quiz: InsertQuiz): Promise<Quiz> {
     const id = this.quizId++;
     // Asegurarse de que categoryId es un número
