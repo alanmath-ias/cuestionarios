@@ -11,10 +11,6 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 
-console.log("Current working directory:", process.cwd());
-console.log("DATABASE_URL:", process.env.DATABASE_URL);
-
-
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -114,7 +110,7 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 5000;
+  
   /*server.listen({
     port,
     host: "0.0.0.0",
@@ -123,9 +119,25 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
   });borre esto y puse el bloque:*/
 
+  /*
+  const port = 5000;
   app.listen(port, 'localhost', () => {
     log(`serving on http://localhost:${port}`);
-  });
+  });*///   ESTA FUNCIONA PERFECTO LOCALMENTE, O SEA PARA VISUALSTUDIO, PERO NO EN RENDER, ENTONCES:
+  
+  
+  // Reemplaza todo el bloque final con esto:
+
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
+
+if (isNaN(port)) {
+  console.error('Invalid PORT environment variable');
+  process.exit(1);
+}
+
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server running on ${process.env.NODE_ENV === 'production' ? 'Render' : 'localhost'}:${port}`);
+});
   
 
 })();
