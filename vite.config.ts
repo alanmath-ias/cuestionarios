@@ -31,10 +31,11 @@ export default defineConfig({
   root: path.resolve(import.meta.dirname, "client"),
   
   
-  build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
-    emptyOutDir: true,
-  },
+  // vite.config.ts
+build: {
+  outDir: path.resolve(import.meta.dirname, "dist/client"), // Cambiado de dist/public
+  emptyOutDir: true,
+}
 
 
 });
