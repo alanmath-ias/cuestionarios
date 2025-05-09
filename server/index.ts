@@ -7,6 +7,12 @@ import { initializeTestData } from "./init-data";
 import PgSession from "connect-pg-simple";
 import postgres from "postgres";
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -46,6 +52,20 @@ app.use(session({
     createTableIfMissing: true
   })
 }));*/
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || "fallback-secret",
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production', // Usa secure en producción
+    maxAge: 86400000 // 1 day
+  },
+  store: new PgStore({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: true
+  })
+}));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -141,6 +161,16 @@ app.get('/', (req, res) => {
   res.send('API funcionando');
 });
 //fin railway*/
+
+// En producción, sirve los archivos estáticos del frontend
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'dist')));
+  
+  // Maneja todas las rutas para SPA
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
+}
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on ${process.env.NODE_ENV === 'production' ? 'Render' : 'localhost'}:${port}`);
