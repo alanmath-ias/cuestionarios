@@ -19,8 +19,8 @@ app.use(express.urlencoded({ extended: false }));
 // Session middleware setup usando PostgreSQL
 const PgStore = PgSession(session);
 app.use(session({
-  //secret: "alanmath-secret-key",//esto funcionaba antes de railway
-  secret: process.env.SESSION_SECRET || "fallback-secret",//esto es para railway
+  secret: "alanmath-secret-key",//esto funcionaba antes de railway
+  //secret: process.env.SESSION_SECRET || "fallback-secret",//esto es para railway
   resave: false,
   saveUninitialized: false,
   cookie: { 
@@ -135,11 +135,12 @@ if (isNaN(port)) {
   console.error('Invalid PORT environment variable');
   process.exit(1);
 }
+/*
 //railway
 app.get('/', (req, res) => {
   res.send('API funcionando');
 });
-//fin railway
+//fin railway*/
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on ${process.env.NODE_ENV === 'production' ? 'Render' : 'localhost'}:${port}`);
