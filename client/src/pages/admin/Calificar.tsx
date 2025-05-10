@@ -46,7 +46,6 @@ const Calificar = () => {
     fetchSubmissions();
   }, []);
 
- 
   const markAsReviewed = async (progressId: number) => {
     await fetch(`/api/quiz-submissions/${progressId}/reviewed`, {
       method: 'PATCH',
@@ -69,9 +68,11 @@ const Calificar = () => {
     setSubmissions((prev) =>
       prev.filter((s) => s.progress && s.progress.id !== progressId)
     );
-    
   };
-  
+
+  // Separar submissions en revisadas y no revisadas
+  const pendingSubmissions = submissions.filter(s => !s.reviewed);
+  const reviewedSubmissions = submissions.filter(s => s.reviewed);
   
   return (
     <div className="p-6">
@@ -82,59 +83,80 @@ const Calificar = () => {
       {submissions.length === 0 ? (
         <p>No hay presentaciones de cuestionarios disponibles.</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {submissions.map((submission, index) => (
-            <Card key={index} className="shadow-md rounded-xl p-4">
-              <CardContent>
+        <div className="space-y-6">
+          {/* Sección de pendientes */}
+          {pendingSubmissions.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-3">Pendientes de revisión</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {pendingSubmissions.map((submission, index) => (
+                  <Card key={`pending-${index}`} className="shadow-md rounded-xl p-4 border-2 border-yellow-200 bg-yellow-50">
+                    <CardContent>
+                      <p><strong>Estado:</strong> <span className="text-yellow-600 font-semibold">🕒 Pendiente</span></p>
+                      <p><strong>Estudiante:</strong> {submission.user.name}</p>
+                      <p><strong>Quiz:</strong> {submission.quiz.title}</p>
+                      <p><strong>Puntaje:</strong> {submission.progress ? submission.progress.score : "No disponible"}</p>
+                      <p><strong>Fecha:</strong> {new Date(submission.completedAt).toLocaleString()}</p>
+                      <p><strong>ID Progreso:</strong> {submission.progress ? submission.progress.id : "N/A"}</p>
+                      {submission.progress && (
+                        <div className="mt-4">
+                          <Button
+                            onClick={async () => {
+                              await markAsReviewed(submission.progress.id);
+                              setLocation(`/admin/review/${submission.progress.id}`);
+                            }}
+                          >
+                            Ver detalles
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={() => handleDiscard(submission.progress.id)}
+                            className="ml-2"
+                          >
+                            Descartar
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
 
-
-              <p><strong>Estado:</strong> {submission.reviewed ? (
-  <span className="text-green-600 font-semibold">✔️ Revisado</span>
-) : (
-  <span className="text-yellow-600 font-semibold">🕒 Pendiente</span>
-)}</p>
-
-
-
-  <p><strong>Estudiante:</strong> {submission.user.name}</p>
-  <p><strong>Quiz:</strong> {submission.quiz.title}</p>
-  <p><strong>Puntaje:</strong> {submission.progress ? submission.progress.score : "No disponible"}</p>
-  <p><strong>Fecha:</strong> {new Date(submission.completedAt).toLocaleString()}</p>
-  <p><strong>ID Progreso:</strong> {submission.progress ? submission.progress.id : "N/A"}</p>
-  {submission.progress && (
-  <div className="mt-4">
-    
-    
-    <Button
-  onClick={async () => {
-    await markAsReviewed(submission.progress.id);
-    setLocation(`/admin/review/${submission.progress.id}`);
-  }}
->
-  Ver detalles
-</Button>
-
-
-<Button
-  variant="destructive"
-  onClick={() => handleDiscard(submission.progress.id)}
-  className="ml-2"
->
-  Descartar
-</Button>
-
-
-  </div>
-)}
-</CardContent>
-
-            </Card>
-          ))}
+          {/* Sección de revisadas */}
+          {reviewedSubmissions.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-3">Revisadas</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {reviewedSubmissions.map((submission, index) => (
+                  <Card key={`reviewed-${index}`} className="shadow-md rounded-xl p-4 border-2 border-green-200 bg-green-50">
+                    <CardContent>
+                      <p><strong>Estado:</strong> <span className="text-green-600 font-semibold">✔️ Revisado</span></p>
+                      <p><strong>Estudiante:</strong> {submission.user.name}</p>
+                      <p><strong>Quiz:</strong> {submission.quiz.title}</p>
+                      <p><strong>Puntaje:</strong> {submission.progress ? submission.progress.score : "No disponible"}</p>
+                      <p><strong>Fecha:</strong> {new Date(submission.completedAt).toLocaleString()}</p>
+                      <p><strong>ID Progreso:</strong> {submission.progress ? submission.progress.id : "N/A"}</p>
+                      {submission.progress && (
+                        <div className="mt-4">
+                          <Button
+                            onClick={() => setLocation(`/admin/review/${submission.progress.id}`)}
+                          >
+                            Ver detalles
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
-  
 };
 
 export default Calificar;

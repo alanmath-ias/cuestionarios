@@ -39,7 +39,10 @@ const formSchema = z.object({
   difficulty: z.string().min(1, { message: "Debes seleccionar una dificultad" }),
   points: z.string().min(1, { message: "Debes asignar puntos a la pregunta" }),
   variables: z.string().optional(),
-  imageUrl: z.string().url().optional(), // 👈 agrégalo aquí
+  imageUrl: z.string().optional().refine(
+    val => !val || val === "" || z.string().url().safeParse(val).success,
+    { message: "Debe ser una URL válida" }
+  ),
 });
 
 export default function QuestionsAdmin() {
@@ -72,11 +75,11 @@ export default function QuestionsAdmin() {
       difficulty: "3",
       points: "10",
       variables: "",
-      imageUrl: "", // 👈 también en defaultValues
+      imageUrl: "",
     },
   });
 
- /* const createMutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
       const payload = {
         quizId: quizId,
@@ -85,6 +88,8 @@ export default function QuestionsAdmin() {
         difficulty: parseInt(values.difficulty),
         points: parseInt(values.points),
         variables: values.variables ? JSON.parse(values.variables) : null,
+        answers: values.type === 'multiple_choice' ? answers : [],
+        imageUrl: values.imageUrl || null,
       };
       
       const response = await fetch("/api/admin/questions", {
@@ -96,45 +101,13 @@ export default function QuestionsAdmin() {
       });
       
       if (!response.ok) {
-        throw new Error("Error al crear la pregunta");
+        const errorData = await response.json();
+        throw new Error(errorData.message || errorData.error || "Error al crear la pregunta");
       }
       
       return response.json();
-    },*/
-
-//deep seek me ayuda con lo del error en la creacion de preguntas
-const createMutation = useMutation({
-  mutationFn: async (values: z.infer<typeof formSchema>) => {
-    const payload = {
-      quizId: quizId,
-      content: values.content,
-      type: values.type,
-      difficulty: parseInt(values.difficulty),
-      points: parseInt(values.points),
-      variables: values.variables ? JSON.parse(values.variables) : null,
-      answers: values.type === 'multiple_choice' ? answers : [], // <-- Envía array vacío si no es opción múltiple
-      imageUrl: values.imageUrl || null, // ✅ Aquí lo agregas  
-    };
-    
-    const response = await fetch("/api/admin/questions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json(); // <-- Lee el mensaje de error del backend
-      throw new Error(errorData.message || errorData.error || "Error al crear la pregunta");
-    }
-    
-    return response.json();
-  },
-//fin de la parte de deep seek
-
+    },
     onSuccess: (data: Question) => {
-      // Crear respuestas para esta pregunta
       if (answers.length > 0) {
         Promise.all(
           answers.map(answer => 
@@ -173,7 +146,7 @@ const createMutation = useMutation({
     onError: (error) => {
       toast({
         title: "Error",
-        description: "No se pudo crear la pregunta",
+        description: error instanceof Error ? error.message : "No se pudo crear la pregunta",
         variant: "destructive",
       });
       console.error("Error al crear la pregunta:", error);
@@ -220,6 +193,7 @@ const createMutation = useMutation({
       difficulty: "3",
       points: "10",
       variables: "",
+      imageUrl: "",
     });
   };
 
@@ -234,7 +208,6 @@ const createMutation = useMutation({
       return;
     }
 
-    // Validar que haya al menos una respuesta correcta
     if (form.watch("type") === "multiple_choice" && !answers.some(a => a.isCorrect)) {
       toast({
         title: "Error",
@@ -246,7 +219,6 @@ const createMutation = useMutation({
     }
 
     if (editingId) {
-      // updateMutation.mutate({ ...values, id: editingId });
       toast({
         title: "Funcionalidad no disponible",
         description: "La edición de preguntas estará disponible próximamente",
@@ -269,7 +241,7 @@ const createMutation = useMutation({
 
     setAnswers([...answers, { 
       ...newAnswer, 
-      id: Math.floor(Math.random() * -1000), // ID temporal negativo
+      id: Math.floor(Math.random() * -1000),
       questionId: editingId || 0
     }]);
     setNewAnswer({ content: "", isCorrect: false, explanation: "" });
@@ -356,25 +328,24 @@ const createMutation = useMutation({
                         )}
                       />
                       
-                     {/* URL de imagen */}
-      <FormField
-        control={form.control}
-        name="imageUrl"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>URL de la imagen (opcional)</FormLabel>
-            <FormControl>
-              <input 
-                type="text"
-                placeholder="https://ejemplo.com/imagen.png"
-                className="input w-full"
-                {...field}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+                      <FormField
+                        control={form.control}
+                        name="imageUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>URL de la imagen (opcional)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="text"
+                                placeholder="https://ejemplo.com/imagen.png"
+                                {...field}
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
                       <FormField
                         control={form.control}
@@ -385,7 +356,6 @@ const createMutation = useMutation({
                             <Select
                               onValueChange={(value) => {
                                 field.onChange(value);
-                                // Reset answers when type changes
                                 if (value !== "multiple_choice") {
                                   setAnswers([]);
                                 }
@@ -672,6 +642,13 @@ const createMutation = useMutation({
                               <Badge variant="default">{question.points} puntos</Badge>
                             </div>
                             <p className="font-medium">{question.content}</p>
+                            {question.imageUrl && (
+                              <div className="mt-2">
+                                <p className="text-sm text-muted-foreground">
+                                  <strong>Imagen:</strong> {question.imageUrl}
+                                </p>
+                              </div>
+                            )}
                           </div>
                           <div className="flex space-x-2 ml-4">
                             <Button 

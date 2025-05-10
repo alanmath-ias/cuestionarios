@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -15,8 +14,7 @@ import { shuffleArray } from '@/lib/mathUtils';
 import { Badge } from '@/components/ui/badge';
 import { QuestionContent } from '@/components/QuestionContent';
 import { insertStudentProgressSchema } from '@shared/schema'
-import { useSession } from '../hooks/useSession'; // Asegúrate de tener este hook
-
+import { useSession } from '../hooks/useSession';
 
 interface Quiz {
   id: number;
@@ -36,7 +34,7 @@ interface Question {
   points: number;
   answers: Answer[];
   variables: Record<string, number>;
-  imageUrl?: string; // 👈 nueva propiedad opcional
+  imageUrl?: string;
 }
 
 interface Answer {
@@ -55,7 +53,6 @@ interface Progress {
   score?: number;
   completedQuestions: number;
   timeSpent?: number;
-  //completedAt?: string;
   completedAt?: string | Date;
 }
 
@@ -73,6 +70,7 @@ function ActiveQuiz() {
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
   const { session } = useSession();
+
   // State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswerId, setSelectedAnswerId] = useState<number | null>(null);
@@ -86,29 +84,31 @@ function ActiveQuiz() {
     correctAnswers: number;
     totalQuestions: number;
   } | null>(null);
-  
+
   // Fetch quiz details
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${quizId}`],
+    onSuccess: (data) => {
+      console.log(data); // Log mínimo solicitado
+    }
   });
-  
+
   // Fetch questions
   const { data: questions, isLoading: loadingQuestions } = useQuery<Question[]>({
     queryKey: [`/api/quizzes/${quizId}/questions`],
   });
-  
+
   // Fetch existing progress
   const { data: progress, isLoading: loadingProgress } = useQuery<Progress | null>({
     queryKey: [`/api/progress/${quizId}`],
   });
-  
+
   // Create or update progress
   const createProgressMutation = useMutation({
     mutationFn: async (progressData: Progress) => {
-      // Convertir completedAt a string ISO si es una fecha
       const dataToSend = {
         ...progressData,
-        completedAt: progressData.completedAt instanceof Date 
+        completedAt: progressData.completedAt instanceof Date
           ? progressData.completedAt.toISOString()
           : progressData.completedAt
       };
@@ -119,55 +119,58 @@ function ActiveQuiz() {
       queryClient.invalidateQueries({ queryKey: ['/api/progress'] });
     },
   });
-  
+
   // Submit answer
   const submitAnswerMutation = useMutation({
     mutationFn: async (answerData: StudentAnswer) => {
       return apiRequest('POST', '/api/answers', answerData);
     },
   });
-  
+
   // Timer setup
-  const { 
-    timeRemaining, 
-    elapsedTime, 
-    formattedTime, 
-    start: startTimer, 
+  const {
+    timeRemaining,
+    elapsedTime,
+    formattedTime,
+    start: startTimer,
     pause: pauseTimer,
     reset: resetTimer
   } = useTimer({
-    initialTime: quiz?.timeLimit ? quiz.timeLimit * 60 : 1800,
+    initialTime: quiz?.timeLimit ?? 1800,
     onTimeUp: () => handleFinishQuiz(),
   });
-  
+
   // Initialize or continue quiz
   useEffect(() => {
-    if (quiz && progress && !loadingProgress) {
+    if (!quiz || loadingProgress) return;
+
+    if (progress) {
       if (progress.status === 'completed') {
         toast({
           title: 'Cuestionario completado',
           description: 'Ya has completado este cuestionario anteriormente.',
         });
         setLocation(`/results/${progress.id}`);
-      } else if (progress.status === 'in_progress') {
-        if (progress.completedQuestions > 0) {
-          setCurrentQuestionIndex(progress.completedQuestions);
-        }
-        
-        if (progress.timeSpent && quiz.timeLimit) {
-          const remainingTime = Math.max(0, quiz.timeLimit * 60 - progress.timeSpent);
-          resetTimer(remainingTime);
-        }
-        
-        startTimer();
-      } else {
-        initializeProgress();
+        return;
       }
-    } else if (quiz && !progress && !loadingProgress) {
+
+      // Set initial time based on progress
+      const initialTime = progress.timeSpent !== undefined && quiz.timeLimit
+        ? Math.max(0, quiz.timeLimit - progress.timeSpent)
+        : quiz.timeLimit;
+
+      resetTimer(initialTime);
+      startTimer();
+
+      if (progress.completedQuestions > 0) {
+        setCurrentQuestionIndex(progress.completedQuestions);
+      }
+    } else {
+      // No progress exists, initialize new quiz
       initializeProgress();
     }
   }, [quiz, progress, loadingProgress]);
-  
+
   // Shuffle answers when question changes
   useEffect(() => {
     if (questions && questions[currentQuestionIndex]) {
@@ -176,11 +179,11 @@ function ActiveQuiz() {
       setSelectedAnswerId(currentAnswer?.answerId || null);
     }
   }, [questions, currentQuestionIndex]);
-  
+
   // Initialize new quiz progress
   const initializeProgress = async () => {
     if (!quiz) return;
-    
+
     try {
       await createProgressMutation.mutateAsync({
         quizId: parseInt(quizId),
@@ -188,6 +191,7 @@ function ActiveQuiz() {
         completedQuestions: 0,
       });
       
+      resetTimer(quiz.timeLimit);
       startTimer();
     } catch (error) {
       console.error('Error initializing quiz:', error);
@@ -198,21 +202,20 @@ function ActiveQuiz() {
       });
     }
   };
-  
+
   // Handle answer selection and immediate validation
   const handleSelectAnswer = async (answerId: number) => {
     if (!questions || !progress?.id) return;
     if (session?.userId === 1) {
-      return; // No guardes progreso si es el administrador
+      return;
     }
-    
+
     setSelectedAnswerId(answerId);
-    
+
     const currentQuestion = questions[currentQuestionIndex];
     const selectedAnswer = currentQuestion.answers.find(a => a.id === answerId);
     const isCorrect = selectedAnswer?.isCorrect || false;
 
-    // Record student answer
     const studentAnswer: StudentAnswer = {
       progressId: progress.id,
       questionId: currentQuestion.id,
@@ -241,16 +244,15 @@ function ActiveQuiz() {
       });
     }
   };
-  
+
   // Move to next question
   const handleNextQuestion = async () => {
     if (!questions || !progress) return;
     if (session?.userId === 1) {
-      return; // No guardes progreso si es el administrador
+      return;
     }
-    
+
     try {
-      // Solo actualizar el progreso si estamos avanzando más allá del progreso guardado
       const newCompletedQuestions = Math.max(progress.completedQuestions, currentQuestionIndex + 1);
       
       await createProgressMutation.mutateAsync({
@@ -268,53 +270,48 @@ function ActiveQuiz() {
       console.error('Error updating progress:', error);
     }
   };
-  
+
   // Move to previous question
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
   };
-  
+
   // Finish quiz and calculate score
   const handleFinishQuiz = async () => {
     if (!progress || !questions) return;
     if (session?.userId === 1) {
-      return; // No guardes progreso si es el administrador
+      return;
     }
-    
+
     const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
     const earnedPoints = studentAnswers
       .filter(a => a.isCorrect)
       .reduce((sum, a) => sum + (questions.find(q => q.id === a.questionId)?.points || 0), 0);
-  
+
     try {
       const progressUpdate = {
         ...progress,
-        //status: 'completed',
         status: 'completed' as const,
         score: Math.round((earnedPoints / totalPoints) * 10),
         timeSpent: elapsedTime,
-        completedAt: new Date() // Enviar como Date directamente
+        completedAt: new Date()
       };
-  
+
       await createProgressMutation.mutateAsync(progressUpdate);
       
-//chat gpt calificaciones
- // 🔔 NUEVO: Enviar registro a la tabla quiz_submissions
- const score = Math.round((earnedPoints / totalPoints) * 10);
-
- await fetch("/api/quiz-submission", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    userId: session?.userId,
-    quizId: quiz?.id,
-    score,
-    progressId: progress.id, // <-- nuevo campo
-  }),
-});
-//fin chat gpt calificaciones
+      const score = Math.round((earnedPoints / totalPoints) * 10);
+      await fetch("/api/quiz-submission", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: session?.userId,
+          quizId: quiz?.id,
+          score,
+          progressId: progress.id,
+        }),
+      });
 
       setQuizResults({
         score: earnedPoints,
@@ -323,7 +320,6 @@ function ActiveQuiz() {
         correctAnswers: studentAnswers.filter(a => a.isCorrect).length,
         totalQuestions: questions.length
       });
-  
     } catch (error) {
       console.error('Error finishing quiz:', error);
       toast({
@@ -341,9 +337,9 @@ function ActiveQuiz() {
     <div id="activeQuiz">
       <div className="mb-6 flex justify-between items-center">
         <div className="flex items-center">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="mr-3"
             onClick={() => {
               pauseTimer();
@@ -363,7 +359,7 @@ function ActiveQuiz() {
           </span>
         </div>
       </div>
-      
+
       {isLoading ? (
         <div className="animate-pulse">
           <Card className="mb-6">
@@ -390,18 +386,20 @@ function ActiveQuiz() {
                   ? 'Resuelve la siguiente ecuación:' 
                   : 'Responde la siguiente pregunta:'}
               </h3>
-              <QuestionContent content={currentQuestion.content} />
-
+              
               {currentQuestion.imageUrl && (
-    <div className="mt-4">
-      <img 
-        src={currentQuestion.imageUrl} 
-        alt="Imagen de la pregunta" 
-        className="max-w-full h-auto rounded border"
-      />
-    </div>
-  )}
-
+                <Card className="mb-4 max-w-2xl mx-auto">
+                  <CardContent className="p-4 flex justify-center">
+                    <img 
+                      src={currentQuestion.imageUrl} 
+                      alt="Imagen de la pregunta" 
+                      className="max-h-96 object-contain rounded"
+                    />
+                  </CardContent>
+                </Card>
+              )}
+              
+              <QuestionContent content={currentQuestion.content} />
             </div>
 
             <div className="space-y-3">
