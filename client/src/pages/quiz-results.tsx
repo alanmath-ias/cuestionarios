@@ -1,5 +1,3 @@
-
-//Este anterior quiz-results esta super, ahora chat gpt lo modifica para que admin lo pueda ver y calificar, y que el admin pueda ver los resultados de todos los estudiantes, no solo de uno.
 import { useEffect } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
@@ -13,37 +11,25 @@ function QuizResults() {
   const { progressId } = useParams<{ progressId: string }>();
   const [_, setLocation] = useLocation();
   
-  // 1. Fetch quiz results
   const { data: results, isLoading: loadingResults } = useQuery<QuizResult>({
     queryKey: [`/api/results/${progressId}`],
   });
 
-  // 2. Fetch complete quiz questions with answers
   const { data: quizQuestions, isLoading: loadingQuestions } = useQuery({
     queryKey: [`/api/quizzes/${results?.quiz.id}/questions`],
-    enabled: !!results?.quiz.id // Only fetch if we have a quiz ID
+    enabled: !!results?.quiz.id
   });
-//Consultas para feedback:
-const { data: feedback, isLoading: loadingFeedback } = useQuery({
-  queryKey: ['quiz-feedback', progressId],
-  queryFn: async () => {
-    const res = await fetch(`/api/quiz-feedback/${progressId}`);
-    if (!res.ok) return null;
-    return res.json();
-  },
-  enabled: !!progressId,
-});
 
+  const { data: feedback, isLoading: loadingFeedback } = useQuery({
+    queryKey: ['quiz-feedback', progressId],
+    queryFn: async () => {
+      const res = await fetch(`/api/quiz-feedback/${progressId}`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!progressId,
+  });
 
-
-
-
-//chat gpt constante para admin ver quiz-results
-const [locationPath] = useLocation();
-//const isAdminView = locationPath.includes('/admin/quiz-results');
-
-
-  // Debug: Log data structure
   useEffect(() => {
     if (results) {
       console.log("Quiz results data:", results);
@@ -64,16 +50,17 @@ const [locationPath] = useLocation();
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  // 3. Improved correct answer lookup
   const getCorrectAnswerContent = (answer: any): string | undefined => {
     if (!quizQuestions) return undefined;
-    
     const fullQuestion = quizQuestions.find((q: any) => q.id === answer.question.id);
     const correctAnswer = fullQuestion?.answers.find((a: any) => a.isCorrect);
     return correctAnswer?.content;
   };
 
-  const renderQuestionContent = (content: string) => {
+  // Función mejorada para parsear contenido (preguntas y respuestas)
+  const renderContent = (content: string) => {
+    if (!content) return null;
+    
     return content.split('*').map((part, i) => {
       if (i % 2 === 0) {
         return <span key={i}>{part}</span>;
@@ -121,17 +108,14 @@ const [locationPath] = useLocation();
   return (
     <div id="quizResults" className="max-w-4xl mx-auto">
       <div className="mb-6 flex items-center">
-
- {/*}     
-<Button 
-  variant="ghost" 
-  size="icon" 
-  className="mr-3"
-  onClick={() => setLocation(isAdminView ? '/admin/calificar' : '/')}
->
-  <ArrowLeft className="h-5 w-5" />
-</Button>*/}
-        
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="mr-3"
+          onClick={() => setLocation('/')}
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
         <h2 className="text-2xl font-semibold">Resultados del Cuestionario</h2>
       </div>
       
@@ -155,29 +139,29 @@ const [locationPath] = useLocation();
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <div className="text-sm font-medium text-gray-500 mb-1">Puntuación</div>
-                <div className="text-3xl font-bold text-primary">
-                  {results.progress.score?.toFixed(1)}<span className="text-lg text-gray-500">/10</span>
+              <div className="bg-blue-50 rounded-lg p-4 text-center border border-blue-100">
+                <div className="text-sm font-medium text-blue-600 mb-1">Puntuación</div>
+                <div className="text-3xl font-bold text-blue-700">
+                  {results.progress.score?.toFixed(1)}<span className="text-lg text-blue-400">/10</span>
                 </div>
               </div>
               
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <div className="text-sm font-medium text-gray-500 mb-1">Preguntas Correctas</div>
-                <div className="text-3xl font-bold text-green-500">
-                  {correctAnswers}<span className="text-lg text-gray-500">/{totalQuestions}</span>
+              <div className="bg-green-50 rounded-lg p-4 text-center border border-green-100">
+                <div className="text-sm font-medium text-green-600 mb-1">Preguntas Correctas</div>
+                <div className="text-3xl font-bold text-green-700">
+                  {correctAnswers}<span className="text-lg text-green-400">/{totalQuestions}</span>
                 </div>
               </div>
               
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <div className="text-sm font-medium text-gray-500 mb-1">Tiempo promedio</div>
-                <div className="text-3xl font-bold text-teal-500">
+              <div className="bg-teal-50 rounded-lg p-4 text-center border border-teal-100">
+                <div className="text-sm font-medium text-teal-600 mb-1">Tiempo promedio</div>
+                <div className="text-3xl font-bold text-teal-700">
                   {Math.floor((results.progress.timeSpent || 0) / totalQuestions / 60)}
-                  <span className="text-lg text-gray-500">
+                  <span className="text-lg text-teal-400">
                     :{Math.floor((results.progress.timeSpent || 0) / totalQuestions % 60).toString().padStart(2, '0')}
                   </span>
                 </div>
-                <div className="text-xs text-gray-500">minutos por pregunta</div>
+                <div className="text-xs text-teal-500">minutos por pregunta</div>
               </div>
             </div>
             
@@ -192,12 +176,12 @@ const [locationPath] = useLocation();
                     <div className="bg-gray-50 p-3 flex justify-between items-center">
                       <div className="font-medium">Pregunta {index + 1}</div>
                       {answer.isCorrect ? (
-                        <div className="text-green-500 font-medium flex items-center">
+                        <div className="text-green-600 font-medium flex items-center">
                           <CheckCircle className="h-4 w-4 mr-1" />
                           Correcta
                         </div>
                       ) : (
-                        <div className="text-red-500 font-medium flex items-center">
+                        <div className="text-red-600 font-medium flex items-center">
                           <XCircle className="h-4 w-4 mr-1" />
                           Incorrecta
                         </div>
@@ -206,28 +190,32 @@ const [locationPath] = useLocation();
                     
                     <div className="p-4">
                       <div className="mb-3">
-                        {renderQuestionContent(answer.question.content)}
+                        {renderContent(answer.question.content)}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className={`border rounded p-3 ${
                           answer.isCorrect 
-                            ? 'bg-green-50 border-green-500' 
-                            : 'bg-red-50 border-red-500'
+                            ? 'bg-green-50 border-green-200' 
+                            : 'bg-red-50 border-red-200'
                         }`}>
                           <div className="text-sm font-medium mb-1">Tu respuesta:</div>
                           {answer.answerDetails ? (
-                            <MathDisplay math={answer.answerDetails.content} />
+                            <div className="text-gray-700">
+                              {renderContent(answer.answerDetails.content)}
+                            </div>
                           ) : (
                             <span className="text-gray-500">No respondida</span>
                           )}
                         </div>
 
                         {!answer.isCorrect && (
-                          <div className="border rounded p-3 bg-green-50 border-green-500">
+                          <div className="border rounded p-3 bg-green-50 border-green-200">
                             <div className="text-sm font-medium mb-1">Respuesta correcta:</div>
                             {correctContent ? (
-                              <MathDisplay math={correctContent} />
+                              <div className="text-gray-700">
+                                {renderContent(correctContent)}
+                              </div>
                             ) : (
                               <span className="text-gray-500">
                                 {loadingQuestions ? 'Cargando...' : 'No disponible'}
@@ -238,8 +226,11 @@ const [locationPath] = useLocation();
                       </div>
 
                       {(answer.answerDetails?.explanation || answer.correctAnswer?.explanation) && (
-                        <div className="mt-3 p-3 bg-gray-50 rounded border text-sm">
-                          <strong>Explicación:</strong> {answer.answerDetails?.explanation || answer.correctAnswer?.explanation}
+                        <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-100 text-sm">
+                          <strong className="text-blue-700">Explicación:</strong> 
+                          <span className="text-gray-700 ml-1">
+                            {answer.answerDetails?.explanation || answer.correctAnswer?.explanation}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -249,25 +240,24 @@ const [locationPath] = useLocation();
             </div>
             
             {!loadingFeedback && (
-  <Card className="mt-6">
-    <CardContent className="p-6">
-      <h4 className="text-lg font-semibold mb-2">Retroalimentación del profesor</h4>
-      {feedback?.feedback ? (
-        <p className="text-gray-700 whitespace-pre-wrap">{feedback.feedback}</p>
-      ) : (
-        <p className="text-gray-500 italic">Tu profesor aún no ha enviado comentarios.</p>
-      )}
-    </CardContent>
-  </Card>
-)}
+              <Card className="mt-6 border border-purple-100">
+                <CardContent className="p-6">
+                  <h4 className="text-lg font-semibold mb-2 text-purple-700">Retroalimentación del profesor</h4>
+                  {feedback?.feedback ? (
+                    <div className="text-gray-700 whitespace-pre-wrap bg-purple-50 p-3 rounded">
+                      {feedback.feedback}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic">Tu profesor aún no ha enviado comentarios.</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
-
-
-
-            <div className="flex justify-center">
+            <div className="flex justify-center mt-6">
               <Button
                 variant="outline"
-                className="flex items-center"
+                className="flex items-center bg-white hover:bg-gray-50 border-gray-300"
                 onClick={handleDownloadResults}
               >
                 <Download className="mr-2 h-4 w-4" />
@@ -277,10 +267,12 @@ const [locationPath] = useLocation();
           </CardContent>
         </Card>
       ) : (
-        <div>No se encontraron resultados.</div>
+        <div className="text-center py-8 text-gray-500">
+          No se encontraron resultados.
+        </div>
       )}
     </div>
   );
 }
 
-export default QuizResults; //Este quiz-results comentado esta excelente para solo estudiantes pero le falta para admin veamos a ver si el siguiente lo resuelve:*/}
+export default QuizResults;

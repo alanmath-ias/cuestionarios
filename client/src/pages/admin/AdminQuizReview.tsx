@@ -23,32 +23,57 @@ function AdminQuizReview() {
     enabled: !!results?.quiz.id,
   });
 
+  const { data: existingFeedback, refetch: refetchFeedback } = useQuery({
+    queryKey: ['quiz-feedback', progressId],
+    queryFn: async () => {
+      const res = await fetch(`/api/quiz-feedback/${progressId}`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!progressId,
+  });
+
   const mutation = useMutation({
     mutationFn: async () => {
-      console.log("Enviando feedback para progressId:", progressId);
-
       const res = await fetch('/api/quiz-feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           progressId,
           text: feedbackText,
+          quizSubmissionId: results?.progress.id
         }),
       });
-      const data = await res.json();
+      
       if (!res.ok) {
-        throw new Error(data.error || 'Error al guardar feedback');
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Error al guardar feedback');
       }
+      
+      const submissionRes = await fetch('/api/update-quiz-submission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          progressId,
+          feedback: feedbackText
+        }),
+      });
+
+      if (!submissionRes.ok) {
+        throw new Error('Error al actualizar la submission');
+      }
+
+      return res.json();
     },
     onSuccess: () => {
       toast.success('Feedback enviado correctamente');
       setFeedbackText('');
+      refetchFeedback();
     },
     onError: (error) => {
       toast.error('Error al enviar el feedback: ' + error.message);
     },
   });
-  
 
   const handleSendFeedback = () => {
     if (!feedbackText.trim()) {
@@ -59,9 +84,10 @@ function AdminQuizReview() {
   };
 
   useEffect(() => {
-    console.log("🧩 Admin Review Results:", results);
-    console.log("🧩 Admin Review Questions:", quizQuestions);
-  }, [results, quizQuestions]);
+    if (existingFeedback?.feedback) {
+      setFeedbackText(existingFeedback.feedback);
+    }
+  }, [existingFeedback]);
 
   const correctAnswers = results?.answers.filter(a => a.isCorrect).length || 0;
   const totalQuestions = results?.answers.length || 0;
@@ -80,16 +106,28 @@ function AdminQuizReview() {
     return correctAnswer?.content;
   };
 
-  const renderQuestionContent = (content: string) => {
-    return content.split('*').map((part, i) => (
-      i % 2 === 0 ? <span key={i}>{part}</span> : <MathDisplay key={i} math={part.trim()} inline />
-    ));
+  // Función mejorada para parsear contenido
+  const renderContent = (content: string) => {
+    if (!content) return null;
+    
+    return content.split('*').map((part, i) => {
+      if (i % 2 === 0) {
+        return <span key={i}>{part}</span>;
+      } else {
+        return <MathDisplay key={i} math={part.trim()} inline />;
+      }
+    });
   };
 
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6 flex items-center">
-        <Button variant="ghost" size="icon" className="mr-3" onClick={() => setLocation('/admin/calificar')}>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="mr-3"
+          onClick={() => setLocation('/admin/calificar')}
+        >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <h2 className="text-2xl font-semibold">Revisión de Cuestionario</h2>
@@ -115,21 +153,27 @@ function AdminQuizReview() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <div className="text-sm font-medium text-gray-500 mb-1">Puntuación</div>
-                <div className="text-3xl font-bold text-primary">{results.progress.score?.toFixed(1)}/10</div>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <div className="text-sm font-medium text-gray-500 mb-1">Correctas</div>
-                <div className="text-3xl font-bold text-green-500">{correctAnswers}/{totalQuestions}</div>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <div className="text-sm font-medium text-gray-500 mb-1">Tiempo promedio</div>
-                <div className="text-3xl font-bold text-teal-500">
-                  {Math.floor((results.progress.timeSpent || 0) / totalQuestions / 60)}:
-                  {(Math.floor((results.progress.timeSpent || 0) / totalQuestions % 60)).toString().padStart(2, '0')}
+              <div className="bg-blue-50 rounded-lg p-4 text-center border border-blue-100">
+                <div className="text-sm font-medium text-blue-600 mb-1">Puntuación</div>
+                <div className="text-3xl font-bold text-blue-700">
+                  {results.progress.score?.toFixed(1)}<span className="text-lg text-blue-400">/10</span>
                 </div>
-                <div className="text-xs text-gray-500">por pregunta</div>
+              </div>
+              <div className="bg-green-50 rounded-lg p-4 text-center border border-green-100">
+                <div className="text-sm font-medium text-green-600 mb-1">Correctas</div>
+                <div className="text-3xl font-bold text-green-700">
+                  {correctAnswers}<span className="text-lg text-green-400">/{totalQuestions}</span>
+                </div>
+              </div>
+              <div className="bg-teal-50 rounded-lg p-4 text-center border border-teal-100">
+                <div className="text-sm font-medium text-teal-600 mb-1">Tiempo promedio</div>
+                <div className="text-3xl font-bold text-teal-700">
+                  {Math.floor((results.progress.timeSpent || 0) / totalQuestions / 60)}
+                  <span className="text-lg text-teal-400">
+                    :{Math.floor((results.progress.timeSpent || 0) / totalQuestions % 60).toString().padStart(2, '0')}
+                  </span>
+                </div>
+                <div className="text-xs text-teal-500">por pregunta</div>
               </div>
             </div>
 
@@ -144,11 +188,11 @@ function AdminQuizReview() {
                     <div className="bg-gray-50 p-3 flex justify-between items-center">
                       <div className="font-medium">Pregunta {index + 1}</div>
                       {answer.isCorrect ? (
-                        <div className="text-green-500 font-medium flex items-center">
+                        <div className="text-green-600 font-medium flex items-center">
                           <CheckCircle className="h-4 w-4 mr-1" /> Correcta
                         </div>
                       ) : (
-                        <div className="text-red-500 font-medium flex items-center">
+                        <div className="text-red-600 font-medium flex items-center">
                           <XCircle className="h-4 w-4 mr-1" /> Incorrecta
                         </div>
                       )}
@@ -156,24 +200,37 @@ function AdminQuizReview() {
 
                     <div className="p-4">
                       <div className="mb-3">
-                        {question ? renderQuestionContent(question.content) : 'Contenido no disponible'}
+                        {question?.imageUrl && (
+                          <div className="mb-3">
+                            <img 
+                              src={question.imageUrl} 
+                              alt="Imagen de la pregunta" 
+                              className="max-h-40 object-contain rounded border"
+                            />
+                          </div>
+                        )}
+                        {question ? renderContent(question.content) : 'Contenido no disponible'}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className={`border rounded p-3 ${answer.isCorrect ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`}>
+                        <div className={`border rounded p-3 ${answer.isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
                           <div className="text-sm font-medium mb-1">Respuesta del estudiante:</div>
                           {answer.answerDetails ? (
-                            <MathDisplay math={answer.answerDetails.content} />
+                            <div className="text-gray-700">
+                              {renderContent(answer.answerDetails.content)}
+                            </div>
                           ) : (
                             <span className="text-gray-500">No respondida</span>
                           )}
                         </div>
 
                         {!answer.isCorrect && (
-                          <div className="border rounded p-3 bg-green-50 border-green-500">
+                          <div className="border rounded p-3 bg-green-50 border-green-200">
                             <div className="text-sm font-medium mb-1">Respuesta correcta:</div>
                             {correctContent ? (
-                              <MathDisplay math={correctContent} />
+                              <div className="text-gray-700">
+                                {renderContent(correctContent)}
+                              </div>
                             ) : (
                               <span className="text-gray-500">No disponible</span>
                             )}
@@ -187,19 +244,33 @@ function AdminQuizReview() {
             </div>
 
             <h4 className="font-semibold text-lg mb-2">Retroalimentación para el estudiante</h4>
+            
+            {existingFeedback?.feedback && (
+              <div className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <h5 className="font-medium text-purple-800 mb-1">Feedback existente:</h5>
+                <p className="text-purple-700 whitespace-pre-wrap">{existingFeedback.feedback}</p>
+              </div>
+            )}
+            
             <Textarea
               value={feedbackText}
               onChange={(e) => setFeedbackText(e.target.value)}
               placeholder="Escribe aquí tu retroalimentación general para el estudiante..."
-              className="mb-4"
+              className="mb-4 min-h-[120px]"
             />
-            <Button onClick={handleSendFeedback} disabled={mutation.isLoading}>
-              {mutation.isLoading ? 'Enviando...' : 'Enviar Feedback'}
+            <Button 
+              onClick={handleSendFeedback} 
+              disabled={mutation.isLoading}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {mutation.isLoading ? 'Enviando...' : existingFeedback?.feedback ? 'Actualizar Feedback' : 'Enviar Feedback'}
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div>No se encontraron resultados.</div>
+        <div className="text-center py-8 text-gray-500">
+          No se encontraron resultados para revisar.
+        </div>
       )}
     </div>
   );

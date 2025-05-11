@@ -393,7 +393,7 @@ function ActiveQuiz() {
                     <img 
                       src={currentQuestion.imageUrl} 
                       alt="Imagen de la pregunta" 
-                      className="max-h-96 object-contain rounded"
+                      className="max-h-60 object-contain rounded"
                     />
                   </CardContent>
                 </Card>

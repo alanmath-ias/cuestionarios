@@ -331,6 +331,7 @@ async getQuizzesByUserId(userId: number) {
       difficulty: quizzes.difficulty,
       status: studentProgress.status,
       reviewed: quizSubmissions.reviewed,
+      progressId: studentProgress.id, // <- Aquí está el cambio clave
     })
     .from(userQuizzes)
     .innerJoin(quizzes, eq(userQuizzes.quizId, quizzes.id))

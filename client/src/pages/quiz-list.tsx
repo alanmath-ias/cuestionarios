@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { QuizCard } from '@/components/dashboard/quiz-card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Dumbbell } from 'lucide-react';
+import { ArrowLeft, Dumbbell, BookOpen, ChevronRight } from 'lucide-react';
 import { useParams, useLocation } from 'wouter';
 import { calculatePercentage } from '@/lib/mathUtils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 
 interface Category {
   id: number;
@@ -84,31 +84,41 @@ function QuizList() {
     return progress.find(p => p.quizId === quizId);
   };
 
+  const calculateSubcategoryProgress = (subcategoryId: number) => {
+    const subcategoryQuizzes = quizzes?.filter(q => q.subcategoryId === subcategoryId) || [];
+    if (subcategoryQuizzes.length === 0) return 0;
+    
+    const completed = progress?.filter(p => 
+      subcategoryQuizzes.some(q => q.id === p.quizId) && p.status === 'completed'
+    ).length || 0;
+    
+    return (completed / subcategoryQuizzes.length) * 100;
+  };
+
   const handleQuizAction = (quizId: number) => {
     setLocation(`/quiz/${quizId}`);
   };
 
   const handleTraining = (subcategoryId: number) => {
     setLocation(`/training2/${categoryId}/${subcategoryId}`);
-    //setLocation(`/training/${subcategoryId}`);
   };
 
   const isLoading = loadingCategory || loadingSubcategories || loadingQuizzes || loadingProgress;
 
   return (
-    <div id="quizSection" className="container mx-auto px-4 py-6 max-w-6xl">
-      <div className="flex items-center mb-6">
+    <div id="quizSection" className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="flex items-center gap-4 mb-8">
         <Button
           variant="ghost"
           size="icon"
-          className="mr-3"
+          className="rounded-full"
           onClick={() => setLocation('/')}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h2 className="text-2xl font-semibold">
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
           {loadingCategory ? 'Cargando...' : category?.name}
-        </h2>
+        </h1>
       </div>
 
       {isLoading ? (
@@ -125,36 +135,95 @@ function QuizList() {
           ))}
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Subcategorías */}
-          {quizzesBySubcategory.map(subcategory => (
-            <div key={subcategory.id} className="space-y-4">
-              <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-3">
-                      <span className="text-blue-800 dark:text-blue-200">{subcategory.name}</span>
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
-                        {subcategory.quizzes.length} cuestionario(s)
-                      </Badge>
-                    </div>
-                    <Button
-                      variant="default"
-                      className="bg-blue-600 text-white hover:bg-blue-700"
-                      onClick={() => handleTraining(subcategory.id)}
+        <div className="space-y-8">
+          {/* Subcategorías - Diseño mejorado */}
+          {quizzesBySubcategory.length > 0 && (
+            <section className="space-y-6">
+              <h2 className="text-2xl font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                <BookOpen className="h-6 w-6 text-blue-600" />
+                Subcategorías
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {quizzesBySubcategory.map(subcategory => {
+                  const progressPercentage = calculateSubcategoryProgress(subcategory.id);
+                  
+                  return (
+                    <Card 
+                      key={subcategory.id} 
+                      className="rounded-xl bg-gradient-to-br from-blue-50 to-white border border-blue-100 shadow-sm hover:shadow-md transition-all"
                     >
-                      <Dumbbell className="w-4 h-4 mr-2" />
-                      Entrenamiento
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-blue-600 dark:text-blue-300">
-                    {subcategory.description || 'Sin descripción'}
-                  </p>
-                </CardContent>
-              </Card>
+                      <CardHeader className="pb-3">
+                        <div className="flex justify-between items-start gap-2">
+                          <div>
+                            <CardTitle className="text-lg font-semibold text-blue-800">
+                              {subcategory.name}
+                            </CardTitle>
+                            <CardDescription className="text-sm text-blue-600">
+                              {subcategory.quizzes.length} cuestionario(s)
+                            </CardDescription>
+                          </div>
+                          <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                            {progressPercentage.toFixed(0)}% completado
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <Progress value={progressPercentage} className="h-2 bg-blue-100" />
+                        
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          {subcategory.description || 'Sin descripción'}
+                        </p>
+                        
+                        <div className="flex gap-2">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                            onClick={() => handleTraining(subcategory.id)}
+                          >
+                            <Dumbbell className="h-4 w-4 mr-2" />
+                            Entrenar
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+                            onClick={() => {
+                              // Scroll to quizzes section
+                              document.getElementById(`subcategory-${subcategory.id}`)?.scrollIntoView({
+                                behavior: 'smooth'
+                              });
+                            }}
+                          >
+                            Ver cuestionarios
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
+          {/* Listado de cuestionarios por subcategoría */}
+          {quizzesBySubcategory.map(subcategory => (
+            <section 
+              key={`quizzes-${subcategory.id}`} 
+              id={`subcategory-${subcategory.id}`}
+              className="space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
+                  {subcategory.name}
+                </h3>
+                <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                  {subcategory.quizzes.length} cuestionario(s)
+                </Badge>
+              </div>
+              
               {subcategory.quizzes.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {subcategory.quizzes.map(quiz => {
@@ -178,42 +247,33 @@ function QuizList() {
                         onStart={() => handleQuizAction(quiz.id)}
                         onContinue={() => handleQuizAction(quiz.id)}
                         onRetry={() => handleQuizAction(quiz.id)}
-                        className="h-full"
+                        className="h-full hover:shadow-md transition-all"
                       />
                     );
                   })}
                 </div>
               ) : (
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4 text-center text-muted-foreground">
+                <Card className="bg-gray-50 border-gray-200">
+                  <CardContent className="p-6 text-center text-gray-500">
                     No hay cuestionarios en esta subcategoría
                   </CardContent>
                 </Card>
               )}
-            </div>
+            </section>
           ))}
 
-          {/* Sin subcategoría */}
+          {/* Cuestionarios sin subcategoría */}
           {quizzesWithoutSubcategory.length > 0 && (
-            <div className="space-y-4">
-              <Card className="border-gray-200 bg-gray-50 dark:bg-gray-900/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-gray-800 dark:text-gray-200">Cuestionarios generales</span>
-                      <Badge variant="secondary">
-                        {quizzesWithoutSubcategory.length} cuestionario(s)
-                      </Badge>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Cuestionarios que no pertenecen a una subcategoría específica
-                  </p>
-                </CardContent>
-              </Card>
-
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                  Cuestionarios generales
+                </h3>
+                <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                  {quizzesWithoutSubcategory.length} cuestionario(s)
+                </Badge>
+              </div>
+              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {quizzesWithoutSubcategory.map(quiz => {
                   const quizProgress = getQuizProgress(quiz.id);
@@ -236,19 +296,28 @@ function QuizList() {
                       onStart={() => handleQuizAction(quiz.id)}
                       onContinue={() => handleQuizAction(quiz.id)}
                       onRetry={() => handleQuizAction(quiz.id)}
-                      className="h-full"
+                      className="h-full hover:shadow-md transition-all"
                     />
                   );
                 })}
               </div>
-            </div>
+            </section>
           )}
 
-          {/* Sin nada */}
+          {/* Sin contenido */}
           {quizzesBySubcategory.length === 0 && quizzesWithoutSubcategory.length === 0 && (
-            <Card className="text-center py-10">
-              <CardContent>
-                <p className="text-muted-foreground">No hay cuestionarios disponibles en esta categoría</p>
+            <Card className="text-center py-12 bg-gradient-to-br from-gray-50 to-white">
+              <CardContent className="space-y-4">
+                <BookOpen className="mx-auto h-10 w-10 text-gray-400" />
+                <p className="text-gray-500 font-medium">No hay cuestionarios disponibles en esta categoría</p>
+                <Button 
+                  variant="ghost" 
+                  className="text-blue-600" 
+                  onClick={() => setLocation('/')}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Volver al inicio
+                </Button>
               </CardContent>
             </Card>
           )}
