@@ -76,7 +76,7 @@ export function Header({ user, pendingCount }: HeaderProps) {
         <div className="flex items-center gap-4">
           <Link href="/">
             <div className="flex items-center space-x-2 cursor-pointer">
-              <Parentheses size={28} />
+              {/*<Parentheses size={28} />*/}
               <h1 className="text-2xl font-bold">AlanMath</h1>
             </div>
           </Link>
@@ -92,7 +92,7 @@ export function Header({ user, pendingCount }: HeaderProps) {
         <nav className={`fixed top-16 left-0 right-0 bg-primary text-white shadow-md md:static md:top-0 md:bg-transparent transition-all duration-300 ${menuOpen ? 'block' : 'hidden'} md:block`}>
           <ul className="flex flex-col md:flex-row gap-4 md:gap-6 p-4 md:p-0 items-start md:items-center">
             <li>
-              <Link href="/">
+            <Link href="/admin/AdminDashboard">
                 <span className="hover:text-white/80 transition-colors cursor-pointer">Dashboard</span>
               </Link>
             </li>
@@ -117,6 +117,11 @@ export function Header({ user, pendingCount }: HeaderProps) {
     <li>
       <Link href="/admin/urlusercategories">
         <span className="hover:text-white/80 transition-colors cursor-pointer">Usuarios</span>
+      </Link>
+    </li>
+    <li>
+      <Link href="/admin/calificar">
+        <span className="hover:text-white/80 transition-colors cursor-pointer">Calificar</span>
       </Link>
     </li>
   </>

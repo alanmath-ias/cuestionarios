@@ -13,7 +13,7 @@ import AuthPage from "@/pages/auth-page";
 import CategoriesAdmin from "@/pages/admin/categories";
 import QuizzesAdmin from "@/pages/admin/quizzes";
 import QuestionsAdmin from "@/pages/admin/questions";
-import AdminDashboard from "@/pages/admin/dashboard";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
 import { PageLayout } from "@/components/layout/page-layout";
 import { useQuery } from "@tanstack/react-query";
 import { User } from "@/shared/types";
@@ -34,16 +34,22 @@ function ProtectedRoute({ component: Component, ...rest }: { component: any, pat
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 5 * 60 * 1000,
   });
   
   const [_, navigate] = useLocation();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      navigate('/auth');
+    if (!isLoading) {
+      if (!user) {
+        navigate('/auth');
+      } else if (user.role === 'admin' && rest.path === '/') {
+        navigate('/admin'); // Redirige admins desde la raíz
+      }
     }
   }, [user, isLoading, navigate]);
+
+
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen">
@@ -126,7 +132,7 @@ function Router() {
 
       {/* Rutas administrativas */}
       <Route path="/admin">
-        {() => <AdminProtectedRoute component={AdminDashboard} path="/admin" />}
+        {() => <AdminProtectedRoute component={AdminDashboard} path="/admin/AdminDashboard" />}
       </Route>
       <Route path="/admin/categories">
         {() => <AdminProtectedRoute component={CategoriesAdmin} path="/admin/categories" />}
@@ -144,13 +150,13 @@ function Router() {
   {() => <AdminProtectedRoute component={AdminQuizReview} path="/admin/review/:progressId" />}
 </Route>
 
+<Route path="/admin/AdminDashboard">
+        {() => <AdminProtectedRoute component={AdminDashboard} path="/admin/AdminDashboard" />}
+      </Route>
        
 {/*chat gpt calificar ruta para el boton que lleva a quiz-results*/}
 <AdminProtectedRoute path="/admin/quiz-results/:progressId" component={QuizResults} />
 {/*chat gpt*/}
-
-
-
 
 
 {/* Nueva ruta para administración de categorías por usuario */}

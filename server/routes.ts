@@ -1501,9 +1501,48 @@ app.get("/api/user/alerts", requireAuth, async (req, res) => {
     res.status(500).json({ error: "Error interno" });
   }
 });
-
-
   //fin chat gpt calificaciones
+
+//Apis para dashboard admin:
+
+app.get('/api/admin/dashboard-kpis', async (req, res) => {
+  try {
+    const storage = new DatabaseStorage(db);
+
+    const totalAssigned = await storage.countAssignedQuizzes();
+    const completed = await storage.countCompletedQuizzes();
+    const pendingReview = await storage.countPendingReview();
+
+    res.json({ totalAssigned, completed, pendingReview });
+  } catch (error) {
+    console.error('Error al obtener KPIs:', error);
+    res.status(500).json({ error: 'Error al obtener KPIs' });
+  }
+});
+
+
+app.get('/api/admin/recent-pending-submissions', async (req, res) => {
+  try {
+    const storage = new DatabaseStorage(db);
+    const submissions = await storage.getRecentPendingSubmissions();
+    res.json(submissions);
+  } catch (error) {
+    console.error('Error al obtener envíos pendientes:', error);
+    res.status(500).json({ error: 'Error al obtener envíos' });
+  }
+});
+
+app.get('/api/admin/user-progress-summary', async (req, res) => {
+  try {
+    const storage = new DatabaseStorage(db);
+    const data = await storage.getUserProgressSummary();
+    res.json(data);
+  } catch (err) {
+    console.error('Error al obtener resumen de progreso:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 
   const httpServer = createServer(app);
   return httpServer;

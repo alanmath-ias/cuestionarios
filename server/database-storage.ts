@@ -332,6 +332,7 @@ async getQuizzesByUserId(userId: number) {
       status: studentProgress.status,
       reviewed: quizSubmissions.reviewed,
       progressId: studentProgress.id, // <- Aquí está el cambio clave
+      completedAt: studentProgress.completedAt, // <- Añade esta línea
     })
     .from(userQuizzes)
     .innerJoin(quizzes, eq(userQuizzes.quizId, quizzes.id))
@@ -720,7 +721,83 @@ async getPendingReviewCount(): Promise<number> {
 }
 
 
-
 //fin chat gpt calificaciones
+
+//Metodo para dashboard del admin:
+async countAssignedQuizzes() {
+  const result = await db.select({ count: sql<number>`count(*)` })
+    .from(userQuizzes);
+  return result[0].count;
+}
+
+async countCompletedQuizzes() {
+  const result = await db.select({ count: sql<number>`count(*)` })
+    .from(studentProgress)
+    .where(eq(studentProgress.status, 'completed'));
+  return result[0].count;
+}
+
+async countPendingReview() {
+  const result = await db.select({ count: sql<number>`count(*)` })
+    .from(quizSubmissions)
+    .where(eq(quizSubmissions.reviewed, false));
+  return result[0].count;
+}
+
+async getRecentPendingSubmissions() {
+  const result = await db
+    .select({
+      id: quizSubmissions.id,
+      userName: users.name,
+      quizTitle: quizzes.title,
+      submittedAt: quizSubmissions.completedAt,
+      progressId: studentProgress.id,
+    })
+    .from(quizSubmissions)
+    .innerJoin(studentProgress, eq(quizSubmissions.progressId, studentProgress.id))
+    .innerJoin(users, eq(quizSubmissions.userId, users.id))
+    .innerJoin(quizzes, eq(quizSubmissions.quizId, quizzes.id))
+    .where(eq(quizSubmissions.reviewed, false))
+    .orderBy(desc(quizSubmissions.completedAt))
+    .limit(5);
+
+  return result;
+}
+
+async getUserProgressSummary() {
+  const allUsers = await this.db.select().from(users);
+
+  const summaries = await Promise.all(
+    allUsers.map(async (user) => {
+      const assignedQuizzes = await this.db
+        .select({ quizId: userQuizzes.quizId })
+        .from(userQuizzes)
+        .where(eq(userQuizzes.userId, user.id));
+
+      const quizIds = assignedQuizzes.map((q) => q.quizId);
+
+      const progresses = await this.db
+        .select({ status: studentProgress.status })
+        .from(studentProgress)
+        .where(eq(studentProgress.userId, user.id));
+
+      const completed = progresses.filter((p) => p.status === 'completed').length;
+      const assigned = quizIds.length;
+      const pending = assigned - completed;
+
+      return {
+        userId: user.id,
+        name: user.name,
+        assigned,
+        completed,
+        pending,
+      };
+    })
+  );
+
+  return summaries;
+}
+
+
 
 }
