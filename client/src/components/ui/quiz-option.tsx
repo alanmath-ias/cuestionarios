@@ -32,6 +32,19 @@ export function QuizOption({
     }
   };
 
+  const renderContent = () => {
+    if (!content) return null;
+    
+    const parts = content.split('*');
+    if (parts.length === 1) return <span>{content}</span>;
+
+    return parts.map((part, i) => (
+      i % 2 === 0 ? 
+        <span key={i}>{part}</span> : 
+        <MathDisplay key={i} math={part.trim()} inline />
+    ));
+  };
+
   return (
     <div 
       className={`quiz-option border rounded-lg p-4 cursor-pointer transition-colors duration-150 ${getStateClasses()} ${disabled ? 'opacity-70 cursor-not-allowed' : ''}`}
@@ -41,8 +54,8 @@ export function QuizOption({
         <div className={`w-7 h-7 rounded-full ${state === 'default' ? 'bg-gray-100' : state === 'selected' ? 'bg-blue-100' : state === 'correct' ? 'bg-green-100' : 'bg-red-100'} flex items-center justify-center mr-3 border`}>
           <span className="font-medium">{optionLabel}</span>
         </div>
-        <div className="math">
-          <MathDisplay math={content} />
+        <div className="quiz-content">
+          {renderContent()}
         </div>
       </div>
     </div>

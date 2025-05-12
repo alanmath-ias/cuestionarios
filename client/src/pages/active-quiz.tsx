@@ -85,13 +85,17 @@ function ActiveQuiz() {
     totalQuestions: number;
   } | null>(null);
 
-  // Fetch quiz details
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
-    queryKey: [`/api/quizzes/${quizId}`],
-    onSuccess: (data) => {
-      console.log(data); // Log mínimo solicitado
-    }
-  });
+  queryKey: [`/api/quizzes/${quizId}`],
+  queryFn: async () => {
+    const res = await fetch(`/api/quizzes/${quizId}`);
+    if (!res.ok) throw new Error('Error fetching quiz');
+    return res.json();
+  },
+  onSuccess: (data) => {
+    console.log(data); // Log mínimo solicitado
+  }
+});
 
   // Fetch questions
   const { data: questions, isLoading: loadingQuestions } = useQuery<Question[]>({
