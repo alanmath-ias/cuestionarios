@@ -1,0 +1,16 @@
+{
+  "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"],
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "NodeNext",  // Recomendado para Node.js + ES Modules
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./client/src/*"],
+      "@shared/*": ["./shared/*"]
+    },
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "strict": true
+  }
+}

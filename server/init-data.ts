@@ -1,4 +1,4 @@
-import { storage } from "./storage.js"; // Agregado ".js" a la importación
+import { storage } from "./storage"; // Agregado ".js" a la importación
 
 // Función para inicializar datos de ejemplo en la base de datos
 export async function initializeTestData() {

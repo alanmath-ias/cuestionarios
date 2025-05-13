@@ -9,9 +9,9 @@ import {
   type StudentAnswer, type InsertStudentAnswer,
 } from "@shared/schema";
 
-import { db } from "./db.js";
+import { db } from "./db";
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
-import { IStorage } from "./storage.js";
+import { IStorage } from "./storage";
 import { userQuizzes } from "@shared/schema";
 import { drizzle } from "drizzle-orm/postgres-js";
 import type { QuizResult } from "@/shared/quiz-types";
@@ -22,8 +22,8 @@ import { quizSubmissions } from "@shared/schema";
 import { quizFeedback } from "@shared/schema"; 
 
 //chat gpt dashboard personalizado
-import { userCategories } from "../shared/schema.js";
-import { subcategories, Subcategory } from "../shared/schema.js";
+import { userCategories } from "../shared/schema";
+import { subcategories, Subcategory } from "../shared/schema";
 
  // Asegúrate que esté importado
 

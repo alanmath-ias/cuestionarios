@@ -1,6 +1,6 @@
 import express, { type Express, Request as ExpressRequest, Response } from "express";
 import { createServer, type Server } from "http";
-//import { storage } from "./storage.js";  // Asegúrate de que si lo usas, la ruta tenga la extensión .js
+//import { storage } from "./storage";  // Asegúrate de que si lo usas, la ruta tenga la extensión .js
 import { z } from "zod";
 import { 
   insertUserSchema, 
@@ -13,7 +13,7 @@ import { eq, sql, and, or, isNull, isNotNull } from "drizzle-orm";
 import { db } from "./db";
 import { userCategories, categories, quizzes } from "../shared/schema";
 import { users } from "../shared/schema";
-import { getUsersAssignedToQuiz } from './storage.js'; // Ruta ajustada para usar .js
+import { getUsersAssignedToQuiz } from './storage'; // Ruta ajustada para usar .js
 //chat gpt entrenamiento
 import { questions as questionsTable } from "@shared/schema";
 import { inArray } from "drizzle-orm";
@@ -25,7 +25,7 @@ import { requireAuth } from "./middleware/requireAuth";
 //fin chat gpt dashboar personalizado
 
 //chat gpt cuestionarios a usuarios
-import { DatabaseStorage } from './database-storage.js'; // Ruta ajustada para usar .js
+import { DatabaseStorage } from './database-storage'; // Ruta ajustada para usar .js
 //fin chat gpt cuestionarios a usuarios
 
 //chat gpt dashboar personalizado

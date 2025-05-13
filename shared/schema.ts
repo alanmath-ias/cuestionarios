@@ -3,7 +3,7 @@ import { pgTable, text, uuid, serial, integer, boolean, jsonb, json, timestamp, 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { drizzle } from "drizzle-orm/postgres-js";
-import * as schema from './schema.js'; // ✅ corregido con extensión .js
+import * as schema from './schema'; // ✅ corregido con extensión .js
 
 //const db = drizzle(connection, { schema });
 
