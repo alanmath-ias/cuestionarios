@@ -4,3 +4,10 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# build
+/dist
+/node_modules
+
+# entorno
+.env

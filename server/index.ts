@@ -1,59 +1,39 @@
-import express, { type Request, Response, NextFunction } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import session from "express-session";
-import memorystore from "memorystore";
-import { initializeTestData } from "./init-data";
 import PgSession from "connect-pg-simple";
-import postgres from "postgres";
+import { initializeTestData } from "./init-data";
+import { createServer } from "http";
 
 import dotenv from 'dotenv';
 dotenv.config();
-
-
-console.log("Current working directory:", process.cwd());
-console.log("DATABASE_URL:", process.env.DATABASE_URL);
-
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-
-// Session middleware setup usando PostgreSQL
+// Session middleware usando PostgreSQL
 const PgStore = PgSession(session);
 app.use(session({
-  secret: "alanmath-secret-key",
+  secret: process.env.SESSION_SECRET || "alanmath-secret-key",
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  cookie: {
     secure: false,
-    maxAge: 86400000 // 1 day
+    maxAge: 86400000, // 1 día
   },
   store: new PgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: true
-  })
+    createTableIfMissing: true,
+  }),
 }));
 
-/*app.use(session({
-  secret: DATABASE_URL, // Usa la clave del entorno o una por defecto
-  resave: false,
-  saveUninitialized: false,
-  cookie: { 
-    secure: false,
-    maxAge: 3600 //86400000 // 1 day
-  },
-  store: new PgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: true
-  })
-}));*/
-
+// Middleware de logging
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  let capturedJsonResponse: any = undefined;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -82,15 +62,12 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // Inicializar datos de prueba en la base de datos
     await initializeTestData();
   } catch (error) {
     console.error("Error al inicializar datos:", error);
   }
 
-  //const server = await registerRoutes(app); comente esto y puse la siguiente linea:
-  registerRoutes(app);  // Solo registras las rutas
-
+  registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -100,36 +77,16 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    //await setupVite(app, server); lo cambie por esto:
-    await setupVite(app);
+  const port = 5000;
+  const server = createServer(app);
 
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  /*server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });borre esto y puse el bloque:*/
-
-  app.listen(port, 'localhost', () => {
+  server.listen(port, 'localhost', () => {
     log(`serving on http://localhost:${port}`);
   });
-  
-
 })();
-
-/*server.listen(port, 'localhost', () => {
-  log(`serving on http://localhost:${port}`);
-});*/
