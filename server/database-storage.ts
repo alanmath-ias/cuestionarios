@@ -7,24 +7,23 @@ import {
   type Answer, type InsertAnswer,
   type StudentProgress, type InsertStudentProgress,
   type StudentAnswer, type InsertStudentAnswer,
-  
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, and, desc, inArray } from "drizzle-orm";
-import { IStorage } from "./storage";
-import { userQuizzes } from '@shared/schema';
+
+import { db } from "./db.js";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
+import { IStorage } from "./storage.js";
+import { userQuizzes } from "@shared/schema";
 import { drizzle } from "drizzle-orm/postgres-js";
 import type { QuizResult } from "@/shared/quiz-types";
-import type { QuizAnswerResult } from "@/shared/quiz-types"
+import type { QuizAnswerResult } from "@/shared/quiz-types";
 
 //chat gpt calificaciones
-import { quizSubmissions } from "@shared/schema"; // Asegúrate que esté importado
+import { quizSubmissions } from "@shared/schema";
 import { quizFeedback } from "@shared/schema"; 
+
 //chat gpt dashboard personalizado
-import { userCategories } from "../shared/schema";
-//fin chat gpt dashboard personalizado
-import { sql } from 'drizzle-orm';
-import { subcategories, Subcategory } from "../shared/schema";
+import { userCategories } from "../shared/schema.js";
+import { subcategories, Subcategory } from "../shared/schema.js";
 
  // Asegúrate que esté importado
 
@@ -708,16 +707,6 @@ async deleteSubmissionByProgressId(progressId: number) {
   await db
     .delete(quizSubmissions)
     .where(eq(quizSubmissions.progressId, progressId));
-}
-
-//contador de pendientes por revisar
-async getPendingReviewCount(): Promise<number> {
-  const result = await this.db.select({
-    count: sql<number>`count(*)`
-  }).from(quizSubmissions)
-    .where(eq(quizSubmissions.reviewed, false));
-
-  return result[0]?.count || 0;
 }
 
 

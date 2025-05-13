@@ -1,6 +1,6 @@
 import express, { type Express, Request as ExpressRequest, Response } from "express";
 import { createServer, type Server } from "http";
-//import { storage } from "./storage";
+//import { storage } from "./storage.js";  // Asegúrate de que si lo usas, la ruta tenga la extensión .js
 import { z } from "zod";
 import { 
   insertUserSchema, 
@@ -8,34 +8,29 @@ import {
   insertStudentAnswerSchema 
 } from "@shared/schema";
 import * as expressSession from "express-session";
-import { eq,sql, and, or, isNull, isNotNull } from "drizzle-orm";
+import { eq, sql, and, or, isNull, isNotNull } from "drizzle-orm";
 
 import { db } from "./db";
 import { userCategories, categories, quizzes } from "../shared/schema";
 import { users } from "../shared/schema";
-import { getUsersAssignedToQuiz } from './storage'; // Ajusta la ruta según dónde esté definido
+import { getUsersAssignedToQuiz } from './storage.js'; // Ruta ajustada para usar .js
 //chat gpt entrenamiento
 import { questions as questionsTable } from "@shared/schema";
 import { inArray } from "drizzle-orm";
 //deep seek entrenamiento:
 import { answers } from "@shared/schema"; // Asegúrate de importar correctamente
 
-
 //chat gpt dashboar personalizado
 import { requireAuth } from "./middleware/requireAuth";
 //fin chat gpt dashboar personalizado
 
 //chat gpt cuestionarios a usuarios
-import { DatabaseStorage } from './database-storage';
-
-const storage = new DatabaseStorage(db);
+import { DatabaseStorage } from './database-storage.js'; // Ruta ajustada para usar .js
 //fin chat gpt cuestionarios a usuarios
 
-
 //chat gpt dashboar personalizado
-import { User } from '@/shared/types'; // Asegúrate de importar correctamente tu tipo de usuario
+import { User } from '@/shared/types'; // Asegúrate de que este tipo esté bien definido
 import { userQuizzes, studentProgress, quizSubmissions } from "@shared/schema";
-
 
 declare global {
   namespace Express {
@@ -1455,12 +1450,6 @@ app.delete('/api/quiz-submissions/:progressId', async (req: ExpressRequest, res:
   res.json({ success: true });
 });
 
-//contar revisiones pendientes:
-app.get('/api/admin/pending-review-count', async (req: ExpressRequest, res: Response) => {
-  const count = await storage.getPendingReviewCount();
-  res.json({ count });
-});
-//esto es solo para el dashboard
 
 app.get("/api/user/alerts", requireAuth, async (req, res) => {
   try {

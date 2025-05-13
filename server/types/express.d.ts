@@ -49,7 +49,7 @@ declare module "express-session" {
 // types/express-session.d.ts
 import "express";
 import "express-session";
-import { User } from "@/shared/types"; // Ajusta el path si es necesario
+import { User } from "@/shared/types.js"; // Ajusta el path si es necesario
 
 // Agrega propiedad `user` al objeto Request de Express (si la usas para guardar información del usuario)
 declare global {

@@ -1,11 +1,12 @@
-  {
+{
     "extends": "../tsconfig.base.json",
     "compilerOptions": {
       "outDir": "../dist/server",
-      "rootDir": ".",
-      "module": "CommonJS",
+      "rootDir": "../",  // Cambiado para incluir todo el proyecto
+      "module": "ESNext",
       "target": "ES2021",
-      "esModuleInterop": true
+      "esModuleInterop": true,
+      "moduleResolution": "node"
     },
     "include": ["**/*.ts"],
     "exclude": ["../client", "../dist", "node_modules"]
