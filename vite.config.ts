@@ -48,8 +48,8 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "client", "src"),  // Reemplazo import.meta.dirname por __dirname
-      "@shared": path.resolve(__dirname, "shared"),  // Reemplazo import.meta.dirname por __dirname
+      "@": path.resolve(__dirname, "client/src"), // Ruta absoluta al directorio del cliente
+      "@shared": path.resolve(__dirname, "shared"), // Ruta al directorio compartido
       "@assets": path.resolve(__dirname, "attached_assets"),  // Reemplazo import.meta.dirname por __dirname      
     },
   },

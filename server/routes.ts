@@ -1,6 +1,6 @@
 import express, { type Express, Request as ExpressRequest, Response } from "express";
 import { createServer, type Server } from "http";
-//import { storage } from "./storage";  // Asegúrate de que si lo usas, la ruta tenga la extensión .js
+import { storage } from "./storage";  // Asegúrate de que si lo usas, la ruta tenga la extensión .js
 import { z } from "zod";
 import { 
   insertUserSchema, 

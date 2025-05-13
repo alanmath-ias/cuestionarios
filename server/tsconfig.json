@@ -2,7 +2,7 @@
     "extends": "../tsconfig.json",
     "compilerOptions": {
       "outDir": "../dist/server",
-      "rootDir": "./",  // Incluye todo el proyecto pero puede causar side effects
+      "rootDir": "../",  // Incluye todo el proyecto pero puede causar side effects
       "module": "ESNext",
       "target": "ES2021",
       "esModuleInterop": true,
