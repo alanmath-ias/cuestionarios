@@ -2,8 +2,9 @@
   "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"],
   "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "NodeNext",  // Recomendado para Node.js + ES Modules
+    "skipLibCheck": true,
+    "module": "NodeNext", // Cambiado de ESNext a NodeNext
+    "moduleResolution": "NodeNext",
     "baseUrl": ".",
     "paths": {
       "@/*": ["./client/src/*"],

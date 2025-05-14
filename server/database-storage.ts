@@ -424,19 +424,17 @@ async getQuizzesByUserId(userId: number) {
     // Preparar los datos para Drizzle
     const insertData = {
       ...progress,
-      // Asegurar que completedAt sea Date o null
-      completedAt: progress.completedAt instanceof Date 
-        ? progress.completedAt 
-        : progress.completedAt
-          ? new Date(progress.completedAt)
-          : null
+      completedAt: progress.completedAt
+        ? new Date(progress.completedAt).toISOString()
+        : null
     };
-  
+    
     const result = await db.insert(studentProgress)
       .values(insertData)
       .returning();
     
     return result[0];
+    
   }
   
   async updateStudentProgress(id: number, progress: Partial<StudentProgress>): Promise<StudentProgress> {
@@ -448,21 +446,19 @@ async getQuizzesByUserId(userId: number) {
     
     // Preparar los datos para Drizzle
     const updateData = {
-      ...progress,
-      // Asegurar que completedAt sea Date o null
-      completedAt: progress.completedAt instanceof Date 
-        ? progress.completedAt 
-        : progress.completedAt
-          ? new Date(progress.completedAt)
-          : null
-    };
-  
-    const result = await db.update(studentProgress)
-      .set(updateData)
-      .where(eq(studentProgress.id, id))
-      .returning();
-    
-    return result[0];
+  ...progress,
+  completedAt: progress.completedAt
+    ? new Date(progress.completedAt).toISOString()
+    : null
+};
+
+const result = await db.update(studentProgress)
+  .set(updateData)
+  .where(eq(studentProgress.id, id))
+  .returning();
+
+return result[0];
+
   }
   
   // Student Answer methods
@@ -509,13 +505,17 @@ async getQuizResults(progressId: number): Promise<QuizResult | null> {
         content: string;
         type: string;
         difficulty: number;
+        variables: Record<string, number>; // Añadido
+        quizId: number; // Añadido
         points: number;
+        imageUrl: string | null; // Añadido
       };
       answerDetails: {
         id: number;
+        questionId: number; // Añadido
         content: string;
         isCorrect: boolean;
-        explanation?: string;
+        explanation: string | null;
       } | null;
     }>;
   };
@@ -544,7 +544,7 @@ async getQuizResults(progressId: number): Promise<QuizResult | null> {
           eq(answers.questionId, answer.questionId),
           eq(answers.isCorrect, true)
         )
-      });
+      })?? null;
 
       return {
         ...answer,
@@ -562,10 +562,10 @@ async getQuizResults(progressId: number): Promise<QuizResult | null> {
       userId: progressWithRelations.userId,
       quizId: progressWithRelations.quizId,
       status: progressWithRelations.status,
-      score: progressWithRelations.score,
+      score: progressWithRelations.score ?? null,
       completedQuestions: progressWithRelations.completedQuestions,
-      timeSpent: progressWithRelations.timeSpent,
-      completedAt: progressWithRelations.completedAt
+      timeSpent: progressWithRelations.timeSpent ?? null,
+      completedAt: progressWithRelations.completedAt ?? null
     },
     quiz: progressWithRelations.quiz,
     answers: enrichedAnswers

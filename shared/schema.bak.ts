@@ -1,214 +1,21 @@
-import { pgTable, foreignKey, serial, text, integer, index, varchar, json, timestamp, boolean, jsonb, unique, uuid, primaryKey } from "drizzle-orm/pg-core"
-import { sql } from "drizzle-orm"
 
+import { pgTable, text, uuid, serial, integer, boolean, jsonb, json, timestamp, unique, foreignKey, varchar } from "drizzle-orm/pg-core";//deep seek nuevo intento categorias por usuarios
 import { createInsertSchema } from "drizzle-zod";
-import * as z from "zod";  // ✅ Forma correcta para Zod v3+
+import { z } from "zod";
 import { drizzle } from "drizzle-orm/postgres-js";
-//import * as schema from './schema'; // ✅ corregido con extensión .js
-
-//schema nuevo
-
-export const subcategories = pgTable("subcategories", {
-	id: serial().primaryKey().notNull(),
-	name: text().notNull(),
-	description: text(),
-	categoryId: integer("category_id").notNull(),
-	colorClass: text("color_class"),
-}, (table) => [
-	foreignKey({
-			columns: [table.categoryId],
-			foreignColumns: [categories.id],
-			name: "subcategories_category_id_fkey"
-		}),
-]);
-
-export const session = pgTable("session", {
-	sid: varchar().primaryKey().notNull(),
-	sess: json().notNull(),
-	expire: timestamp({ precision: 6, mode: 'string' }).notNull(),
-}, (table) => [
-	index("IDX_session_expire").using("btree", table.expire.asc().nullsLast().op("timestamp_ops")),
-]);
-
-export const answers = pgTable("answers", {
-	id: serial().primaryKey().notNull(),
-	questionId: integer("question_id").notNull(),
-	content: text().notNull(),
-	isCorrect: boolean("is_correct").notNull(),
-	explanation: text(),
-});
-
-export const quizzes = pgTable("quizzes", {
-	id: serial().primaryKey().notNull(),
-	title: text().notNull(),
-	description: text().notNull(),
-	categoryId: integer("category_id").notNull(),
-	timeLimit: integer("time_limit").notNull(),
-	difficulty: text().notNull(),
-	totalQuestions: integer("total_questions").notNull(),
-	isPublic: boolean("is_public").default(false),
-	subcategoryId: integer("subcategory_id"),
-}, (table) => [
-	foreignKey({
-			columns: [table.subcategoryId],
-			foreignColumns: [subcategories.id],
-			name: "quizzes_subcategory_id_fkey"
-		}),
-]);
-
-export const studentAnswers = pgTable("student_answers", {
-	id: serial().primaryKey().notNull(),
-	progressId: integer("progress_id").notNull(),
-	questionId: integer("question_id").notNull(),
-	answerId: integer("answer_id"),
-	isCorrect: boolean("is_correct"),
-	variables: jsonb(),
-	timeSpent: integer("time_spent"),
-});
-
-export const categories = pgTable("categories", {
-	id: serial().primaryKey().notNull(),
-	name: text().notNull(),
-	description: text().notNull(),
-	colorClass: text("color_class").notNull(),
-});
-
-export const questions = pgTable("questions", {
-	id: serial().primaryKey().notNull(),
-	quizId: integer("quiz_id").notNull(),
-	content: text().notNull(),
-	type: text().notNull(),
-	difficulty: integer().notNull(),
-	points: integer().default(5).notNull(),
-	variables: jsonb(),
-	imageUrl: text("image_url"),
-});
-
-export const users = pgTable("users", {
-	id: serial().primaryKey().notNull(),
-	username: text().notNull(),
-	password: text().notNull(),
-	name: text().notNull(),
-	email: text(),
-	role: text().default('student').notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-}, (table) => [
-	unique("users_username_unique").on(table.username),
-]);
-
-export const studentProgress = pgTable("student_progress", {
-	id: serial().primaryKey().notNull(),
-	userId: integer("user_id").notNull(),
-	quizId: integer("quiz_id").notNull(),
-	status: text().notNull(),
-	score: integer(),
-	completedQuestions: integer("completed_questions").default(0),
-	timeSpent: integer("time_spent"),
-	completedAt: timestamp("completed_at", { mode: 'string' }),
-});
-
-export const quizSubmissions = pgTable("quiz_submissions", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	userId: integer("user_id"),
-	quizId: integer("quiz_id"),
-	completedAt: timestamp("completed_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-	score: integer().notNull(),
-	feedback: text(),
-	reviewed: boolean().default(false),
-	progressId: integer("progress_id"),
-}, (table) => [
-	foreignKey({
-			columns: [table.progressId],
-			foreignColumns: [studentProgress.id],
-			name: "quiz_submissions_progress_id_fkey"
-		}).onDelete("set null"),
-	foreignKey({
-			columns: [table.quizId],
-			foreignColumns: [quizzes.id],
-			name: "quiz_submissions_quiz_id_fkey"
-		}).onDelete("cascade"),
-	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "quiz_submissions_user_id_fkey"
-		}).onDelete("cascade"),
-]);
-
-export const quizfeedback = pgTable("quizfeedback", {
-	id: serial().primaryKey().notNull(),
-	userid: integer().notNull(),
-	quizid: integer().notNull(),
-	feedback: text().notNull(),
-	createdat: timestamp({ withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
-}, (table) => [
-	foreignKey({
-			columns: [table.quizid],
-			foreignColumns: [quizzes.id],
-			name: "fk_quiz"
-		}).onDelete("cascade"),
-	foreignKey({
-			columns: [table.userid],
-			foreignColumns: [users.id],
-			name: "fk_user"
-		}).onDelete("cascade"),
-]);
-
-export const userCategories = pgTable("user_categories", {
-	id: serial().primaryKey().notNull(),
-	userId: integer("user_id").notNull(),
-	categoryId: integer("category_id").notNull(),
-}, (table) => [
-	foreignKey({
-			columns: [table.categoryId],
-			foreignColumns: [categories.id],
-			name: "user_categories_category_id_fkey"
-		}).onDelete("cascade"),
-	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "user_categories_user_id_fkey"
-		}).onDelete("cascade"),
-	unique("user_category_unique").on(table.userId, table.categoryId),
-]);
-
-export const quizFeedback = pgTable("quiz_feedback", {
-	id: serial().primaryKey().notNull(),
-	progressId: integer("progress_id").notNull(),
-	feedback: text().notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-});
-
-export const userQuizzes = pgTable("user_quizzes", {
-	userId: integer("user_id").notNull(),
-	quizId: integer("quiz_id").notNull(),
-}, (table) => [
-	foreignKey({
-			columns: [table.quizId],
-			foreignColumns: [quizzes.id],
-			name: "user_quizzes_quiz_id_fkey"
-		}),
-	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "user_quizzes_user_id_fkey"
-		}),
-	primaryKey({ columns: [table.userId, table.quizId], name: "user_quizzes_pkey"}),
-]);
-
-//fin schema nuevo
-
+import * as schema from './schema'; // ✅ corregido con extensión .js
 
 //const db = drizzle(connection, { schema });
 
 //session model
-/*export const session = pgTable("session", {
+export const session = pgTable("session", {
   sid: text("sid").primaryKey(), // character varying → text en Drizzle
   sess: json("sess").notNull(),  // json
   expire: timestamp("expire", { withTimezone: false }).notNull(), // timestamp sin zona horaria
-});*/
+});
 
 // User model
-/*export const users = pgTable("users", {
+export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
@@ -216,7 +23,7 @@ export const userQuizzes = pgTable("user_quizzes", {
   email: text("email"),
   role: text("role").default("student").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});*/
+});
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -227,12 +34,12 @@ export const insertUserSchema = createInsertSchema(users).pick({
 });
 
 // Categories model
-/*export const categories = pgTable("categories", {
+export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull(),
   colorClass: text("color_class").notNull(),
-});*/
+});
 
 export const insertCategorySchema = createInsertSchema(categories).pick({
   name: true,
@@ -241,7 +48,7 @@ export const insertCategorySchema = createInsertSchema(categories).pick({
 });
 
 // Quizzes model
-/*export const quizzes = pgTable("quizzes", {
+export const quizzes = pgTable("quizzes", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description").notNull(),
@@ -251,13 +58,13 @@ export const insertCategorySchema = createInsertSchema(categories).pick({
   difficulty: text("difficulty").notNull(),
   totalQuestions: integer("total_questions").notNull(),
   isPublic: boolean("is_public").default(false),
-});*/
+});
 
 
-/*export const userQuizzes = pgTable("user_quizzes", {
+export const userQuizzes = pgTable("user_quizzes", {
   userId: integer("user_id").notNull().references(() => users.id),
   quizId: integer("quiz_id").notNull().references(() => quizzes.id),
-});*/
+});
 
 
 export const insertQuizSchema = createInsertSchema(quizzes).pick({
@@ -271,7 +78,7 @@ export const insertQuizSchema = createInsertSchema(quizzes).pick({
 });
 
 // Questions model (template questions that can be randomized)
-/*export const questions = pgTable("questions", {
+export const questions = pgTable("questions", {
   id: serial("id").primaryKey(),
   quizId: integer("quiz_id").notNull(),
   content: text("content").notNull(), // Can include placeholders like {a}, {b} for randomization
@@ -281,7 +88,7 @@ export const insertQuizSchema = createInsertSchema(quizzes).pick({
   variables: jsonb("variables"), // JSON structure defining variable ranges, e.g. {"a": {"min": 1, "max": 10}}
   imageUrl: text("image_url"), // ✅
 
-});*/
+});
 
 export const insertQuestionSchema = createInsertSchema(questions).pick({
   quizId: true,
@@ -294,14 +101,14 @@ export const insertQuestionSchema = createInsertSchema(questions).pick({
 });
 
 // Answers model (for each question)
-/*export const answers = pgTable("answers", {
+export const answers = pgTable("answers", {
   id: serial("id").primaryKey(),
   //questionId: integer("question_id").references(() => questionsTable.id), // Asegura la relación
   questionId: integer("question_id").notNull().references(() => questions.id),
   content: text("content").notNull(),
   isCorrect: boolean("is_correct").notNull(),
   explanation: text("explanation")
-});*/
+});
 
 
 export const insertAnswerSchema = createInsertSchema(answers).pick({
@@ -312,7 +119,7 @@ export const insertAnswerSchema = createInsertSchema(answers).pick({
 });
 
 // Student Progress model
-/*export const studentProgress = pgTable("student_progress", {
+export const studentProgress = pgTable("student_progress", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   quizId: integer("quiz_id").notNull(),
@@ -322,7 +129,7 @@ export const insertAnswerSchema = createInsertSchema(answers).pick({
   timeSpent: integer("time_spent"), // in seconds
   //completedAt: timestamp("completed_at"),//deep seek mejora active-quiz:
   completedAt: timestamp("completed_at", { mode: 'date' }), // Asegura el modo date
-});*/
+});
 
 import { InferModel } from "drizzle-orm";
 
@@ -339,7 +146,7 @@ export const insertStudentProgressSchema = createInsertSchema(studentProgress, {
 
 
 // Student Answers model
-/*export const studentAnswers = pgTable("student_answers", {
+export const studentAnswers = pgTable("student_answers", {
   id: serial("id").primaryKey(),
   progressId: integer("progress_id").notNull(),
   //questionId: integer("question_id").notNull(),
@@ -349,7 +156,7 @@ export const insertStudentProgressSchema = createInsertSchema(studentProgress, {
   isCorrect: boolean("is_correct"),
   variables: jsonb("variables"), // The actual variables used in this instance of the question
   timeSpent: integer("time_spent"), // in seconds
-});*/
+});
 
 
 export const insertStudentAnswerSchema = createInsertSchema(studentAnswers).pick({
@@ -362,26 +169,26 @@ export const insertStudentAnswerSchema = createInsertSchema(studentAnswers).pick
 });
 
 // User-Categories relation (many-to-many)
-/*export const userCategories = pgTable("user_categories", {
+export const userCategories = pgTable("user_categories", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   categoryId: integer("category_id").notNull().references(() => categories.id),
 }, (table) => ({
   unq: unique("user_category_unique").on(table.userId, table.categoryId)
-}));*/
+}));
 
 export const insertUserCategorySchema = createInsertSchema(userCategories).pick({
   userId: true,
   categoryId: true,
 });
 // Subcategorias Model
-/*export const subcategories = pgTable("subcategories", {
+export const subcategories = pgTable("subcategories", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
   categoryId: integer("category_id").references(() => categories.id).notNull(),
   colorClass: text("color_class"),
-});*/
+});
 
 export type UserQuiz = {
   id: number;
@@ -395,7 +202,7 @@ export type UserQuiz = {
 
 // chat gpt calificaciones quiz
 // Quiz Submissions model (for tracking quiz completions and scores)
-/*export const quizSubmissions = pgTable("quiz_submissions", {
+export const quizSubmissions = pgTable("quiz_submissions", {
   id: uuid("id").defaultRandom().primaryKey(),
 
   userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
@@ -409,15 +216,15 @@ export type UserQuiz = {
   feedback: text("feedback"),
   reviewed: boolean("reviewed").default(false),
   
-});*/
+});
 
 // Asegúrate de que las claves externas sean las correctas para las tablas 'users' y 'quizzes'
-/*export const quizFeedback = pgTable("quiz_feedback", {
+export const quizFeedback = pgTable("quiz_feedback", {
   id: serial("id").primaryKey(),
   progressId: integer("progress_id").notNull(), // ahora es entero
   feedback: text("feedback").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});*/
+});
 
 // Types exports
 export type User = typeof users.$inferSelect;
