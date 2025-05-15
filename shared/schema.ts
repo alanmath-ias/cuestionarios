@@ -264,6 +264,7 @@ export const insertQuizSchema = createInsertSchema(quizzes).pick({
   title: true,
   description: true,
   categoryId: true,
+  subcategoryId: true, // ← ✅ Agrega esta línea
   timeLimit: true,
   difficulty: true,
   totalQuestions: true,

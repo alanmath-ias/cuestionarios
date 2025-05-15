@@ -52,6 +52,14 @@ type Request = ExpressRequest & {
   session: expressSession.Session & Partial<expressSession.SessionData>
 };
 
+type Answer = {
+  id: number;
+  content: string;
+  questionId: number;
+  // otras propiedades...
+};
+
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   const apiRouter = express.Router();
@@ -419,21 +427,38 @@ app.get('/api/training-subcategory/:categoryId/:subcategoryId', async (req, res)
     });
 
   } catch (err) {
-    console.error('❌ Error al obtener preguntas:', {
-      error: err,
-      stack: err.stack,
-      params: req.params,
-      timestamp: new Date().toISOString()
-    });
-    
-    res.status(500).json({ 
-      error: "Error al obtener preguntas",
-      details: {
-        categoryId,
-        subcategoryId,
-        internalError: process.env.NODE_ENV === 'development' ? err.message : undefined
-      }
-    });
+    if (err instanceof Error) {
+      console.error('❌ Error al obtener preguntas:', {
+        error: err.message,
+        stack: err.stack,
+        params: req.params,
+        timestamp: new Date().toISOString()
+      });
+  
+      res.status(500).json({ 
+        error: "Error al obtener preguntas",
+        details: {
+          categoryId,
+          subcategoryId,
+          internalError: process.env.NODE_ENV === 'development' ? err.message : undefined
+        }
+      });
+    } else {
+      console.error('❌ Error desconocido al obtener preguntas:', {
+        error: err,
+        params: req.params,
+        timestamp: new Date().toISOString()
+      });
+  
+      res.status(500).json({ 
+        error: "Error desconocido al obtener preguntas",
+        details: {
+          categoryId,
+          subcategoryId,
+          internalError: process.env.NODE_ENV === 'development' ? JSON.stringify(err) : undefined
+        }
+      });
+    }
   } finally {
     // 5. Log final de la ejecución
     console.log('🏁 Fin de la solicitud para:', {
@@ -706,48 +731,60 @@ app.get('/api/training-subcategory/:categoryId/:subcategoryId', async (req, res)
 //deep seek mejora active-quiz:
 apiRouter.post("/progress", async (req: Request, res: Response) => {
   const userId = req.session.userId;
-  
+
   if (!userId) {
     return res.status(401).json({ message: "Authentication required" });
   }
-  
+
   try {
-    // Parsear y validar los datos
+    // Validar datos con Zod (completedAt es tipo Date)
     const progressData = insertStudentProgressSchema.parse({
       ...req.body,
-      userId
+      userId,
     });
 
     // Verificar progreso existente
-    const existingProgress = await storage.getStudentProgressByQuiz(userId, progressData.quizId);
-    
+    const existingProgress = await storage.getStudentProgressByQuiz(
+      userId,
+      progressData.quizId
+    );
+
+    // Convertir Date a string solo si existe
+    const progressForStorage = {
+      ...progressData,
+      completedAt: progressData.completedAt
+        ? progressData.completedAt.toISOString()
+        : undefined,
+    };
+
     if (existingProgress) {
       // Actualizar progreso existente
       const updatedProgress = await storage.updateStudentProgress(
-        existingProgress.id, 
-        progressData
+        existingProgress.id,
+        progressForStorage
       );
       return res.json(updatedProgress);
     }
-    
+
     // Crear nuevo progreso
     const newProgress = await storage.createStudentProgress(progressData);
     res.status(201).json(newProgress);
-    
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: "Invalid progress data",
-        errors: error.errors
+        errors: error.errors,
       });
     }
+
     console.error("Progress creation error:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: "Error creating/updating progress",
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 });
+
 // fin deep seek mejora active-quiz
 
   // Student answers endpoint
@@ -1234,12 +1271,16 @@ app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Resp
     res.json({ questions: selected });
   } catch (err) {
     console.error("Error en entrenamiento:", err);
+  
+    const errorMessage = err instanceof Error ? err.message : "Unknown error";
+  
     res.status(500).json({ 
       code: "TRAINING_ERROR",
       message: "Error al obtener preguntas",
-      details: err.message 
+      details: errorMessage
     });
   }
+  
 });
 //fin deep seek entrenamiento estilo active-quiz
 
@@ -1294,7 +1335,8 @@ app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Resp
       });
   
       // Manejo de respuestas
-      let createdAnswers = [];
+      let createdAnswers: (Answer | null)[] = [];
+
       if (questionData.type === 'multiple_choice' && Array.isArray(answers)) {
         try {
           createdAnswers = await Promise.all(
@@ -1325,11 +1367,15 @@ app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Resp
   
     } catch (error) {
       console.error("Question creation error:", error);
+    
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    
       res.status(500).json({ 
         message: "Error creating question",
-        error: error.message 
+        error: errorMessage
       });
     }
+    
   });
   //fin deep seek me ayuda error crear preguntas
 

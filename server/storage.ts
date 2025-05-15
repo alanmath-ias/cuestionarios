@@ -352,11 +352,14 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser, 
       id,
-      createdAt: new Date()
+      email: insertUser.email ?? null,        // Asegura que sea string o null
+      role: insertUser.role ?? "student",     // Asegura que no sea undefined
+      createdAt: new Date().toISOString()
     };
     this.users.set(id, user);
     return user;
   }
+  
   
   async updateUser(id: number, userData: Partial<User>): Promise<User> {
     const existingUser = this.users.get(id);
@@ -413,13 +416,22 @@ export class MemStorage implements IStorage {
   
   async createQuiz(quiz: InsertQuiz): Promise<Quiz> {
     const id = this.quizId++;
-    // Asegurarse de que categoryId es un número
     const categoryId = typeof quiz.categoryId === 'string' ? parseInt(quiz.categoryId) : quiz.categoryId;
-    const newQuiz: Quiz = { ...quiz, id, categoryId };
+    const subcategoryId = quiz.subcategoryId ?? null;
+  
+    const newQuiz: Quiz = {
+      ...quiz,
+      id,
+      categoryId,
+      subcategoryId, // asegúrate de que siempre esté presente
+      isPublic: quiz.isPublic ?? null, // también importante si puede venir undefined
+    };
+  
     this.quizzes.set(id, newQuiz);
     console.log(`Creando quiz: ${newQuiz.title}, categoryId: ${newQuiz.categoryId}`);
     return newQuiz;
   }
+  
   
   // Question methods
   async getQuestionsByQuiz(quizId: number): Promise<Question[]> {
@@ -434,10 +446,20 @@ export class MemStorage implements IStorage {
   
   async createQuestion(question: InsertQuestion): Promise<Question> {
     const id = this.questionId++;
-    const newQuestion: Question = { ...question, id };
+    const newQuestion: Question = {
+      id,
+      difficulty: question.difficulty,
+      type: question.type,
+      quizId: question.quizId,
+      content: question.content,
+      points: question.points ?? 0,
+      variables: question.variables ?? {},
+      imageUrl: question.imageUrl ?? null,
+    };
     this.questions.set(id, newQuestion);
     return newQuestion;
   }
+  
   
   // Answer methods
   async getAnswersByQuestion(questionId: number): Promise<Answer[]> {
@@ -452,10 +474,17 @@ export class MemStorage implements IStorage {
   
   async createAnswer(answer: InsertAnswer): Promise<Answer> {
     const id = this.answerId++;
-    const newAnswer: Answer = { ...answer, id };
+    const newAnswer: Answer = {
+      id,
+      content: answer.content,
+      questionId: answer.questionId,
+      isCorrect: answer.isCorrect,
+      explanation: answer.explanation ?? null,
+    };
     this.answers.set(id, newAnswer);
     return newAnswer;
   }
+  
   
   // Student Progress methods
   async getStudentProgress(userId: number): Promise<StudentProgress[]> {
@@ -472,10 +501,20 @@ export class MemStorage implements IStorage {
   
   async createStudentProgress(progress: InsertStudentProgress): Promise<StudentProgress> {
     const id = this.progressId++;
-    const newProgress: StudentProgress = { ...progress, id };
+    const newProgress: StudentProgress = {
+      id,
+      status: progress.status,
+      quizId: progress.quizId,
+      userId: progress.userId,
+      score: progress.score ?? null,
+      completedQuestions: progress.completedQuestions ?? null,
+      timeSpent: progress.timeSpent ?? null,
+      completedAt: progress.completedAt?.toISOString() ?? null, // Asegura string | null
+    };
     this.studentProgress.set(id, newProgress);
     return newProgress;
   }
+  
   
   async updateStudentProgress(id: number, progress: Partial<StudentProgress>): Promise<StudentProgress> {
     const existingProgress = this.studentProgress.get(id);
@@ -497,10 +536,72 @@ export class MemStorage implements IStorage {
   
   async createStudentAnswer(answer: InsertStudentAnswer): Promise<StudentAnswer> {
     const id = this.studentAnswerId++;
-    const newAnswer: StudentAnswer = { ...answer, id };
+    const newAnswer: StudentAnswer = {
+      id,
+      variables: answer.variables ?? {}, // default: objeto vacío
+      questionId: answer.questionId,
+      isCorrect: answer.isCorrect ?? null, // default: null
+      timeSpent: answer.timeSpent ?? null, // default: null
+      progressId: answer.progressId,
+      answerId: answer.answerId ?? null, // default: null
+    };
     this.studentAnswers.set(id, newAnswer);
     return newAnswer;
   }
+  
+// Category methods
+async updateCategory(id: number, category: Partial<Category>): Promise<Category> {
+  throw new Error("Method not implemented.");
+}
+
+async deleteCategory(id: number): Promise<void> {
+  throw new Error("Method not implemented.");
+}
+
+// Quiz methods
+async getPublicQuizzes(): Promise<Quiz[]> {
+  throw new Error("Method not implemented.");
+}
+
+async updateQuiz(id: number, quiz: Partial<Quiz>): Promise<Quiz> {
+  throw new Error("Method not implemented.");
+}
+
+async deleteQuiz(id: number): Promise<void> {
+  throw new Error("Method not implemented.");
+}
+
+// Métodos de asignación de quizzes a usuarios
+async getUserQuizzes(userId: number): Promise<Quiz[]> {
+  throw new Error("Method not implemented.");
+}
+
+async assignQuizToUser(userId: number, quizId: number): Promise<void> {
+  throw new Error("Method not implemented.");
+}
+
+async removeQuizFromUser(userId: number, quizId: number): Promise<void> {
+  throw new Error("Method not implemented.");
+}
+// Question methods
+async updateQuestion(id: number, question: Partial<Question>): Promise<Question> {
+  throw new Error("Method not implemented.");
+}
+
+async deleteQuestion(id: number): Promise<void> {
+  throw new Error("Method not implemented.");
+}
+
+// Answer methods
+async updateAnswer(id: number, answer: Partial<Answer>): Promise<Answer> {
+  throw new Error("Method not implemented.");
+}
+
+async deleteAnswer(id: number): Promise<void> {
+  throw new Error("Method not implemented.");
+}
+
+
 }
 
 // Importar la implementación de almacenamiento de base de datos

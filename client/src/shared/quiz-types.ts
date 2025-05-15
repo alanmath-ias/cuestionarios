@@ -15,7 +15,7 @@ export interface QuizAnswerResult {
 
 export interface QuizResult {
   progress: Omit<StudentProgress, 'createdAt'> & {
-    completedAt?: string; // Convertir Date a string para el frontend
+    completedAt: string | null; // Añade | null
   };
   quiz: Quiz;
   answers: QuizAnswerResult[];

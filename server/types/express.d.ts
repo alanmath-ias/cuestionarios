@@ -69,4 +69,14 @@ declare module "express-session" {
   }
 }
 
+declare global {
+  namespace Express {
+    interface Request {
+      user?: Pick<User, 'id'>; // Solo incluye el id
+      // O si necesitas más propiedades:
+      // user?: Partial<User>;
+    }
+  }
+}
+
 export {}; // evita conflicto de ámbito global

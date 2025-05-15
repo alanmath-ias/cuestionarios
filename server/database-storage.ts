@@ -491,6 +491,8 @@ async getQuizResults(progressId: number): Promise<QuizResult | null> {
       timeLimit: number;
       difficulty: string;
       totalQuestions: number;
+      isPublic: boolean | null;    // Añadir esto
+      subcategoryId: number | null // Añadir esto
     };
     answers: Array<{
       id: number;
@@ -521,18 +523,31 @@ async getQuizResults(progressId: number): Promise<QuizResult | null> {
   };
 
   // 2. Realizar consulta con tipo explícito
-  const progressWithRelations = await db.query.studentProgress.findFirst({
-    where: eq(studentProgress.id, progressId),
-    with: {
-      quiz: true,
-      answers: {
-        with: {
-          question: true,
-          answerDetails: true
-        }
+  // 2. Modifica la consulta para incluir todos los campos necesarios
+const progressWithRelations = await db.query.studentProgress.findFirst({
+  where: eq(studentProgress.id, progressId),
+  with: {
+    quiz: {
+      columns: {
+        id: true,
+        title: true,
+        description: true,
+        categoryId: true,
+        timeLimit: true,
+        difficulty: true,
+        totalQuestions: true,
+        isPublic: true,
+        subcategoryId: true
+      }
+    },
+    answers: {
+      with: {
+        question: true,
+        answerDetails: true
       }
     }
-  }) as unknown as ProgressWithRelations | null;
+  }
+}) as unknown as ProgressWithRelations | null;
 
   if (!progressWithRelations || !progressWithRelations.answers) return null;
 
@@ -565,7 +580,7 @@ async getQuizResults(progressId: number): Promise<QuizResult | null> {
       score: progressWithRelations.score ?? null,
       completedQuestions: progressWithRelations.completedQuestions,
       timeSpent: progressWithRelations.timeSpent ?? null,
-      completedAt: progressWithRelations.completedAt ?? null
+      completedAt: progressWithRelations.completedAt?.toISOString() ?? null
     },
     quiz: progressWithRelations.quiz,
     answers: enrichedAnswers
@@ -585,7 +600,7 @@ async saveQuizSubmission({ userId, quizId, score, progressId }: {
     userId,
     quizId,
     score,
-    completedAt: new Date(),
+    completedAt: new Date().toISOString(), // Convertir Date a string ISO
     progressId,
   });
 }
@@ -640,9 +655,12 @@ async getAllQuizSubmissions() {
 async saveQuizFeedback({ progressId, text }: { progressId: string; text: string }) {
   try {
     await this.db.insert(quizFeedback).values({
-      progressId: Number(progressId),   // Convertir a número
-      feedback: text,                   // Usar la clave correcta
-      createdAt: new Date(),
+      progressId: Number(progressId),   // Conversión a número
+      feedback: text,                   // Asegúrate que 'feedback' sea el nombre correcto del campo
+      createdAt: new Date().toISOString(), // Opción 1: Convertir a string ISO
+      // O alternativamente:
+      // createdAt: sql`now()`,         // Opción 2: Usar función de base de datos
+      // createdAt: new Date(),         // Opción 3: Solo si el esquema lo permite
     });
   } catch (err) {
     console.error("❌ Error al insertar feedback:", err);

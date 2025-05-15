@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { storage } from "server/storage"; // ✅ extensión .js agregada//ajusta si tu path es distinto
+import { storage } from "server/storage";
 
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.session.userId;
@@ -16,7 +16,15 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       return res.status(401).json({ error: "Usuario no válido" });
     }
 
-    req.user = { id: user.id }; // aquí asignamos user.id a req.user
+    req.user = {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      role: user.role,
+      email: user.email,
+      createdAt: user.createdAt ? new Date(user.createdAt) : undefined,
+    };
+
     next();
   } catch (error) {
     console.error("❌ Error en requireAuth:", error);
