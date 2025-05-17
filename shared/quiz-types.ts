@@ -1,4 +1,4 @@
-import type { StudentProgress, Quiz, Question, Answer } from "@shared/schema";
+import type { StudentProgress, Quiz, Question, Answer } from "./schema.js";
 
 export interface QuizAnswerResult {
   id: number;

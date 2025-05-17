@@ -4,16 +4,16 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-  "dev": "cross-env NODE_ENV=development concurrently \"npm run dev:server\" \"npm run dev:client\"",
-  "dev:server": "cross-env TS_NODE_PROJECT=server/tsconfig.json tsx watch -r tsconfig-paths/register server/index.ts",
-  "dev:client": "vite --config client/vite.config.ts",
-  "build": "npm run build:client && npm run build:server && npm run copy-shared-files",
-  "build:client": "cd client && vite build",
-  "build:server": "tsc -p tsconfig.json",
-  "copy-shared-files": "copyfiles -u 1 \"shared/**/*.ts\" \"shared/**/*.json\" \"dist/shared\"",
-  "start": "node -r ./server/register-aliases.js dist/server/index.js",
-  "typecheck": "tsc --noEmit -p tsconfig.json"
-},
+    "dev": "cross-env NODE_ENV=development concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cross-env TS_NODE_PROJECT=server/tsconfig.server.json tsx watch -r tsconfig-paths/register server/index.ts",
+    "dev:client": "vite --config client/vite.config.ts",
+    "build": "npm run build:client && npm run build:server && npm run copy-shared-files",
+    "build:client": "cd client && vite build",
+    "build:server": "tsc -p server/tsconfig.json",
+    "copy-shared-files": "copyfiles -u 1 \"shared/**/*.ts\" \"shared/**/*.json\" \"dist/shared\"",
+    "start": "node -r ./server/register-aliases.js dist/server/index.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
   "engines": {
     "node": "22.14.0",
     "npm": "10.9.2"
@@ -106,6 +106,7 @@
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.2",
+    "copyfiles": "^2.4.1",
     "cross-env": "^7.0.3",
     "drizzle-kit": "^0.31.1",
     "esbuild": "^0.25.0",

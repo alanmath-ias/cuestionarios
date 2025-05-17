@@ -1,14 +1,14 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "outDir": "../dist/server",
+    "outDir": "../dist",
     "rootDir": "../",
-    "module": "ESNext",
+    "module": "NodeNext", // Compatible con ESM
     "target": "ES2021",
+    "moduleResolution": "NodeNext",
     "esModuleInterop": true,
-    "moduleResolution": "node",
     "types": ["node"]
   },
   "include": ["./**/*.ts"],
-  "exclude": ["../client", "../dist", "node_modules","./shared/**/*"]
+  "exclude": ["../client", "../dist", "node_modules","./server/*.ts"]
 }

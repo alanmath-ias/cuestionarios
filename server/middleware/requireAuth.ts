@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { storage } from "../storage";
+import { storage } from "../storage.js";
 
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.session.userId;
@@ -22,7 +22,8 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       username: user.username,
       role: user.role,
       email: user.email,
-      createdAt: user.createdAt ? new Date(user.createdAt) : undefined,
+      createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : null,
+      password: user.password, // Asegúrate de que `user.password` esté disponible
     };
 
     next();

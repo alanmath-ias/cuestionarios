@@ -1,14 +1,14 @@
 {
   "include": ["shared/**/*", "server/"],
-  "exclude": ["client/src/**/*", "node_modules", "dist", "**/*.test.ts","shared/schema.bak.ts"],
+  "exclude": ["client/src/**/*", "node_modules", "dist", "**/*.test.ts", "shared/schema.bak.ts"],
   "compilerOptions": {
     "skipLibCheck": true,
-    "module": "NodeNext", // Cambiado de ESNext a NodeNext
+    "module": "NodeNext", // Compatible con ESM
     "moduleResolution": "NodeNext",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./client/src/*"],// Alias para el cliente
-      "@shared/*": ["./shared/*"]// Alias para archivos compartidos
+      "@/*": ["./client/src/*"], // Alias para el cliente
+      "@shared/*": ["./shared/*"] // Alias para archivos compartidos
     },
     "outDir": "./dist",
     "esModuleInterop": true,

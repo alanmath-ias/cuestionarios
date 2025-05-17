@@ -6,7 +6,7 @@ import {
   insertUserSchema, 
   insertStudentProgressSchema, 
   insertStudentAnswerSchema 
-} from "@shared/schema";
+} from "@shared/schema.js";
 import * as expressSession from "express-session";
 import { eq, sql, and, or, isNull, isNotNull } from "drizzle-orm";
 
@@ -15,10 +15,10 @@ import { userCategories, categories, quizzes } from "../shared/schema.js";
 import { users } from "../shared/schema.js";
 import { getUsersAssignedToQuiz } from './storage.js'; // Ruta ajustada para usar .js
 //chat gpt entrenamiento
-import { questions as questionsTable } from "@shared/schema";
+import { questions as questionsTable } from "@shared/schema.js";
 import { inArray } from "drizzle-orm";
 //deep seek entrenamiento:
-import { answers } from "@shared/schema"; // Asegúrate de importar correctamente
+import { answers } from "@shared/schema.js"; // Asegúrate de importar correctamente
 
 //chat gpt dashboar personalizado
 import { requireAuth } from "./middleware/requireAuth.js";
@@ -29,8 +29,8 @@ import { DatabaseStorage } from './database-storage.js'; // Ruta ajustada para u
 //fin chat gpt cuestionarios a usuarios
 
 //chat gpt dashboar personalizado
-import { User } from '@shared/schema'; // Asegúrate de que este tipo esté bien definido
-import { userQuizzes, studentProgress, quizSubmissions } from "@shared/schema";
+import { User } from '@shared/schema.js'; // Asegúrate de que este tipo esté bien definido
+import { userQuizzes, studentProgress, quizSubmissions } from "@shared/schema.js";
 
 declare global {
   namespace Express {

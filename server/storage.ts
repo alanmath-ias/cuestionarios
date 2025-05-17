@@ -6,7 +6,7 @@ import {
   answers, Answer, InsertAnswer,
   studentProgress, StudentProgress, InsertStudentProgress,
   studentAnswers, StudentAnswer, InsertStudentAnswer
-} from "@shared/schema";
+} from "@shared/schema.js";
 import { db } from './db.js'; // Aquí cambiamos la extensión al usar importaciones locales
 
 export interface IStorage {

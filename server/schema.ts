@@ -420,6 +420,9 @@ export type UserQuiz = {
   createdAt: timestamp("created_at").defaultNow(),
 });*/
 
+
+
+
 // Types exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
