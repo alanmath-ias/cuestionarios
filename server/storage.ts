@@ -7,7 +7,7 @@ import {
   studentProgress, StudentProgress, InsertStudentProgress,
   studentAnswers, StudentAnswer, InsertStudentAnswer
 } from "@shared/schema";
-import { db } from './db'; // Aquí cambiamos la extensión al usar importaciones locales
+import { db } from './db.js'; // Aquí cambiamos la extensión al usar importaciones locales
 
 export interface IStorage {
   // User methods
@@ -605,7 +605,7 @@ async deleteAnswer(id: number): Promise<void> {
 }
 
 // Importar la implementación de almacenamiento de base de datos
-import { DatabaseStorage } from "./database-storage";
+import { DatabaseStorage } from "./database-storage.js";
 
 // Usar almacenamiento de base de datos en lugar de memoria
 export const storage = new DatabaseStorage(db);

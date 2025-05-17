@@ -1,5 +1,6 @@
 // Definiciones de tipos para la aplicación
 
+
 export interface User {
   id: number;
   username: string;
@@ -67,3 +68,13 @@ export interface StudentAnswer {
   timeSpent: number | null;
   variables?: Record<string, number>;
 }
+
+
+export type UserQuiz = {
+  id: number;
+  title: string;
+  categoryId: number;
+  difficulty: string;
+  status?: "not_started" | "in_progress" | "completed"; // Puede ser opcional
+  reviewed?: boolean;
+};

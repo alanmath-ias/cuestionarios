@@ -11,3 +11,8 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+/* si tu proyecto define variables CSS: */
+:root {
+  --border: 210 16% 82%;
+}

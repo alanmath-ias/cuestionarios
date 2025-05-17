@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { storage } from "server/storage";
+import { storage } from "../storage";
 
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.session.userId;

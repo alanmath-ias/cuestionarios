@@ -1,18 +1,14 @@
 {
-    "extends": "../tsconfig.json",
-    "compilerOptions": {
-      "outDir": "../dist/server",
-      "rootDir": "../",  // Incluye todo el proyecto pero puede causar side effects
-      "module": "ESNext",
-      "target": "ES2021",
-      "esModuleInterop": true,
-      "moduleResolution": "node",
-  
-      // 👇 Esto anula los tipos heredados (como vite/client)
-      "types": ["node"]
-    },
-    "include": ["./**/*.ts", "../shared/**/*.ts"],
-    "exclude": ["../client", "../dist", "node_modules"]
-  }
-  
-  
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../dist/server",
+    "rootDir": "../",
+    "module": "ESNext",
+    "target": "ES2021",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "types": ["node"]
+  },
+  "include": ["./**/*.ts"],
+  "exclude": ["../client", "../dist", "node_modules","./shared/**/*"]
+}

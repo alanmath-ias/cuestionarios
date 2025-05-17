@@ -14,10 +14,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Trash, Clock, BookOpen, Link as LinkIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Category, Quiz } from "@/shared/types";
+import { Category, Quiz } from "@/types/types";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { User } from '@/shared/types';
+import { User } from '@/types/types';
 import { 
   Accordion, 
   AccordionContent, 

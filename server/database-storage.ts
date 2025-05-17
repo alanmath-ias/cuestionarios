@@ -14,8 +14,8 @@ import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { IStorage } from "./storage";
 import { userQuizzes } from "@shared/schema";
 import { drizzle } from "drizzle-orm/postgres-js";
-import type { QuizResult } from "@/shared/quiz-types";
-import type { QuizAnswerResult } from "@/shared/quiz-types";
+import type { QuizResult } from "@shared/quiz-types";
+import type { QuizAnswerResult } from "@shared/quiz-types";
 
 //chat gpt calificaciones
 import { quizSubmissions } from "@shared/schema";

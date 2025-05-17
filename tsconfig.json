@@ -1,17 +1,19 @@
 {
-  "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"],
+  "include": ["shared/**/*", "server/"],
+  "exclude": ["client/src/**/*", "node_modules", "dist", "**/*.test.ts","shared/schema.bak.ts"],
   "compilerOptions": {
     "skipLibCheck": true,
     "module": "NodeNext", // Cambiado de ESNext a NodeNext
     "moduleResolution": "NodeNext",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"]
+      "@/*": ["./client/src/*"],// Alias para el cliente
+      "@shared/*": ["./shared/*"]// Alias para archivos compartidos
     },
     "outDir": "./dist",
     "esModuleInterop": true,
     "strict": true
   }
 }
+//Edwin, este tsconfig solo crea la carpeta server, pero vacía "server/"
+//mientras que el tsconfig de sever la llena 

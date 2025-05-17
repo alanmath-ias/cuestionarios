@@ -384,15 +384,6 @@ export const insertUserCategorySchema = createInsertSchema(userCategories).pick(
   colorClass: text("color_class"),
 });*/
 
-export type UserQuiz = {
-  id: number;
-  title: string;
-  categoryId: number;
-  difficulty: string;
-  status?: "not_started" | "in_progress" | "completed"; // Puede ser opcional
-  reviewed?: boolean;
-};
-
 
 // chat gpt calificaciones quiz
 // Quiz Submissions model (for tracking quiz completions and scores)
@@ -419,6 +410,9 @@ export type UserQuiz = {
   feedback: text("feedback").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });*/
+
+
+
 
 // Types exports
 export type User = typeof users.$inferSelect;

@@ -14,7 +14,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
 import { Trash } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Category } from "@/shared/types";
+import { Category } from "@/types/types";
 
 const colorOptions = [
   { value: "primary", label: "Azul (Primario)" },

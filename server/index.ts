@@ -1,9 +1,9 @@
 import express, { Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";   // Asegúrate de que tenga la extensión .js
-import { setupVite, serveStatic, log } from "./vite";   // Asegúrate de que tenga la extensión .js
+import { registerRoutes } from "./routes.js";   // Asegúrate de que tenga la extensión .js
+import { setupVite, serveStatic, log } from "./vite.js";   // Asegúrate de que tenga la extensión .js
 import session from "express-session";
 import PgSession from "connect-pg-simple";
-import { initializeTestData } from "./init-data";   // Asegúrate de que tenga la extensión .js
+import { initializeTestData } from "./init-data.js";   // Asegúrate de que tenga la extensión .js
 import { createServer } from "http";
 
 import dotenv from 'dotenv';

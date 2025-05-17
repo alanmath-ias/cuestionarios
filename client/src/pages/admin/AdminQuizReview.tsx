@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MathDisplay } from '@/components/ui/math-display';
 import { ArrowLeft, Clock, CheckCircle, XCircle } from 'lucide-react';
-import type { QuizResult } from '@/shared/quiz-types';
+import type { QuizResult } from '@shared/quiz-types';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 

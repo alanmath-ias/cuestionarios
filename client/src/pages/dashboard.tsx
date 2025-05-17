@@ -8,8 +8,8 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { Category } from "@/shared/types";
-import { UserQuiz } from "@shared/schema";
+import { Category } from "@/types/types";
+import { UserQuiz } from "@/types/types";
 import {
   BookOpen,
   ListChecks,
