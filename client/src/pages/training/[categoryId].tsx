@@ -12,6 +12,23 @@ import { Link } from 'wouter';
 import { PageLayout } from "@/components/layout/page-layout";
 import { motion, AnimatePresence } from "framer-motion";
 
+interface ProgressProps {
+  value: number;
+  className?: string;
+  indicatorClassName?: string;
+}
+
+export function ComoTeFue({ value, className, indicatorClassName }: ProgressProps) {
+  return (
+    <div className={`relative ${className}`}>
+      <div
+        className={`absolute top-0 left-0 h-full transition-all ${indicatorClassName}`}
+        style={{ width: `${value}%` }}
+      />
+    </div>
+  );
+}
+
 type Question = {
   id: number;
   content: string;
@@ -185,6 +202,7 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
     const percentage = Math.round((score / totalPoints) * 100);
     const isGoodScore = percentage >= 70;
 
+    
     return (
       <PageLayout>
         <div className="max-w-2xl mx-auto p-6 space-y-6">
@@ -220,7 +238,7 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Progress 
+                  <ComoTeFue
                     value={percentage} 
                     className="h-4 bg-gray-200"
                     indicatorClassName={isGoodScore ? 'bg-green-500' : 'bg-blue-500'}

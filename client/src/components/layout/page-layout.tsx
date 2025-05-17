@@ -21,9 +21,9 @@ interface PageLayoutProps {
 
 export function PageLayout({ children }: PageLayoutProps) {
   // Fetch current user
-  const { data: user } = useQuery<User>({
+  const { data: user } = useQuery<User | null>({
     queryKey: ['/api/user'],
-    queryFn: async () => {
+    queryFn: async (): Promise<User | null> => {
       try {
         const res = await fetch('/api/user', { credentials: 'include' });
         if (res.status === 401) {

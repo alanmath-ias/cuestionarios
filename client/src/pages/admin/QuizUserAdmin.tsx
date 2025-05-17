@@ -3,20 +3,44 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import React, { useState } from "react";
 
 export default function QuizUserAdmin() {
+
+  interface User {
+    id: number;
+    name: string;
+    email: string;
+  }
+  
+  interface Quiz {
+    id: number;
+    title: string;
+    difficulty: string;
+  }
+  
   const { toast } = useToast();
   const [selectedQuizzes, setSelectedQuizzes] = useState<Record<number, number[]>>({});
 
   // Fetch users
-  const { data: users } = useQuery({
+  const { data: users } = useQuery<User[]>({
     queryKey: ["/api/users"],
+    queryFn: async () => {
+      const res = await fetch("/api/users");
+      if (!res.ok) throw new Error("Error al obtener usuarios");
+      return res.json();
+    },
   });
 
   // Fetch quizzes
-  const { data: quizzes } = useQuery({
-    queryKey: ["/api/quizzes"],
-  });
+  const { data: quizzes } = useQuery<Quiz[]>({
+  queryKey: ["/api/quizzes"],
+  queryFn: async () => {
+    const res = await fetch("/api/quizzes");
+    if (!res.ok) throw new Error("Error al obtener cuestionarios");
+    return res.json();
+  },
+});
 
   // Fetch user quizzes
   const { data: userQuizzes } = useQuery({
@@ -82,12 +106,12 @@ export default function QuizUserAdmin() {
             </div>
             
             <Button 
-              className="mt-4"
-              onClick={() => handleSave(user.id)}
-              disabled={assignQuizzesMutation.isLoading}
-            >
-              Guardar
-            </Button>
+  className="mt-4"
+  onClick={() => handleSave(user.id)}
+  disabled={assignQuizzesMutation.status === "pending"}
+>
+  {assignQuizzesMutation.status === "pending" ? "Guardando..." : "Guardar"}
+</Button>
           </div>
         ))}
       </div>

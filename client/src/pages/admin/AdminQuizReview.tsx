@@ -33,6 +33,7 @@ function AdminQuizReview() {
     enabled: !!progressId,
   });
 
+ 
   const mutation = useMutation({
     mutationFn: async () => {
       const res = await fetch('/api/quiz-feedback', {
@@ -74,7 +75,7 @@ function AdminQuizReview() {
       toast.error('Error al enviar el feedback: ' + error.message);
     },
   });
-
+  const isLoading = mutation.status === "pending";
   const handleSendFeedback = () => {
     if (!feedbackText.trim()) {
       toast.warning('Escribe algo de feedback antes de enviarlo');
@@ -119,6 +120,7 @@ function AdminQuizReview() {
     });
   };
 
+ 
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6 flex items-center">
@@ -258,13 +260,14 @@ function AdminQuizReview() {
               placeholder="Escribe aquí tu retroalimentación general para el estudiante..."
               className="mb-4 min-h-[120px]"
             />
-            <Button 
-              onClick={handleSendFeedback} 
-              disabled={mutation.isLoading}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              {mutation.isLoading ? 'Enviando...' : existingFeedback?.feedback ? 'Actualizar Feedback' : 'Enviar Feedback'}
-            </Button>
+
+<Button 
+  onClick={handleSendFeedback} 
+  disabled={isLoading}
+  className="bg-purple-600 hover:bg-purple-700 text-white"
+>
+  {isLoading ? 'Enviando...' : existingFeedback?.feedback ? 'Actualizar Feedback' : 'Enviar Feedback'}
+</Button>
           </CardContent>
         </Card>
       ) : (

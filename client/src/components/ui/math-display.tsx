@@ -5,6 +5,7 @@ interface MathDisplayProps {
   math: string;
   display?: boolean;
   className?: string;
+  inline?: boolean; // Agrega la propiedad inline como opcional
 }
 
 export function MathDisplay({ math, display = false, className = '' }: MathDisplayProps) {
