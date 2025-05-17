@@ -7,19 +7,19 @@ import {
   type Answer, type InsertAnswer,
   type StudentProgress, type InsertStudentProgress,
   type StudentAnswer, type InsertStudentAnswer,
-} from "@shared/schema.js";
+} from "./schema.js";
 
 import { db } from "./db.js";
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { IStorage } from "./storage.js";
-import { userQuizzes } from "@shared/schema.js";
+import { userQuizzes } from "./schema.js";
 import { drizzle } from "drizzle-orm/postgres-js";
-import type { QuizResult } from "@shared/quiz-types.js";
-import type { QuizAnswerResult } from "@shared/quiz-types.js";
+import type { QuizResult } from "../shared/quiz-types.js";
+import type { QuizAnswerResult } from "../shared/quiz-types.js";
 
 //chat gpt calificaciones
-import { quizSubmissions } from "@shared/schema.js";
-import { quizFeedback } from "@shared/schema.js"; 
+import { quizSubmissions } from "./schema.js";
+import { quizFeedback } from "./schema.js"; 
 
 //chat gpt dashboard personalizado
 import { userCategories } from "../shared/schema.js";
