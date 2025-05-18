@@ -123,7 +123,7 @@ export class MemStorage implements IStorage {
         name: "Administrador",
         email: "admin@alanmath.com"
       });
-      console.log(`Usuario creado: ${admin.username}, ID: ${admin.id}`);
+      //console.log(`Usuario creado: ${admin.username}, ID: ${admin.id}`);
       
       // Create sample student
       const student = await this.createUser({
@@ -132,7 +132,7 @@ export class MemStorage implements IStorage {
         name: "María González",
         email: "maria@example.com"
       });
-      console.log(`Usuario creado: ${student.username}, ID: ${student.id}`);
+      //console.log(`Usuario creado: ${student.username}, ID: ${student.id}`);
       
       // Create categories
       const algebra = await this.createCategory({
@@ -140,21 +140,21 @@ export class MemStorage implements IStorage {
         description: "Ecuaciones, polinomios y sistemas lineales",
         colorClass: "primary" // primary color class
       });
-      console.log(`Categoría creada: ${algebra.name}, ID: ${algebra.id}`);
+      //console.log(`Categoría creada: ${algebra.name}, ID: ${algebra.id}`);
       
       const geometria = await this.createCategory({
         name: "Geometría",
         description: "Figuras, ángulos y teoremas básicos",
         colorClass: "secondary" // secondary color class
       });
-      console.log(`Categoría creada: ${geometria.name}, ID: ${geometria.id}`);
+      //console.log(`Categoría creada: ${geometria.name}, ID: ${geometria.id}`);
       
       const calculo = await this.createCategory({
         name: "Cálculo",
         description: "Límites, derivadas e integrales",
         colorClass: "accent" // accent color class
       });
-      console.log(`Categoría creada: ${calculo.name}, ID: ${calculo.id}`);
+      //console.log(`Categoría creada: ${calculo.name}, ID: ${calculo.id}`);
       
       // Create quizzes for Algebra
       const ecuacionesQuiz = await this.createQuiz({
@@ -165,7 +165,7 @@ export class MemStorage implements IStorage {
         difficulty: "basic",
         totalQuestions: 10
       });
-      console.log(`Quiz creado: ${ecuacionesQuiz.title}, Categoría ID: ${ecuacionesQuiz.categoryId}`);
+      //console.log(`Quiz creado: ${ecuacionesQuiz.title}, Categoría ID: ${ecuacionesQuiz.categoryId}`);
       
       const sistemasQuiz = await this.createQuiz({
         title: "Sistemas de ecuaciones",
@@ -175,7 +175,7 @@ export class MemStorage implements IStorage {
         difficulty: "intermediate",
         totalQuestions: 8
       });
-      console.log(`Quiz creado: ${sistemasQuiz.title}, Categoría ID: ${sistemasQuiz.categoryId}`);
+      //console.log(`Quiz creado: ${sistemasQuiz.title}, Categoría ID: ${sistemasQuiz.categoryId}`);
       
       const polinomiosQuiz = await this.createQuiz({
         title: "Polinomios",
@@ -185,7 +185,7 @@ export class MemStorage implements IStorage {
         difficulty: "intermediate",
         totalQuestions: 12
       });
-      console.log(`Quiz creado: ${polinomiosQuiz.title}, Categoría ID: ${polinomiosQuiz.categoryId}`);
+      //console.log(`Quiz creado: ${polinomiosQuiz.title}, Categoría ID: ${polinomiosQuiz.categoryId}`);
       
       // Create geometry quizzes
       const triangulosQuiz = await this.createQuiz({
@@ -196,7 +196,7 @@ export class MemStorage implements IStorage {
         difficulty: "basic",
         totalQuestions: 10
       });
-      console.log(`Quiz creado: ${triangulosQuiz.title}, Categoría ID: ${triangulosQuiz.categoryId}`);
+      //console.log(`Quiz creado: ${triangulosQuiz.title}, Categoría ID: ${triangulosQuiz.categoryId}`);
       
       const circulosQuiz = await this.createQuiz({
         title: "Círculos y áreas",
@@ -206,7 +206,7 @@ export class MemStorage implements IStorage {
         difficulty: "intermediate",
         totalQuestions: 8
       });
-      console.log(`Quiz creado: ${circulosQuiz.title}, Categoría ID: ${circulosQuiz.categoryId}`);
+      //console.log(`Quiz creado: ${circulosQuiz.title}, Categoría ID: ${circulosQuiz.categoryId}`);
       
       // Create calculus quizzes
       const limitesQuiz = await this.createQuiz({
@@ -217,7 +217,7 @@ export class MemStorage implements IStorage {
         difficulty: "intermediate",
         totalQuestions: 10
       });
-      console.log(`Quiz creado: ${limitesQuiz.title}, Categoría ID: ${limitesQuiz.categoryId}`);
+      //console.log(`Quiz creado: ${limitesQuiz.title}, Categoría ID: ${limitesQuiz.categoryId}`);
       
       const derivadasQuiz = await this.createQuiz({
         title: "Derivadas",
@@ -227,7 +227,7 @@ export class MemStorage implements IStorage {
         difficulty: "advanced",
         totalQuestions: 12
       });
-      console.log(`Quiz creado: ${derivadasQuiz.title}, Categoría ID: ${derivadasQuiz.categoryId}`);
+      //console.log(`Quiz creado: ${derivadasQuiz.title}, Categoría ID: ${derivadasQuiz.categoryId}`);
       
     } catch (error) {
       console.error("Error inicializando datos:", error);
@@ -401,12 +401,12 @@ export class MemStorage implements IStorage {
     const result = Array.from(this.quizzes.values()).filter(
       (quiz) => {
         const quizCatId = typeof quiz.categoryId === 'string' ? parseInt(quiz.categoryId) : quiz.categoryId;
-        console.log(`Comparando quiz ${quiz.title}: ${quizCatId} con categoría: ${catId}`);
+        //console.log(`Comparando quiz ${quiz.title}: ${quizCatId} con categoría: ${catId}`);
         return quizCatId === catId;
       }
     );
     
-    console.log(`Encontrados ${result.length} quizzes para la categoría ${catId}`);
+    //console.log(`Encontrados ${result.length} quizzes para la categoría ${catId}`);
     return result;
   }
   
@@ -428,7 +428,7 @@ export class MemStorage implements IStorage {
     };
   
     this.quizzes.set(id, newQuiz);
-    console.log(`Creando quiz: ${newQuiz.title}, categoryId: ${newQuiz.categoryId}`);
+    //console.log(`Creando quiz: ${newQuiz.title}, categoryId: ${newQuiz.categoryId}`);
     return newQuiz;
   }
   

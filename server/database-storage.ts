@@ -125,7 +125,7 @@ export class DatabaseStorage implements IStorage {
   
   //Entrenamiento por subcategorias:
   async getTrainingQuestionsByCategoryAndSubcategory(categoryId: number, subcategoryId: number) {
-    console.log('🔍 Verificando quizzes para:', { categoryId, subcategoryId });
+    //console.log('🔍 Verificando quizzes para:', { categoryId, subcategoryId });
     
     const quizzesInCategoryAndSubcategory = await db
       .select({ id: quizzes.id })
@@ -141,7 +141,7 @@ export class DatabaseStorage implements IStorage {
         throw err;
       });
   
-    console.log('📊 Quizzes encontrados:', quizzesInCategoryAndSubcategory);
+    //console.log('📊 Quizzes encontrados:', quizzesInCategoryAndSubcategory);
   
     if (quizzesInCategoryAndSubcategory.length === 0) {
       console.warn('⚠️ No hay quizzes para:', { categoryId, subcategoryId });

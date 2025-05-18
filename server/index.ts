@@ -1,12 +1,13 @@
 import express, { Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes.js";   // Asegúrate de que tenga la extensión .js
-import { setupVite, serveStatic, log } from "./vite.js";   // Asegúrate de que tenga la extensión .js
+import { registerRoutes } from "./routes.js";
+import { setupVite, serveStatic, log } from "./vite.js";
 import session from "express-session";
 import PgSession from "connect-pg-simple";
-import { initializeTestData } from "./init-data.js";   // Asegúrate de que tenga la extensión .js
+import { initializeTestData } from "./init-data.js";
 import { createServer } from "http";
 
 import dotenv from 'dotenv';
+import path from 'path'; // Importa path para manejar rutas
 dotenv.config();
 
 const app = express();
@@ -73,24 +74,23 @@ app.use((req, res, next) => {
 
   registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  const port = 5000;
-  const server = createServer(app);
-
+  // Middleware para servir archivos estáticos en producción
   if (app.get("env") === "development") {
+    const server = createServer(app);
     await setupVite(app, server);
+    server.listen(5000, 'localhost', () => {
+      log(`serving on http://localhost:5000`);
+    });
   } else {
-    serveStatic(app);
-  }
+    const clientPath = path.resolve(__dirname, "../dist/client");
+    app.use(express.static(clientPath)); // Sirve archivos estáticos desde dist/client
 
-  server.listen(port, 'localhost', () => {
-    log(`serving on http://localhost:${port}`);
-  });
+    app.get("*", (_req, res) => {
+      res.sendFile(path.resolve(clientPath, "index.html")); // Devuelve index.html para rutas no manejadas
+    });
+
+    app.listen(5000, () => {
+      log(`Production server running on http://localhost:5000`);
+    });
+  }
 })();

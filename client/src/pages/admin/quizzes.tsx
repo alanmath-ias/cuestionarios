@@ -135,11 +135,11 @@ export default function QuizzesAdmin() {
   const organizeQuizzesHierarchically = () => {
     if (!quizzes || !categories || !subcategoriesResponse) return [];
     
-    console.log("Datos para estructura jerárquica:", {
+    /*console.log("Datos para estructura jerárquica:", {
       quizzes: quizzes.length,
       categories: categories.length,
       subcategories: subcategoriesResponse.length
-    });
+    });*/
 
     // 1. Agrupar quizzes por subcategoría
     const quizzesBySubcategory = quizzes.reduce((acc, quiz) => {
@@ -169,7 +169,7 @@ export default function QuizzesAdmin() {
       };
     });
 
-    console.log("Estructura jerárquica resultante:", result);
+    //console.log("Estructura jerárquica resultante:", result);
     return result;
   };
 

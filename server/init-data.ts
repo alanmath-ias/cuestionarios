@@ -3,7 +3,7 @@ import { storage } from "./storage.js"; // Agregado ".js" a la importación
 // Función para inicializar datos de ejemplo en la base de datos
 export async function initializeTestData() {
   try {
-    console.log("Inicializando datos de ejemplo...");
+    //console.log("Inicializando datos de ejemplo...");
     
     // Verificar si ya existen usuarios para evitar duplicados
     const existingUsers = await storage.getUsers();
@@ -16,7 +16,7 @@ export async function initializeTestData() {
         name: "Administrador",
         email: "admin@alanmath.com"
       });
-      console.log(`Usuario creado: ${admin.username}, ID: ${admin.id}`);
+      //console.log(`Usuario creado: ${admin.username}, ID: ${admin.id}`);
       
       const student = await storage.createUser({
         username: "estudiante",
@@ -24,7 +24,7 @@ export async function initializeTestData() {
         name: "María González",
         email: "maria@example.com"
       });
-      console.log(`Usuario creado: ${student.username}, ID: ${student.id}`);
+      //console.log(`Usuario creado: ${student.username}, ID: ${student.id}`);
       
       // Crear categorías
       const categories = await storage.getCategories();
@@ -36,21 +36,21 @@ export async function initializeTestData() {
           description: "Ecuaciones, polinomios y sistemas lineales",
           colorClass: "primary"
         });
-        console.log(`Categoría creada: ${algebra.name}, ID: ${algebra.id}`);
+        //console.log(`Categoría creada: ${algebra.name}, ID: ${algebra.id}`);
         
         const geometria = await storage.createCategory({
           name: "Geometría",
           description: "Figuras, ángulos y teoremas básicos",
           colorClass: "secondary"
         });
-        console.log(`Categoría creada: ${geometria.name}, ID: ${geometria.id}`);
+        //console.log(`Categoría creada: ${geometria.name}, ID: ${geometria.id}`);
         
         const calculo = await storage.createCategory({
           name: "Cálculo",
           description: "Límites, derivadas e integrales",
           colorClass: "accent"
         });
-        console.log(`Categoría creada: ${calculo.name}, ID: ${calculo.id}`);
+        //console.log(`Categoría creada: ${calculo.name}, ID: ${calculo.id}`);
         
         // Crear quizzes para Álgebra
         const ecuacionesQuiz = await storage.createQuiz({
@@ -61,7 +61,7 @@ export async function initializeTestData() {
           difficulty: "basic",
           totalQuestions: 10
         });
-        console.log(`Quiz creado: ${ecuacionesQuiz.title}, Categoría ID: ${ecuacionesQuiz.categoryId}`);
+        //console.log(`Quiz creado: ${ecuacionesQuiz.title}, Categoría ID: ${ecuacionesQuiz.categoryId}`);
         
         const sistemasQuiz = await storage.createQuiz({
           title: "Sistemas de ecuaciones",
@@ -71,7 +71,7 @@ export async function initializeTestData() {
           difficulty: "intermediate",
           totalQuestions: 8
         });
-        console.log(`Quiz creado: ${sistemasQuiz.title}, Categoría ID: ${sistemasQuiz.categoryId}`);
+        //console.log(`Quiz creado: ${sistemasQuiz.title}, Categoría ID: ${sistemasQuiz.categoryId}`);
         
         const polinomiosQuiz = await storage.createQuiz({
           title: "Polinomios",
@@ -81,7 +81,7 @@ export async function initializeTestData() {
           difficulty: "intermediate",
           totalQuestions: 12
         });
-        console.log(`Quiz creado: ${polinomiosQuiz.title}, Categoría ID: ${polinomiosQuiz.categoryId}`);
+        //console.log(`Quiz creado: ${polinomiosQuiz.title}, Categoría ID: ${polinomiosQuiz.categoryId}`);
         
         // Crear quizzes para Geometría
         const triangulosQuiz = await storage.createQuiz({
@@ -92,7 +92,7 @@ export async function initializeTestData() {
           difficulty: "basic",
           totalQuestions: 10
         });
-        console.log(`Quiz creado: ${triangulosQuiz.title}, Categoría ID: ${triangulosQuiz.categoryId}`);
+        //console.log(`Quiz creado: ${triangulosQuiz.title}, Categoría ID: ${triangulosQuiz.categoryId}`);
         
         const circulosQuiz = await storage.createQuiz({
           title: "Círculos y áreas",
@@ -102,7 +102,7 @@ export async function initializeTestData() {
           difficulty: "intermediate",
           totalQuestions: 8
         });
-        console.log(`Quiz creado: ${circulosQuiz.title}, Categoría ID: ${circulosQuiz.categoryId}`);
+        //console.log(`Quiz creado: ${circulosQuiz.title}, Categoría ID: ${circulosQuiz.categoryId}`);
         
         // Crear quizzes para Cálculo
         const limitesQuiz = await storage.createQuiz({
@@ -113,7 +113,7 @@ export async function initializeTestData() {
           difficulty: "intermediate",
           totalQuestions: 10
         });
-        console.log(`Quiz creado: ${limitesQuiz.title}, Categoría ID: ${limitesQuiz.categoryId}`);
+        //console.log(`Quiz creado: ${limitesQuiz.title}, Categoría ID: ${limitesQuiz.categoryId}`);
         
         const derivadasQuiz = await storage.createQuiz({
           title: "Derivadas",
@@ -123,7 +123,7 @@ export async function initializeTestData() {
           difficulty: "advanced",
           totalQuestions: 12
         });
-        console.log(`Quiz creado: ${derivadasQuiz.title}, Categoría ID: ${derivadasQuiz.categoryId}`);
+        //console.log(`Quiz creado: ${derivadasQuiz.title}, Categoría ID: ${derivadasQuiz.categoryId}`);
         
         // Crear preguntas y respuestas para el quiz de ecuaciones
         const q1 = await storage.createQuestion({
@@ -202,7 +202,7 @@ export async function initializeTestData() {
       }
     }
     
-    console.log("Inicialización de datos completada");
+    //console.log("Inicialización de datos completada");
   } catch (error) {
     console.error("Error al inicializar datos de ejemplo:", error);
   }

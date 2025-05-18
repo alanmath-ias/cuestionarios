@@ -3,7 +3,7 @@ import { storage } from "../storage.js";
 
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.session.userId;
-  console.log("🧩 Session userId (auth):", userId);
+  //console.log("🧩 Session userId (auth):", userId);
 
   if (!userId) {
     return res.status(401).json({ error: "Usuario no autenticado" });

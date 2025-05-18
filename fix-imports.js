@@ -23,4 +23,4 @@ sourceFiles.forEach((file) => {
   file.saveSync();
 });
 
-console.log("✅ Imports actualizados con .js en paths relativos.");
+//console.log("✅ Imports actualizados con .js en paths relativos.");

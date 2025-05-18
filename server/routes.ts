@@ -284,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 app.get('/api/admin/subcategories', async (req, res) => {
   try {
     const subcategories = await storage.getAllSubcategories();
-    console.log("✅ Subcategorías obtenidas:", subcategories);
+    //console.log("✅ Subcategorías obtenidas:", subcategories);
     res.json(subcategories);
   } catch (err) {
     console.error("❌ Error al obtener subcategorías:", err);
@@ -296,11 +296,11 @@ app.get('/api/admin/subcategories', async (req, res) => {
 // Crear una nueva subcategoría
 app.post('/api/admin/subcategories', async (req, res) => {
   const { name, categoryId, description } = req.body;
-  console.log("📦 Creando subcategoría con:", { name, categoryId });
+  //console.log("📦 Creando subcategoría con:", { name, categoryId });
 
   try {
     const subcategory = await storage.createSubcategory({ name, categoryId, description });
-    console.log("✅ Subcategoría creada:", subcategory);
+    //console.log("✅ Subcategoría creada:", subcategory);
     res.json(subcategory);
   } catch (err) {
     console.error("❌ Error al crear subcategoría:", err);
@@ -311,11 +311,11 @@ app.post('/api/admin/subcategories', async (req, res) => {
 // Obtener subcategorías por categoría
 app.get('/api/admin/subcategories/by-category/:categoryId', async (req, res) => {
   const categoryId = Number(req.params.categoryId);
-  console.log("🔍 Buscando subcategorías de la categoría:", categoryId);
+  //console.log("🔍 Buscando subcategorías de la categoría:", categoryId);
 
   try {
     const subcategories = await storage.getSubcategoriesByCategory(categoryId);
-    console.log(`✅ Subcategorías para categoría ${categoryId}:`, subcategories);
+    //console.log(`✅ Subcategorías para categoría ${categoryId}:`, subcategories);
     res.json(subcategories);
   } catch (err) {
     console.error("❌ Error al obtener subcategorías por categoría:", err);
@@ -326,11 +326,11 @@ app.get('/api/admin/subcategories/by-category/:categoryId', async (req, res) => 
 // Eliminar una subcategoría
 app.delete('/api/admin/subcategories/:id', async (req, res) => {
   const id = Number(req.params.id);
-  console.log("🗑️ Eliminando subcategoría con ID:", id);
+  //console.log("🗑️ Eliminando subcategoría con ID:", id);
 
   try {
     await storage.deleteSubcategory(id);
-    console.log("✅ Subcategoría eliminada");
+    //console.log("✅ Subcategoría eliminada");
     res.json({ success: true });
   } catch (err) {
     console.error("❌ Error al eliminar subcategoría:", err);
@@ -350,7 +350,7 @@ app.put('/api/admin/subcategories/:id', async (req, res) => {
   try {
     await storage.updateSubcategory(id, name, description);
 
-    console.log(`✅ Subcategoría ${id} actualizada a: ${name}`);
+    //console.log(`✅ Subcategoría ${id} actualizada a: ${name}`);
     res.json({ success: true });
   } catch (err) {
     console.error("❌ Error al actualizar subcategoría:", err);
@@ -361,17 +361,17 @@ app.put('/api/admin/subcategories/:id', async (req, res) => {
 //Entrenamiento por Subcategorías:
 app.get('/api/training-subcategory/:categoryId/:subcategoryId', async (req, res) => {
   // 1. Log de los parámetros recibidos en bruto
-  console.log('📥 Parámetros recibidos:', {
+  /*console.log('📥 Parámetros recibidos:', {
     rawParams: req.params,
     rawQuery: req.query,
     rawBody: req.body
-  });
+  });*/
 
   const categoryId = Number(req.params.categoryId);
   const subcategoryId = Number(req.params.subcategoryId);
 
   // 2. Log de conversión numérica
-  console.log('🔄 Conversión a números:', {
+  /*console.log('🔄 Conversión a números:', {
     categoryId: {
       raw: req.params.categoryId,
       converted: categoryId,
@@ -382,7 +382,7 @@ app.get('/api/training-subcategory/:categoryId/:subcategoryId', async (req, res)
       converted: subcategoryId,
       isValid: !isNaN(subcategoryId)
     }
-  });
+  });*/
 
   if (isNaN(categoryId) || isNaN(subcategoryId)) {
     console.error('❌ IDs inválidos:', {
@@ -401,21 +401,21 @@ app.get('/api/training-subcategory/:categoryId/:subcategoryId', async (req, res)
 
   try {
     // 3. Log antes de hacer la consulta a la DB
-    console.log('🔍 Buscando preguntas para:', {
+    /*console.log('🔍 Buscando preguntas para:', {
       categoryId,
       subcategoryId,
       timestamp: new Date().toISOString()
-    });
+    });*/
 
     const questions = await storage.getTrainingQuestionsByCategoryAndSubcategory(categoryId, subcategoryId);
 
     // 4. Log del resultado
-    console.log('✅ Resultado encontrado:', {
+    /*console.log('✅ Resultado encontrado:', {
       categoryId,
       subcategoryId,
       questionCount: questions.length,
       sampleQuestion: questions.length > 0 ? questions[0] : null
-    });
+    });*/
 
     res.json({ 
       questions,
@@ -461,11 +461,11 @@ app.get('/api/training-subcategory/:categoryId/:subcategoryId', async (req, res)
     }
   } finally {
     // 5. Log final de la ejecución
-    console.log('🏁 Fin de la solicitud para:', {
+    /*console.log('🏁 Fin de la solicitud para:', {
       categoryId,
       subcategoryId,
       timestamp: new Date().toISOString()
-    });
+    });*/
   }
 });
 
@@ -831,9 +831,9 @@ apiRouter.post("/progress", async (req: Request, res: Response) => {
     }
   
     try {
-      console.log("User ID:", userId);
-console.log("Role:", role);
-console.log("Requested progressId:", progressId);
+      //console.log("User ID:", userId);
+//console.log("Role:", role);
+//console.log("Requested progressId:", progressId);
 
 
       let progress;
@@ -841,7 +841,7 @@ console.log("Requested progressId:", progressId);
       if (role === "admin") {
         // Admin puede ver cualquier progreso
         const allProgresses = await storage.getAllProgresses(); // Este método debe existir en storage
-        console.log("Total progresses found:", allProgresses.length);
+        //console.log("Total progresses found:", allProgresses.length);
         progress = allProgresses.find(p => p.id === progressId);
       } else {
         // Usuario solo puede ver sus propios progresos
@@ -884,7 +884,7 @@ console.log("Requested progressId:", progressId);
   // Middleware para verificar si el usuario es administrador
   const requireAdmin = async (req: Request, res: Response, next: () => void) => {
     const userId = req.session.userId;
-    console.log("🧩 Session userId:", userId);
+    //console.log("🧩 Session userId:", userId);
   
     if (!userId) {
       console.warn("⚠️ Usuario no autenticado");
@@ -893,7 +893,7 @@ console.log("Requested progressId:", progressId);
   
     try {
       const user = await storage.getUser(userId);
-      console.log("👤 Usuario autenticado:", user);
+      //console.log("👤 Usuario autenticado:", user);
   
       if (!user || user.role !== 'admin') {
         console.warn("⛔ No tiene rol de administrador");
@@ -955,7 +955,7 @@ console.log("Requested progressId:", progressId);
   
 apiRouter.get("/users/:userId/categories", requireAdmin, async (req, res) => {
   const userId = parseInt(req.params.userId);
-  console.log("🧪 userId recibido1:", req.params.userId, "➡️ convertido a:", userId);
+  //console.log("🧪 userId recibido1:", req.params.userId, "➡️ convertido a:", userId);
   if (isNaN(userId)) {
     return res.status(400).json({ message: "ID de usuario inválido" });
   }
@@ -980,7 +980,7 @@ apiRouter.get("/users/:userId/categories", requireAdmin, async (req, res) => {
 apiRouter.put("/users/:userId/categories", async (req: Request, res: Response) => {
   const userId = parseInt(req.params.userId);
   const { categoryIds } = req.body;
-  console.log("🧪 userId recibido2:", req.params.userId, "➡️ convertido a:", userId);
+  //console.log("🧪 userId recibido2:", req.params.userId, "➡️ convertido a:", userId);
   if (isNaN(userId)) {
     return res.status(400).json({ message: "Invalid user ID" });
   }
@@ -1125,12 +1125,12 @@ apiRouter.get("/admin/users", requireAdmin, async (req, res) => {
 
 // Asignar un quiz a un usuario
 apiRouter.post("/admin/users/quizzes", requireAdmin, async (req, res) => {
-  console.log("📥 Body recibido en POST /admin/users/quizzes:", req.body);
+  //console.log("📥 Body recibido en POST /admin/users/quizzes:", req.body);
   const { userId, quizId } = req.body;
   if (!userId || !quizId) return res.status(400).json({ message: "Missing data" });
 
   try {
-    console.log(req.body)
+    //console.log(req.body)
     await storage.assignQuizToUser(userId, quizId);
     res.status(204).end();
   } catch (err) {
@@ -1314,7 +1314,7 @@ app.get("/api/training/:categoryId", requireAuth, async (req: Request, res: Resp
 
 //deep seek me ayuda error crear preguntas
   apiRouter.post("/admin/questions", requireAdmin, async (req: Request, res: Response) => {
-    console.log("📦 Datos recibidos en el body:", req.body);
+    //console.log("📦 Datos recibidos en el body:", req.body);
 
     try {
       const { answers = [], ...questionData } = req.body;
@@ -1407,13 +1407,13 @@ app.post("/api/quiz-submission", async (req, res) => {
   const { userId, quizId, score, progressId } = req.body;
 
 
-  console.log("📥 Datos recibidos en /api/quiz-submission:", {
+  /*console.log("📥 Datos recibidos en /api/quiz-submission:", {
     userId,
     quizId,
     score,
     progressId,
     typeofScore: typeof score,
-  });
+  });*/
 
   if (!userId || !quizId || typeof score !== "number" || !progressId) {
     return res.status(400).json({ error: "Datos incompletos o inválidos" });

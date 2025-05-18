@@ -13,7 +13,7 @@ import { ArrowLeft, ArrowRight, Timer } from 'lucide-react';
 import { shuffleArray } from '@/lib/mathUtils';
 import { Badge } from '@/components/ui/badge';
 import { QuestionContent } from '@/components/QuestionContent';
-import { insertStudentProgressSchema } from '@shared/schema'
+//import { insertStudentProgressSchema } from '@shared/schema'
 import { useSession } from '../hooks/useSession';
 
 interface Quiz {
@@ -92,9 +92,9 @@ function ActiveQuiz() {
     if (!res.ok) throw new Error('Error fetching quiz');
     return res.json();
   },
-  onSuccess: (data) => {
+  /*onSuccess: (data) => {
     console.log(data); // Log mínimo solicitado
-  }
+  }*/
 });
 
   // Fetch questions
