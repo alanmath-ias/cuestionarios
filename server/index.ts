@@ -10,6 +10,9 @@ import dotenv from 'dotenv';
 import path from 'path'; // Importa path para manejar rutas
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -40,7 +43,6 @@ app.get('/api/test-db', async (_req, res) => {
   }
 });
 
-
 // Session middleware usando PostgreSQL
 const PgStore = PgSession(session);
 app.use(session({
@@ -55,10 +57,21 @@ app.use(session({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: true,
     ssl: { rejectUnauthorized: false }, // Si estás usando SSL
-    host: '127.0.0.1', // Fuerza IPv4 si es necesario
-  }as any),
+  } as any),
 }));
 console.log("Intentando conectar a la base de datos:", process.env.DATABASE_URL);
+
+//endpoint temporal para verificar variables env de railway
+app.get('/api/env', (_req, res) => {
+  res.json({
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT,
+    DATABASE_URL: process.env.DATABASE_URL,
+    SESSION_SECRET: process.env.SESSION_SECRET,
+    VITE_API_URL: process.env.VITE_API_URL,
+  });
+});
+
 // Middleware de logging
 app.use((req, res, next) => {
   const start = Date.now();
@@ -107,10 +120,7 @@ app.use((req, res, next) => {
       log(`serving on http://localhost:5000`);
     });
   } else {
-    const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const clientPath = path.resolve(__dirname, "../dist/client");
+    const clientPath = path.resolve(__dirname, "../client");
     app.use(express.static(clientPath)); // Sirve archivos estáticos desde dist/client
 
     app.get("*", (_req, res) => {
