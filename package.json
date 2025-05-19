@@ -12,8 +12,8 @@
     "build:client": "cd client && vite build --logLevel silent",
     "build:server": "tsc -p server/tsconfig.json && npm run rename:register-aliases",
     "copy-shared-files": "copyfiles -u 1 \"shared/**/*.ts\" \"shared/**/*.json\" \"dist/shared\"",
-    "rename:register-aliases": "shx mv ./dist/server/register-aliases.js ./dist/server/register-aliases.cjs",
-    "start": "node -r ./server/register-aliases.cjs dist/server/index.js",
+    "rename:register-aliases": "shx mv ./dist/server/register-aliases.js ./dist/server/register-aliases.mjs",
+    "start": "node --import ./dist/server/register-aliases.mjs dist/server/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "engines": {

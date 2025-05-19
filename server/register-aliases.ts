@@ -1,4 +1,4 @@
-import 'module-alias/register';
+import 'module-alias/register.js';
 import path from 'path';
 import moduleAlias from 'module-alias';
 import { fileURLToPath } from 'url';

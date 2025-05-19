@@ -16,7 +16,7 @@ import QuestionsAdmin from "@/pages/admin/questions";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import { PageLayout } from "@/components/layout/page-layout";
 import { useQuery } from "@tanstack/react-query";
-import { User } from "@/shared/types";
+import { User } from "@/types/types";
 import { useEffect } from "react";
 import AllUsersCategoriesAdmin from './pages/admin/AllUsersCategoriesAdmin';
 
