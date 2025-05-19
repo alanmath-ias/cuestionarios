@@ -8,7 +8,19 @@ import { createServer } from "http";
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import path from 'path'; // Importa path para manejar rutas
-dotenv.config();
+// Carga explícita del archivo de entorno
+const envFile = process.env.NODE_ENV === "production" ? ".envproduction" : ".env";
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+
+
+console.log(`Archivo de entorno cargado: ${envFile}`);
+
+
+console.log("NODE_ENV:", process.env.NODE_ENV);
+console.log("DATABASE_URL:", process.env.DATABASE_URL);
+console.log("SESSION_SECRET:", process.env.SESSION_SECRET);
+console.log("VITE_API_URL:", process.env.VITE_API_URL);
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,6 +53,15 @@ app.get('/api/test-db', async (_req, res) => {
       res.status(500).json({ status: 'error', message: 'Unknown error occurred' });
     }
   }
+});
+
+app.get('/api/env-debug', (_req, res) => {
+  res.json({
+    NODE_ENV: process.env.NODE_ENV,
+    DATABASE_URL: process.env.DATABASE_URL ? "Cargada correctamente" : "No definida",
+    SESSION_SECRET: process.env.SESSION_SECRET ? "Cargada correctamente" : "No definida",
+    VITE_API_URL: process.env.VITE_API_URL ? "Cargada correctamente" : "No definida",
+  });
 });
 
 // Session middleware usando PostgreSQL
