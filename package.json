@@ -10,9 +10,10 @@
     "dev:client": "vite --config client/vite.config.ts",
     "build": "npm run build:client && npm run copy-shared-files && npm run build:css && npm run build:server",
     "build:client": "cd client && vite build --logLevel silent",
-    "build:server": "tsc -p server/tsconfig.json",
+    "build:server": "tsc -p server/tsconfig.json && npm run rename:register-aliases",
     "copy-shared-files": "copyfiles -u 1 \"shared/**/*.ts\" \"shared/**/*.json\" \"dist/shared\"",
-    "start": "node -r ./server/register-aliases.js dist/server/index.js",
+    "rename:register-aliases": "ren .\\dist\\server\\register-aliases.js register-aliases.cjs",
+    "start": "node -r ./server/register-aliases.cjs dist/server/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "engines": {
