@@ -5,7 +5,7 @@ import session from "express-session";
 import PgSession from "connect-pg-simple";
 import { initializeTestData } from "./init-data.js";
 import { createServer } from "http";
-
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import path from 'path'; // Importa path para manejar rutas
 dotenv.config();
@@ -17,6 +17,29 @@ app.use(express.urlencoded({ extended: false }));
 app.get('/api/test', (req, res) => {
   res.json({ status: 'ok', message: 'Server is working' });
 });
+
+// Endpoint temporal para probar la conexión a la base de datos
+app.get('/api/test-db', async (_req, res) => {
+  const { Pool } = require('pg');
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }, // Si estás usando SSL
+  });
+
+  try {
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW()');
+    client.release();
+    res.json({ status: 'ok', time: result.rows[0].now });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({ status: 'error', message: error.message });
+    } else {
+      res.status(500).json({ status: 'error', message: 'Unknown error occurred' });
+    }
+  }
+});
+
 
 // Session middleware usando PostgreSQL
 const PgStore = PgSession(session);
@@ -31,9 +54,11 @@ app.use(session({
   store: new PgStore({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: true,
-  }),
+    ssl: { rejectUnauthorized: false }, // Si estás usando SSL
+    host: '127.0.0.1', // Fuerza IPv4 si es necesario
+  }as any),
 }));
-
+console.log("Intentando conectar a la base de datos:", process.env.DATABASE_URL);
 // Middleware de logging
 app.use((req, res, next) => {
   const start = Date.now();
@@ -82,7 +107,10 @@ app.use((req, res, next) => {
       log(`serving on http://localhost:5000`);
     });
   } else {
-    const clientPath = path.resolve(__dirname, "../dist/client");
+    const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const clientPath = path.resolve(__dirname, "../dist/client");
     app.use(express.static(clientPath)); // Sirve archivos estáticos desde dist/client
 
     app.get("*", (_req, res) => {

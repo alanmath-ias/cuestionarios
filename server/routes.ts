@@ -1578,7 +1578,6 @@ app.get('/api/admin/user-progress-summary', async (req, res) => {
   }
 });
 
-
   const httpServer = createServer(app);
   return httpServer;
 }
