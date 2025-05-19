@@ -27,8 +27,7 @@ app.get('/api/test-db', async (_req, res) => {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }, // Si estás usando SSL
-    host: '0.0.0.0', // Fuerza el uso de IPv4
-  });
+   });
 
   try {
     const client = await pool.connect();
