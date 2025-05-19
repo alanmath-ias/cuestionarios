@@ -12,7 +12,7 @@
     "build:client": "cd client && vite build --logLevel silent",
     "build:server": "tsc -p server/tsconfig.json && npm run rename:register-aliases",
     "copy-shared-files": "copyfiles -u 1 \"shared/**/*.ts\" \"shared/**/*.json\" \"dist/shared\"",
-    "rename:register-aliases": "ren .\\dist\\server\\register-aliases.js register-aliases.cjs",
+    "rename:register-aliases": "shx mv ./dist/server/register-aliases.js ./dist/server/register-aliases.cjs",
     "start": "node -r ./server/register-aliases.cjs dist/server/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
@@ -119,6 +119,7 @@
     "drizzle-kit": "^0.31.1",
     "esbuild": "^0.25.0",
     "postcss": "^8.5.3",
+    "shx": "^0.4.0",
     "tailwindcss": "^3.4.17",
     "ts-morph": "^25.0.1",
     "ts-node": "^10.9.2",
