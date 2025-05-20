@@ -1,6 +1,6 @@
 # .env.production
 NODE_ENV=production
 PORT=5000
-DATABASE_URL=postgresql://postgres:contrasenabasededatossupabase123@db.mdvsowihjnesxykavqyr.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:KhKIghnzSfqJKGYeyfroFwzsYPpRJMAI@metro.proxy.rlwy.net:43105/railway
 SESSION_SECRET=clave-secreta-mas-compleja  # ¡Cambia esto en producción real!
-VITE_API_URL=https://cuestionarios-production.up.railway.app  # Mismo puerto que el servidor local
+#VITE_API_URL=https://cuestionarios-production.up.railway.app  # Mismo puerto que el servidor local

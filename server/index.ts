@@ -12,15 +12,7 @@ import path from 'path'; // Importa path para manejar rutas
 const envFile = process.env.NODE_ENV === "production" ? ".envproduction" : ".env";
 dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
-
 console.log(`Archivo de entorno cargado: ${envFile}`);
-
-
-console.log("NODE_ENV:", process.env.NODE_ENV);
-console.log("DATABASE_URL:", process.env.DATABASE_URL);
-console.log("SESSION_SECRET:", process.env.SESSION_SECRET);
-console.log("VITE_API_URL:", process.env.VITE_API_URL);
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +21,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+/*
 app.get('/api/test', (req, res) => {
   res.json({ status: 'ok', message: 'Server is working' });
 });
@@ -64,6 +57,20 @@ app.get('/api/env-debug', (_req, res) => {
   });
 });
 
+
+//endpoint temporal para verificar variables env de railway
+app.get('/api/env', (_req, res) => {
+  res.json({
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT,
+    DATABASE_URL: process.env.DATABASE_URL,
+    SESSION_SECRET: process.env.SESSION_SECRET,
+    VITE_API_URL: process.env.VITE_API_URL,
+  });
+});
+
+*/
+
 // Session middleware usando PostgreSQL
 const PgStore = PgSession(session);
 app.use(session({
@@ -80,18 +87,7 @@ app.use(session({
     ssl: { rejectUnauthorized: false }, // Si estás usando SSL
   } as any),
 }));
-console.log("Intentando conectar a la base de datos:", process.env.DATABASE_URL);
-
-//endpoint temporal para verificar variables env de railway
-app.get('/api/env', (_req, res) => {
-  res.json({
-    NODE_ENV: process.env.NODE_ENV,
-    PORT: process.env.PORT,
-    DATABASE_URL: process.env.DATABASE_URL,
-    SESSION_SECRET: process.env.SESSION_SECRET,
-    VITE_API_URL: process.env.VITE_API_URL,
-  });
-});
+//console.log("Intentando conectar a la base de datos:", process.env.DATABASE_URL);
 
 // Middleware de logging
 app.use((req, res, next) => {
