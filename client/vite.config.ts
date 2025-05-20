@@ -10,10 +10,10 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: path.resolve(__dirname, 'index.html'), // Asegura que el archivo HTML sea el punto de entrada
-      output: {
-        assetFileNames: (assetInfo) => {
-          if (assetInfo.name?.endsWith('.css')) return 'index.css';
-          return 'assets/[name]-[hash][extname]';
+      output: {        
+              assetFileNames: (assetInfo) => {
+              if (assetInfo.name?.endsWith('.css')) return 'assets/[name]-[hash][extname]';
+              return 'assets/[name]-[hash][extname]';
         }
       }
     },
