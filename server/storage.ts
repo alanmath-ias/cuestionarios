@@ -384,7 +384,11 @@ export class MemStorage implements IStorage {
   
   async createCategory(category: InsertCategory): Promise<Category> {
     const id = this.categoryId++;
-    const newCategory: Category = { ...category, id };
+    const newCategory: Category = { 
+      ...category, 
+      id, 
+      youtubeLink: category.youtubeLink ?? null // Asigna null si es undefined
+    };
     this.categories.set(id, newCategory);
     return newCategory;
   }

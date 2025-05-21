@@ -14,6 +14,7 @@ export const subcategories = pgTable("subcategories", {
 	description: text(),
 	categoryId: integer("category_id").notNull(),
 	colorClass: text("color_class"),
+	youtube_sublink: text("youtube_sublink").default(sql`NULL`), // Usar sql para establecer NULL como valor predeterminado
 }, (table) => [
 	foreignKey({
 			columns: [table.categoryId],
@@ -71,6 +72,7 @@ export const categories = pgTable("categories", {
 	name: text().notNull(),
 	description: text().notNull(),
 	colorClass: text("color_class").notNull(),
+	youtubeLink: text("youtube_link"), // Columna sin valores predeterminados
 });
 
 export const questions = pgTable("questions", {
@@ -238,6 +240,7 @@ export const insertCategorySchema = createInsertSchema(categories).pick({
   name: true,
   description: true,
   colorClass: true,
+  youtubeLink: true, // Incluye youtubeLink en el esquema
 });
 
 // Quizzes model

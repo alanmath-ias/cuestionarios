@@ -12,6 +12,7 @@ type Subcategory = {
   name: string;
   description?: string;
   categoryId: number;
+  youtube_sublink?: string | null; // Nuevo campo opcional
 };
 
 export default function SubcategoriesPage() {
@@ -26,6 +27,8 @@ export default function SubcategoriesPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [openCategoryIds, setOpenCategoryIds] = useState<number[]>([]);
+  const [newSubcategoryYoutubeLink, setNewSubcategoryYoutubeLink] = useState("");
+  const [editingYoutubeLink, setEditingYoutubeLink] = useState("");
 
   useEffect(() => {
     fetchCategories();
@@ -49,14 +52,15 @@ export default function SubcategoriesPage() {
       const response = await fetch("/api/admin/subcategories");
       if (!response.ok) throw new Error("Error fetching subcategories");
       const data = await response.json();
-
+  
       const formattedData = data.map((item: any) => ({
-        id: item.subcategories.id,
-        name: item.subcategories.name,
-        description: item.subcategories.description,
-        categoryId: item.subcategories.categoryId,
+        id: item.id, // Accede directamente a las propiedades
+        name: item.name,
+        description: item.description,
+        categoryId: item.categoryId,
+        youtube_sublink: item.youtube_sublink, // Accede directamente al campo
       }));
-
+  
       setSubcategories(formattedData);
     } catch (err) {
       setError("Error al cargar subcategorías");
@@ -67,12 +71,12 @@ export default function SubcategoriesPage() {
   const handleCreate = async () => {
     setError("");
     setSuccess("");
-
+  
     if (!newSubcategoryName.trim() || !selectedCategoryId) {
       setError("Debes ingresar un nombre y seleccionar una categoría.");
       return;
     }
-
+  
     try {
       const response = await fetch("/api/admin/subcategories", {
         method: "POST",
@@ -83,14 +87,16 @@ export default function SubcategoriesPage() {
           name: newSubcategoryName.trim(),
           description: newSubcategoryDescription.trim(),
           categoryId: selectedCategoryId,
+          youtube_sublink: newSubcategoryYoutubeLink.trim() || null, // Enviar el enlace o null
         }),
       });
-
+  
       if (!response.ok) throw new Error("Error creating subcategory");
-
+  
       setSuccess("Subcategoría creada con éxito.");
       setNewSubcategoryName("");
       setNewSubcategoryDescription("");
+      setNewSubcategoryYoutubeLink(""); // Restablecer el campo del enlace de YouTube
       setSelectedCategoryId(null);
       fetchSubcategories();
     } catch (err) {
@@ -187,6 +193,13 @@ export default function SubcategoriesPage() {
           onChange={(e) => setNewSubcategoryDescription(e.target.value)}
           className="border p-2 mr-2 rounded w-full mb-2"
         />
+        <input
+  type="text"
+  placeholder="Enlace de YouTube (opcional)"
+  value={newSubcategoryYoutubeLink}
+  onChange={(e) => setNewSubcategoryYoutubeLink(e.target.value)}
+  className="border p-2 mr-2 rounded w-full mb-2"
+/>
         <select
           value={selectedCategoryId ?? ""}
           onChange={(e) => setSelectedCategoryId(Number(e.target.value))}
@@ -245,6 +258,13 @@ export default function SubcategoriesPage() {
                               onChange={(e) => setEditingDescription(e.target.value)}
                               className="border p-2 rounded w-full"
                             />
+                            <input
+  type="text"
+  placeholder="Enlace de YouTube (opcional)"
+  value={editingYoutubeLink}
+  onChange={(e) => setEditingYoutubeLink(e.target.value)}
+  className="border p-2 rounded w-full"
+/>
                             <div className="flex gap-2">
                               <button
                                 onClick={handleUpdate}

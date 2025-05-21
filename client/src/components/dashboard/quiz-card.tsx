@@ -15,6 +15,7 @@ interface QuizCardProps {
   onStart: () => void;
   onContinue: () => void;
   onRetry: () => void;
+  className?: string; // Agregar esta propiedad opcional
 }
 
 export function QuizCard({

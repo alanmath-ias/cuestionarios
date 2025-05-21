@@ -6,7 +6,7 @@ import {
   insertUserSchema, 
   insertStudentProgressSchema, 
   insertStudentAnswerSchema 
-} from "./schema.js";
+} from "../shared/schema.js";
 import * as expressSession from "express-session";
 import { eq, sql, and, or, isNull, isNotNull } from "drizzle-orm";
 
@@ -15,10 +15,10 @@ import { userCategories, categories, quizzes } from "../shared/schema.js";
 import { users } from "../shared/schema.js";
 import { getUsersAssignedToQuiz } from './storage.js'; // Ruta ajustada para usar .js
 //chat gpt entrenamiento
-import { questions as questionsTable } from "./schema.js";
+import { questions as questionsTable } from "../shared/schema.js";
 import { inArray } from "drizzle-orm";
 //deep seek entrenamiento:
-import { answers } from "./schema.js"; // Asegúrate de importar correctamente
+import { answers } from "../shared/schema.js"; // Asegúrate de importar correctamente
 
 //chat gpt dashboar personalizado
 import { requireAuth } from "./middleware/requireAuth.js";
@@ -29,8 +29,8 @@ import { DatabaseStorage } from './database-storage.js'; // Ruta ajustada para u
 //fin chat gpt cuestionarios a usuarios
 
 //chat gpt dashboar personalizado
-import { User } from './schema.js'; // Asegúrate de que este tipo esté bien definido
-import { userQuizzes, studentProgress, quizSubmissions } from "./schema.js";
+import { User } from "../shared/schema.js"; // Asegúrate de que este tipo esté bien definido
+import { userQuizzes, studentProgress, quizSubmissions } from "../shared/schema.js";
 
 declare global {
   namespace Express {
@@ -295,12 +295,10 @@ app.get('/api/admin/subcategories', async (req, res) => {
 
 // Crear una nueva subcategoría
 app.post('/api/admin/subcategories', async (req, res) => {
-  const { name, categoryId, description } = req.body;
-  //console.log("📦 Creando subcategoría con:", { name, categoryId });
+  const { name, categoryId, description, youtube_sublink } = req.body;
 
   try {
-    const subcategory = await storage.createSubcategory({ name, categoryId, description });
-    //console.log("✅ Subcategoría creada:", subcategory);
+    const subcategory = await storage.createSubcategory({ name, categoryId, description, youtube_sublink });
     res.json(subcategory);
   } catch (err) {
     console.error("❌ Error al crear subcategoría:", err);
@@ -340,17 +338,14 @@ app.delete('/api/admin/subcategories/:id', async (req, res) => {
 
 app.put('/api/admin/subcategories/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const { name, description } = req.body;
-
+  const { name, description, youtube_sublink } = req.body;
 
   if (!name || isNaN(id)) {
     return res.status(400).json({ error: "Datos inválidos" });
   }
 
   try {
-    await storage.updateSubcategory(id, name, description);
-
-    //console.log(`✅ Subcategoría ${id} actualizada a: ${name}`);
+    await storage.updateSubcategory(id, name, description, youtube_sublink);
     res.json({ success: true });
   } catch (err) {
     console.error("❌ Error al actualizar subcategoría:", err);

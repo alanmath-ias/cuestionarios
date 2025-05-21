@@ -7,19 +7,19 @@ import {
   type Answer, type InsertAnswer,
   type StudentProgress, type InsertStudentProgress,
   type StudentAnswer, type InsertStudentAnswer,
-} from "./schema.js";
+} from "../shared/schema.js";
 
 import { db } from "./db.js";
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { IStorage } from "./storage.js";
-import { userQuizzes } from "./schema.js";
+import { userQuizzes } from "../shared/schema.js";
 import { drizzle } from "drizzle-orm/postgres-js";
 import type { QuizResult } from "../shared/quiz-types.js";
 import type { QuizAnswerResult } from "../shared/quiz-types.js";
 
 //chat gpt calificaciones
-import { quizSubmissions } from "./schema.js";
-import { quizFeedback } from "./schema.js"; 
+import { quizSubmissions } from "../shared/schema.js";
+import { quizFeedback } from "../shared/schema.js";
 
 //chat gpt dashboard personalizado
 import { userCategories } from "../shared/schema.js";
@@ -100,15 +100,36 @@ export class DatabaseStorage implements IStorage {
   }
   //subcategory methods
   async getAllSubcategories() {
-    return db.select().from(subcategories).leftJoin(categories, eq(subcategories.categoryId, categories.id));
+    return db
+      .select({
+        id: subcategories.id,
+        name: subcategories.name,
+        description: subcategories.description,
+        categoryId: subcategories.categoryId,
+        youtube_sublink: subcategories.youtube_sublink, // Incluye el nuevo campo
+      })
+      .from(subcategories)
+      .leftJoin(categories, eq(subcategories.categoryId, categories.id));
   }
   
   async getSubcategoriesByCategory(categoryId: number) {
-    return db.select().from(subcategories).where(eq(subcategories.categoryId, categoryId));
+    return db
+      .select({
+        id: subcategories.id,
+        name: subcategories.name,
+        description: subcategories.description,
+        categoryId: subcategories.categoryId,
+        youtube_sublink: subcategories.youtube_sublink, // Incluye el nuevo campo
+      })
+      .from(subcategories)
+      .where(eq(subcategories.categoryId, categoryId));
   }
   
-  async createSubcategory({ name, categoryId, description }: { name: string; categoryId: number; description?: string }) {
-    return db.insert(subcategories).values({ name, categoryId, description }).returning();
+  async createSubcategory({ name, categoryId, description, youtube_sublink }: { name: string; categoryId: number; description?: string; youtube_sublink?: string | null }) {
+    return db
+      .insert(subcategories)
+      .values({ name, categoryId, description, youtube_sublink }) // Incluye el nuevo campo
+      .returning();
   }
   
   
@@ -116,10 +137,10 @@ export class DatabaseStorage implements IStorage {
     return db.delete(subcategories).where(eq(subcategories.id, id));
   }
   
-  async updateSubcategory(id: number, name: string, description?: string) {
+  async updateSubcategory(id: number, name: string, description?: string, youtube_sublink?: string | null) {
     await db
       .update(subcategories)
-      .set({ name, description })
+      .set({ name, description, youtube_sublink }) // Incluye el nuevo campo
       .where(eq(subcategories.id, id));
   }
   
@@ -313,6 +334,7 @@ async getCategoriesByUserId(userId: number) {
     .select({
       id: categories.id,
       name: categories.name,
+      youtubeLink: categories.youtubeLink, // Incluye youtubeLink
     })
     .from(userCategories)
     .innerJoin(categories, eq(userCategories.categoryId, categories.id))

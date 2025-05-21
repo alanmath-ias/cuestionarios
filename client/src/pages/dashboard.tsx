@@ -23,6 +23,9 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { useEffect } from "react";
+import { Youtube } from 'lucide-react'; // Para Lucide Icons
+// o
+import { FaYoutube } from 'react-icons/fa'; // Para Font Awesome
 
 interface QuizWithFeedback extends UserQuiz {
   progressId?: string;
@@ -296,17 +299,18 @@ export default function UserDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {categories?.map((category) => (
           <Card
-            key={category.id}
-            className="rounded-2xl bg-gradient-to-tr from-indigo-100 to-white border border-indigo-200 shadow-md hover:shadow-lg transition-all duration-300"
-          >
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <div>
-                <CardTitle className="text-lg text-indigo-800 font-semibold">{category.name}</CardTitle>
-                <CardDescription className="text-sm text-indigo-600">Categoría asignada</CardDescription>
-              </div>
-              <BookOpen className="h-6 w-6 text-indigo-600" />
-            </CardHeader>
-            <CardContent>
+          key={category.id}
+          className="rounded-2xl bg-gradient-to-tr from-indigo-100 to-white border border-indigo-200 shadow-md hover:shadow-lg transition-all duration-300"
+        >
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <div>
+              <CardTitle className="text-lg text-indigo-800 font-semibold">{category.name}</CardTitle>
+              <CardDescription className="text-sm text-indigo-600">Categoría asignada</CardDescription>
+            </div>
+            <BookOpen className="h-6 w-6 text-indigo-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-2">
               <div className="flex flex-col sm:flex-row gap-2">
                 <Link href={`/category/${category.id}`} className="w-full sm:w-auto">
                   <Button
@@ -326,8 +330,23 @@ export default function UserDashboard() {
                   </Button>
                 </Link>
               </div>
-            </CardContent>
-          </Card>
+              {/* Botón de YouTube con nuevo estilo */}
+              {category.youtubeLink && (
+                <a
+                  href={category.youtubeLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto"
+                >
+                  <Button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#FF0000] hover:bg-[#CC0000] text-white font-semibold">
+                    <Youtube className="w-5 h-5" />
+                    YouTube VIDEOS
+                  </Button>
+                </a>
+              )}
+            </div>
+          </CardContent>
+        </Card>
         ))}
       </div>
 

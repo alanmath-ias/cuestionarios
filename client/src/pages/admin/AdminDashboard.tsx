@@ -4,6 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { Youtube } from 'lucide-react'; // Para Lucide Icons
+// o
+import { FaYoutube } from 'react-icons/fa'; // Para Font Awesome
 import {
   BadgeCheck,
   ClipboardList,
@@ -46,7 +49,7 @@ const AdminDashboard: React.FC = () => {
     pendingReview: 0,
   });
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
-  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string; youtubeLink?: string | null }[]>([]);
   const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
 
   useEffect(() => {
@@ -188,37 +191,53 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Vista de categorías */}
-      <div>
-        <h2 className="text-2xl font-bold mt-8 mb-4 flex items-center gap-2">
-          <ClipboardList className="w-5 h-5 text-indigo-600" /> Categorías disponibles
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {categories.map(category => (
-            <Card key={category.id} className="hover:shadow-md transition">
-              <CardContent className="p-4 space-y-2">
-                <p className="text-lg font-semibold text-indigo-700">{category.name}</p>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Link to={`/category/${category.id}`} className="w-full sm:w-auto">
-                    <Button
-                      variant="outline"
-                      className="w-full sm:w-auto flex items-center justify-center font-semibold border-indigo-500 text-indigo-700"
-                    >
-                      Ver cuestionarios
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link to={`/training/${category.id}`} className="w-full sm:w-auto">
-                    <Button className="w-full sm:w-auto flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
-                      Entrenamiento
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+{/* Vista de categorías */}
+<div>
+  <h2 className="text-2xl font-bold mt-8 mb-4 flex items-center gap-2">
+    <ClipboardList className="w-5 h-5 text-indigo-600" /> Categorías disponibles
+  </h2>
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+    {categories.map(category => (
+      <Card key={category.id} className="hover:shadow-md transition">
+        <CardContent className="p-4 space-y-2">
+          <p className="text-lg font-semibold text-indigo-700">{category.name}</p>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Link to={`/category/${category.id}`} className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto flex items-center justify-center font-semibold border-indigo-500 text-indigo-700"
+                >
+                  Ver cuestionarios
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+              <Link to={`/training/${category.id}`} className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
+                  Entrenamiento
+                </Button>
+              </Link>
+            </div>
+            {/* Botón de YouTube con nuevo estilo */}
+            {category.youtubeLink && (
+              <a
+                href={category.youtubeLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto"
+              >
+                <Button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#FF0000] hover:bg-[#CC0000] text-white font-semibold">
+                  <Youtube className="w-5 h-5" />
+                  YouTube VIDEOS
+                </Button>
+              </a>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    ))}
+  </div>
+</div>
     </div>
   );
 };

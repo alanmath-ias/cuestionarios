@@ -29,6 +29,7 @@ const formSchema = z.object({
   name: z.string().min(3, { message: "El nombre debe tener al menos 3 caracteres" }),
   description: z.string().min(10, { message: "La descripción debe tener al menos 10 caracteres" }),
   colorClass: z.string(),
+  youtubeLink: z.string().url({ message: "Debe ser un enlace válido" }).optional(), // Campo opcional
 });
 
 export default function CategoriesAdmin() {
@@ -45,6 +46,7 @@ export default function CategoriesAdmin() {
       name: "",
       description: "",
       colorClass: "primary",
+      youtubeLink: "", // Valor predeterminado vacío
     },
   });
 
@@ -168,6 +170,7 @@ export default function CategoriesAdmin() {
       name: category.name,
       description: category.description,
       colorClass: category.colorClass || "primary",
+      youtubeLink: category.youtubeLink || "", // Incluye el enlace o un valor vacío
     });
   }
 
@@ -212,91 +215,105 @@ export default function CategoriesAdmin() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nombre</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ej: Estadística" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Descripción</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Describe brevemente los temas que incluye esta área" 
-                            rows={3}
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="colorClass"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Color</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona un color" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {colorOptions.map((color) => (
-                              <SelectItem key={color.value} value={color.value}>
-                                <div className="flex items-center gap-2">
-                                  <div className={`h-4 w-4 rounded-full bg-${color.value}`}></div>
-                                  <span>{color.label}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex justify-end gap-2 pt-4">
-                    {editingId && (
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={handleCancelEdit}
-                      >
-                        Cancelar
-                      </Button>
-                    )}
-                    <Button 
-                      type="submit" 
-                      disabled={createMutation.isPending || updateMutation.isPending}
-                    >
-                      {(createMutation.isPending || updateMutation.isPending) && <Spinner className="mr-2 h-4 w-4" />}
-                      {editingId ? "Actualizar" : "Crear categoría"}
-                    </Button>
+            <Form {...form}>
+  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <FormField
+      control={form.control}
+      name="name"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Nombre</FormLabel>
+          <FormControl>
+            <Input placeholder="Ej: Estadística" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+    
+    <FormField
+      control={form.control}
+      name="description"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Descripción</FormLabel>
+          <FormControl>
+            <Textarea 
+              placeholder="Describe brevemente los temas que incluye esta área" 
+              rows={3}
+              {...field} 
+            />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+    
+    <FormField
+      control={form.control}
+      name="youtubeLink"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Enlace de YouTube (opcional)</FormLabel>
+          <FormControl>
+            <Input placeholder="https://www.youtube.com/watch?v=..." {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+    
+    <FormField
+      control={form.control}
+      name="colorClass"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Color</FormLabel>
+          <Select
+            onValueChange={field.onChange}
+            value={field.value}
+          >
+            <FormControl>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona un color" />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent>
+              {colorOptions.map((color) => (
+                <SelectItem key={color.value} value={color.value}>
+                  <div className="flex items-center gap-2">
+                    <div className={`h-4 w-4 rounded-full bg-${color.value}`}></div>
+                    <span>{color.label}</span>
                   </div>
-                </form>
-              </Form>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+    
+    <div className="flex justify-end gap-2 pt-4">
+      {editingId && (
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={handleCancelEdit}
+        >
+          Cancelar
+        </Button>
+      )}
+      <Button 
+        type="submit" 
+        disabled={createMutation.isPending || updateMutation.isPending}
+      >
+        {(createMutation.isPending || updateMutation.isPending) && <Spinner className="mr-2 h-4 w-4" />}
+        {editingId ? "Actualizar" : "Crear categoría"}
+      </Button>
+    </div>
+  </form>
+</Form>
             </CardContent>
           </Card>
         </div>

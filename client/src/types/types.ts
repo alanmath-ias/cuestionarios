@@ -15,6 +15,7 @@ export interface Category {
   name: string;
   description: string;
   colorClass?: string;
+  youtubeLink?: string | null; // Opcional y puede ser null
 }
 
 export interface Quiz {
