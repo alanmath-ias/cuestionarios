@@ -424,6 +424,12 @@ export type UserQuiz = {
 });*/
 
 
+export const parents = pgTable("parents", {
+	id: serial("id").primaryKey(),
+	name: varchar("name", { length: 100 }).notNull(), // Ej: Ximena
+	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	childId: integer("child_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  });
 
 
 // Types exports

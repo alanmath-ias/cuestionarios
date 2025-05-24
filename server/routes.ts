@@ -30,12 +30,16 @@ import { DatabaseStorage } from './database-storage.js'; // Ruta ajustada para u
 
 //chat gpt dashboar personalizado
 import { User } from "../shared/schema.js"; // Asegúrate de que este tipo esté bien definido
-import { userQuizzes, studentProgress, quizSubmissions } from "../shared/schema.js";
+import { userQuizzes, studentProgress, quizSubmissions, parents } from "../shared/schema.js";
+//import bcrypt from 'bcrypt';
+
+
 
 declare global {
   namespace Express {
     interface Request {
       user?: User;
+      role?: string;
     }
   }
 }
@@ -58,6 +62,14 @@ type Answer = {
   questionId: number;
   // otras propiedades...
 };
+
+type ProgressWithQuiz = typeof studentProgress.$inferSelect & {
+  quiz: {
+    id: number;
+    title: string;
+  };
+};
+
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1183,7 +1195,10 @@ app.get("/api/user/categories", requireAuth, async (req, res) => {
     }
     
         
-    const userId = req.user.id;
+    //const userId = req.user.id;
+     // Cambio principal: Permitir user_id como parámetro opcional
+     const userId = req.query.user_id ? Number(req.query.user_id) : req.user.id; // Línea modificada
+
     const categories = await storage.getCategoriesByUserId(userId);
     res.json(categories);
   } catch (error) {
@@ -1201,7 +1216,10 @@ app.get("/api/user/quizzes", requireAuth, async (req, res) => {
     }
     
        
-    const userId = req.user.id;
+    //const userId = req.user.id;
+// Cambio principal: Permitir user_id como parámetro opcional
+const userId = req.query.user_id ? Number(req.query.user_id) : req.user.id; // Línea modificada
+
     const quizzes = await storage.getQuizzesByUserId(userId);
     res.json(quizzes);
   } catch (error) {
@@ -1494,7 +1512,10 @@ app.delete('/api/quiz-submissions/:progressId', async (req: ExpressRequest, res:
 
 app.get("/api/user/alerts", requireAuth, async (req, res) => {
   try {
-    const userId = req.user?.id;
+    
+    //const userId = req.user?.id;
+    const userId = req.query.user_id ? Number(req.query.user_id) : req.user?.id;
+
     if (!userId) {
       return res.status(401).json({ error: "No autenticado" });
     }
@@ -1572,6 +1593,139 @@ app.get('/api/admin/user-progress-summary', async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+/*
+// Obtener nombre del hijo asignado al padre
+// Obtener el nombre del estudiante del padre logueado
+app.get("/api/parent/student", async (req: Request, res: Response) => {
+  const parentId = req.session.userId;
+
+  if (!parentId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const parent = await db.query.parents.findFirst({
+    where: eq(parents.userId, parentId),
+  });
+
+  if (!parent) {
+    return res.status(404).json({ error: "Parent record not found" });
+  }
+
+  const student = await db.query.users.findFirst({
+    where: eq(users.id, parent.childId),
+    columns: { name: true },
+  });
+
+  if (!student) {
+    return res.status(404).json({ error: "Student not found" });
+  }
+
+  return res.json({ studentName: student.name });
+});
+
+
+// Obtener quizzes del estudiante hijo desde el padre
+app.get("/api/parent/student-quizzes", async (req: Request, res: Response) => {
+  const parentId = req.session.userId;
+
+  if (!parentId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const parent = await db.query.parents.findFirst({
+      where: eq(parents.userId, parentId),
+    });
+
+    if (!parent) {
+      return res.status(404).json({ error: "Parent record not found" });
+    }
+
+    const childId = parent.childId;
+
+    const progressRecords = await db.query.studentProgress.findMany({
+      where: eq(studentProgress.userId, childId),
+      with: {
+        quiz: {
+          columns: { id: true, title: true },
+        },
+      },
+    });
+
+    const quizIds = progressRecords.map((p) => p.quiz.id);
+
+    const submissions = await db.query.quizSubmissions.findMany({
+      where: and(
+        eq(quizSubmissions.userId, childId),
+        inArray(quizSubmissions.quizId, quizIds)
+      ),
+    });
+
+    const result = progressRecords.map((progress) => {
+      const submission = submissions.find(
+        (s) =>
+          s.quizId === progress.quiz.id &&
+          s.progressId === progress.id
+      );
+
+      return {
+        quizId: progress.quiz.id,
+        progressId: progress.id,
+        title: progress.quiz.title,
+        status: progress.status,
+        score: submission?.score ?? null,
+        reviewed: submission?.reviewed ?? false,
+        feedback: submission?.feedback ?? null,
+      };
+    });
+
+    return res.json(result);
+  } catch (error) {
+    console.error("Error fetching student quizzes:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+*/// el anterior era INTENtO DE COMPONENTE parentdashboard muchos problemas
+
+//para la creacion de usuario  padre e hijo desde el admin:
+app.post('/api/auth/register-parent', requireAdmin, async (req, res) => {
+  const { parent, child } = req.body;
+
+  try {
+    const result = await storage.registerParentWithChild(parent, child);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error al registrar padre e hijo:', error);
+    res.status(500).json({ error: 'Error al registrar padre e hijo' });
+  }
+});
+
+
+
+app.get('/api/parent/child', requireAuth, async (req: Request, res: Response) => {
+  try {
+    // 2. Validar que req.user existe
+    if (!req.user) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    const parentId = req.user.id;
+    const child = await storage.getChildByParentId(parentId);
+    
+    if (!child) {
+      return res.status(404).json({ error: 'No se encontró un hijo asociado a este padre' });
+    }
+    
+    res.status(200).json({
+      child_id: child.id,
+      child_name: child.name
+    });
+  } catch (error) {
+    console.error('Error al obtener hijo del padre:', error);
+    res.status(500).json({ error: 'Error al obtener información del hijo' });
+  }
+});
+
 
   const httpServer = createServer(app);
   return httpServer;

@@ -275,6 +275,15 @@ export const insertUserCategorySchema = createInsertSchema(userCategories).pick(
   userId: true,
   categoryId: true,
 });
+
+
+export const parents = pgTable("parents", {
+	id: serial("id").primaryKey(),
+	name: varchar("name", { length: 100 }).notNull(), // Ej: Ximena
+	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	childId: integer("child_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  });
+
 // Types exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -305,5 +314,6 @@ export type UserCategory = typeof userCategories.$inferSelect;
 export type InsertUserCategory = z.infer<typeof insertUserCategorySchema>;
 
 export type Subcategory = typeof subcategories.$inferSelect;
+export type Parent = typeof parents.$inferSelect;
 
 

@@ -79,3 +79,14 @@ export type UserQuiz = {
   status?: "not_started" | "in_progress" | "completed"; // Puede ser opcional
   reviewed?: boolean;
 };
+
+// Tipo para la subcategoría (basado en tu schema de Drizzle)
+export interface Subcategory {
+  id: number
+  name: string
+  description: string | null
+  categoryId: number
+  colorClass?: string | null
+  youtube_sublink?: string | null
+}
+

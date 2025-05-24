@@ -29,6 +29,8 @@ import TrainingPageSub from "@/pages/training2/[categoryId]/[subcategoryId]";
 {/*chat gpt calificar*/}
 import Calificar from "@/pages/admin/Calificar";
 import subcategories from "./pages/admin/subcategories";
+import RegistrarPadres from "@/pages/admin/RegistrarPadres";
+import ParentDashboard from "@/pages/parent/ParentDashboard";
 
 function ProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
   const { data: user, isLoading } = useQuery<User>({
@@ -42,9 +44,11 @@ function ProtectedRoute({ component: Component, ...rest }: { component: any, pat
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
-        navigate('/auth');
+        navigate('/auth'); // Redirige a la página de inicio de sesión si no está autenticado
       } else if (user.role === 'admin' && rest.path === '/') {
-        navigate('/admin'); // Redirige admins desde la raíz
+        navigate('/admin'); // Redirige a /admin si el usuario es administrador
+      } else if (user.role === 'parent') {
+        navigate('/parent-dashboard'); // Redirige a /parent-dashboard si el usuario es un padre
       }
     }
   }, [user, isLoading, navigate]);
@@ -187,7 +191,16 @@ function Router() {
   <TrainingPageSub /> {/* Sin pasar props manualmente */}
 </Route>
 
-{/*fin chat gpt entrenamiento*/}
+<Route path="/admin/RegistrarPadres">
+  <AdminProtectedRoute 
+    component={RegistrarPadres}
+    path="/admin/RegistrarPadres" 
+  />
+</Route>
+
+<Route path="/parent-dashboard">
+        {() => <ProtectedRoute component={ParentDashboard} path="/parent-dashboard" />}
+      </Route>
 
       {/* Ruta de 404 */}
       <Route>

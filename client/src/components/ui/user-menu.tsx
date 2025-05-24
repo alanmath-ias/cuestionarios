@@ -113,6 +113,9 @@ const handleLogout = async () => {
             <DropdownMenuItem onClick={() => setLocation('/admin/quizzes')}>
               Gestionar Cuestionarios
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLocation('/admin/RegistrarPadres')}>
+              Registrar Padres
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLocation('/admin/urlusercategories')}>
               Gestionar Usuarios
             </DropdownMenuItem>

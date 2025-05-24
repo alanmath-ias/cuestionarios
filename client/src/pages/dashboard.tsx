@@ -110,7 +110,7 @@ function CompletedQuizCard({ quiz }: { quiz: QuizWithFeedback }) {
       <CardContent>
         {!loadingFeedback && feedback?.feedback && (
           <div className="mb-3 bg-white p-3 rounded border border-green-200">
-            <h4 className="text-sm font-semibold text-green-800 mb-1">¿Y cómo te fue?</h4>
+            <h4 className="text-sm font-semibold text-green-800 mb-1">Retroalimentación AlanMath:</h4>
             <p className="text-sm text-gray-700 whitespace-pre-wrap">{feedback.feedback}</p>
           </div>
         )}

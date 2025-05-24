@@ -24,6 +24,10 @@ import { quizFeedback } from "../shared/schema.js";
 //chat gpt dashboard personalizado
 import { userCategories } from "../shared/schema.js";
 import { subcategories, Subcategory } from "../shared/schema.js";
+import { parents } from "../shared/schema.js";
+import bcrypt from 'bcryptjs';
+import { Child } from '../shared/quiz-types.js'; // Ajusta la ruta
+import { Pool } from 'pg';
 
  // Asegúrate que esté importado
 
@@ -32,7 +36,12 @@ import { subcategories, Subcategory } from "../shared/schema.js";
   subcategory?: Subcategory | null;
 }
 
+
+
+
 export class DatabaseStorage implements IStorage {
+ 
+  
   // User methods
   async getUsers(): Promise<User[]> {
     return await db.select().from(users);
@@ -828,5 +837,69 @@ async getUserProgressSummary() {
 }
 
 
+async registerParentWithChild(
+  parent: { username: string, password: string, name: string, email?: string },
+  child: { username: string, password: string, name: string, email?: string }
+) {
+  // Validar que los usernames no existan
+  const [existingParent] = await this.db.select().from(users).where(eq(users.username, parent.username));
+  const [existingChild] = await this.db.select().from(users).where(eq(users.username, child.username));
+
+  if (existingParent || existingChild) {
+    throw new Error('Nombre de usuario ya está en uso');
+  }
+
+  // Hash de contraseñas
+  //const parentPassword = await bcrypt.hash(parent.password, 10);
+  
+  //const childPassword = await bcrypt.hash(child.password, 10);
+
+  // Insertar hijo
+  const [childUser] = await this.db.insert(users).values({
+    username: child.username,
+    password: child.password,  //para password hasheada usar childPassword
+    name: child.name,
+    email: child.email,
+    role: 'student'
+  }).returning();
+
+  // Insertar padre
+  const [parentUser] = await this.db.insert(users).values({
+    username: parent.username,
+    password: parent.password, //para password hasheada usar parentPassword
+    name: parent.name,
+    email: parent.email,
+    role: 'parent'
+  }).returning();
+
+  // Enlazar en tabla parents
+  await this.db.insert(parents).values({
+    name: parent.name,
+    userId: parentUser.id,
+    childId: childUser.id,
+  });
+
+  return { success: true, parentId: parentUser.id, childId: childUser.id };
+}
+getChildByParentId(parentId: number): Promise<Child | null>;
+
+async getChildByParentId(parentId: number): Promise<Child | null> {
+  try {
+    const result = await this.db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+      })
+      .from(parents)
+      .innerJoin(users, eq(parents.childId, users.id))
+      .where(eq(parents.userId, parentId));
+
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error('Error en getChildByParentId:', error);
+    throw new Error('Failed to get child by parent ID');
+  }
+}
 
 }

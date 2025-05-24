@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Trash, Clock, BookOpen, Link as LinkIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Category, Quiz } from "@/types/types";
+import { Category, Quiz, Subcategory } from "@/types/types";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { User } from '@/types/types';
@@ -61,6 +61,7 @@ export default function QuizzesAdmin() {
   });
 
   // Cargar todas las subcategorías con formato corregido
+  /*
   const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = useQuery({
     queryKey: ["/api/admin/subcategories"],
     queryFn: async () => {
@@ -70,7 +71,16 @@ export default function QuizzesAdmin() {
       return data.map((item: any) => item.subcategories);
     }
   });
-
+*/
+// Query corregida para subcategorías
+const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = useQuery<Subcategory[]>({
+  queryKey: ["/api/admin/subcategories"],
+  queryFn: async () => {
+    const res = await fetch("/api/admin/subcategories");
+    if (!res.ok) throw new Error(res.statusText);
+    return res.json(); // Devuelve los datos directamente
+  }
+});
   const isLoading = loadingCategories || loadingQuizzes || loadingSubcategoriesList;
 
   const form = useForm<z.infer<typeof formSchema>>({

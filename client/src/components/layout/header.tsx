@@ -76,6 +76,11 @@ export function Header({ user, pendingCount }: HeaderProps) {
         <span className="hover:text-white/80 transition-colors cursor-pointer">Calificar</span>
       </Link>
     </li>
+    <li>
+      <Link href="/admin/RegistrarPadres">
+        <span className="hover:text-white/80 transition-colors cursor-pointer">Padres</span>
+      </Link>
+    </li>
   </>
 )}
 

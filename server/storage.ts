@@ -8,6 +8,7 @@ import {
   studentAnswers, StudentAnswer, InsertStudentAnswer
 } from "./schema.js";
 import { db } from './db.js'; // Aquí cambiamos la extensión al usar importaciones locales
+import { Child } from '../shared/quiz-types.js'; // Ajusta la ruta
 
 export interface IStorage {
   // User methods
@@ -16,6 +17,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, userData: Partial<User>): Promise<User>;
+  //getChildByParentId(parentId: number): Promise<Child | null>;
   
   // Category methods
   getCategories(): Promise<Category[]>;

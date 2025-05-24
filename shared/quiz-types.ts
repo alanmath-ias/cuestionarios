@@ -20,4 +20,13 @@ export interface QuizResult {
   };
   quiz: Quiz;
   answers: QuizAnswerResult[];
+
+}
+
+// types/child.type.ts (o en tu archivo de interfaces)
+export interface Child {
+  id: number;
+  name: string;
+  email: string | null; // Permitir que sea null
+  // Agrega otros campos relevantes que necesites
 }
