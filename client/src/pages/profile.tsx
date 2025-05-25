@@ -140,7 +140,7 @@ export default function ProfilePage() {
         </CardContent>
 
         <CardFooter className="flex justify-end">
-          <Button variant="outline" onClick={() => setLocation('/')}>
+          <Button variant="outline" onClick={() => setLocation('/admin/AdminDashboard')}>
             Volver al inicio
           </Button>
         </CardFooter>

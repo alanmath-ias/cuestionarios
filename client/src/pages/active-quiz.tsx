@@ -15,6 +15,13 @@ import { Badge } from '@/components/ui/badge';
 import { QuestionContent } from '@/components/QuestionContent';
 //import { insertStudentProgressSchema } from '@shared/schema'
 import { useSession } from '../hooks/useSession';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
+
 
 interface Quiz {
   id: number;
@@ -456,14 +463,30 @@ function ActiveQuiz() {
                 Anterior
               </Button>
               
-              <Button 
-                onClick={handleNextQuestion}
-              >
-                {currentQuestionIndex >= (questions?.length || 0) - 1 ? 'Finalizar' : 'Siguiente'}
-                {currentQuestionIndex < (questions?.length || 0) - 1 && (
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                )}
-              </Button>
+              {session?.role === 'parent' && currentQuestionIndex >= (questions?.length || 0) - 1 ? (
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span>
+          <Button disabled>
+            Finalizar
+          </Button>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>
+        Los padres no pueden finalizar cuestionarios.
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+) : (
+  <Button onClick={handleNextQuestion}>
+    {currentQuestionIndex >= (questions?.length || 0) - 1 ? 'Finalizar' : 'Siguiente'}
+    {currentQuestionIndex < (questions?.length || 0) - 1 && (
+      <ArrowRight className="ml-1 h-4 w-4" />
+    )}
+  </Button>
+)}
+
             </div>
           </CardContent>
         </Card>
