@@ -111,7 +111,7 @@ function AdminQuizReview() {
   const renderContent = (content: string) => {
     if (!content) return null;
     
-    return content.split('*').map((part, i) => {
+    return content.split('¡').map((part, i) => {
       if (i % 2 === 0) {
         return <span key={i}>{part}</span>;
       } else {

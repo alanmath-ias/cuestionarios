@@ -45,7 +45,7 @@ export function MathText({ children, className = '' }: { children: string, class
       // Automatically searches for $...$ delimiters and renders math
       try {
         // Basic regex to match $...$ patterns
-        const mathRegex = /\$(.*?)\$/g;
+        const mathRegex = /\$(.¡?)\$/g;
         let content = children;
         let match;
         let lastIndex = 0;

@@ -325,7 +325,7 @@ const TrainingPageSub = () => {
           <div className="mb-3 flex justify-center text-center">
             <div className="whitespace-pre-wrap">
               <h2 className="text-xl font-semibold">
-                {currentQuestion.content.split('*').map((part, i) => (
+                {currentQuestion.content.split('¡').map((part, i) => (
                   i % 2 === 0 ? 
                     <span key={i}>{part}</span> : 
                     <MathDisplay key={i} math={part.trim()} inline />

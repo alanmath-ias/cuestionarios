@@ -35,7 +35,7 @@ export function QuizOption({
   const renderContent = () => {
     if (!content) return null;
     
-    const parts = content.split('*');
+    const parts = content.split('¡');
     if (parts.length === 1) return <span>{content}</span>;
 
     return parts.map((part, i) => (
