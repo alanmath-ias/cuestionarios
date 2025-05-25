@@ -8,7 +8,7 @@
     "dev:server": "cross-env TS_NODE_PROJECT=server/tsconfig.json tsx watch -r tsconfig-paths/register server/index.ts",
     "dev:client": "vite --config client/vite.config.ts",
     "build": "npm run build:client && npm run copy-shared-files && npm run build:server",
-    "build:client": "vite build --logLevel silent",
+    "build:client": "vite build",
     "build:server": "tsc -p server/tsconfig.json && npm run rename:register-aliases",
     "copy-shared-files": "copyfiles -u 1 \"shared/**/*.ts\" \"shared/**/*.json\" \"dist/shared\"",
     "rename:register-aliases": "shx mv ./dist/server/register-aliases.js ./dist/server/register-aliases.mjs",
