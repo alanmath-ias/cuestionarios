@@ -30,7 +30,7 @@ import TrainingPageSub from "@/pages/training2/[categoryId]/[subcategoryId]";
 import Calificar from "@/pages/admin/Calificar";
 import subcategories from "./pages/admin/subcategories";
 import RegistrarPadres from "@/pages/admin/RegistrarPadres";
-import ParentDashboard from "@/pages/parent/ParentDashboard";
+import ParentDashboard from "@/pages/parent/parentDashboard";
 
 function ProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
   const { data: user, isLoading } = useQuery<User>({
