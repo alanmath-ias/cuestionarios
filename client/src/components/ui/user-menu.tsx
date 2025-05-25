@@ -105,19 +105,19 @@ const handleLogout = async () => {
               Panel Administrativo
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLocation('/admin/categories')}>
-              Gestionar Categorías
+              Gestionar Materias
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLocation('/admin/subcategories')}>
-            Subcategorías
+              Gestionar Temas
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLocation('/admin/quizzes')}>
               Gestionar Cuestionarios
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/admin/RegistrarPadres')}>
-              Registrar Padres
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLocation('/admin/urlusercategories')}>
               Gestionar Usuarios
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLocation('/admin/RegistrarPadres')}>
+              Registrar Padres
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLocation('/admin/Calificar')}>
              Calificar

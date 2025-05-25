@@ -44,7 +44,7 @@ async function fetchChildCategories(childId: string) {
   const response = await fetch(`/api/user/categories?user_id=${childId}`, {
     credentials: "include",
   });
-  if (!response.ok) throw new Error("Error al obtener categorías del hijo");
+  if (!response.ok) throw new Error("Error al obtener materias del hijo");
   return response.json();
 }
 

@@ -34,8 +34,8 @@ const difficultyOptions = [
 const formSchema = z.object({
   title: z.string().min(3, { message: "El título debe tener al menos 3 caracteres" }),
   description: z.string().min(10, { message: "La descripción debe tener al menos 10 caracteres" }),
-  categoryId: z.string().min(1, { message: "Debes seleccionar una categoría" }),
-  subcategoryId: z.string().min(1, { message: "Debes seleccionar una subcategoría" }),
+  categoryId: z.string().min(1, { message: "Debes seleccionar una materia" }),
+  subcategoryId: z.string().min(1, { message: "Debes seleccionar un tema" }),
   timeLimit: z.string().min(1, { message: "Debes establecer un tiempo límite" }),
   difficulty: z.string().min(1, { message: "Debes seleccionar una dificultad" }),
   isPublic: z.boolean().default(false),
@@ -130,7 +130,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
         console.error("Error fetching subcategories:", error);
         toast({
           title: "Error",
-          description: "No se pudieron cargar las subcategorías",
+          description: "No se pudieron cargar los Temas",
           variant: "destructive",
         });
       } finally {
@@ -454,7 +454,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                     name="categoryId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Categoría</FormLabel>
+                        <FormLabel>Materia</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
@@ -462,7 +462,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Selecciona una categoría" />
+                              <SelectValue placeholder="Selecciona una materia" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -483,7 +483,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                     name="subcategoryId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Subcategoría</FormLabel>
+                        <FormLabel>Tema</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
@@ -499,8 +499,8 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                               ) : (
                                 <SelectValue placeholder={
                                   !categoryId
-                                    ? "Primero selecciona una categoría"
-                                    : "Selecciona una subcategoría"
+                                    ? "Primero selecciona una materia"
+                                    : "Selecciona un tema"
                                 } />
                               )}
                             </SelectTrigger>
@@ -778,7 +778,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                     <AccordionItem value="uncategorized" className="border rounded-md">
                       <AccordionTrigger className="hover:no-underline px-4 py-3 bg-muted/50">
                         <div className="flex-1 text-left">
-                          <h3 className="text-lg font-medium">Sin categoría/subcategoría</h3>
+                          <h3 className="text-lg font-medium">Sin materia/tema</h3>
                           <p className="text-sm text-muted-foreground">
                             {quizzesWithoutClassification.length} cuestionario(s) no clasificado(s)
                           </p>

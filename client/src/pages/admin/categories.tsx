@@ -61,7 +61,7 @@ export default function CategoriesAdmin() {
       });
       
       if (!response.ok) {
-        throw new Error("Error al crear la categoría");
+        throw new Error("Error al crear la materia");
       }
       
       return response.json();
@@ -74,17 +74,17 @@ export default function CategoriesAdmin() {
         colorClass: "primary",
       });
       toast({
-        title: "Categoría creada",
-        description: "La categoría ha sido creada exitosamente",
+        title: "Materia creada",
+        description: "La materia ha sido creada exitosamente",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "No se pudo crear la categoría",
+        description: "No se pudo crear la materia",
         variant: "destructive",
       });
-      console.error("Error al crear la categoría:", error);
+      console.error("Error al crear la materia:", error);
     },
   });
 
@@ -99,7 +99,7 @@ export default function CategoriesAdmin() {
       });
       
       if (!response.ok) {
-        throw new Error("Error al actualizar la categoría");
+        throw new Error("Error al actualizar la materia");
       }
       
       return response.json();
@@ -113,17 +113,17 @@ export default function CategoriesAdmin() {
         colorClass: "primary",
       });
       toast({
-        title: "Categoría actualizada",
-        description: "La categoría ha sido actualizada exitosamente",
+        title: "Materia actualizada",
+        description: "La materia ha sido actualizada exitosamente",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "No se pudo actualizar la categoría",
+        description: "No se pudo actualizar la materia",
         variant: "destructive",
       });
-      console.error("Error al actualizar la categoría:", error);
+      console.error("Error al actualizar la materia:", error);
     },
   });
 
@@ -134,7 +134,7 @@ export default function CategoriesAdmin() {
       });
       
       if (!response.ok) {
-        throw new Error("Error al eliminar la categoría");
+        throw new Error("Error al eliminar la materia");
       }
       
       return response;
@@ -142,17 +142,17 @@ export default function CategoriesAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       toast({
-        title: "Categoría eliminada",
-        description: "La categoría ha sido eliminada exitosamente",
+        title: "Materia eliminada",
+        description: "La materia ha sido eliminada exitosamente",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "No se pudo eliminar la categoría",
+        description: "No se pudo eliminar la materia",
         variant: "destructive",
       });
-      console.error("Error al eliminar la categoría:", error);
+      console.error("Error al eliminar la materia:", error);
     },
   });
 
@@ -184,7 +184,7 @@ export default function CategoriesAdmin() {
   }
 
   function handleDelete(id: number) {
-    if (window.confirm("¿Estás seguro de eliminar esta categoría? Esta acción no se puede deshacer.")) {
+    if (window.confirm("¿Estás seguro de eliminar esta materia? Esta acción no se puede deshacer.")) {
       deleteMutation.mutate(id);
     }
   }
@@ -193,7 +193,7 @@ export default function CategoriesAdmin() {
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Administración de Categorías</h1>
+          <h1 className="text-3xl font-bold">Administración de Materias</h1>
           <p className="text-muted-foreground">Gestiona las áreas temáticas de matemáticas</p>
         </div>
         <div className="flex gap-2">
@@ -207,10 +207,10 @@ export default function CategoriesAdmin() {
         <div className="md:col-span-1">
           <Card className="sticky top-4">
             <CardHeader className="bg-muted/50">
-              <CardTitle>{editingId ? "Editar Categoría" : "Nueva Categoría"}</CardTitle>
+              <CardTitle>{editingId ? "Editar Materia" : "Nueva Materia"}</CardTitle>
               <CardDescription>
                 {editingId 
-                  ? "Actualiza los detalles de la categoría" 
+                  ? "Actualiza los detalles de la materia" 
                   : "Añade una nueva área temática para los cuestionarios"}
               </CardDescription>
             </CardHeader>
@@ -321,9 +321,9 @@ export default function CategoriesAdmin() {
         <div className="md:col-span-2">
           <Card>
             <CardHeader className="bg-muted/50">
-              <CardTitle>Categorías Existentes</CardTitle>
+              <CardTitle>Materias Existentes</CardTitle>
               <CardDescription>
-                Lista de todas las categorías disponibles en el sistema
+                Lista de todas las Materias disponibles en el sistema
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
@@ -354,7 +354,7 @@ export default function CategoriesAdmin() {
                               variant="destructive" 
                               size="sm"
                               onClick={() => handleDelete(category.id)}
-                              title="Eliminar categoría"
+                              title="Eliminar materia"
                             >
                               <Trash className="h-4 w-4" />
                             </Button>
@@ -369,16 +369,16 @@ export default function CategoriesAdmin() {
                   <div className="mb-4 rounded-full bg-muted h-12 w-12 flex items-center justify-center mx-auto">
                     <Trash className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <h3 className="text-lg font-medium">No hay categorías disponibles</h3>
+                  <h3 className="text-lg font-medium">No hay materias disponibles</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Crea tu primera categoría para empezar a organizar los cuestionarios.
+                    Crea tu primera materia para empezar a organizar los cuestionarios.
                   </p>
                 </div>
               )}
             </CardContent>
             <CardFooter className="border-t bg-muted/30 px-6 py-3">
               <p className="text-sm text-muted-foreground">
-                Total: <strong>{categories?.length || 0}</strong> categorías
+                Total: <strong>{categories?.length || 0}</strong> materias
               </p>
             </CardFooter>
           </Card>

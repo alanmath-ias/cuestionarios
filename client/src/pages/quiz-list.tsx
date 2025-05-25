@@ -174,7 +174,7 @@ function QuizList() {
         <section className="space-y-6">
           <h2 className="text-2xl font-semibold text-gray-800 dark:text-white flex items-center gap-2">
             <BookOpen className="h-6 w-6 text-blue-600" />
-            Subcategorías
+            Temas
           </h2>
 
 
@@ -326,7 +326,7 @@ function QuizList() {
           ) : (
             <Card className="bg-gray-50 border-gray-200">
               <CardContent className="p-6 text-center text-gray-500">
-                No hay cuestionarios en esta subcategoría
+                No hay cuestionarios en este tema
               </CardContent>
             </Card>
           )}
@@ -380,7 +380,7 @@ function QuizList() {
         <Card className="text-center py-12 bg-gradient-to-br from-gray-50 to-white">
           <CardContent className="space-y-4">
             <BookOpen className="mx-auto h-10 w-10 text-gray-400" />
-            <p className="text-gray-500 font-medium">No hay cuestionarios disponibles en esta categoría</p>
+            <p className="text-gray-500 font-medium">No hay cuestionarios disponibles en esta materia</p>
             <Button 
               variant="ghost" 
               className="text-blue-600" 

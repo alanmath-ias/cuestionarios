@@ -70,23 +70,23 @@ const UserCategoriesAdmin: React.FC = () => {
 
       if (!response.ok) throw new Error('Error al actualizar');
     } catch (err) {
-      setError('Error al actualizar categorías');
+      setError('Error al actualizar materias');
       console.error(err);
     }
   };
 
-  if (isUserLoading || loading) return <div className="p-4">Cargando categorías...</div>;
+  if (isUserLoading || loading) return <div className="p-4">Cargando materias...</div>;
   if (error) return <div className="p-4 text-red-500">{error}</div>;
 
   return (
     <div className="container mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-4">sadfAdministrar Categorías del Usuario</h2>
+      <h2 className="text-2xl font-bold mb-4">sadfAdministrar Materias del Usuario</h2>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Categorías Disponibles</h3>
+        <h3 className="text-lg font-semibold mb-4">Materias Disponibles</h3>
 
         {allCategories.length === 0 ? (
-          <p>No hay categorías disponibles</p>
+          <p>No hay materias disponibles</p>
         ) : (
           <div className="space-y-2">
             {allCategories.map(category => (

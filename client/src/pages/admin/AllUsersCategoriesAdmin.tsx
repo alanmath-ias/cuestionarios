@@ -85,7 +85,7 @@ const AllUsersCategoriesAdmin: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Administrar Categorías por Usuario</h2>
+      <h2 className="text-2xl font-bold mb-6">Administrar Materias por Usuario</h2>
       {usersData.map(({ user, categories }) => (
         <div key={user.id} className="mb-8 border rounded-lg p-4 shadow-sm">
           <h3 className="text-xl font-semibold mb-2">

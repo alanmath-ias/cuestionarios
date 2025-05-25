@@ -207,7 +207,7 @@ export default function UserDashboard() {
       )}
 
       <p className="text-muted-foreground mb-6">
-        Aquí puedes acceder a tus categorías y cuestionarios asignados
+        Aquí puedes acceder a tus Materias y Cuestionarios asignados
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -295,7 +295,7 @@ export default function UserDashboard() {
 
       </div>
 
-      <h2 className="text-xl font-semibold mb-3">Tus Categorías</h2>
+      <h2 className="text-xl font-semibold mb-3">Tus Materias</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {categories?.map((category) => (
           <Card
@@ -305,7 +305,7 @@ export default function UserDashboard() {
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <div>
               <CardTitle className="text-lg text-indigo-800 font-semibold">{category.name}</CardTitle>
-              <CardDescription className="text-sm text-indigo-600">Categoría asignada</CardDescription>
+              <CardDescription className="text-sm text-indigo-600">Materia asignada</CardDescription>
             </div>
             <BookOpen className="h-6 w-6 text-indigo-600" />
           </CardHeader>

@@ -139,7 +139,7 @@ export default function FreeQuizzes() {
                   <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-xl font-medium mb-2">No hay cuestionarios disponibles</h3>
                   <p className="text-muted-foreground">
-                    No se encontraron cuestionarios públicos en esta categoría.
+                    No se encontraron cuestionarios públicos en esta materia.
                   </p>
                 </div>
               )}

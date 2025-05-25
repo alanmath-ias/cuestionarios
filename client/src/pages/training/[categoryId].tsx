@@ -288,7 +288,7 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
               <h1 className="text-2xl font-bold">Entrenamiento</h1>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">No hay preguntas disponibles para esta categoría.</p>
+              <p className="text-muted-foreground">No hay preguntas disponibles para esta materia.</p>
             </CardContent>
             <CardFooter>
               <Link href="/">

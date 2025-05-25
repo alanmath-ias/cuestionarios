@@ -210,7 +210,7 @@ const TrainingPageSub = () => {
                   )}
                 </div>
                 <h1 className="text-3xl font-bold text-gray-800">
-                  {isGoodScore ? "¡Dominas esta subcategoría!" : "¡Buen progreso!"}
+                  {isGoodScore ? "¡Dominas este tema!" : "¡Buen progreso!"}
                 </h1>
                 <p className="text-lg text-gray-600">
                   {getRandomMessage('results')}
@@ -253,7 +253,7 @@ const TrainingPageSub = () => {
                 <Link href={`/category/${categoryId}`}>
                   <Button variant="outline" className="flex items-center gap-2">
                     <ChevronLeft className="h-4 w-4" />
-                    Volver a la categoría
+                    Volver a la materia
                   </Button>
                 </Link>
                 <Button onClick={enterReviewMode} className="gap-2">
@@ -274,13 +274,13 @@ const TrainingPageSub = () => {
         <div className="p-6 max-w-2xl mx-auto">
           <Card className="bg-gradient-to-br from-gray-50 to-white">
             <CardHeader>
-              <h1 className="text-2xl font-bold">Entrenamiento de subcategoría</h1>
+              <h1 className="text-2xl font-bold">Entrenamiento del Tema</h1>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
                 {isNaN(categoryIdNum) || isNaN(subcategoryIdNum)
                   ? "IDs inválidos"
-                  : "No hay preguntas disponibles para esta subcategoría"
+                  : "No hay preguntas disponibles para este tema"
                 }
               </p>
             </CardContent>

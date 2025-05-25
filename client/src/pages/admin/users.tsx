@@ -26,7 +26,7 @@ export default function UsersAdmin() {
     queryKey: ["categories"],
     queryFn: async () => {
       const res = await fetch("/api/admin/categories");
-      if (!res.ok) throw new Error("Error al obtener categorías");
+      if (!res.ok) throw new Error("Error al obtener materias");
       return res.json();
     }
   });
@@ -87,7 +87,7 @@ export default function UsersAdmin() {
       return res.json();
     },
     onSuccess: (_, vars) => {
-      toast({ title: "Éxito", description: "Categorías actualizadas" });
+      toast({ title: "Éxito", description: "Materias actualizadas" });
       // Actualización optimista
       setSelectedCategories(prev => ({
         ...prev,
@@ -130,7 +130,7 @@ export default function UsersAdmin() {
             <p className="text-muted-foreground">{user.email}</p>
             
             <div className="mt-4">
-              <h3 className="text-lg font-medium mb-2">Categorías</h3>
+              <h3 className="text-lg font-medium mb-2">Materias</h3>
               <div className="grid grid-cols-2 gap-2">
                 {categories?.map((category: any) => (
                   <div key={category.id} className="flex items-center gap-2">

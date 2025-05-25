@@ -53,12 +53,12 @@ export function Header({ user, pendingCount }: HeaderProps) {
   <>
     <li>
       <Link href="/admin/categories">
-        <span className="hover:text-white/80 transition-colors cursor-pointer">Categorías</span>
+        <span className="hover:text-white/80 transition-colors cursor-pointer">Materias</span>
       </Link>
     </li>
     <li>
       <Link href="/admin/subcategories">
-        <span className="hover:text-white/80 transition-colors cursor-pointer">Subcategorías</span>
+        <span className="hover:text-white/80 transition-colors cursor-pointer">Temas</span>
       </Link>
     </li>
     <li>

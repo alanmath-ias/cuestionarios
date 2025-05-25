@@ -42,7 +42,7 @@ export default function SubcategoriesPage() {
       const data = await response.json();
       setCategories(data);
     } catch (err) {
-      setError("Error al cargar categorías");
+      setError("Error al cargar materias");
       console.error(err);
     }
   };
@@ -63,7 +63,7 @@ export default function SubcategoriesPage() {
   
       setSubcategories(formattedData);
     } catch (err) {
-      setError("Error al cargar subcategorías");
+      setError("Error al cargar los Temas");
       console.error(err);
     }
   };
@@ -73,7 +73,7 @@ export default function SubcategoriesPage() {
     setSuccess("");
   
     if (!newSubcategoryName.trim() || !selectedCategoryId) {
-      setError("Debes ingresar un nombre y seleccionar una categoría.");
+      setError("Debes ingresar un nombre y seleccionar una materia.");
       return;
     }
   
@@ -93,14 +93,14 @@ export default function SubcategoriesPage() {
   
       if (!response.ok) throw new Error("Error creating subcategory");
   
-      setSuccess("Subcategoría creada con éxito.");
+      setSuccess("Materia creada con éxito.");
       setNewSubcategoryName("");
       setNewSubcategoryDescription("");
       setNewSubcategoryYoutubeLink(""); // Restablecer el campo del enlace de YouTube
       setSelectedCategoryId(null);
       fetchSubcategories();
     } catch (err) {
-      setError("Error al crear subcategoría.");
+      setError("Error al crear el tema.");
       console.error(err);
     }
   };
@@ -115,7 +115,7 @@ export default function SubcategoriesPage() {
 
       fetchSubcategories();
     } catch (err) {
-      setError("Error al eliminar subcategoría.");
+      setError("Error al eliminar el tema.");
       console.error(err);
     }
   };
@@ -148,13 +148,13 @@ export default function SubcategoriesPage() {
 
       if (!response.ok) throw new Error("Error updating subcategory");
 
-      setSuccess("Subcategoría actualizada.");
+      setSuccess("Tema actualizado.");
       setEditingId(null);
       setEditingName("");
       setEditingDescription("");
       fetchSubcategories();
     } catch (err) {
-      setError("Error al actualizar subcategoría.");
+      setError("Error al actualizar el tema.");
       console.error(err);
     }
   };
@@ -176,19 +176,19 @@ export default function SubcategoriesPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Subcategorías</h1>
+      <h1 className="text-2xl font-bold mb-4">Temas</h1>
 
       <div className="mb-6">
         <input
           type="text"
-          placeholder="Nombre de la subcategoría"
+          placeholder="Nombre del tema"
           value={newSubcategoryName}
           onChange={(e) => setNewSubcategoryName(e.target.value)}
           className="border p-2 mr-2 rounded w-full mb-2"
         />
         <input
           type="text"
-          placeholder="Descripción de la subcategoría"
+          placeholder="Descripción del Tema"
           value={newSubcategoryDescription}
           onChange={(e) => setNewSubcategoryDescription(e.target.value)}
           className="border p-2 mr-2 rounded w-full mb-2"
@@ -205,7 +205,7 @@ export default function SubcategoriesPage() {
           onChange={(e) => setSelectedCategoryId(Number(e.target.value))}
           className="border p-2 mr-2 rounded mb-2 w-full"
         >
-          <option value="">Selecciona una categoría</option>
+          <option value="">Selecciona una materia</option>
           {categories.map((cat) => (
             <option key={cat.id} value={cat.id}>
               {cat.name}
@@ -236,7 +236,7 @@ export default function SubcategoriesPage() {
             {openCategoryIds.includes(category.id) && (
               <div className="mt-4">
                 {groupedSubcategories[category.id]?.length === 0 ? (
-                  <p className="text-gray-500">Esta categoría está vacía.</p>
+                  <p className="text-gray-500">Esta materia está vacía.</p>
                 ) : (
                   <ul className="space-y-2">
                     {groupedSubcategories[category.id]?.map((sub) => (

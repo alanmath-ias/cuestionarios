@@ -194,7 +194,7 @@ const AdminDashboard: React.FC = () => {
 {/* Vista de categorías */}
 <div>
   <h2 className="text-2xl font-bold mt-8 mb-4 flex items-center gap-2">
-    <ClipboardList className="w-5 h-5 text-indigo-600" /> Categorías disponibles
+    <ClipboardList className="w-5 h-5 text-indigo-600" />Materias disponibles
   </h2>
   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
     {categories.map(category => (

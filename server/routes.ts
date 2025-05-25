@@ -301,8 +301,8 @@ app.get('/api/admin/subcategories', async (req, res) => {
     //console.log("✅ Subcategorías obtenidas:", subcategories);
     res.json(subcategories);
   } catch (err) {
-    console.error("❌ Error al obtener subcategorías:", err);
-    res.status(500).json({ error: "Error al obtener subcategorías" });
+    console.error("❌ Error al obtener los Temas:", err);
+    res.status(500).json({ error: "Error al obtener los Temas" });
   }
 });
 
@@ -316,7 +316,7 @@ app.post('/api/admin/subcategories', async (req, res) => {
     res.json(subcategory);
   } catch (err) {
     console.error("❌ Error al crear subcategoría:", err);
-    res.status(500).json({ error: "Error al crear subcategoría" });
+    res.status(500).json({ error: "Error al crear el tema" });
   }
 });
 
@@ -330,8 +330,8 @@ app.get('/api/admin/subcategories/by-category/:categoryId', async (req, res) => 
     //console.log(`✅ Subcategorías para categoría ${categoryId}:`, subcategories);
     res.json(subcategories);
   } catch (err) {
-    console.error("❌ Error al obtener subcategorías por categoría:", err);
-    res.status(500).json({ error: "Error al obtener subcategorías por categoría" });
+    console.error("❌ Error al obtener los Temas por Materia:", err);
+    res.status(500).json({ error: "Error al obtener los Temas por Materia" });
   }
 });
 
@@ -345,8 +345,8 @@ app.delete('/api/admin/subcategories/:id', async (req, res) => {
     //console.log("✅ Subcategoría eliminada");
     res.json({ success: true });
   } catch (err) {
-    console.error("❌ Error al eliminar subcategoría:", err);
-    res.status(500).json({ error: "Error al eliminar subcategoría" });
+    console.error("❌ Error al eliminar el tema:", err);
+    res.status(500).json({ error: "Error al eliminar el tema" });
   }
 });
 
@@ -362,8 +362,8 @@ app.put('/api/admin/subcategories/:id', async (req, res) => {
     await storage.updateSubcategory(id, name, description, youtube_sublink);
     res.json({ success: true });
   } catch (err) {
-    console.error("❌ Error al actualizar subcategoría:", err);
-    res.status(500).json({ error: "Error al actualizar subcategoría" });
+    console.error("❌ Error al actualizar el tema:", err);
+    res.status(500).json({ error: "Error al actualizar el tema" });
   }
 });
 
@@ -1053,7 +1053,7 @@ apiRouter.get("/users/:userId/categories", requireAdmin, async (req, res) => {
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ 
-      message: "Error al obtener categorías",
+      message: "Error al obtener materias",
       details: error instanceof Error ? error.message : String(error)
     });
   }
@@ -1134,8 +1134,8 @@ apiRouter.get("/admin/users-with-categories", requireAdmin, async (req, res) => 
 
     res.json(result);
   } catch (error) {
-    console.error("Error al obtener usuarios con categorías:", error);
-    res.status(500).json({ message: "Error al obtener usuarios con categorías" });
+    console.error("Error al obtener usuarios con materias:", error);
+    res.status(500).json({ message: "Error al obtener usuarios con materias" });
   }
 });
 
