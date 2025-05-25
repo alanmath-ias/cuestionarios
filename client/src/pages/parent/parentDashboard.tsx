@@ -69,7 +69,7 @@ async function fetchQuizFeedback(progressId: string) {
   return res.json();
 }
 
-function CompletedQuizCard({ quiz }: { quiz: QuizWithFeedback }) {
+function CompletedQuizCard({ quiz, childId }: { quiz: QuizWithFeedback; childId: string }) {
   const { data: feedback, isLoading: loadingFeedback } = useQuery({
     queryKey: ['quiz-feedback', quiz.progressId],
     queryFn: () => quiz.progressId ? fetchQuizFeedback(quiz.progressId) : null,
@@ -112,7 +112,7 @@ function CompletedQuizCard({ quiz }: { quiz: QuizWithFeedback }) {
             <p className="text-sm text-gray-700 whitespace-pre-wrap">{feedback.feedback}</p>
           </div>
         )}
-        <Link href={`/results/${quiz.progressId}`}>
+        <Link href={`/results/${quiz.progressId}?user_id=${childId}`}>
           <Button variant="outline" className="flex items-center text-green-700 border-green-400 hover:bg-green-100">
             Ver Resultados
             <ChevronRight className="ml-2 h-4 w-4" />
@@ -154,6 +154,7 @@ const { data: user, isLoading: loadingUser } = useQuery({
   });
 
   const childId = childData?.child_id || params.childId;
+ //const childId = childData?.child_id;
 
   // Luego obtenemos todos los datos del hijo
   const { data: categories, isLoading: loadingCategories } = useQuery<Category[]>({
@@ -413,7 +414,7 @@ const { data: user, isLoading: loadingUser } = useQuery({
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {completedQuizzes.map((quiz) => (
-                <CompletedQuizCard key={quiz.id} quiz={quiz} />
+                <CompletedQuizCard key={quiz.id} quiz={quiz} childId={childId} />
               ))}
             </div>
           )}

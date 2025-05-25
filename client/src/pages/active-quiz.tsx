@@ -151,10 +151,10 @@ function ActiveQuiz() {
     if (progress) {
       if (progress.status === 'completed') {
         toast({
-          title: 'Cuestionario completado',
-          description: 'Ya has completado este cuestionario anteriormente.',
+          title: 'Grandioso, has completado este cuestionario!',
+          description: 'Ahora puedes ver los resultados en tu Dashboard',
         });
-        setLocation(`/results/${progress.id}`);
+        setLocation(`/results/${progress.id}`);//Esta línea de codigo es la que dirige automáticamente a los resultados del cuestionario
         return;
       }
 
@@ -341,17 +341,23 @@ function ActiveQuiz() {
     <div id="activeQuiz">
       <div className="mb-6 flex justify-between items-center">
         <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="mr-3"
-            onClick={() => {
-              pauseTimer();
-              setLocation(`/category/${quiz?.categoryId}`);
-            }}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+        <Button
+  variant="ghost"
+  size="icon"
+  className="mr-3"
+  onClick={() => {
+    pauseTimer();
+    if (window.history.length > 1) {
+      // Si hay historial, regresa a la página anterior
+      window.history.back();
+    } else {
+      // Si no hay historial, redirige a una ruta predeterminada
+      setLocation(`/category/${quiz?.categoryId}`);
+    }
+  }}
+>
+  <ArrowLeft className="h-5 w-5" />
+</Button>
           <h2 className="text-2xl font-semibold">
             {loadingQuiz ? 'Cargando...' : quiz?.title}
           </h2>
@@ -422,7 +428,11 @@ function ActiveQuiz() {
                       : 'default'
                   }
                   disabled={answeredQuestions[currentQuestionIndex]}
-                  onClick={() => !answeredQuestions[currentQuestionIndex] && handleSelectAnswer(answer.id)}
+                  onClick={() =>
+                    !answeredQuestions[currentQuestionIndex] &&
+                    session?.role !== 'parent' &&
+                    handleSelectAnswer(answer.id)
+                  }
                 />
               ))}
             </div>

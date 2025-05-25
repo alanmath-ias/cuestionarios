@@ -5,7 +5,6 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 
-// Definir la interfaz User aquí para evitar problemas con el import
 interface User {
   id: number;
   name: string;
@@ -18,7 +17,6 @@ export default function AuthPage() {
   const { toast } = useToast();
   const [_, setLocation] = useLocation();
   
-  // Form state
   const [showLoginForm, setShowLoginForm] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -26,14 +24,12 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Check if user is already logged in
   const { data: user } = useQuery<User>({
     queryKey: ['/api/user'],
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Redirect to dashboard if already logged in - use useEffect for redirection
   useEffect(() => {
     if (user) {
       setLocation('/');
@@ -45,7 +41,12 @@ export default function AuthPage() {
     setLoading(true);
     
     try {
-      await apiRequest('POST', '/api/auth/login', { username, password });
+      // Convertir username a minúsculas antes de enviar
+      const normalizedUsername = username.toLowerCase();
+      await apiRequest('POST', '/api/auth/login', { 
+        username: normalizedUsername, 
+        password 
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       setUsername('');
       setPassword('');
@@ -71,8 +72,10 @@ export default function AuthPage() {
     setLoading(true);
     
     try {
+      // Convertir username a minúsculas antes de enviar
+      const normalizedUsername = username.toLowerCase();
       await apiRequest('POST', '/api/auth/register', { 
-        username, 
+        username: normalizedUsername, 
         password,
         name,
         email 
@@ -104,7 +107,7 @@ export default function AuthPage() {
       <div className="w-full max-w-md mx-4">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold text-primary mb-2">AlanMath</h1>
-          <p className="text-gray-600">Plataforma de Cuestionarios Matemáticos</p>
+          <p className="text-gray-600">Plataforma de Entrenamiento en Matemáticas</p>
         </div>
         
         <div className="bg-white rounded-lg shadow-lg p-8">
@@ -233,15 +236,6 @@ export default function AuthPage() {
               </div>
             </form>
           )}
-          {/*}
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p>Credenciales de demostración:</p>
-            <p className="font-semibold">Para administrador:</p>
-            <p>Usuario: admin / Contraseña: admin123</p>
-            <p className="font-semibold mt-1">Para estudiante:</p>
-            <p>Usuario: estudiante / Contraseña: estudiante123</p>
-          </div>
-          */}
         </div>
       </div>
     </div>

@@ -16,7 +16,7 @@ export function Footer() {
           <div className="text-center md:text-right">
             <p className="text-gray-400 text-sm">&copy; {new Date().getFullYear()} AlanMath. Todos los derechos reservados.</p>
             <div className="flex justify-center md:justify-end mt-2 space-x-4">
-              <Link href="/help">
+              {/*<Link href="/help">
                 <a className="text-gray-400 hover:text-white transition-colors">Ayuda</a>
               </Link>
               <Link href="/privacy">
@@ -24,7 +24,7 @@ export function Footer() {
               </Link>
               <Link href="/terms">
                 <a className="text-gray-400 hover:text-white transition-colors">Términos</a>
-              </Link>
+              </Link>*/}
             </div>
           </div>
         </div>

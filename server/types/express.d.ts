@@ -17,7 +17,7 @@ declare global {
 declare module "express-session" {
   interface SessionData {
     userId?: number;
-    role?: "admin" | "user" | "student"; // puedes agregar otros roles si los usas
+    role?: "admin" | "user" | "student" | "parent"; // puedes agregar otros roles si los usas
     username?: string;
   }
 }

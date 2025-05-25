@@ -95,7 +95,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Authenticate user
       req.session.userId = user.id;
   
-      const validRoles = ["admin", "user", "student"] as const;
+      //const validRoles = ["admin", "user", "student"] as const;
+      const validRoles = ["admin", "user", "student", "parent"] as const;  
+
       if (validRoles.includes(user.role as any)) {
         req.session.role = user.role as typeof validRoles[number];
       } else {
@@ -823,7 +825,7 @@ apiRouter.post("/progress", async (req: Request, res: Response) => {
       res.status(500).json({ message: "Error submitting answer" });
     }
   });
- 
+ /*
   apiRouter.get("/results/:progressId", async (req: Request, res: Response) => {
     const userId = req.session.userId;
     const role = req.session.role; // Asegúrate que esto está disponible en tu sesión
@@ -879,6 +881,79 @@ apiRouter.post("/progress", async (req: Request, res: Response) => {
         progress,
         quiz,
         answers: detailedAnswers
+      });
+    } catch (error) {
+      console.error("Results fetch error:", error);
+      res.status(500).json({ message: "Error fetching quiz results" });
+    }
+  });*/
+
+  apiRouter.get("/results/:progressId", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    const role = req.session.role; // Asegúrate de que esto está disponible en tu sesión
+    const progressId = parseInt(req.params.progressId);
+    const childId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
+  
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+  
+    if (isNaN(progressId)) {
+      return res.status(400).json({ message: "Invalid progress ID" });
+    }
+  
+    try {
+      let progress;
+  
+      console.log("Role:", role, "UserId:", userId, "ChildId:", childId);
+  
+      if (role === "admin") {
+        // Admin puede ver cualquier progreso
+        const allProgresses = await storage.getAllProgresses();
+        progress = allProgresses.find((p) => p.id === progressId);
+      } else if (role === "parent" && childId) {
+        // Verificar que el childId pertenece al padre autenticado
+        const parentChild = await storage.getChildByParentId(userId);
+        if (!parentChild || parentChild.id !== childId) {
+          return res.status(403).json({ message: "Not authorized to view these results" });
+        }
+  
+        // Obtener el progreso del hijo
+        const childProgresses = await storage.getStudentProgress(childId);
+        progress = childProgresses.find((p) => p.id === progressId);
+      } else if (role === "student" || role === "user") {
+        // Usuario normal solo puede ver sus propios progresos
+        const userProgresses = await storage.getStudentProgress(userId);
+        progress = userProgresses.find((p) => p.id === progressId);
+      } else {
+        return res.status(403).json({ message: "Not authorized to view these results" });
+      }
+  
+      if (!progress) {
+        return res.status(404).json({ message: "Progress not found" });
+      }
+  
+      const quiz = await storage.getQuiz(progress.quizId);
+      const answers = await storage.getStudentAnswersByProgress(progressId);
+  
+      // Obtener detalles de las preguntas para cada respuesta
+      const detailedAnswers = await Promise.all(
+        answers.map(async (answer) => {
+          const question = await storage.getQuestion(answer.questionId);
+          const answerDetails = answer.answerId ? await storage.getAnswer(answer.answerId) : null;
+  
+          return {
+            ...answer,
+            question,
+            answerDetails,
+          };
+        })
+      );
+  
+      res.json({
+        progress,
+        quiz,
+        answers: detailedAnswers,
       });
     } catch (error) {
       console.error("Results fetch error:", error);

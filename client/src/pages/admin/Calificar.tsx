@@ -145,6 +145,13 @@ const Calificar = () => {
                           >
                             Ver detalles
                           </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={() => handleDiscard(submission.progress.id)}
+                            className="ml-2"
+                          >
+                            Descartar
+                          </Button>
                         </div>
                       )}
                     </CardContent>

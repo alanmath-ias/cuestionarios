@@ -89,8 +89,8 @@ const handleLogout = async () => {
           </DropdownMenuItem>
         ) : (
           <>
-            <DropdownMenuItem onClick={() => setLocation('/')}>
-              Mis Calificaciones
+            <DropdownMenuItem onClick={() => setLocation('/admin/AdminDashboard')}>
+              Dashboard
             </DropdownMenuItem>
             {/*<DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>*/}
               {/*Quizzes Gratuitos*/}
