@@ -1,0 +1,18 @@
+{
+    "build": {
+      "nixpacksPlan": {
+        "phases": {
+          "setup": {
+            "runtime": "nodejs-22.14.0",
+            "nixPkgs": ["nodejs-22.14.0"]
+          },
+          "install": {
+            "cmd": "npm install --omit=dev"
+          },
+          "build": {
+            "cmd": "npm run build"
+          }
+        }
+      }
+    }
+  }
