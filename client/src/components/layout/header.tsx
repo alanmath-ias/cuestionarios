@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
 import { UserMenu } from '@/components/ui/user-menu';
-import { Parentheses, Menu as MenuIcon, X as CloseIcon } from 'lucide-react';
+import { Menu as MenuIcon, X as CloseIcon, Youtube, Instagram, Globe } from 'lucide-react';
+import { FaTiktok, FaFacebook } from 'react-icons/fa';
+import logo from '@/assets/images/logo.png';
 
 interface User {
   id: number;
@@ -20,19 +22,27 @@ export function Header({ user, pendingCount }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const isAdmin = user?.role === 'admin';
 
+  const socialLinks = {
+    youtube: 'https://www.youtube.com/@AlanMath',
+    instagram: 'https://www.instagram.com/alanmath.ias/',
+    tiktok: 'https://www.tiktok.com/@alanmath.ias',
+    facebook: 'https://www.facebook.com/people/AlanMathias/61572215860800/?name=xhp_nt_',
+    website: 'https://alanmath.com',
+  };
+
   return (
     <header className="bg-primary text-white shadow-md">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        
-        {/* Logo y botón menú móvil */}
+
+        {/* Logo + AlanMath + botón menú móvil */}
         <div className="flex items-center gap-4">
           <Link href="/admin/AdminDashboard">
             <div className="flex items-center space-x-2 cursor-pointer">
-              {/*<Parentheses size={28} />*/}
-              <h1 className="text-2xl font-bold">AlanMath</h1>
+              <img src={logo} alt="Logo AlanMath" className="h-10 w-10 rounded-full object-cover border-2 border-white" />
+              <span className="text-lg font-semibold text-white">AlanMath</span>
             </div>
           </Link>
-          <button 
+          <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="md:hidden focus:outline-none"
           >
@@ -44,54 +54,50 @@ export function Header({ user, pendingCount }: HeaderProps) {
         <nav className={`fixed top-16 left-0 right-0 bg-primary text-white shadow-md md:static md:top-0 md:bg-transparent transition-all duration-300 ${menuOpen ? 'block' : 'hidden'} md:block`}>
           <ul className="flex flex-col md:flex-row gap-4 md:gap-6 p-4 md:p-0 items-start md:items-center">
             <li>
-            <Link href="/admin/AdminDashboard">
+              <Link href="/admin/AdminDashboard">
                 <span className="hover:text-white/80 transition-colors cursor-pointer">Dashboard</span>
               </Link>
             </li>
 
             {isAdmin && (
-  <>
-    <li>
-      <Link href="/admin/categories">
-        <span className="hover:text-white/80 transition-colors cursor-pointer">Materias</span>
-      </Link>
-    </li>
-    <li>
-      <Link href="/admin/subcategories">
-        <span className="hover:text-white/80 transition-colors cursor-pointer">Temas</span>
-      </Link>
-    </li>
-    <li>
-      <Link href="/admin/quizzes">
-        <span className="hover:text-white/80 transition-colors cursor-pointer">Cuestionarios</span>
-      </Link>
-    </li>
-    <li>
-      <Link href="/admin/urlusercategories">
-        <span className="hover:text-white/80 transition-colors cursor-pointer">Usuarios</span>
-      </Link>
-    </li>
-    <li>
-      <Link href="/admin/calificar">
-        <span className="hover:text-white/80 transition-colors cursor-pointer">Calificar</span>
-      </Link>
-    </li>
-    <li>
-      <Link href="/admin/RegistrarPadres">
-        <span className="hover:text-white/80 transition-colors cursor-pointer">Padres</span>
-      </Link>
-    </li>
-  </>
-)}
+              <>
+                <li><Link href="/admin/categories"><span className="hover:text-white/80 transition-colors cursor-pointer">Materias</span></Link></li>
+                <li><Link href="/admin/subcategories"><span className="hover:text-white/80 transition-colors cursor-pointer">Temas</span></Link></li>
+                <li><Link href="/admin/quizzes"><span className="hover:text-white/80 transition-colors cursor-pointer">Cuestionarios</span></Link></li>
+                <li><Link href="/admin/urlusercategories"><span className="hover:text-white/80 transition-colors cursor-pointer">Usuarios</span></Link></li>
+                <li><Link href="/admin/calificar"><span className="hover:text-white/80 transition-colors cursor-pointer">Calificar</span></Link></li>
+                <li><Link href="/admin/RegistrarPadres"><span className="hover:text-white/80 transition-colors cursor-pointer">Padres</span></Link></li>
 
-
+                {/* Redes sociales en versión móvil */}
+                <li className="md:hidden pt-2">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-5">
+                      <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="hover:text-[#FF0000]" aria-label="YouTube"><Youtube size={22} /></a>
+                      <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-[#E1306C]" aria-label="Instagram"><Instagram size={22} /></a>
+                      <a href={socialLinks.tiktok} target="_blank" rel="noopener noreferrer" className="hover:text-[#000000]" aria-label="TikTok"><FaTiktok size={20} /></a>
+                      <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="hover:text-[#000000]" aria-label="Facebook"><FaFacebook size={20} /></a>
+                      <a href={socialLinks.website} target="_blank" rel="noopener noreferrer" className="hover:text-white/80" aria-label="Sitio Web"><Globe size={20} /></a>
+                    </div>
+                  </div>
+                </li>
+              </>
+            )}
           </ul>
         </nav>
 
-        {/* Menú de usuario */}
-        {user && <UserMenu user={user} />}
+        {/* Redes sociales (versión desktop) y menú de usuario */}
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-4 mr-4">
+            <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#FF0000]" aria-label="YouTube"><Youtube size={20} /></a>
+            <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#E1306C]" aria-label="Instagram"><Instagram size={20} /></a>
+            <a href={socialLinks.tiktok} target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#000000]" aria-label="TikTok"><FaTiktok size={18} /></a>
+            <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#000000]" aria-label="Facebook"><FaFacebook size={18} /></a>
+            <a href={socialLinks.website} target="_blank" rel="noopener noreferrer" className="text-white hover:text-white/80" aria-label="Sitio Web"><Globe size={18} /></a>
+          </div>
+
+          {user && <UserMenu user={user} />}
+        </div>
       </div>
     </header>
   );
 }
-

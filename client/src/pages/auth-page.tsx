@@ -11,8 +11,13 @@ import {
   Video, 
   Rocket, 
   Award,
-  BrainCircuit
+  BrainCircuit,
+  Youtube,
+  Instagram,
+  Facebook,
+  Globe
 } from 'lucide-react';
+import { FaTiktok } from 'react-icons/fa';
 
 interface User {
   id: number;
@@ -133,7 +138,7 @@ export default function AuthPage() {
             <div className="flex items-start gap-4">
               <BookOpen className="flex-shrink-0 mt-1 text-blue-500" size={24} />
               <p>
-                Aquí encontrarás Cuestionarios tipo Evaluación con los cuales podrás prepararte para tus exámenes de Matemáticas, Física y otras Áreas tanto del colegio como de la Universidad.
+                Aquí encontrarás Cuestionarios tipo Evaluación con los cuales podrás prepararte para tus exámenes de Matemáticas, Física y otras Áreas tanto del Colegio como de la Universidad.
               </p>
             </div>
             
@@ -322,6 +327,52 @@ export default function AuthPage() {
               </div>
             </form>
           )}
+
+          {/* Sección de redes sociales */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="flex justify-center space-x-6">
+              <a 
+                href="https://youtube.com/alanmath" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-red-500"
+              >
+                <Youtube className="h-6 w-6" />
+              </a>
+              <a 
+                href="https://instagram.com/alanmath" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-pink-600"
+              >
+                <Instagram className="h-6 w-6" />
+              </a>
+              <a 
+                href="https://facebook.com/alanmath" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-blue-600"
+              >
+                <Facebook className="h-6 w-6" />
+              </a>
+              <a 
+                href="https://tiktok.com/@alanmath" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-black"
+              >
+                <FaTiktok className="h-6 w-6" />
+              </a>
+              <a 
+                href="https://alanmath.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-primary"
+              >
+                <Globe className="h-6 w-6" />
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
