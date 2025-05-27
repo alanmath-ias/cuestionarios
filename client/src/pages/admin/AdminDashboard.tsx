@@ -114,47 +114,49 @@ const AdminDashboard: React.FC = () => {
           {userProgress.length === 0 ? (
             <p className="text-muted-foreground">No hay progreso de estudiantes disponible.</p>
           ) : (
-            userProgress.map(user => (
-              <Card 
-                key={user.userId} 
-                className={`shadow-sm hover:shadow-md transition ${
-                  user.pending > 0 
-                    ? 'border-red-200 bg-red-50 hover:bg-red-100' 
-                    : 'border-green-200 bg-green-50 hover:bg-green-100'
-                }`}
-              >
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-medium">
-                      <UserCircle2 className="w-5 h-5" />
-                      <p className={user.pending > 0 ? 'text-red-800' : 'text-green-800'}>{user.name}</p>
+            userProgress
+              .filter(user => user.assigned !== 0)
+              .map(user => (
+                <Card 
+                  key={user.userId} 
+                  className={`shadow-sm hover:shadow-md transition ${
+                    user.pending > 0 
+                      ? 'border-red-200 bg-red-50 hover:bg-red-100' 
+                      : 'border-green-200 bg-green-50 hover:bg-green-100'
+                  }`}
+                >
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-medium">
+                        <UserCircle2 className="w-5 h-5" />
+                        <p className={user.pending > 0 ? 'text-red-800' : 'text-green-800'}>{user.name}</p>
+                      </div>
+                      {user.pending > 0 ? (
+                        <AlertCircle className="w-5 h-5 text-red-600" />
+                      ) : (
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      )}
                     </div>
-                    {user.pending > 0 ? (
-                      <AlertCircle className="w-5 h-5 text-red-600" />
-                    ) : (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    <p className={`text-sm ${
+                      user.pending > 0 ? 'text-red-700' : 'text-green-700'
+                    }`}>
+                      Asignados: <strong>{user.assigned}</strong> · Completados: <strong>{user.completed}</strong> · Pendientes: <strong>{user.pending}</strong>
+                    </p>
+                    {user.pending === 0 && (
+                      <div className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                        <CheckCircle className="w-3 h-3" />
+                        <span>Todos los cuestionarios completados</span>
+                      </div>
                     )}
-                  </div>
-                  <p className={`text-sm ${
-                    user.pending > 0 ? 'text-red-700' : 'text-green-700'
-                  }`}>
-                    Asignados: <strong>{user.assigned}</strong> · Completados: <strong>{user.completed}</strong> · Pendientes: <strong>{user.pending}</strong>
-                  </p>
-                  {user.pending === 0 && (
-                    <div className="flex items-center gap-1 text-xs text-green-600 font-medium">
-                      <CheckCircle className="w-3 h-3" />
-                      <span>Todos los cuestionarios completados</span>
-                    </div>
-                  )}
-                  {user.pending > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-red-600 font-medium">
-                      <AlertCircle className="w-3 h-3" />
-                      <span>Cuestionarios pendientes</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))
+                    {user.pending > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-red-600 font-medium">
+                        <AlertCircle className="w-3 h-3" />
+                        <span>Cuestionarios pendientes</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
           )}
         </div>
       </div>
