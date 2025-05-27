@@ -26,7 +26,7 @@ export function Header({ user, pendingCount }: HeaderProps) {
         
         {/* Logo y botón menú móvil */}
         <div className="flex items-center gap-4">
-          <Link href="/">
+          <Link href="/admin/AdminDashboard">
             <div className="flex items-center space-x-2 cursor-pointer">
               {/*<Parentheses size={28} />*/}
               <h1 className="text-2xl font-bold">AlanMath</h1>

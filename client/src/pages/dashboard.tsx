@@ -344,9 +344,12 @@ export default function UserDashboard() {
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto"
                 >
-                  <Button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#FF0000] hover:bg-[#CC0000] text-white font-semibold">
-                    <Youtube className="w-5 h-5" />
-                    YouTube VIDEOS
+                 <Button 
+                    size="sm"
+                    className="w-full font-semibold flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-800 dark:hover:bg-gray-700"
+                    >
+                    <Youtube className="h-4 w-4 text-red-600" />
+                    YouTube Videos
                   </Button>
                 </a>
               )}
