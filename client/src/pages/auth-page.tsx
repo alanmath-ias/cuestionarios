@@ -4,6 +4,15 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
+import { 
+  BookOpen, 
+  LineChart, 
+  ListChecks, 
+  Video, 
+  Rocket, 
+  Award,
+  BrainCircuit
+} from 'lucide-react';
 
 interface User {
   id: number;
@@ -23,6 +32,9 @@ export default function AuthPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [registeredName, setRegisteredName] = useState('');
+  const [shouldShowWelcome, setShouldShowWelcome] = useState(false);
 
   const { data: user } = useQuery<User>({
     queryKey: ['/api/user'],
@@ -31,23 +43,22 @@ export default function AuthPage() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && !registrationSuccess) {
       setLocation('/');
     }
-  }, [user, setLocation]);
+  }, [user, setLocation, registrationSuccess]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      // Convertir username a minúsculas antes de enviar
       const normalizedUsername = username.toLowerCase();
       await apiRequest('POST', '/api/auth/login', { 
         username: normalizedUsername, 
         password 
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       setUsername('');
       setPassword('');
       toast({
@@ -72,7 +83,6 @@ export default function AuthPage() {
     setLoading(true);
     
     try {
-      // Convertir username a minúsculas antes de enviar
       const normalizedUsername = username.toLowerCase();
       await apiRequest('POST', '/api/auth/register', { 
         username: normalizedUsername, 
@@ -80,16 +90,24 @@ export default function AuthPage() {
         name,
         email 
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      
+      setRegisteredName(name);
       setUsername('');
       setPassword('');
       setName('');
       setEmail('');
+      
       toast({
         title: 'Registro exitoso',
         description: '¡Bienvenido a AlanMath!',
       });
-      setLocation('/');
+      
+      setRegistrationSuccess(true);
+      setShouldShowWelcome(true);
+      
+      // Invalidamos la query pero no esperamos por ella
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      
     } catch (error) {
       console.error('Register error:', error);
       toast({
@@ -101,6 +119,74 @@ export default function AuthPage() {
       setLoading(false);
     }
   };
+
+  if (shouldShowWelcome) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
+        <div className="w-full max-w-2xl mx-4 bg-white rounded-lg shadow-lg p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-primary mb-2">¡Bienvenid@ a AlanMath!</h1>
+            <h2 className="text-2xl font-semibold">Hola {registeredName}</h2>
+          </div>
+          
+          <div className="space-y-6 text-lg">
+            <div className="flex items-start gap-4">
+              <BookOpen className="flex-shrink-0 mt-1 text-blue-500" size={24} />
+              <p>
+                Aquí encontrarás Cuestionarios tipo Evaluación con los cuales podrás prepararte para tus exámenes de Matemáticas, Física y otras Áreas tanto del colegio como de la Universidad.
+              </p>
+            </div>
+            
+            <div className="flex items-start gap-4">
+              <LineChart className="flex-shrink-0 mt-1 text-green-500" size={24} />
+              <p>
+                Además, si estás estudiando con AlanMath podrás ver el progreso de tus Cursos y las Actividades que te son asignadas para que pasito a pasito seas cada día mejor con estas hermosas Ciencias.
+              </p>
+            </div>
+            
+            <div className="flex items-start gap-4">
+              <ListChecks className="flex-shrink-0 mt-1 text-purple-500" size={24} />
+              <p>
+                Los Cuestionarios están organizados por Materias y tienes la posibilidad de ir a la sección de Entrenamiento, en donde encontrarás Cuestionarios con preguntas variadas de toda una Materia o de todo un Tema en particular que estés estudiando.
+              </p>
+            </div>
+            
+            <div className="flex items-start gap-4">
+              <Video className="flex-shrink-0 mt-1 text-red-500" size={24} />
+              <p>
+                Contarás también con los enlaces a los videos de AlanMath tanto para las materias completas, como para los temas en particular.
+              </p>
+            </div>
+            
+            <div className="flex items-start gap-4">
+              <BrainCircuit className="flex-shrink-0 mt-1 text-yellow-500" size={24} />
+              <p className="font-semibold">
+                Diviértete aprendiendo y no olvides que... 
+                <br />
+                <span className="text-primary flex items-center gap-2 mt-2">
+                  <Award className="inline" /> Si Yo lo puedo hacer, Tú también lo puedes hacer!
+                </span>
+              </p>
+            </div>
+          </div>
+          
+          <div className="text-center mt-10">
+            <Button
+              size="lg"
+              className="gap-2"
+              onClick={() => {
+                setShouldShowWelcome(false);
+                setLocation('/');
+              }}
+            >
+              <Rocket size={20} />
+              ¡Comencemos!
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">

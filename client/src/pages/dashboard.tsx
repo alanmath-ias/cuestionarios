@@ -46,7 +46,7 @@ async function fetchCategories() {
   const response = await fetch("/api/user/categories", {
     credentials: "include",
   });
-  if (!response.ok) throw new Error("Error al obtener categorías");
+  if (!response.ok) throw new Error("Error al obtener materias");
   return response.json();
 }
 
@@ -273,6 +273,12 @@ export default function UserDashboard() {
         </p>
         <p className="text-sm text-gray-500">
           ¡Anímate, comencemos!
+        </p>
+        <p className="text-sm text-gray-500">
+          Si aún no tienes Materias Asignadas envía un mensaje al número de Whatsapp:
+        </p>
+        <p className="text-gray-600 font-medium">
+          +57 3208056799 AlanMath
         </p>
         <Link href="/category" className="inline-block mt-4">
 
