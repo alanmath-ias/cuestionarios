@@ -29,9 +29,10 @@ import { DatabaseStorage } from './database-storage.js'; // Ruta ajustada para u
 //fin chat gpt cuestionarios a usuarios
 
 //chat gpt dashboar personalizado
-import { User } from "../shared/schema.js"; // Asegúrate de que este tipo esté bien definido
+import { User, studentAnswers } from "../shared/schema.js"; // Asegúrate de que este tipo esté bien definido
 import { userQuizzes, studentProgress, quizSubmissions, parents } from "../shared/schema.js";
 //import bcrypt from 'bcrypt';
+
 
 
 
@@ -1801,6 +1802,43 @@ app.get('/api/parent/child', requireAuth, async (req: Request, res: Response) =>
   }
 });
 
+// En tu archivo de rutas principal (ej: server.ts o app.ts)
+// Obtener respuestas guardadas de un progreso específico
+
+ENDPOINT:
+// Obtener respuestas guardadas de un progreso específico
+app.get("/api/progress/:progressId/answers", requireAuth, async (req, res) => {
+  try {
+    const progressId = Number(req.params.progressId);
+    const userId = req.query.user_id ? Number(req.query.user_id) : req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "No autenticado" });
+    }
+
+    // Verificar que el progreso pertenece al usuario
+    const progress = await db.select().from(studentProgress).where(
+      and(
+        eq(studentProgress.id, progressId),
+        eq(studentProgress.userId, userId)
+      )
+    );
+
+    if (!progress || progress.length === 0) {
+      return res.status(404).json({ error: "Progreso no encontrado" });
+    }
+
+    // Obtener todas las respuestas asociadas a este progreso
+    const answers = await db.select().from(studentAnswers).where(
+      eq(studentAnswers.progressId, progressId)
+    );
+
+    res.json(answers);
+  } catch (error) {
+    console.error("Error al cargar respuestas:", error);
+    res.status(500).json({ error: "Error al cargar respuestas" });
+  }
+});
 
   const httpServer = createServer(app);
   return httpServer;
