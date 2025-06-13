@@ -363,7 +363,7 @@ function ActiveQuiz() {
   };
 
   // Navigation handlers
-  const handleNextQuestion = async () => {
+  /*const handleNextQuestion = async () => {
     if (!questions || !progress || session?.userId === 1) return;
 
     console.log('[NAV] Moving to next question');
@@ -391,7 +391,50 @@ function ActiveQuiz() {
     } else {
       await handleFinishQuiz();
     }
-  };
+  };*/
+
+  const [isNavigating, setIsNavigating] = useState(false);
+
+const handleNextQuestion = async () => {
+  if (!questions || !progress || session?.userId === 1 || isNavigating) return;
+
+  setIsNavigating(true);
+  console.log('[NAV] Moving to next question');
+
+  try {
+    // Guardar respuesta actual si es necesario (solo si no es la última pregunta)
+    if (currentQuestionIndex < questions.length - 1) {
+      if (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex]) {
+        await submitCurrentAnswer();
+      }
+
+      // Esperar 2 segundos mostrando los resultados
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Actualizar progreso
+      await createProgressMutation.mutateAsync({
+        ...progress,
+        completedQuestions: Math.max(progress.completedQuestions, currentQuestionIndex + 1),
+        timeSpent: elapsedTime,
+      });
+
+      // Avanzar a siguiente pregunta
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setSelectedAnswerId(null);
+    } else {
+      await handleFinishQuiz();
+    }
+  } catch (error) {
+    console.error('[ERROR] Error in navigation:', error);
+    toast({
+      title: 'Error',
+      description: 'Ocurrió un error al avanzar',
+      variant: 'destructive',
+    });
+  } finally {
+    setIsNavigating(false);
+  }
+};
 
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
@@ -446,7 +489,7 @@ function ActiveQuiz() {
   };
 
   // Finish quiz
-  const handleFinishQuiz = async () => {
+  /*const handleFinishQuiz = async () => {
     if (!progress || !questions || session?.userId === 1) return;
 
     console.log('[QUIZ] Finishing quiz');
@@ -496,6 +539,77 @@ function ActiveQuiz() {
         variant: 'destructive',
       });
     }
+  };*/
+
+  const handleFinishQuiz = async () => {
+    if (!progress || !questions || session?.userId === 1) return;
+  
+    console.log('[QUIZ] Finishing quiz');
+  
+    // 1. Primero guardar la respuesta de la última pregunta si no está guardada
+    if (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex]) {
+      console.log('[QUIZ] Saving last question answer before finishing');
+      await submitCurrentAnswer();
+    }
+  
+    // 2. Calcular puntuación
+    const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+    const earnedPoints = studentAnswers
+      .filter(a => a.isCorrect)
+      .reduce((sum, a) => sum + (questions.find(q => q.id === a.questionId)?.points || 0), 0);
+  
+    try {
+      // 3. Actualizar progreso como completado
+      const progressUpdate = {
+        ...progress,
+        status: 'completed' as const,
+        score: Math.round((earnedPoints / totalPoints) * 10),
+        timeSpent: elapsedTime,
+        completedAt: new Date()
+      };
+  
+      await createProgressMutation.mutateAsync(progressUpdate);
+      
+      // 4. Enviar submission del quiz
+      const score = Math.round((earnedPoints / totalPoints) * 10);
+      const submissionResponse = await fetch("/api/quiz-submission", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: session?.userId,
+          quizId: quiz?.id,
+          score,
+          progressId: progress.id,
+        }),
+      });
+  
+      if (!submissionResponse.ok) {
+        throw new Error('Failed to submit quiz results');
+      }
+  
+      // 5. Actualizar estado local
+      setQuizResults({
+        score: earnedPoints,
+        totalPoints,
+        percentage: Math.round((earnedPoints / totalPoints) * 100),
+        correctAnswers: studentAnswers.filter(a => a.isCorrect).length,
+        totalQuestions: questions.length
+      });
+      
+      console.log('[QUIZ] Quiz completed successfully');
+    } catch (error) {
+      console.error('[ERROR] Error finishing quiz:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Error al completar el cuestionario',
+        variant: 'destructive',
+      });
+      // No redirigir si hay error
+      return;
+    }
+  
+    // Redirigir a resultados solo si todo salió bien
+    setLocation(`/results/${progress.id}`);
   };
 
   const currentQuestion = questions?.[currentQuestionIndex];
@@ -675,17 +789,34 @@ function ActiveQuiz() {
                   </Tooltip>
                 </TooltipProvider>
               ) : (
+
+
                 <Button 
-                  onClick={handleNextQuestion}
-                  disabled={currentQuestion.type === 'text' 
-                    ? !answeredQuestions[currentQuestionIndex]
-                    : false}
-                >
-                  {currentQuestionIndex >= (questions?.length || 0) - 1 ? 'Finalizar' : 'Siguiente'}
-                  {currentQuestionIndex < (questions?.length || 0) - 1 && (
-                    <ArrowRight className="ml-1 h-4 w-4" />
-                  )}
-                </Button>
+  id="nextButton"
+  onClick={handleNextQuestion}
+  disabled={isNavigating || (currentQuestion.type === 'text' 
+    ? !answeredQuestions[currentQuestionIndex]
+    : false)}
+>
+  {isNavigating ? (
+    <span className="flex items-center">
+      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      Procesando...
+    </span>
+  ) : (
+    <>
+      {currentQuestionIndex >= (questions?.length || 0) - 1 ? 'Finalizar' : 'Siguiente'}
+      {currentQuestionIndex < (questions?.length || 0) - 1 && (
+        <ArrowRight className="ml-1 h-4 w-4" />
+      )}
+    </>
+  )}
+</Button>
+
+
               )}
             </div>
           </CardContent>
