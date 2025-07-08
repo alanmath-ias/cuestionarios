@@ -110,6 +110,9 @@ function QuizResults() {
     });
   };
 
+//Puntaje preciso:
+const preciseScore = ((correctAnswers / totalQuestions) * 10).toFixed(1);
+
   const handleDownloadResults = () => {
     if (!results) return;
     
@@ -122,7 +125,7 @@ function QuizResults() {
     ]);
     
     rows.push([
-      `Puntuación: ${results.progress.score?.toFixed(1)}/10`,
+      `Puntuación: ${preciseScore}/10`,  // Usar el mismo cálculo
       `Correctas: ${correctAnswers}/${totalQuestions}`,
       `Tiempo total: ${formatTimeSpent(results.progress.timeSpent)}`,
       ''
@@ -182,7 +185,7 @@ function QuizResults() {
               <div className="bg-blue-50 rounded-lg p-4 text-center border border-blue-100">
                 <div className="text-sm font-medium text-blue-600 mb-1">Puntuación</div>
                 <div className="text-3xl font-bold text-blue-700">
-                  {results.progress.score?.toFixed(1)}<span className="text-lg text-blue-400">/10</span>
+                {preciseScore}<span className="text-lg text-blue-400">/10</span>
                 </div>
               </div>
               
