@@ -399,7 +399,7 @@ const handleNextQuestion = async () => {
   if (!questions || !progress || session?.userId === 1 || isNavigating) return;
 
   setIsNavigating(true);
-  console.log('[NAV] Moving to next question');
+  //console.log('[NAV] Moving to next question');
 
   try {
     // Guardar respuesta actual si es necesario (solo si no es la última pregunta)
@@ -409,7 +409,7 @@ const handleNextQuestion = async () => {
       }
 
       // Esperar 2 segundos mostrando los resultados
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Actualizar progreso
       await createProgressMutation.mutateAsync({
