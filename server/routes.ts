@@ -549,13 +549,15 @@ app.get('/api/training-subcategory/:categoryId/:subcategoryId', async (req, res)
   // Quiz questions endpoint
   apiRouter.get("/quizzes/:quizId/questions", async (req: Request, res: Response) => {
     const quizId = parseInt(req.params.quizId);
+    const publicQuizIds = [68, 69, 70, 71, 72, 73]; // IDs de cuestionarios públicos - cuestionarios para encuesta modelo tests
+  
     
     if (isNaN(quizId)) {
       return res.status(400).json({ message: "Invalid quiz ID" });
     }
     
     // Check authentication
-    if (!req.session.userId) {
+    if (!req.session.userId && !publicQuizIds.includes(quizId)) {
       return res.status(401).json({ message: "Authentication required" });
     }
     

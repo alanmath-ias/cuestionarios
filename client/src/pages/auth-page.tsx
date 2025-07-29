@@ -4,6 +4,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
+//import { useNavigate } from 'react-router-dom';
 import { 
   BookOpen, 
   LineChart, 
@@ -18,6 +19,8 @@ import {
   Globe
 } from 'lucide-react';
 import { FaTiktok } from 'react-icons/fa';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
 
 interface User {
   id: number;
@@ -40,6 +43,9 @@ export default function AuthPage() {
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredName, setRegisteredName] = useState('');
   const [shouldShowWelcome, setShouldShowWelcome] = useState(false);
+  //const navigate = useNavigate();
+  const [location] = useLocation();
+
 
   const { data: user } = useQuery<User>({
     queryKey: ['/api/user'],
@@ -124,6 +130,26 @@ export default function AuthPage() {
       setLoading(false);
     }
   };
+
+  const [ageModalOpen, setAgeModalOpen] = useState(false);
+  const [userAgeGroup, setUserAgeGroup] = useState<'child' | 'teen' | null>(null);
+
+  const handleDiagnosticClick = () => {
+    // Limpiar datos existentes antes de abrir el modal
+    localStorage.removeItem('surveyFormData');
+    localStorage.removeItem('completedTests');
+    sessionStorage.removeItem('quizResult');
+    
+    setAgeModalOpen(true);
+  };
+
+  const handleAgeSelection = (isUnder12: boolean) => {
+    setUserAgeGroup(isUnder12 ? 'child' : 'teen');
+    setAgeModalOpen(false);
+    // Navegar a EncuestaPage con parámetros de edad y reset
+    window.location.href = `/encuestapage?ageGroup=${isUnder12 ? 'child' : 'teen'}&reset=true`;
+  };
+
 
   if (shouldShowWelcome) {
     return (
@@ -216,6 +242,36 @@ export default function AuthPage() {
               >
                 Registrarse
               </Button>
+
+              <Button onClick={handleDiagnosticClick}>
+              📊Diagnóstico Inicial
+      </Button>
+
+      <Dialog open={ageModalOpen} onOpenChange={setAgeModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Selecciona tu grupo de edad</DialogTitle>
+          </DialogHeader>
+          <div className="flex gap-4 mt-4">
+            <Button 
+              onClick={() => handleAgeSelection(true)}
+              className="w-full"
+            >
+              7 a 11 años
+            </Button>
+            <Button 
+              onClick={() => handleAgeSelection(false)}
+              className="w-full"
+            >
+              12 a 16 años
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
+
+
             </div>
           </div>
           

@@ -32,6 +32,58 @@ import subcategories from "./pages/admin/subcategories";
 import RegistrarPadres from "@/pages/admin/RegistrarPadres";
 import ParentDashboard from "@/pages/parent/parentDashboard";
 
+import EncuestaPage from '@/pages/EncuestaPage';
+
+// En tu router.tsx o App.tsx
+import PublicActiveQuiz from '@/pages/PublicActiveQuiz';
+import PublicQuizResults from '@/pages/PublicQuizResults';
+
+
+//Protectroute que permite el ingreso a cuestionarios publicos:
+const PUBLIC_QUIZZES = [1, 2, 3, 4]; // IDs de los cuestionarios públicos
+
+function ProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ['/api/user'],
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const [_, navigate] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading) {
+      const isPublicQuiz = rest.path.startsWith('/quiz/') && PUBLIC_QUIZZES.includes(parseInt(rest.path.split('/quiz/')[1]));
+      
+      if (!user && !isPublicQuiz) {
+        navigate('/auth'); // Redirige a la página de inicio de sesión si no está autenticado y no es un cuestionario público
+      } else if (user?.role === 'admin' && rest.path === '/') {
+        navigate('/admin'); // Redirige a /admin si el usuario es administrador
+      } else if (user?.role === 'parent') {
+        navigate('/parent-dashboard'); // Redirige a /parent-dashboard si el usuario es un padre
+      }
+    }
+  }, [user, isLoading, navigate, rest.path]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold mb-4">Cargando...</h2>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user && !PUBLIC_QUIZZES.includes(parseInt(rest.path.split('/quiz/')[1]))) {
+    return null;
+  }
+
+  return <PageLayout><Component {...rest} /></PageLayout>;
+}
+
+/*
 function ProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
@@ -71,6 +123,7 @@ function ProtectedRoute({ component: Component, ...rest }: { component: any, pat
   return <PageLayout><Component {...rest} /></PageLayout>;
 }
 
+*/
 function AdminProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
@@ -113,6 +166,19 @@ function Router() {
       <Route path="/auth">
         {() => <AuthPage />}
       </Route>
+
+      <Route path="/EncuestaPage">
+  {() => <EncuestaPage />}
+</Route>
+
+// Agregar estas rutas
+<Route path="/public-quiz/:quizId">
+  {(params) => <PublicActiveQuiz />}
+</Route>
+<Route path="/public-quiz-results">
+  {() => <PublicQuizResults />}
+</Route>
+
 
       {/* Rutas de estudiante */}
       <Route path="/">
