@@ -13,6 +13,8 @@ import { useEffect } from 'react'; // Importar useEffect
 import { useLocation } from 'wouter'; // Importar useLocation
 import { Badge } from '@/components/ui/badge'; // Añade esta línea
 
+import FeedbackCard from "./FeedbackCard";
+
 type FormData = {
   // Campos regulares
   sex: string;
@@ -164,8 +166,7 @@ export default function EncuestaPage() {
   const [_, setLocation] = useLocation();
 
   const [deepSeekFeedback, setDeepSeekFeedback] = useState<string | null>(null);
-
-
+  
 
 // En EncuestaPage, al inicio del componente:
 useEffect(() => {
@@ -391,6 +392,7 @@ useEffect(() => {
  // ⬇️ Aquí consultamos DeepSeek después de la predicción
  const feedback = await consultarDeepSeek(formData, finalPrediction);
  setDeepSeekFeedback(feedback);
+ 
 
     } catch (err) {
       console.error(err);
@@ -404,19 +406,75 @@ useEffect(() => {
     }
   };
 
+  const formDataToText = (formData: FormData, prediccion: number): string => {
+    const readableData = {
+      "Edad": formData.age,
+      "Sexo": formData.sex,
+      "Dirección": formData.address,
+      "Tamaño familiar": formData.famsize,
+      "Padres viven juntos": formData.Pstatus,
+      "Educación madre": formData.Medu,
+      "Educación padre": formData.Fedu,
+      "Trabajo madre": formData.Mjob,
+      "Trabajo padre": formData.Fjob,
+      "Motivo para elegir la escuela": formData.reason,
+      "Tutor legal": formData.guardian,
+      "Tiempo de viaje a la escuela": formData.traveltime,
+      "Tiempo semanal de estudio": formData.studytime,
+      "Materias reprobadas antes": formData.failures,
+      "Apoyo educativo escolar": formData.schoolsup,
+      "Apoyo educativo familiar": formData.famsup,
+      "Clases extras pagas": formData.paid,
+      "Actividades extracurriculares": formData.activities,
+      "Asistió a preescolar": formData.nursery,
+      "Desea cursar estudios superiores": formData.higher,
+      "Tiene internet en casa": formData.internet,
+      "Tiene pareja": formData.romantic,
+      "Relación familiar": formData.famrel,
+      "Tiempo libre diario": formData.freetime,
+      "Salidas con amigos": formData.goout,
+      "Consumo de alcohol entre semana": formData.Dalc,
+      "Consumo de alcohol en fines de semana": formData.Walc,
+      "Salud": formData.health,
+      "Inasistencias escolares": formData.absences,
+      "Nota en test de lenguaje": (formData.G1 / 2).toFixed(1),
+      "Nota en test de matemáticas": (formData.G2 / 2).toFixed(1),
+      "Nota final predicha": (prediccion / 2).toFixed(1),
+    };
+  
+    return Object.entries(readableData)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
+  };
+  
+  
+
   const consultarDeepSeek = async (formData: FormData, prediccion: number): Promise<string> => {
     const prompt = `
-  Eres un experto en aprendizaje automático. Un modelo de predicción ha estimado el rendimiento académico de un estudiante con ${prediccion.toFixed(1)} / 20.
+  Eres un experto en aprendizaje automático. Un modelo ha estimado el rendimiento académico del estudiante en ${(prediccion / 2).toFixed(1)} / 10.
   
-  Estos son los datos del estudiante:
-  ${JSON.stringify(formData, null, 2)}
+  Analiza la situación del estudiante con base en sus datos, y entrega una retroalimentación clara, amable, motivadora y fácil de entender el mensaje será leído directamente al estudiante, entonces háblale al este directamente. Organiza el resultado así:
+  Comienza escribiendo inmediatamente el primer punto que te comparto enseguida, no escribas nada antes, ve directo a los puntos sin responderme a mi nada
+  ---
   
-  Por favor, indica:
-  1. Qué variables afectaron más negativamente el rendimiento y por qué.
-  2. Qué variables pueden mejorar si el estudiante toma acción.
-  3. Sugerencias específicas para mejorar el resultado futuro.
-  Usa un lenguaje claro y orientado al estudiante.
-    `;
+  1. Diagnóstico general: Explica si el estudiante va bien o tiene aspectos por mejorar, sin ser duro.
+  
+  2. Factores más influyentes: Menciona de forma humana las variables clave (por ejemplo: "tiempo que dedicas a estudiar", "consumo de alcohol en fines de semana").
+  
+  3. Sugerencias personalizadas para mejorar: Ofrece consejos prácticos. No uses nombres técnicos ni nada en inglés.
+  
+  ---
+  
+  Evita usar nombres de variables como "G2", "studytime", etc. Usa expresiones humanas, como "test de matemáticas" o "tiempo de estudio".
+  NO USES ASTERISCOS EN LAS RESPUESTAS, COLOCA ÍCONOS RELEVANTES PARA CADA FACTOR Y SUGERENCIA EN LUGAR DE GUIONES O ASTERISCOS
+  SIEMPRE ACONSEJA CLASES DE MATEMÁTICAS EXTRAS, PERSONALIZADAS NO IMPORTA EL RESULTADO
+  DEJA UNA TABULACIÓN PARA CADA ITEM QUE CORRESPONDA A 1, 2 O 3 LA IDEA ES QUE SE VEA AGRADABLE
+  
+  
+  Aquí están los datos del estudiante:
+ 
+  ${formDataToText(formData, prediccion)}
+  `;
     
     try {
       const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
@@ -1014,7 +1072,7 @@ const shouldShowRomanticField = currentAgeGroup === 'teen';
 </div>
 
         <Button type="submit" className="w-full gap-2" disabled={loading}>
-          {loading ? (<><Loader2 className="animate-spin" size={18} /> Enviando...</>) :
+          {loading ? (<><Loader2 className="animate-spin" size={18} /> Espera mientras analizamos tus respuestas y te compartimos los detalles...</>) :
             (<><Sparkles size={18} /> Obtener Predicción</>)}
         </Button>
       </form>
@@ -1027,27 +1085,26 @@ const shouldShowRomanticField = currentAgeGroup === 'teen';
           </p>
           {prediction < 10 ? (
             <p className="text-red-600 font-medium">
-              Parece que hay algunas dificultades por el camino, pero no te preocupes, consulta con el equipo de AlanMath para ver como comenzamos a mejorar.
+              Parece que hay algunas dificultades por el camino, estamos analizando cuales son y cómo podrías superarlas...
             </p>
           ) : prediction < 15 ? (
             <p className="text-yellow-600 font-medium">
-              Vas por buen camino, pero podrías mejorar un montón. Consulta con el equipo de AlanMath para generar un plan de acción.
+              Vas por buen camino, pero podrías mejorar un montón, estamos analizando tus fortalezas, debilidades y preparando el mejor plan de acción...
             </p>
           ) : (
             <p className="text-green-700 font-medium">
-              ¡Excelente! Estás en condiciones geniales para llegar a la cima. Consulta con el equipo de AlanMath para establecer un programa que te lleve a lo más alto.
+              ¡Excelente! Estás en condiciones geniales para llegar a la cima, estamos analizando tus respuesta y en unos segundos te diremos como puedes mejorar aún más...
             </p>
           )}
         </div>
       )}
 
-{deepSeekFeedback && (
-  <div className="mt-8 bg-blue-100 border border-blue-300 rounded-lg p-6 text-left">
-    <h2 className="text-xl font-semibold text-blue-800 mb-2">🧠 Sugerencias Personalizadas</h2>
-    <pre className="whitespace-pre-wrap text-blue-700">{deepSeekFeedback}</pre>
+
+{prediction && deepSeekFeedback && (
+  <div className="mt-6">
+    <FeedbackCard content={deepSeekFeedback} />
   </div>
 )}
-
 
 
     </div>
