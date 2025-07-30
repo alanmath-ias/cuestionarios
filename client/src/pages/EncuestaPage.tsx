@@ -65,7 +65,7 @@ export default function EncuestaPage() {
     return savedCompleted ? JSON.parse(savedCompleted) : [];
   });
 
-  /* Lista de cuestionarios públicos, ojo se debe cambiar abajo tambien 
+  /* Lista de cuestionarios públicos, ojo se debe cambiar tambien 
   const isLanguageTest = [64, 52],
 
   El componente activepublicquiz tambíen requiere cambio:
@@ -162,6 +162,10 @@ export default function EncuestaPage() {
   });
 
   const [_, setLocation] = useLocation();
+
+  const [deepSeekFeedback, setDeepSeekFeedback] = useState<string | null>(null);
+
+
 
 // En EncuestaPage, al inicio del componente:
 useEffect(() => {
@@ -384,6 +388,10 @@ useEffect(() => {
       const finalPrediction = calculateAdjustedPrediction(data.prediccion, formData);
       setPrediction(finalPrediction);
   
+ // ⬇️ Aquí consultamos DeepSeek después de la predicción
+ const feedback = await consultarDeepSeek(formData, finalPrediction);
+ setDeepSeekFeedback(feedback);
+
     } catch (err) {
       console.error(err);
       toast({
@@ -395,6 +403,47 @@ useEffect(() => {
       setLoading(false);
     }
   };
+
+  const consultarDeepSeek = async (formData: FormData, prediccion: number): Promise<string> => {
+    const prompt = `
+  Eres un experto en aprendizaje automático. Un modelo de predicción ha estimado el rendimiento académico de un estudiante con ${prediccion.toFixed(1)} / 20.
+  
+  Estos son los datos del estudiante:
+  ${JSON.stringify(formData, null, 2)}
+  
+  Por favor, indica:
+  1. Qué variables afectaron más negativamente el rendimiento y por qué.
+  2. Qué variables pueden mejorar si el estudiante toma acción.
+  3. Sugerencias específicas para mejorar el resultado futuro.
+  Usa un lenguaje claro y orientado al estudiante.
+    `;
+    
+    try {
+      const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
+      
+      const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          //'Authorization': `Bearer ${import.meta.env.VITE_DEEPSEEK_API_KEY}`,
+          Authorization: `Bearer ${apiKey}`,
+
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+        }),
+      });
+  
+      const data = await res.json();
+      return data?.choices?.[0]?.message?.content || 'No se pudo generar una recomendación.';
+    } catch (error) {
+      console.error('Error al consultar DeepSeek:', error);
+      return 'Error al consultar DeepSeek.';
+    }
+  };
+  
 
   const getFieldColor = (field: string, value: number | string): string => {
     // Define qué campos son "inversos" (donde valores bajos son buenos)
@@ -916,7 +965,7 @@ const shouldShowRomanticField = currentAgeGroup === 'teen';
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
   {publicQuizzes.map((quiz) => {
     // Identificar si el test es de lenguaje o matemáticas
-    const isLanguageTest = [64, 52].includes(quiz.id); // IDs de lenguaje
+    const isLanguageTest = [68, 69].includes(quiz.id); // IDs de lenguaje
     const fieldName = isLanguageTest ? 'G1' : 'G2'; // Usar G1 para lenguaje y G2 para matemáticas
     const fieldValue = (formData[fieldName] as number) / 2;
     const isCompleted = completedTests.includes(quiz.id);
@@ -991,6 +1040,16 @@ const shouldShowRomanticField = currentAgeGroup === 'teen';
           )}
         </div>
       )}
+
+{deepSeekFeedback && (
+  <div className="mt-8 bg-blue-100 border border-blue-300 rounded-lg p-6 text-left">
+    <h2 className="text-xl font-semibold text-blue-800 mb-2">🧠 Sugerencias Personalizadas</h2>
+    <pre className="whitespace-pre-wrap text-blue-700">{deepSeekFeedback}</pre>
+  </div>
+)}
+
+
+
     </div>
   );
 }
