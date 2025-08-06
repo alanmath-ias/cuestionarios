@@ -1,6 +1,7 @@
 # .env.production
 NODE_ENV=production
 PORT=5000
-DATABASE_URL=postgresql://postgres:KhKIghnzSfqJKGYeyfroFwzsYPpRJMAI@metro.proxy.rlwy.net:43105/railway
+DATABASE_URL=postgres://postgres:LbG7KjvVYb2WcCERh9lTWq4dSx1HKjKJZkiyehLcJ8Iu3MaRjLVEnzlCAzs5QFMq:5432/postgres
+#DATABASE_URL=postgresql://postgres:KhKIghnzSfqJKGYeyfroFwzsYPpRJMAI@metro.proxy.rlwy.net:43105/railway
 SESSION_SECRET=clave-secreta-mas-compleja  # ¡Cambia esto en producción real!
-#VITE_API_URL=https://cuestionarios-production.up.railway.app  # Mismo puerto que el servidor local
+VITE_API_URL=http://tsg0w44s0wscwogogo4sgksc.178.156.147.25.sslip.io  # Mismo puerto que el servidor local

@@ -370,29 +370,9 @@ app.put('/api/admin/subcategories/:id', async (req, res) => {
 
 //Entrenamiento por Subcategorías:
 app.get('/api/training-subcategory/:categoryId/:subcategoryId', async (req, res) => {
-  // 1. Log de los parámetros recibidos en bruto
-  /*console.log('📥 Parámetros recibidos:', {
-    rawParams: req.params,
-    rawQuery: req.query,
-    rawBody: req.body
-  });*/
-
   const categoryId = Number(req.params.categoryId);
   const subcategoryId = Number(req.params.subcategoryId);
 
-  // 2. Log de conversión numérica
-  /*console.log('🔄 Conversión a números:', {
-    categoryId: {
-      raw: req.params.categoryId,
-      converted: categoryId,
-      isValid: !isNaN(categoryId)
-    },
-    subcategoryId: {
-      raw: req.params.subcategoryId,
-      converted: subcategoryId,
-      isValid: !isNaN(subcategoryId)
-    }
-  });*/
 
   if (isNaN(categoryId) || isNaN(subcategoryId)) {
     console.error('❌ IDs inválidos:', {
@@ -410,22 +390,8 @@ app.get('/api/training-subcategory/:categoryId/:subcategoryId', async (req, res)
   }
 
   try {
-    // 3. Log antes de hacer la consulta a la DB
-    /*console.log('🔍 Buscando preguntas para:', {
-      categoryId,
-      subcategoryId,
-      timestamp: new Date().toISOString()
-    });*/
 
     const questions = await storage.getTrainingQuestionsByCategoryAndSubcategory(categoryId, subcategoryId);
-
-    // 4. Log del resultado
-    /*console.log('✅ Resultado encontrado:', {
-      categoryId,
-      subcategoryId,
-      questionCount: questions.length,
-      sampleQuestion: questions.length > 0 ? questions[0] : null
-    });*/
 
     res.json({ 
       questions,
@@ -470,12 +436,7 @@ app.get('/api/training-subcategory/:categoryId/:subcategoryId', async (req, res)
       });
     }
   } finally {
-    // 5. Log final de la ejecución
-    /*console.log('🏁 Fin de la solicitud para:', {
-      categoryId,
-      subcategoryId,
-      timestamp: new Date().toISOString()
-    });*/
+
   }
 });
 
@@ -828,69 +789,7 @@ apiRouter.post("/progress", async (req: Request, res: Response) => {
       res.status(500).json({ message: "Error submitting answer" });
     }
   });
- /*
-  apiRouter.get("/results/:progressId", async (req: Request, res: Response) => {
-    const userId = req.session.userId;
-    const role = req.session.role; // Asegúrate que esto está disponible en tu sesión
-    const progressId = parseInt(req.params.progressId);
-  
-    if (!userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-  
-    if (isNaN(progressId)) {
-      return res.status(400).json({ message: "Invalid progress ID" });
-    }
-  
-    try {
-      //console.log("User ID:", userId);
-//console.log("Role:", role);
-//console.log("Requested progressId:", progressId);
-
-
-      let progress;
-  
-      if (role === "admin") {
-        // Admin puede ver cualquier progreso
-        const allProgresses = await storage.getAllProgresses(); // Este método debe existir en storage
-        //console.log("Total progresses found:", allProgresses.length);
-        progress = allProgresses.find(p => p.id === progressId);
-      } else {
-        // Usuario solo puede ver sus propios progresos
-        const userProgresses = await storage.getStudentProgress(userId);
-        progress = userProgresses.find(p => p.id === progressId);
-      }
-  
-      if (!progress) {
-        return res.status(403).json({ message: "Not authorized to view these results" });
-      }
-  
-      const quiz = await storage.getQuiz(progress.quizId);
-      const answers = await storage.getStudentAnswersByProgress(progressId);
-  
-      // Get question details for each answer
-      const detailedAnswers = await Promise.all(answers.map(async (answer) => {
-        const question = await storage.getQuestion(answer.questionId);
-        const answerDetails = answer.answerId ? await storage.getAnswer(answer.answerId) : null;
-  
-        return {
-          ...answer,
-          question,
-          answerDetails
-        };
-      }));
-  
-      res.json({
-        progress,
-        quiz,
-        answers: detailedAnswers
-      });
-    } catch (error) {
-      console.error("Results fetch error:", error);
-      res.status(500).json({ message: "Error fetching quiz results" });
-    }
-  });*/
-
+ 
   apiRouter.get("/results/:progressId", async (req: Request, res: Response) => {
     const userId = req.session.userId;
     const role = req.session.role; // Asegúrate de que esto está disponible en tu sesión
@@ -1671,99 +1570,6 @@ app.get('/api/admin/user-progress-summary', async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
-/*
-// Obtener nombre del hijo asignado al padre
-// Obtener el nombre del estudiante del padre logueado
-app.get("/api/parent/student", async (req: Request, res: Response) => {
-  const parentId = req.session.userId;
-
-  if (!parentId) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const parent = await db.query.parents.findFirst({
-    where: eq(parents.userId, parentId),
-  });
-
-  if (!parent) {
-    return res.status(404).json({ error: "Parent record not found" });
-  }
-
-  const student = await db.query.users.findFirst({
-    where: eq(users.id, parent.childId),
-    columns: { name: true },
-  });
-
-  if (!student) {
-    return res.status(404).json({ error: "Student not found" });
-  }
-
-  return res.json({ studentName: student.name });
-});
-
-
-// Obtener quizzes del estudiante hijo desde el padre
-app.get("/api/parent/student-quizzes", async (req: Request, res: Response) => {
-  const parentId = req.session.userId;
-
-  if (!parentId) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  try {
-    const parent = await db.query.parents.findFirst({
-      where: eq(parents.userId, parentId),
-    });
-
-    if (!parent) {
-      return res.status(404).json({ error: "Parent record not found" });
-    }
-
-    const childId = parent.childId;
-
-    const progressRecords = await db.query.studentProgress.findMany({
-      where: eq(studentProgress.userId, childId),
-      with: {
-        quiz: {
-          columns: { id: true, title: true },
-        },
-      },
-    });
-
-    const quizIds = progressRecords.map((p) => p.quiz.id);
-
-    const submissions = await db.query.quizSubmissions.findMany({
-      where: and(
-        eq(quizSubmissions.userId, childId),
-        inArray(quizSubmissions.quizId, quizIds)
-      ),
-    });
-
-    const result = progressRecords.map((progress) => {
-      const submission = submissions.find(
-        (s) =>
-          s.quizId === progress.quiz.id &&
-          s.progressId === progress.id
-      );
-
-      return {
-        quizId: progress.quiz.id,
-        progressId: progress.id,
-        title: progress.quiz.title,
-        status: progress.status,
-        score: submission?.score ?? null,
-        reviewed: submission?.reviewed ?? false,
-        feedback: submission?.feedback ?? null,
-      };
-    });
-
-    return res.json(result);
-  } catch (error) {
-    console.error("Error fetching student quizzes:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
-*/// el anterior era INTENtO DE COMPONENTE parentdashboard muchos problemas
 
 //para la creacion de usuario  padre e hijo desde el admin:
 app.post('/api/auth/register-parent', requireAdmin, async (req, res) => {
