@@ -375,7 +375,7 @@ useEffect(() => {
     localStorage.setItem('surveyFormData', JSON.stringify(formData));
 
     try {
-      const res = await fetch('https://wg48wwwgoks0804044wowo8w.178.156.147.25.sslip.io/predecir', {
+      const res = await fetch('https://prediccion.alanmath.com/predecir', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
