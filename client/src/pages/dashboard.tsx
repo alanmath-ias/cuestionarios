@@ -26,6 +26,8 @@ import { useEffect } from "react";
 import { Youtube } from 'lucide-react'; // Para Lucide Icons
 // o
 import { FaYoutube } from 'react-icons/fa'; // Para Font Awesome
+import { useState } from "react";
+
 
 interface QuizWithFeedback extends UserQuiz {
   progressId?: string;
@@ -125,7 +127,12 @@ function CompletedQuizCard({ quiz }: { quiz: QuizWithFeedback }) {
   );
 }
 
+
+
 export default function UserDashboard() {
+  // Filtramos las tareas completadas
+const [showAllCompleted, setShowAllCompleted] = useState(false);
+
   const queryClient = useQueryClient();
 
   const queryOptions = {
@@ -173,6 +180,7 @@ export default function UserDashboard() {
     };
   }, [queryClient]);
 
+  
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[300px]">
@@ -187,6 +195,13 @@ export default function UserDashboard() {
   const progressPercentage = quizzes && quizzes.length > 0
     ? (completedQuizzes.length / quizzes.length) * 100
     : 0;
+
+
+
+// Ordenar las tareas completadas por fecha más reciente
+const sortedCompletedQuizzes = [...completedQuizzes].sort((a, b) =>
+  new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime()
+);
 
   return (
     <div className="container mx-auto py-8">
@@ -398,20 +413,38 @@ export default function UserDashboard() {
         </div>
 
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <ClipboardCheck className="h-5 w-5 text-green-600" />
-            <h2 className="text-lg font-bold text-green-800">Tareas Terminadas</h2>
-          </div>
-          {completedQuizzes.length === 0 ? (
-            <p className="text-muted-foreground">No has completado ninguna tarea aún.</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {completedQuizzes.map((quiz) => (
-                <CompletedQuizCard key={quiz.id} quiz={quiz} />
-              ))}
-            </div>
-          )}
+  <div className="flex items-center gap-2 mb-2">
+    <ClipboardCheck className="h-5 w-5 text-green-600" />
+    <h2 className="text-lg font-bold text-green-800">Tareas Terminadas</h2>
+  </div>
+
+  {sortedCompletedQuizzes.length === 0 ? (
+    <p className="text-muted-foreground">No has completado ninguna tarea aún.</p>
+  ) : (
+    <>
+      <div className="grid grid-cols-1 gap-4">
+        {(showAllCompleted
+          ? sortedCompletedQuizzes
+          : sortedCompletedQuizzes.slice(0, 5)
+        ).map((quiz) => (
+          <CompletedQuizCard key={quiz.id} quiz={quiz} />
+        ))}
+      </div>
+
+      {sortedCompletedQuizzes.length > 5 && (
+        <div className="flex justify-center mt-4">
+          <Button
+            variant="outline"
+            onClick={() => setShowAllCompleted(!showAllCompleted)}
+            className="text-green-700 border-green-400 hover:bg-green-100"
+          >
+            {showAllCompleted ? "Ver menos" : "Ver todas"}
+          </Button>
         </div>
+      )}
+    </>
+  )}
+</div>
       </div>
     </div>
   );

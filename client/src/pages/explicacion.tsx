@@ -127,7 +127,7 @@ Ejemplo de formato:
       <Card className="w-full max-w-3xl mx-auto bg-white shadow-xl">
         <CardHeader className="relative">
           <CardTitle className="text-xl font-semibold text-primary">
-            📚 Explicación ejercicio sobre {quizTitle} {/* Muestra el título aquí */}
+            📚 Explicación ejercicio del cuestionario: {quizTitle} {/* Muestra el título aquí */}
           </CardTitle>
           <Button
             variant="ghost"
