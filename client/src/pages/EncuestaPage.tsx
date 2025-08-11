@@ -15,6 +15,11 @@ import { Badge } from '@/components/ui/badge'; // Añade esta línea
 
 import FeedbackCard from "./FeedbackCard";
 
+import { ArrowLeft } from "lucide-react";
+//import { useNavigate } from "react-router-dom";
+
+
+
 type FormData = {
   // Campos regulares
   sex: string;
@@ -469,7 +474,7 @@ useEffect(() => {
   NO USES ASTERISCOS EN LAS RESPUESTAS, COLOCA ÍCONOS RELEVANTES PARA CADA FACTOR Y SUGERENCIA EN LUGAR DE GUIONES O ASTERISCOS
   SIEMPRE ACONSEJA CLASES DE MATEMÁTICAS EXTRAS, PERSONALIZADAS NO IMPORTA EL RESULTADO
   DEJA UNA TABULACIÓN PARA CADA ITEM QUE CORRESPONDA A 1, 2 O 3 LA IDEA ES QUE SE VEA AGRADABLE
-  
+  Muy importante, si el puntaje sobre cualquier pregunta relacionada con el alcohol es el mínimo, no menciones nada sobre el alcohol, ni como algo bueno ni como algo malo, cero menciones 
   
   Aquí están los datos del estudiante:
  
@@ -576,6 +581,24 @@ const shouldShowRomanticField = currentAgeGroup === 'teen';
 
   return (
     <div className="max-w-3xl mx-auto py-10 px-4">
+
+ {/* Botón arriba a la izquierda */}
+ <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-4 left-4"
+        onClick={() => {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            // Ruta predeterminada si no hay historial
+            window.location.href = "/";
+          }
+        }}
+      >
+        <ArrowLeft className="h-5 w-5" />
+      </Button>
+
       <h1 className="text-3xl font-bold text-center mb-6 text-primary">📊 Encuesta de Diagnóstico Inicial</h1>
 
       <p className="text-center text-muted-foreground mb-6">
@@ -1015,6 +1038,9 @@ const shouldShowRomanticField = currentAgeGroup === 'teen';
               />
             </div>
             */}
+
+
+            
           </div>
         </div>
 

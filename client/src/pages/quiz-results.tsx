@@ -6,6 +6,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { MathDisplay } from '@/components/ui/math-display';
 import { ArrowLeft, Download, Clock, CheckCircle, XCircle } from 'lucide-react';
 import type { QuizResult } from '@shared/quiz-types.js';
+// En la parte superior del archivo QuizResults.tsx, añade:
+import { useState } from 'react';
+import { ExplanationModal } from './explicacion'; // Asegúrate de crear este componente
+
 
 interface Question {
   id: number;
@@ -148,6 +152,19 @@ const preciseScore = ((correctAnswers / totalQuestions) * 10).toFixed(1);
     document.body.removeChild(link);
   };
 
+// Dentro del componente QuizResults, añade este estado:
+const [showExplanation, setShowExplanation] = useState(false);
+const [currentExplanation, setCurrentExplanation] = useState<{
+  question: string;
+  correctAnswer: string;
+} | null>(null);
+
+// Añade esta función para manejar la solicitud de explicación
+const handleRequestExplanation = (question: string, correctAnswer: string) => {
+  setCurrentExplanation({ question, correctAnswer });
+  setShowExplanation(true);
+};
+
   return (
     <div id="quizResults" className="max-w-4xl mx-auto">
       <div className="mb-6 flex items-center">
@@ -253,19 +270,34 @@ const preciseScore = ((correctAnswers / totalQuestions) * 10).toFixed(1);
                         </div>
 
                         {!answer.isCorrect && (
-                          <div className="border rounded p-3 bg-green-50 border-green-200">
-                            <div className="text-sm font-medium mb-1">Respuesta correcta:</div>
-                            {correctContent ? (
-                              <div className="text-gray-700">
-                                {renderContent(correctContent)}
-                              </div>
-                            ) : (
-                              <span className="text-gray-500">
-                                {loadingQuestions ? 'Cargando...' : 'No disponible'}
-                              </span>
-                            )}
-                          </div>
-                        )}
+  <div className="border rounded p-3 bg-green-50 border-green-200">
+    <div className="flex justify-between items-start">
+      <div>
+        <div className="text-sm font-medium mb-1">Respuesta correcta:</div>
+        {correctContent ? (
+          <div className="text-gray-700">
+            {renderContent(correctContent)}
+          </div>
+        ) : (
+          <span className="text-gray-500">
+            {loadingQuestions ? 'Cargando...' : 'No disponible'}
+          </span>
+        )}
+      </div>
+      <Button 
+        variant="outline" 
+        size="sm"
+        onClick={() => handleRequestExplanation(
+          answer.question.content,
+          correctContent || ''
+        )}
+        className="ml-2"
+      >
+        Ver Explicación
+      </Button>
+    </div>
+  </div>
+)}
                       </div>
 
                       {(answer.answerDetails?.explanation || answer.correctAnswer?.explanation) && (
@@ -314,8 +346,23 @@ const preciseScore = ((correctAnswers / totalQuestions) * 10).toFixed(1);
           No se encontraron resultados.
         </div>
       )}
+
+{showExplanation && currentExplanation && (
+  <ExplanationModal
+    question={currentExplanation.question}
+    correctAnswer={currentExplanation.correctAnswer}
+    quizTitle={results?.quiz.title || 'Matemáticas'} // Asegúrate de pasar el título
+    onClose={() => setShowExplanation(false)}
+  />
+)}
+
     </div>
+    
   );
+
+
+
+
 }
 
 export default QuizResults;

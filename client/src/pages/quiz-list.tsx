@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
+import  VideoEmbed  from './VideoEmbed';
 
 interface Category {
   id: number;
@@ -118,34 +119,27 @@ function QuizList() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            onClick={() => setLocation('/')}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-            {loadingCategory ? 'Cargando...' : category?.name}
-          </h1>
-        </div>
-        {category?.youtubeLink && (
-          <a
-            href={category.youtubeLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-auto"
-          >
-            <Button className="flex items-center gap-2 bg-[#FF0000] hover:bg-[#CC0000] text-white">
-              <Youtube className="w-5 h-5" />
-              YouTube VIDEOS
-            </Button>
-          </a>
-        )}
+      {/* Botón atrás */}
+    <Button
+      variant="ghost"
+      size="icon"
+      className="rounded-full"
+      onClick={() => setLocation('/')}
+    >
+      <ArrowLeft className="h-5 w-5" />
+    </Button>
+
+    {/* Título de la categoría */}
+    <h1 className="text-3xl font-bold text-gray-800 dark:text-white mt-4 mb-4">
+      {loadingCategory ? 'Cargando...' : category?.name}
+    </h1>
+
+    {/* Video embebido */}
+    {category?.youtubeLink && (
+      <div className="w-full max-w-3xl mx-auto mb-8">
+        <VideoEmbed youtubeLink={category.youtubeLink} />
       </div>
+    )}
 
       {isLoading ? (
         <div className="space-y-8">

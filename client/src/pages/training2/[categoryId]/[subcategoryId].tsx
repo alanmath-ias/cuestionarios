@@ -365,47 +365,53 @@ const TrainingPageSub = () => {
             </AnimatePresence>
 
             {currentQuestion.options.map((option, index) => {
-              const isSelected = isAnswered 
-                ? previousAnswer?.selectedOption === index
-                : selectedOption === index;
-              
-              const isCorrectAnswer = option.isCorrect;
-              const showCorrect = (showResult || reviewMode) && isCorrectAnswer;
-              const showIncorrect = (showResult || reviewMode) && isSelected && !isCorrectAnswer;
+  const isSelected = isAnswered 
+    ? previousAnswer?.selectedOption === index
+    : selectedOption === index;
+  
+  const isCorrectAnswer = option.isCorrect;
+  const showCorrect = (showResult || reviewMode) && isCorrectAnswer;
+  const showIncorrect = (showResult || reviewMode) && isSelected && !isCorrectAnswer;
 
-              return (
-                <Button
-                  key={option.id}
-                  variant={
-                    reviewMode
-                      ? isCorrectAnswer
-                        ? "secondary"
-                        : isSelected
-                        ? "destructive"
-                        : "outline"
-                      : isAnswered
-                      ? previousAnswer?.selectedOption === index
-                        ? previousAnswer?.isCorrect
-                          ? "secondary"
-                          : "destructive"
-                        : showCorrect
-                        ? "secondary"
-                        : "outline"
-                      : isSelected
-                      ? "secondary"
-                      : "outline"
-                  }
-                  className={`w-full text-left justify-start h-auto py-3 whitespace-normal transition-all ${
-                    showCorrect ? 'ring-2 ring-green-500' : ''
-                  } ${showIncorrect ? 'ring-2 ring-red-500' : ''}`}
-                  onClick={() => handleOptionSelect(index)}
-                  disabled={isAnswered || reviewMode}
-                >
-                  {option.text}
-                  {showCorrect && <Star className="ml-2 h-4 w-4 text-yellow-500" />}
-                </Button>
-              );
-            })}
+  return (
+    <Button
+      key={option.id}
+      variant={
+        reviewMode
+          ? isCorrectAnswer
+            ? "secondary"
+            : isSelected
+            ? "destructive"
+            : "outline"
+          : isAnswered
+          ? previousAnswer?.selectedOption === index
+            ? previousAnswer?.isCorrect
+              ? "secondary"
+              : "destructive"
+            : showCorrect
+            ? "secondary"
+            : "outline"
+          : isSelected
+          ? "secondary"
+          : "outline"
+      }
+      className={`w-full text-left justify-start h-auto py-3 whitespace-normal transition-all ${
+        showCorrect ? 'ring-2 ring-green-500' : ''
+      } ${showIncorrect ? 'ring-2 ring-red-500' : ''}`}
+      onClick={() => handleOptionSelect(index)}
+      disabled={isAnswered || reviewMode}
+    >
+      <span className="whitespace-pre-wrap">
+        {option.text.split('¡').map((part, i) => (
+          i % 2 === 0 ? 
+            <span key={i}>{part}</span> : 
+            <MathDisplay key={i} math={part.trim()} inline />
+        ))}
+      </span>
+      {showCorrect && <Star className="ml-2 h-4 w-4 text-yellow-500" />}
+    </Button>
+  );
+})}
           </CardContent>
 
           <CardFooter className="flex justify-between">
