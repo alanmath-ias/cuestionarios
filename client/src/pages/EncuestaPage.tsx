@@ -18,7 +18,7 @@ import FeedbackCard from "./FeedbackCard";
 import { ArrowLeft } from "lucide-react";
 //import { useNavigate } from "react-router-dom";
 
-
+import {PageLayout} from "@/components/layout/page-layout";
 
 type FormData = {
   // Campos regulares
@@ -580,9 +580,11 @@ const shouldShowAlcoholField = currentAgeGroup === 'teen';
 const shouldShowRomanticField = currentAgeGroup === 'teen';
 
   return (
+    <PageLayout>
     <div className="max-w-3xl mx-auto py-10 px-4">
 
  {/* Botón arriba a la izquierda */}
+ {/*
  <Button
         variant="ghost"
         size="icon"
@@ -598,7 +600,7 @@ const shouldShowRomanticField = currentAgeGroup === 'teen';
       >
         <ArrowLeft className="h-5 w-5" />
       </Button>
-
+*/}
       <h1 className="text-3xl font-bold text-center mb-6 text-primary">📊 Encuesta de Diagnóstico Inicial</h1>
 
       <p className="text-center text-muted-foreground mb-6">
@@ -1134,5 +1136,6 @@ const shouldShowRomanticField = currentAgeGroup === 'teen';
 
 
     </div>
+    </PageLayout>
   );
 }

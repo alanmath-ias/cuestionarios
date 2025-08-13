@@ -49,6 +49,7 @@ export const quizzes = pgTable("quizzes", {
 	totalQuestions: integer("total_questions").notNull(),
 	isPublic: boolean("is_public").default(false),
 	subcategoryId: integer("subcategory_id"),
+	url: text("url"), // opcional, tipo texto
 }, (table) => [
 	foreignKey({
 			columns: [table.subcategoryId],

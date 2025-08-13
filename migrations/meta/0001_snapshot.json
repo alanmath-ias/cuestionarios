@@ -1,6 +1,6 @@
 {
-  "id": "1c3eb7d9-f000-4b6b-a1dc-441057f328a2",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "0adb6e4b-72ca-41cd-a796-f1a19c6996f8",
+  "prevId": "1c3eb7d9-f000-4b6b-a1dc-441057f328a2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -485,6 +485,12 @@
         "subcategory_id": {
           "name": "subcategory_id",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }

@@ -431,6 +431,7 @@ export class MemStorage implements IStorage {
       categoryId,
       subcategoryId, // asegúrate de que siempre esté presente
       isPublic: quiz.isPublic ?? null, // también importante si puede venir undefined
+      url: null // asignamos null porque no viene del input
     };
   
     this.quizzes.set(id, newQuiz);

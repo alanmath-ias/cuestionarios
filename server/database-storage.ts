@@ -244,7 +244,8 @@ export class DatabaseStorage implements IStorage {
       totalQuestions: quizzes.totalQuestions,
       isPublic: quizzes.isPublic,
       category: categories,
-      subcategory: subcategories
+      subcategory: subcategories,
+      url: quizzes.url, // <-- agregado
     })
     .from(quizzes)
     .leftJoin(categories, eq(quizzes.categoryId, categories.id))
@@ -363,6 +364,7 @@ async getQuizzesByUserId(userId: number) {
       reviewed: quizSubmissions.reviewed,
       progressId: studentProgress.id, // <- Aquí está el cambio clave
       completedAt: studentProgress.completedAt, // <- Añade esta línea
+      url: quizzes.url, // ← Añade esta línea
     })
     .from(userQuizzes)
     .innerJoin(quizzes, eq(userQuizzes.quizId, quizzes.id))
@@ -524,6 +526,7 @@ async getQuizResults(progressId: number): Promise<QuizResult | null> {
       totalQuestions: number;
       isPublic: boolean | null;    // Añadir esto
       subcategoryId: number | null // Añadir esto
+      url: string | null; // <- agregado
     };
     answers: Array<{
       id: number;
@@ -568,7 +571,8 @@ const progressWithRelations = await db.query.studentProgress.findFirst({
         difficulty: true,
         totalQuestions: true,
         isPublic: true,
-        subcategoryId: true
+        subcategoryId: true,
+        url: true  // <-- agregado
       }
     },
     answers: {

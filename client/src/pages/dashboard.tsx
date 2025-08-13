@@ -20,14 +20,12 @@ import {
   MessageCircle,
   AlertTriangle,
   Sparkles,
+  Youtube,
 } from "lucide-react";
 import { Link } from "wouter";
-import { useEffect } from "react";
-import { Youtube } from 'lucide-react'; // Para Lucide Icons
-// o
-import { FaYoutube } from 'react-icons/fa'; // Para Font Awesome
+import { useEffect, useRef } from "react";
 import { useState } from "react";
-
+import VideoEmbed from './VideoEmbed';
 
 interface QuizWithFeedback extends UserQuiz {
   progressId?: string;
@@ -35,6 +33,7 @@ interface QuizWithFeedback extends UserQuiz {
   completedAt?: string | Date;
   score?: number;
   timeSpent?: number;
+  url?: string | null;
   // Otros campos que puedas necesitar
 }
 
@@ -53,11 +52,23 @@ async function fetchCategories() {
 }
 
 async function fetchQuizzes() {
-  const response = await fetch("/api/user/quizzes", {
-    credentials: "include",
-  });
-  if (!response.ok) throw new Error("Error al obtener cuestionarios");
-  return response.json();
+  try {
+    const response = await fetch("/api/user/quizzes", {
+      credentials: "include",
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error al obtener cuestionarios: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    //console.log("Datos recibidos de /api/user/quizzes:", data); // ← LOG AQUÍ
+    return data;
+    
+  } catch (error) {
+    console.error("Error en fetchQuizzes:", error);
+    throw error;
+  }
 }
 
 async function fetchAlerts() {
@@ -73,7 +84,7 @@ async function fetchQuizFeedback(progressId: string) {
   return res.json();
 }
 
-function CompletedQuizCard({ quiz }: { quiz: QuizWithFeedback }) {
+function CompletedQuizCard({ quiz, playVideo }: { quiz: QuizWithFeedback, playVideo: (url: string) => void }) {
   const { data: feedback, isLoading: loadingFeedback } = useQuery({
     queryKey: ['quiz-feedback', quiz.progressId],
     queryFn: () => quiz.progressId ? fetchQuizFeedback(quiz.progressId) : null,
@@ -105,33 +116,54 @@ function CompletedQuizCard({ quiz }: { quiz: QuizWithFeedback }) {
           </CardDescription>
         </div>
         <div className="absolute bottom-3 right-3">
-    <CheckCircle2 className="h-6 w-6 text-green-600" />
-  </div>
+          <CheckCircle2 className="h-6 w-6 text-green-600" />
+        </div>
       </CardHeader>
       
-      <CardContent>
+      <CardContent className="space-y-3">
         {!loadingFeedback && feedback?.feedback && (
           <div className="mb-3 bg-white p-3 rounded border border-green-200">
             <h4 className="text-sm font-semibold text-green-800 mb-1">Retroalimentación AlanMath:</h4>
             <p className="text-sm text-gray-700 whitespace-pre-wrap">{feedback.feedback}</p>
           </div>
         )}
-        <Link href={`/results/${quiz.progressId}`}>
-          <Button variant="outline" className="flex items-center text-green-700 border-green-400 hover:bg-green-100">
-            Ver Resultados
-            <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        </Link>
+        
+        <div className="flex gap-2">
+          <Link href={`/results/${quiz.progressId}`}>
+            <Button variant="outline" className="flex items-center text-green-700 border-green-400 hover:bg-green-100">
+              Ver Resultados
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+          
+          {quiz.url && (
+            <Button 
+              variant="outline" 
+              className="flex items-center text-red-600 border-red-300 hover:bg-red-50"
+              onClick={() => playVideo(quiz.url!)}
+            >
+              <Youtube className="h-4 w-4 mr-2" />
+              Ver Video
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-
-
 export default function UserDashboard() {
-  // Filtramos las tareas completadas
-const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const videoSectionRef = useRef<HTMLDivElement>(null);
+
+  const playVideo = (youtubeLink: string) => {
+    if (!youtubeLink) return;
+    setSelectedVideo(youtubeLink);
+    setTimeout(() => {
+      videoSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  };
 
   const queryClient = useQueryClient();
 
@@ -180,6 +212,17 @@ const [showAllCompleted, setShowAllCompleted] = useState(false);
     };
   }, [queryClient]);
 
+  useEffect(() => {
+    if (categories && categories.length > 0) {
+      const categoriesWithVideo = categories.filter(cat => !!cat.youtubeLink);
+      if (categoriesWithVideo.length > 0) {
+        const randomCategory = categoriesWithVideo[
+          Math.floor(Math.random() * categoriesWithVideo.length)
+        ];
+        setSelectedVideo(randomCategory.youtubeLink!);
+      }
+    }
+  }, [categories]);
   
   if (isLoading) {
     return (
@@ -196,23 +239,28 @@ const [showAllCompleted, setShowAllCompleted] = useState(false);
     ? (completedQuizzes.length / quizzes.length) * 100
     : 0;
 
-
-
-// Ordenar las tareas completadas por fecha más reciente
-const sortedCompletedQuizzes = [...completedQuizzes].sort((a, b) =>
-  new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime()
-);
+  // Ordenar las tareas completadas por fecha más reciente
+  const sortedCompletedQuizzes = [...completedQuizzes].sort((a, b) =>
+    new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime()
+  );
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-4">Hola {currentUser?.name}</h1>
+    <div className="container mx-auto py-4">
+      <div className="relative mb-4">
+        <h1 className="text-3xl font-bold">
+          Hola {currentUser?.name}:{" "}
+          <span className="font-normal text-base">
+            Aquí puedes acceder a tus Materias y Cuestionarios asignados
+          </span>
+        </h1>
 
-      {alerts?.hasPendingTasks && (
-        <div className="mb-4 p-4 rounded-xl bg-yellow-100 text-yellow-800 flex items-center gap-2 shadow-md">
-          <AlertTriangle className="w-5 h-5" />
-          Tienes tareas pendientes por resolver.
-        </div>
-      )}
+        {alerts?.hasPendingTasks && (
+          <div className="absolute top-0 right-0 mt-0 mr-0 p-2 rounded-lg bg-yellow-100 text-yellow-800 flex items-center gap-1 text-sm shadow-md max-w-xs sm:max-w-full">
+            <AlertTriangle className="w-4 h-4" />
+            Tienes tareas pendientes por resolver.
+          </div>
+        )}
+      </div>
 
       {alerts?.hasFeedback && (
         <div className="mb-4 p-4 rounded-xl bg-green-100 text-green-800 flex items-center gap-2 shadow-md">
@@ -221,156 +269,129 @@ const sortedCompletedQuizzes = [...completedQuizzes].sort((a, b) =>
         </div>
       )}
 
-      <p className="text-muted-foreground mb-6">
-        Aquí puedes acceder a tus Materias y Cuestionarios asignados
-      </p>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-       
-
-
-       {/* Card de Progreso General */}
-<Card className="shadow-lg bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
-  <CardHeader>
-    <CardTitle className="text-xl font-semibold text-indigo-800">
-      Progreso General
-    </CardTitle>
-  </CardHeader>
-  <CardContent className="text-center">
-    <div className="text-5xl font-bold text-indigo-600 mb-2">
-      {progressPercentage.toFixed(0)}%
-    </div>
-    <div className="text-indigo-500 font-medium">
-      DE TAREAS COMPLETADAS
-    </div>
-    <div className="mt-4 h-2 bg-indigo-200 rounded-full overflow-hidden">
-      <div 
-        className="h-full bg-indigo-600 transition-all duration-1000 ease-out"
-        style={{ width: `${progressPercentage}%` }}
-      ></div>
-    </div>
-  </CardContent>
-</Card>
-
-{/* Card de Actividad Reciente */}
-<Card className="shadow-lg bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-  <CardHeader>
-    <CardTitle className="text-xl font-semibold text-green-800">
-      Actividad Reciente
-    </CardTitle>
-  </CardHeader>
-  <CardContent>
-    {completedQuizzes.length > 0 ? (
-      <div className="flex flex-col gap-3">
-        {completedQuizzes.slice(0, 3).map((quiz) => (
-          <div 
-            key={quiz.id} 
-            className="flex items-center gap-3 p-3 rounded-lg transition-all 
-                      hover:bg-white hover:shadow-sm hover:border hover:border-green-200"
-          >
-            <div className="p-2 bg-green-100 rounded-full">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+        {/* Card de Progreso General */}
+        <Card className="shadow-lg bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-base font-semibold text-indigo-800">
+              Progreso General
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center py-1 px-3">
+            <div className="text-2xl font-bold text-indigo-600 mb-0.5">
+              {progressPercentage.toFixed(0)}%
             </div>
-            <div className="text-sm font-medium text-gray-700 flex-1">
-              {quiz.title}
+            <div className="text-indigo-500 font-medium text-xs">
+              DE TAREAS COMPLETADAS
             </div>
-            <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>
-          </div>
-        ))}
+            <div className="mt-1 h-1 rounded-full overflow-hidden bg-indigo-200">
+              <div 
+                className="h-full bg-indigo-600 transition-all duration-1000 ease-out"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card de Actividad Reciente */}
+        <Card className="shadow-lg bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-lg font-semibold text-green-800">
+              Actividad Reciente
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="py-2 px-4">
+            {completedQuizzes.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {completedQuizzes.slice(0, 3).map((quiz) => (
+                  <div 
+                    key={quiz.id} 
+                    className="flex items-center gap-2 p-2 rounded-lg transition-all hover:bg-white hover:shadow-sm hover:border hover:border-green-200"
+                  >
+                    <div className="p-1 bg-green-100 rounded-full">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div className="text-xs font-medium text-gray-700 flex-1">
+                      {quiz.title}
+                    </div>
+                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 space-y-2">
+                <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <ClipboardList className="h-6 w-6 text-green-600" />
+                </div>
+                <p className="text-sm font-medium">Aún no has tenido actividad</p>
+                <p className="text-xs text-gray-500">¡Anímate, comencemos!</p>
+                <p className="text-xs text-gray-500">
+                  Si aún no tienes Materias Asignadas envía un mensaje al número de Whatsapp:
+                </p>
+                <p className="text-sm font-medium">+57 3208056799 AlanMath</p>
+                <Link href="/category" className="inline-block mt-2">
+                  {/* Aquí tu botón si decides activarlo */}
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    ) : (
-      <div className="text-center py-6 space-y-3">
-        <div className="mx-auto w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-          <ClipboardList className="h-7 w-7 text-green-600" />
+
+      {selectedVideo && (
+        <div ref={videoSectionRef} className="mt-8 max-w-4xl mx-auto">
+          <VideoEmbed youtubeLink={selectedVideo} />
         </div>
-        <p className="text-gray-600 font-medium">
-          Aún no has tenido actividad
-        </p>
-        <p className="text-sm text-gray-500">
-          ¡Anímate, comencemos!
-        </p>
-        <p className="text-sm text-gray-500">
-          Si aún no tienes Materias Asignadas envía un mensaje al número de Whatsapp:
-        </p>
-        <p className="text-gray-600 font-medium">
-          +57 3208056799 AlanMath
-        </p>
-        <Link href="/category" className="inline-block mt-4">
-
-{/*
-          <Button 
-            size="sm" 
-            className="bg-green-600 hover:bg-green-700 text-white shadow-md"
-          >
-            <Sparkles className="h-4 w-4 mr-2" />
-            Explorar cuestionarios
-          </Button>
-*/}{/* este boton está muy bonito y debe conducir a unos quices de prueba o a ver alguna categoria de prueba*/}
-
-        </Link>
-      </div>
-    )}
-  </CardContent>
-</Card>
-
-
-      </div>
+      )}
 
       <h2 className="text-xl font-semibold mb-3">Tus Materias</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {categories?.map((category) => (
           <Card
-          key={category.id}
-          className="rounded-2xl bg-gradient-to-tr from-indigo-100 to-white border border-indigo-200 shadow-md hover:shadow-lg transition-all duration-300"
-        >
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <div>
-              <CardTitle className="text-lg text-indigo-800 font-semibold">{category.name}</CardTitle>
-              <CardDescription className="text-sm text-indigo-600">Materia asignada</CardDescription>
-            </div>
-            <BookOpen className="h-6 w-6 text-indigo-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Link href={`/category/${category.id}`} className="w-full sm:w-auto">
-                  <Button
-                    variant="outline"
-                    className="w-full sm:w-auto flex items-center justify-center font-semibold border-indigo-500 text-indigo-700"
-                  >
-                    Ver cuestionarios
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href={`/training/${category.id}`} className="w-full sm:w-auto">
-                  <Button
-                    variant="default"
-                    className="w-full sm:w-auto flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
-                  >
-                    Entrenamiento
-                  </Button>
-                </Link>
+            key={category.id}
+            className="rounded-2xl bg-gradient-to-tr from-indigo-100 to-white border border-indigo-200 shadow-md hover:shadow-lg transition-all duration-300"
+          >
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <div>
+                <CardTitle className="text-lg text-indigo-800 font-semibold">{category.name}</CardTitle>
+                <CardDescription className="text-sm text-indigo-600">Materia asignada</CardDescription>
               </div>
-              {/* Botón de YouTube con nuevo estilo */}
-              {category.youtubeLink && (
-                <a
-                  href={category.youtubeLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto"
-                >
-                 <Button 
+              <BookOpen className="h-6 w-6 text-indigo-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Link href={`/category/${category.id}`} className="w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto flex items-center justify-center font-semibold border-indigo-500 text-indigo-700"
+                    >
+                      Ver cuestionarios
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href={`/training/${category.id}`} className="w-full sm:w-auto">
+                    <Button
+                      variant="default"
+                      className="w-full sm:w-auto flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                    >
+                      Entrenamiento
+                    </Button>
+                  </Link>
+                </div>
+                {category.youtubeLink && (
+                  <Button
                     size="sm"
                     className="w-full font-semibold flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-800 dark:hover:bg-gray-700"
-                    >
+                    onClick={() => playVideo(category.youtubeLink!)}
+                  >
                     <Youtube className="h-4 w-4 text-red-600" />
                     YouTube Videos
                   </Button>
-                </a>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
@@ -398,13 +419,26 @@ const sortedCompletedQuizzes = [...completedQuizzes].sort((a, b) =>
                     </div>
                     <ListChecks className="h-6 w-6 text-yellow-600" />
                   </CardHeader>
-                  <CardContent>
-                    <Link href={`/quiz/${quiz.id}`}>
-                      <Button variant="secondary" className="flex items-center bg-yellow-500 text-white hover:bg-yellow-600">
-                        Resolver
-                        <ChevronRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </Link>
+                  <CardContent className="space-y-3">
+                    <div className="flex gap-2">
+                      <Link href={`/quiz/${quiz.id}`}>
+                        <Button variant="secondary" className="flex items-center bg-yellow-500 text-white hover:bg-yellow-600">
+                          Resolver
+                          <ChevronRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </Link>
+                      
+                      {quiz.url && (
+                        <Button 
+                          variant="outline" 
+                          className="flex items-center text-red-600 border-red-300 hover:bg-red-50"
+                          onClick={() => playVideo(quiz.url!)}
+                        >
+                          <Youtube className="h-4 w-4 mr-2" />
+                          Ver Video (Repasar)
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -413,38 +447,38 @@ const sortedCompletedQuizzes = [...completedQuizzes].sort((a, b) =>
         </div>
 
         <div>
-  <div className="flex items-center gap-2 mb-2">
-    <ClipboardCheck className="h-5 w-5 text-green-600" />
-    <h2 className="text-lg font-bold text-green-800">Tareas Terminadas</h2>
-  </div>
+          <div className="flex items-center gap-2 mb-2">
+            <ClipboardCheck className="h-5 w-5 text-green-600" />
+            <h2 className="text-lg font-bold text-green-800">Tareas Terminadas</h2>
+          </div>
 
-  {sortedCompletedQuizzes.length === 0 ? (
-    <p className="text-muted-foreground">No has completado ninguna tarea aún.</p>
-  ) : (
-    <>
-      <div className="grid grid-cols-1 gap-4">
-        {(showAllCompleted
-          ? sortedCompletedQuizzes
-          : sortedCompletedQuizzes.slice(0, 5)
-        ).map((quiz) => (
-          <CompletedQuizCard key={quiz.id} quiz={quiz} />
-        ))}
-      </div>
+          {sortedCompletedQuizzes.length === 0 ? (
+            <p className="text-muted-foreground">No has completado ninguna tarea aún.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-4">
+                {(showAllCompleted
+                  ? sortedCompletedQuizzes
+                  : sortedCompletedQuizzes.slice(0, 5)
+                ).map((quiz) => (
+                  <CompletedQuizCard key={quiz.id} quiz={quiz} playVideo={playVideo} />
+                ))}
+              </div>
 
-      {sortedCompletedQuizzes.length > 5 && (
-        <div className="flex justify-center mt-4">
-          <Button
-            variant="outline"
-            onClick={() => setShowAllCompleted(!showAllCompleted)}
-            className="text-green-700 border-green-400 hover:bg-green-100"
-          >
-            {showAllCompleted ? "Ver menos" : "Ver todas"}
-          </Button>
+              {sortedCompletedQuizzes.length > 5 && (
+                <div className="flex justify-center mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAllCompleted(!showAllCompleted)}
+                    className="text-green-700 border-green-400 hover:bg-green-100"
+                  >
+                    {showAllCompleted ? "Ver menos" : "Ver todas"}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      )}
-    </>
-  )}
-</div>
       </div>
     </div>
   );
