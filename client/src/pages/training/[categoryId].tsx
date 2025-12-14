@@ -123,7 +123,7 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
     if (selectedOption !== null && questions[currentIndex]) {
       const currentQuestion = questions[currentIndex];
       const isCorrect = currentQuestion.options[selectedOption]?.isCorrect;
-      
+
       setAnsweredQuestions(prev => [
         ...prev,
         {
@@ -202,7 +202,7 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
     const percentage = Math.round((score / totalPoints) * 100);
     const isGoodScore = percentage >= 70;
 
-    
+
     return (
       <PageLayout>
         <div className="max-w-2xl mx-auto p-6 space-y-6">
@@ -236,10 +236,10 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
                     Acertaste el <span className={`font-bold ${isGoodScore ? 'text-green-600' : 'text-blue-600'}`}>{percentage}%</span> de las preguntas
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <ComoTeFue
-                    value={percentage} 
+                    value={percentage}
                     className="h-4 bg-gray-200"
                     indicatorClassName={isGoodScore ? 'bg-green-500' : 'bg-blue-500'}
                   />
@@ -247,7 +247,7 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
                     Dificultad promedio: {questions.reduce((acc, q) => acc + (q.difficulty === 'hard' ? 2 : q.difficulty === 'medium' ? 1 : 0), 0) / questions.length > 1.5 ? 'Alta' : 'Media'}
                   </p>
                 </div>
-                
+
                 <div className="flex flex-wrap justify-center gap-2">
                   {questions.map((q, i) => {
                     const answer = answeredQuestions.find(a => a.questionId === q.id);
@@ -309,6 +309,14 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
   const isAnswered = isQuestionAnswered(currentQuestion.id);
   const previousAnswer = getQuestionAnswer(currentQuestion.id);
 
+  const renderTextWithMath = (text: string) => {
+    return text.split('¡').map((part, i) => (
+      i % 2 === 0 ?
+        <span key={i}>{part}</span> :
+        <MathDisplay key={i} math={part.trim()} inline />
+    ));
+  };
+
   return (
     <PageLayout>
       <div className="max-w-2xl mx-auto p-6 space-y-6">
@@ -331,24 +339,19 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
           <div className="mb-3 flex justify-center text-center">
             <div className="whitespace-pre-wrap">
               <h2 className="text-xl font-semibold">
-                {currentQuestion.content.split('¡').map((part, i) => (
-                  i % 2 === 0 ? 
-                    <span key={i}>{part}</span> : 
-                    <MathDisplay key={i} math={part.trim()} inline />
-                ))}
+                {renderTextWithMath(currentQuestion.content)}
               </h2>
             </div>
           </div>
 
           <CardContent className="space-y-3">
             {reviewMode && previousAnswer && (
-              <div className={`p-3 rounded-md text-center font-medium ${
-                previousAnswer.isCorrect 
-                  ? 'bg-green-100 text-green-800' 
+              <div className={`p-3 rounded-md text-center font-medium ${previousAnswer.isCorrect
+                  ? 'bg-green-100 text-green-800'
                   : 'bg-red-100 text-red-800'
-              }`}>
-                {previousAnswer.isCorrect 
-                  ? "¡Respuesta correcta!" 
+                }`}>
+                {previousAnswer.isCorrect
+                  ? "¡Respuesta correcta!"
                   : "Respuesta incorrecta"}
               </div>
             )}
@@ -359,11 +362,10 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className={`p-3 rounded-md text-center font-medium ${
-                    selectedOption !== null && currentQuestion.options[selectedOption]?.isCorrect
+                  className={`p-3 rounded-md text-center font-medium ${selectedOption !== null && currentQuestion.options[selectedOption]?.isCorrect
                       ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
-                  }`}
+                    }`}
                 >
                   {feedbackMessage}
                 </motion.div>
@@ -371,10 +373,10 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
             </AnimatePresence>
 
             {currentQuestion.options.map((option, index) => {
-              const isSelected = isAnswered 
+              const isSelected = isAnswered
                 ? previousAnswer?.selectedOption === index
                 : selectedOption === index;
-              
+
               const isCorrectAnswer = option.isCorrect;
               const showCorrect = (showResult || reviewMode) && isCorrectAnswer;
               const showIncorrect = (showResult || reviewMode) && isSelected && !isCorrectAnswer;
@@ -387,27 +389,26 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
                       ? isCorrectAnswer
                         ? "secondary"
                         : isSelected
-                        ? "destructive"
-                        : "outline"
+                          ? "destructive"
+                          : "outline"
                       : isAnswered
-                      ? previousAnswer?.selectedOption === index
-                        ? previousAnswer?.isCorrect
+                        ? previousAnswer?.selectedOption === index
+                          ? previousAnswer?.isCorrect
+                            ? "secondary"
+                            : "destructive"
+                          : showCorrect
+                            ? "secondary"
+                            : "outline"
+                        : isSelected
                           ? "secondary"
-                          : "destructive"
-                        : showCorrect
-                        ? "secondary"
-                        : "outline"
-                      : isSelected
-                      ? "secondary"
-                      : "outline"
+                          : "outline"
                   }
-                  className={`w-full text-left justify-start h-auto py-3 whitespace-normal transition-all ${
-                    showCorrect ? 'ring-2 ring-green-500' : ''
-                  } ${showIncorrect ? 'ring-2 ring-red-500' : ''}`}
+                  className={`w-full text-left justify-start h-auto py-3 whitespace-normal transition-all ${showCorrect ? 'ring-2 ring-green-500' : ''
+                    } ${showIncorrect ? 'ring-2 ring-red-500' : ''}`}
                   onClick={() => handleOptionSelect(index)}
                   disabled={isAnswered || reviewMode}
                 >
-                  {option.text}
+                  {renderTextWithMath(option.text)}
                   {showCorrect && <Star className="ml-2 h-4 w-4 text-yellow-500" />}
                 </Button>
               );
@@ -415,8 +416,8 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
           </CardContent>
 
           <CardFooter className="flex justify-between">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               disabled={currentIndex === 0}
               onClick={() => {
                 setCurrentIndex(prev => prev - 1);
@@ -426,12 +427,12 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
             >
               <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
             </Button>
-            <Button 
+            <Button
               onClick={handleNext}
               disabled={(!reviewMode && selectedOption === null && !isAnswered) || showResult}
             >
-              {currentIndex === questions.length - 1 
-                ? reviewMode ? "Finalizar revisión" : "Finalizar" 
+              {currentIndex === questions.length - 1
+                ? reviewMode ? "Finalizar revisión" : "Finalizar"
                 : "Siguiente"}
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>

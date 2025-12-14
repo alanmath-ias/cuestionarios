@@ -1,3 +1,4 @@
+import "./env-config.js";
 import express, { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite.js";
@@ -6,13 +7,7 @@ import PgSession from "connect-pg-simple";
 import { initializeTestData } from "./init-data.js";
 import { createServer } from "http";
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
 import path from 'path'; // Importa path para manejar rutas
-// Carga explícita del archivo de entorno
-const envFile = process.env.NODE_ENV === "production" ? ".envproduction" : ".env";
-dotenv.config({ path: path.resolve(process.cwd(), envFile) });
-
-console.log(`Archivo de entorno cargado: ${envFile}`);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
