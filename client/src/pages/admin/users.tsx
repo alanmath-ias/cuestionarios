@@ -13,7 +13,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -91,6 +90,23 @@ export default function UsersAdmin() {
     }
   });
 
+  // 3. Efecto para resaltar usuario desde URL
+  const [location] = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const highlightId = params.get("highlight");
+    if (highlightId && !usersLoading && users) {
+      const element = document.getElementById(`user-row-${highlightId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        element.classList.add("bg-yellow-100", "dark:bg-yellow-900/30", "transition-colors", "duration-1000");
+        setTimeout(() => {
+          element.classList.remove("bg-yellow-100", "dark:bg-yellow-900/30");
+        }, 3000);
+      }
+    }
+  }, [users, usersLoading, location]);
+
   if (usersLoading) {
     return (
       <div className="flex justify-center py-12">
@@ -116,7 +132,7 @@ export default function UsersAdmin() {
           </TableHeader>
           <TableBody>
             {users?.map((user) => (
-              <TableRow key={user.id}>
+              <TableRow key={user.id} id={`user-row-${user.id}`}>
                 <TableCell>{user.id}</TableCell>
                 <TableCell className="font-medium">{user.name}</TableCell>
                 <TableCell>{user.email}</TableCell>

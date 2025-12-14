@@ -1,24 +1,20 @@
-// client/src/pages/admin/AdminDashboard.tsx
-
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Youtube } from 'lucide-react'; // Para Lucide Icons
-// o
-import { FaYoutube } from 'react-icons/fa'; // Para Font Awesome
 import {
   BadgeCheck,
   ClipboardList,
   ListChecks,
-  ChevronRight,
   Users,
   FileClock,
-  UserCircle2,
-  FileText,
-  CheckCircle,
-  AlertCircle,
+  AlertTriangle,
+  Activity,
+  TrendingUp,
+  Youtube
 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 type KPIStats = {
   totalAssigned: number;
@@ -34,12 +30,22 @@ type Submission = {
   progressId: string;
 };
 
-type UserProgress = {
+type AtRiskStudent = {
   userId: number;
-  name: string;
-  assigned: number;
-  completed: number;
-  pending: number;
+  userName: string;
+  quizTitle: string;
+  score: number;
+  completedAt: string;
+};
+
+type RecentActivity = {
+  id: number;
+  userId: number;
+  userName: string;
+  quizTitle: string;
+  status: string;
+  score: number | null;
+  completedAt: string;
 };
 
 const AdminDashboard: React.FC = () => {
@@ -50,7 +56,8 @@ const AdminDashboard: React.FC = () => {
   });
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
   const [categories, setCategories] = useState<{ id: number; name: string; youtubeLink?: string | null }[]>([]);
-  const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
+  const [atRiskStudents, setAtRiskStudents] = useState<AtRiskStudent[]>([]);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
 
   useEffect(() => {
     fetch('/api/admin/dashboard-kpis')
@@ -65,184 +72,244 @@ const AdminDashboard: React.FC = () => {
       .then(res => res.json())
       .then(setCategories);
 
-    fetch('/api/admin/user-progress-summary')
+    // Nuevos endpoints
+    fetch('/api/admin/students-at-risk?limit=5')
       .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setUserProgress(data);
-      });
+      .then(setAtRiskStudents);
+
+    fetch('/api/admin/recent-activity?limit=10')
+      .then(res => res.json())
+      .then(setRecentActivity);
   }, []);
 
   return (
-    <div className="p-6 space-y-10">
+    <div className="p-6 space-y-8 max-w-7xl mx-auto">
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="shadow-md border-blue-100">
-          <CardContent className="p-6 space-y-2">
-            <div className="flex items-center gap-3 text-blue-600">
-              <ClipboardList className="w-6 h-6" />
-              <h3 className="text-lg font-semibold">Cuestionarios asignados</h3>
+        <Card className="shadow-sm border-l-4 border-l-blue-500">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Cuestionarios Asignados</p>
+                <h3 className="text-3xl font-bold text-blue-700 mt-2">{kpis.totalAssigned}</h3>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-full">
+                <ClipboardList className="w-6 h-6 text-blue-600" />
+              </div>
             </div>
-            <p className="text-4xl font-bold text-blue-800">{kpis.totalAssigned}</p>
           </CardContent>
         </Card>
-        <Card className="shadow-md border-green-100">
-          <CardContent className="p-6 space-y-2">
-            <div className="flex items-center gap-3 text-green-600">
-              <ListChecks className="w-6 h-6" />
-              <h3 className="text-lg font-semibold">Completados</h3>
+
+        <Card className="shadow-sm border-l-4 border-l-green-500">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Completados</p>
+                <h3 className="text-3xl font-bold text-green-700 mt-2">{kpis.completed}</h3>
+              </div>
+              <div className="p-3 bg-green-50 rounded-full">
+                <ListChecks className="w-6 h-6 text-green-600" />
+              </div>
             </div>
-            <p className="text-4xl font-bold text-green-800">{kpis.completed}</p>
           </CardContent>
         </Card>
-        <Card className="shadow-md border-yellow-100">
-          <CardContent className="p-6 space-y-2">
-            <div className="flex items-center gap-3 text-yellow-600">
-              <BadgeCheck className="w-6 h-6" />
-              <h3 className="text-lg font-semibold">Pendientes por revisar</h3>
+
+        <Card className="shadow-sm border-l-4 border-l-yellow-500">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Pendientes por Revisar</p>
+                <h3 className="text-3xl font-bold text-yellow-700 mt-2">{kpis.pendingReview}</h3>
+              </div>
+              <div className="p-3 bg-yellow-50 rounded-full">
+                <BadgeCheck className="w-6 h-6 text-yellow-600" />
+              </div>
             </div>
-            <p className="text-4xl font-bold text-yellow-700">{kpis.pendingReview}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Progreso de estudiantes */}
-      <div>
-        <h2 className="text-2xl font-bold flex items-center gap-2 mb-4">
-          <Users className="w-5 h-5 text-primary" /> Progreso de estudiantes
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {userProgress.length === 0 ? (
-            <p className="text-muted-foreground">No hay progreso de estudiantes disponible.</p>
-          ) : (
-            userProgress
-              .filter(user => user.assigned !== 0)
-              .map(user => (
-                <Card 
-                  key={user.userId} 
-                  className={`shadow-sm hover:shadow-md transition ${
-                    user.pending > 0 
-                      ? 'border-red-200 bg-red-50 hover:bg-red-100' 
-                      : 'border-green-200 bg-green-50 hover:bg-green-100'
-                  }`}
-                >
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 font-medium">
-                        <UserCircle2 className="w-5 h-5" />
-                        <p className={user.pending > 0 ? 'text-red-800' : 'text-green-800'}>{user.name}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Columna Izquierda: Requieren Atención y Pendientes */}
+        <div className="lg:col-span-2 space-y-8">
+
+          {/* Envíos Pendientes (Prioridad Alta) */}
+          <Card className="border-orange-200 shadow-sm">
+            <CardHeader className="pb-3 border-b bg-orange-50/30">
+              <CardTitle className="text-lg font-bold flex items-center gap-2 text-orange-800">
+                <FileClock className="w-5 h-5" />
+                Envíos Pendientes de Revisión
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {recentSubmissions.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  <BadgeCheck className="w-12 h-12 mx-auto mb-3 text-green-200" />
+                  <p>¡Todo al día! No hay envíos pendientes.</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {recentSubmissions.map(sub => (
+                    <div key={sub.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition">
+                      <div>
+                        <p className="font-semibold text-slate-800">{sub.userName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Envió <span className="font-medium text-orange-700">{sub.quizTitle}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatDistanceToNow(new Date(sub.submittedAt), { addSuffix: true, locale: es })}
+                        </p>
                       </div>
-                      {user.pending > 0 ? (
-                        <AlertCircle className="w-5 h-5 text-red-600" />
-                      ) : (
-                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      <Button asChild size="sm" className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200">
+                        <Link to={`/admin/review/${sub.progressId}`}>
+                          Revisar
+                        </Link>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Estudiantes en Riesgo */}
+          <Card className="border-red-100 shadow-sm">
+            <CardHeader className="pb-3 border-b bg-red-50/30">
+              <CardTitle className="text-lg font-bold flex items-center gap-2 text-red-800">
+                <AlertTriangle className="w-5 h-5" />
+                Requieren Atención (Notas Bajas)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {atRiskStudents.length === 0 ? (
+                <div className="p-6 text-center text-muted-foreground">
+                  <p className="text-sm">No se detectaron estudiantes con notas críticas recientemente.</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {atRiskStudents.map((student, idx) => (
+                    <div key={idx} className="p-4 flex items-center justify-between hover:bg-red-50/30 transition">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-700 font-bold text-sm">
+                          {student.score}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-800">{student.userName}</p>
+                          <p className="text-sm text-red-600">
+                            Bajo rendimiento en: {student.quizTitle}
+                          </p>
+                        </div>
+                      </div>
+                      <Button asChild variant="ghost" size="sm">
+                        <Link to="/admin/users">Ver Perfil</Link>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+        </div>
+
+        {/* Columna Derecha: Actividad Reciente y Accesos Rápidos */}
+        <div className="space-y-8">
+
+          {/* Actividad Reciente */}
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3 border-b">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Activity className="w-5 h-5 text-blue-600" />
+                Actividad Reciente
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {recentActivity.length === 0 ? (
+                <div className="p-6 text-center text-muted-foreground">
+                  <p>No hay actividad reciente registrada.</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {recentActivity.map((act) => (
+                    <div key={act.id} className="p-3 hover:bg-slate-50 transition">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-medium text-sm text-slate-900">{act.userName}</span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                          {formatDistanceToNow(new Date(act.completedAt), { locale: es })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-snug">
+                        Completó <span className="text-slate-700 font-medium">{act.quizTitle}</span>
+                      </p>
+                      {act.score !== null && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${act.score >= 80 ? 'bg-green-100 text-green-700' :
+                            act.score >= 60 ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                            Nota: {act.score}
+                          </span>
+                        </div>
                       )}
                     </div>
-                    <p className={`text-sm ${
-                      user.pending > 0 ? 'text-red-700' : 'text-green-700'
-                    }`}>
-                      Asignados: <strong>{user.assigned}</strong> · Completados: <strong>{user.completed}</strong> · Pendientes: <strong>{user.pending}</strong>
-                    </p>
-                    {user.pending === 0 && (
-                      <div className="flex items-center gap-1 text-xs text-green-600 font-medium">
-                        <CheckCircle className="w-3 h-3" />
-                        <span>Todos los cuestionarios completados</span>
-                      </div>
-                    )}
-                    {user.pending > 0 && (
-                      <div className="flex items-center gap-1 text-xs text-red-600 font-medium">
-                        <AlertCircle className="w-3 h-3" />
-                        <span>Cuestionarios pendientes</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-          )}
-        </div>
-      </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Últimos envíos pendientes */}
-      <div>
-        <h2 className="text-2xl font-bold flex items-center gap-2 mb-4">
-          <FileClock className="w-5 h-5 text-orange-600" /> Últimos envíos pendientes de revisión
-        </h2>
-        <div className="space-y-3">
-          {recentSubmissions.length === 0 ? (
-            <p className="text-muted-foreground">No hay envíos pendientes.</p>
-          ) : (
-            recentSubmissions.map(sub => (
-              <Card key={sub.id} className="border-orange-200 hover:shadow-md transition">
-                <CardContent className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                  <div>
-                    <p className="font-medium text-orange-700">{sub.userName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {sub.quizTitle} — enviado el{' '}
-                      <span className="font-medium">{new Date(sub.submittedAt).toLocaleString()}</span>
-                    </p>
-                  </div>
-                  <Button asChild variant="secondary" className="text-orange-700 border-orange-500 hover:bg-orange-50">
-                    <Link to={`/admin/review/${sub.progressId}`}>
-                      <FileText className="w-4 h-4 mr-1" />
-                      Revisar
+          {/* Accesos Rápidos a Materias */}
+          <Card className="shadow-sm bg-slate-50 border-slate-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold text-slate-700">
+                Materias
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="space-y-1">
+                {categories.map(cat => (
+                  <div key={cat.id} className="flex items-center justify-between p-2 hover:bg-white rounded-md transition group border border-transparent hover:border-slate-100 hover:shadow-sm">
+                    <Link to={`/category/${cat.id}`} className="font-medium text-sm text-slate-700 hover:text-blue-700 flex-1 truncate mr-2" title={cat.name}>
+                      {cat.name}
                     </Link>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {cat.youtubeLink ? (
+                        <a
+                          href={cat.youtubeLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Ver videos en YouTube"
+                          className="text-muted-foreground hover:text-red-600 transition-colors p-1.5 rounded-md hover:bg-red-50"
+                        >
+                          <Youtube className="w-4 h-4" />
+                        </a>
+                      ) : (
+                        <span className="w-7"></span>
+                      )}
+                      <Link
+                        to={`/training/${cat.id}`}
+                        title="Ir a Entrenamiento"
+                        className="text-muted-foreground hover:text-indigo-600 transition-colors p-1.5 rounded-md hover:bg-indigo-50"
+                      >
+                        <TrendingUp className="w-4 h-4" />
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <Link to="/admin/users">
+                  <Button variant="outline" className="w-full justify-between bg-white hover:bg-slate-50">
+                    Gestionar Usuarios
+                    <Users className="w-4 h-4 ml-2" />
                   </Button>
-                </CardContent>
-              </Card>
-            ))
-          )}
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
         </div>
       </div>
-
-{/* Vista de categorías */}
-<div>
-  <h2 className="text-2xl font-bold mt-8 mb-4 flex items-center gap-2">
-    <ClipboardList className="w-5 h-5 text-indigo-600" />Materias disponibles
-  </h2>
-  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-    {categories.map(category => (
-      <Card key={category.id} className="hover:shadow-md transition">
-        <CardContent className="p-4 space-y-2">
-          <p className="text-lg font-semibold text-indigo-700">{category.name}</p>
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Link to={`/category/${category.id}`} className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-auto flex items-center justify-center font-semibold border-indigo-500 text-indigo-700"
-                >
-                  Ver cuestionarios
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to={`/training/${category.id}`} className="w-full sm:w-auto">
-                <Button className="w-full sm:w-auto flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
-                  Entrenamiento
-                </Button>
-              </Link>
-            </div>
-            {/* Botón de YouTube con nuevo estilo */}
-            {category.youtubeLink && (
-              <a
-                href={category.youtubeLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto"
-              >
-                <Button 
-                  size="sm"
-                  className="w-full font-semibold flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-800 dark:hover:bg-gray-700"
-                  >
-                  <Youtube className="h-4 w-4 text-red-600" />
-                  YouTube Videos
-                </Button>
-              </a>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    ))}
-  </div>
-</div>
     </div>
   );
 };

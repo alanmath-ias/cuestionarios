@@ -10,7 +10,7 @@
 } from "../shared/schema.js";
 
 import { db, DbClient } from "./db.js";
-import { eq, and, desc, inArray, sql } from "drizzle-orm";
+import { eq, and, desc, inArray, sql, ilike, or } from "drizzle-orm";
 import { IStorage } from "./storage.js";
 import { userQuizzes } from "../shared/schema.js";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -715,6 +715,84 @@ export class DatabaseStorage implements IStorage {
     );
 
     return summaries;
+  }
+
+  async getStudentsAtRisk(limit: number = 5) {
+    // Definición de "En Riesgo": Promedio de notas < 60 en los últimos intentos
+    // O estudiantes que han fallado sus últimos quizzes
+
+    // Obtenemos los últimos progresos completados con nota baja
+    const lowScores = await this.db
+      .select({
+        userId: studentProgress.userId,
+        userName: users.name,
+        quizTitle: quizzes.title,
+        score: studentProgress.score,
+        completedAt: studentProgress.completedAt,
+      })
+      .from(studentProgress)
+      .innerJoin(users, eq(studentProgress.userId, users.id))
+      .innerJoin(quizzes, eq(studentProgress.quizId, quizzes.id))
+      .where(and(
+        eq(studentProgress.status, 'completed'),
+        sql`${studentProgress.score} < 60`
+      ))
+      .orderBy(desc(studentProgress.completedAt))
+      .limit(limit);
+
+    return lowScores;
+  }
+
+  async getRecentActivity(limit: number = 10) {
+    const activity = await this.db
+      .select({
+        id: studentProgress.id,
+        userId: studentProgress.userId,
+        userName: users.name,
+        quizTitle: quizzes.title,
+        status: studentProgress.status,
+        score: studentProgress.score,
+        completedAt: studentProgress.completedAt,
+      })
+      .from(studentProgress)
+      .innerJoin(users, eq(studentProgress.userId, users.id))
+      .innerJoin(quizzes, eq(studentProgress.quizId, quizzes.id))
+      .where(eq(studentProgress.status, 'completed')) // Solo mostrar completados por ahora para reducir ruido
+      .orderBy(desc(studentProgress.completedAt))
+      .limit(limit);
+
+    return activity;
+  }
+
+  async searchUsers(query: string): Promise<User[]> {
+    if (!query) return [];
+    const searchPattern = `%${query}%`;
+    return await this.db
+      .select()
+      .from(users)
+      .where(
+        or(
+          ilike(users.name, searchPattern),
+          ilike(users.username, searchPattern),
+          ilike(users.email, searchPattern)
+        )
+      )
+      .limit(10);
+  }
+
+  async searchQuizzes(query: string): Promise<Quiz[]> {
+    if (!query) return [];
+    const searchPattern = `%${query}%`;
+    return await this.db
+      .select()
+      .from(quizzes)
+      .where(
+        or(
+          ilike(quizzes.title, searchPattern),
+          ilike(quizzes.description, searchPattern)
+        )
+      )
+      .limit(10);
   }
 
   async registerParentWithChild(

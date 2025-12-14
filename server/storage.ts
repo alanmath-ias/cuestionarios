@@ -103,6 +103,14 @@ export interface IStorage {
   getQuizResults(progressId: number): Promise<any>;
   getStudentAnswers(progressId: number): Promise<any>;
   backfillQuizSubmissions(): Promise<void>;
+
+  // Dashboard Analytics
+  getStudentsAtRisk(limit?: number): Promise<any[]>;
+  getRecentActivity(limit?: number): Promise<any[]>;
+
+  // Search methods
+  searchUsers(query: string): Promise<User[]>;
+  searchQuizzes(query: string): Promise<Quiz[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -176,6 +184,12 @@ export class MemStorage implements IStorage {
   async deleteSubmissionByProgressId(progressId: number): Promise<void> { }
   async getQuizResults(progressId: number): Promise<any> { return null; }
   async getStudentAnswers(progressId: number): Promise<any> { return []; }
+
+  async getStudentsAtRisk(limit: number = 5): Promise<any[]> { return []; }
+  async getRecentActivity(limit: number = 10): Promise<any[]> { return []; }
+
+  async searchUsers(query: string): Promise<User[]> { return []; }
+  async searchQuizzes(query: string): Promise<Quiz[]> { return []; }
 
   private async initializeData() {
     try {

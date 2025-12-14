@@ -1343,6 +1343,56 @@ Ejemplo de formato:
     }
   });
 
+  // Nuevos endpoints para el Dashboard Refactorizado
+  apiRouter.get("/admin/students-at-risk", requireAdmin, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+      const students = await storage.getStudentsAtRisk(limit);
+      res.json(students);
+    } catch (err) {
+      console.error("Error fetching students at risk:", err);
+      res.status(500).json({ message: "Error fetching students at risk" });
+    }
+  });
+
+  apiRouter.get("/admin/recent-activity", requireAdmin, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const activity = await storage.getRecentActivity(limit);
+      res.json(activity);
+    } catch (err) {
+      console.error("Error fetching recent activity:", err);
+      res.status(500).json({ message: "Error fetching recent activity" });
+    }
+  });
+
+  // Search Routes
+  apiRouter.get("/admin/search/users", requireAdmin, async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      if (!query || query.length < 2) return res.json([]);
+
+      const users = await storage.searchUsers(query);
+      res.json(users);
+    } catch (err) {
+      console.error("Error searching users:", err);
+      res.status(500).json({ message: "Error searching users" });
+    }
+  });
+
+  apiRouter.get("/search/quizzes", requireAuth, async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      if (!query || query.length < 2) return res.json([]);
+
+      const quizzes = await storage.searchQuizzes(query);
+      res.json(quizzes);
+    } catch (err) {
+      console.error("Error searching quizzes:", err);
+      res.status(500).json({ message: "Error searching quizzes" });
+    }
+  });
+
   // Eliminar un progreso específico (tarea completada)
   apiRouter.delete("/admin/progress/:progressId", requireAdmin, async (req, res) => {
     const progressId = parseInt(req.params.progressId);
