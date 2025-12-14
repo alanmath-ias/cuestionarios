@@ -78,6 +78,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const apiRouter = express.Router();
   app.use("/api", apiRouter);
 
+  // Middleware para verificar si el usuario es administrador
+  const requireAdmin = async (req: Request, res: Response, next: () => void) => {
+    const userId = req.session.userId;
+
+    if (!userId) {
+      console.warn("⚠️ Usuario no autenticado");
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    try {
+      const user = await storage.getUser(userId);
+
+      if (!user || user.role !== 'admin') {
+        console.warn("⛔ No tiene rol de administrador");
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      next();
+    } catch (error) {
+      console.error("❌ Admin check error:", error);
+      res.status(500).json({ message: "Error checking admin permissions" });
+    }
+  };
+
   // Authentication endpoints
   apiRouter.post("/auth/login", async (req: Request, res: Response) => {
     const { username, password } = req.body;
@@ -736,11 +760,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           existingProgress.id,
           progressForStorage
         );
+
+        // Si se completó, guardar en quizSubmissions para admin
+        if (progressForStorage.status === 'completed') {
+          await storage.saveQuizSubmission({
+            userId: userId,
+            quizId: progressData.quizId,
+            score: progressData.score || 0,
+            progressId: existingProgress.id
+          });
+        }
+
         return res.json(updatedProgress);
       }
 
       // Crear nuevo progreso
       const newProgress = await storage.createStudentProgress(progressData);
+
+      // Si se completó, guardar en quizSubmissions para admin
+      if (progressForStorage.status === 'completed') {
+        await storage.saveQuizSubmission({
+          userId: userId,
+          quizId: progressData.quizId,
+          score: progressData.score || 0,
+          progressId: newProgress.id
+        });
+      }
+
       res.status(201).json(newProgress);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -755,6 +801,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Error creating/updating progress",
         error: error instanceof Error ? error.message : String(error),
       });
+    }
+  });
+
+  // Eliminar asignación de cuestionario (Eliminar definitivamente)
+  apiRouter.delete("/admin/assignments", requireAdmin, async (req, res) => {
+    const { userId, quizId } = req.body;
+
+    if (!userId || !quizId) {
+      return res.status(400).json({ message: "UserId and QuizId are required" });
+    }
+
+    try {
+      // Primero eliminar el progreso si existe
+      const progress = await storage.getStudentProgressByQuiz(userId, quizId);
+      if (progress) {
+        await storage.deleteStudentProgress(progress.id);
+      }
+
+      // Luego eliminar la asignación
+      await storage.removeQuizFromUser(userId, quizId);
+
+      res.status(204).end();
+    } catch (err) {
+      console.error("Error removing assignment:", err);
+      res.status(500).json({ message: "Error removing assignment" });
     }
   });
 
@@ -933,35 +1004,19 @@ Ejemplo de formato:
   });
 
 
-  // Rutas de administración 
-  // Middleware para verificar si el usuario es administrador
-  const requireAdmin = async (req: Request, res: Response, next: () => void) => {
-    const userId = req.session.userId;
-    //console.log("🧩 Session userId:", userId);
 
-    if (!userId) {
-      console.warn("⚠️ Usuario no autenticado");
-      return res.status(401).json({ message: "Authentication required" });
-    }
-
-    try {
-      const user = await storage.getUser(userId);
-      //console.log("👤 Usuario autenticado:", user);
-
-      if (!user || user.role !== 'admin') {
-        console.warn("⛔ No tiene rol de administrador");
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
-      next();
-    } catch (error) {
-      console.error("❌ Admin check error:", error);
-      res.status(500).json({ message: "Error checking admin permissions" });
-    }
-  };
 
 
   // API para gestionar categorías
+  apiRouter.get("/admin/categories", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const allCategories = await storage.getCategories();
+      res.json(allCategories);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      res.status(500).json({ message: "Error fetching categories" });
+    }
+  });
   apiRouter.post("/admin/categories", requireAdmin, async (req: Request, res: Response) => {
     try {
       const categoryData = req.body;
@@ -1172,6 +1227,133 @@ Ejemplo de formato:
       res.json(users);
     } catch (err) {
       res.status(500).json({ message: "Error fetching users" });
+    }
+  });
+
+  // Eliminar usuario y todos sus datos asociados
+  apiRouter.delete("/admin/users/:userId", requireAdmin, async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) return res.status(400).json({ message: "Invalid user ID" });
+
+    try {
+      await storage.deleteUser(userId);
+      res.status(204).end();
+    } catch (err) {
+      console.error("Error deleting user:", err);
+      res.status(500).json({ message: "Error deleting user" });
+    }
+  });
+
+  // Rutas para Calificar (Quiz Submissions)
+  apiRouter.post("/admin/backfill-submissions", requireAdmin, async (req, res) => {
+    try {
+      await storage.backfillQuizSubmissions();
+      res.json({ message: "Backfill completed successfully" });
+    } catch (error) {
+      console.error("Backfill error:", error);
+      res.status(500).json({ message: "Error backfilling submissions" });
+    }
+  });
+
+  apiRouter.get("/admin/quiz-submissions", requireAdmin, async (req, res) => {
+    try {
+      console.log("Fetching quiz submissions...");
+      const submissions = await storage.getAllQuizSubmissions();
+      console.log(`Found ${submissions.length} submissions.`);
+      res.json(submissions);
+    } catch (err) {
+      console.error("Error fetching quiz submissions:", err);
+      res.status(500).json({ message: "Error fetching quiz submissions" });
+    }
+  });
+
+  apiRouter.patch("/quiz-submissions/:progressId/reviewed", requireAdmin, async (req, res) => {
+    const progressId = parseInt(req.params.progressId);
+    if (isNaN(progressId)) return res.status(400).json({ message: "Invalid progress ID" });
+
+    try {
+      await storage.markSubmissionAsReviewed(progressId);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error marking submission as reviewed:", err);
+      res.status(500).json({ message: "Error updating submission" });
+    }
+  });
+
+  apiRouter.delete("/quiz-submissions/:progressId", requireAdmin, async (req, res) => {
+    const progressId = parseInt(req.params.progressId);
+    if (isNaN(progressId)) return res.status(400).json({ message: "Invalid progress ID" });
+
+    try {
+      await storage.deleteSubmissionByProgressId(progressId);
+      res.status(204).end();
+    } catch (err) {
+      console.error("Error deleting submission:", err);
+      res.status(500).json({ message: "Error deleting submission" });
+    }
+  });
+
+  // Actualizar categorías de usuario
+  apiRouter.put("/admin/users/:userId/categories", requireAdmin, async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const { categoryIds } = req.body;
+
+    if (isNaN(userId) || !Array.isArray(categoryIds)) {
+      return res.status(400).json({ message: "Invalid input" });
+    }
+
+    try {
+      await storage.updateUserCategories(userId, categoryIds);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error updating user categories:", err);
+      res.status(500).json({ message: "Error updating user categories" });
+    }
+  });
+
+  // Eliminar progreso de usuario (admin)
+  apiRouter.delete("/admin/progress/:progressId", requireAdmin, async (req, res) => {
+    const progressId = parseInt(req.params.progressId);
+    if (isNaN(progressId)) return res.status(400).json({ message: "Invalid progress ID" });
+
+    try {
+      await storage.deleteStudentProgress(progressId);
+      res.status(204).end();
+    } catch (err) {
+      console.error("Error deleting progress:", err);
+      res.status(500).json({ message: "Error deleting progress" });
+    }
+  });
+
+  // Obtener datos del dashboard de un usuario específico (para admin)
+  apiRouter.get("/admin/users/:userId/dashboard", requireAdmin, async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) return res.status(400).json({ message: "Invalid user ID" });
+
+    try {
+      const [quizzes, categories] = await Promise.all([
+        storage.getQuizzesByUserId(userId),
+        storage.getCategoriesByUserId(userId)
+      ]);
+
+      res.json({ quizzes, categories });
+    } catch (err) {
+      console.error("Error fetching user dashboard data:", err);
+      res.status(500).json({ message: "Error fetching user dashboard data" });
+    }
+  });
+
+  // Eliminar un progreso específico (tarea completada)
+  apiRouter.delete("/admin/progress/:progressId", requireAdmin, async (req, res) => {
+    const progressId = parseInt(req.params.progressId);
+    if (isNaN(progressId)) return res.status(400).json({ message: "Invalid progress ID" });
+
+    try {
+      await storage.deleteStudentProgress(progressId);
+      res.status(204).end();
+    } catch (err) {
+      console.error("Error deleting progress:", err);
+      res.status(500).json({ message: "Error deleting progress" });
     }
   });
 
@@ -1495,6 +1677,24 @@ Ejemplo de formato:
     } catch (error) {
       console.error("Error al obtener submissions:", error);
       res.status(500).json({ error: "Error interno" });
+    }
+  });
+
+  // Update user categories
+  app.put("/api/admin/users/:userId/categories", async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const { categoryIds } = req.body;
+
+    if (isNaN(userId) || !Array.isArray(categoryIds)) {
+      return res.status(400).json({ error: "Invalid input" });
+    }
+
+    try {
+      await storage.updateUserCategories(userId, categoryIds);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating user categories:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
   //recoge todo lo que debe calificar y lo lleva al componente calificaciones

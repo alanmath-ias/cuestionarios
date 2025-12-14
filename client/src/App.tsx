@@ -13,6 +13,7 @@ import AuthPage from "@/pages/auth-page";
 import CategoriesAdmin from "@/pages/admin/categories";
 import QuizzesAdmin from "@/pages/admin/quizzes";
 import QuestionsAdmin from "@/pages/admin/questions";
+import UsersAdmin from "@/pages/admin/users";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import { PageLayout } from "@/components/layout/page-layout";
 import { useQuery } from "@tanstack/react-query";
@@ -22,11 +23,11 @@ import AllUsersCategoriesAdmin from './pages/admin/AllUsersCategoriesAdmin';
 
 import AdminQuizReview from './pages/admin/AdminQuizReview';
 
-{/*chat gpt entrenamiento*/}
+{/*chat gpt entrenamiento*/ }
 import TrainingPage from "@/pages/training/[categoryId]";
 import TrainingPageSub from "@/pages/training2/[categoryId]/[subcategoryId]";
 
-{/*chat gpt calificar*/}
+{/*chat gpt calificar*/ }
 import Calificar from "@/pages/admin/Calificar";
 import subcategories from "./pages/admin/subcategories";
 import RegistrarPadres from "@/pages/admin/RegistrarPadres";
@@ -54,7 +55,7 @@ function ProtectedRoute({ component: Component, ...rest }: { component: any, pat
   useEffect(() => {
     if (!isLoading) {
       const isPublicQuiz = rest.path.startsWith('/quiz/') && PUBLIC_QUIZZES.includes(parseInt(rest.path.split('/quiz/')[1]));
-      
+
       if (!user && !isPublicQuiz) {
         navigate('/auth'); // Redirige a la página de inicio de sesión si no está autenticado y no es un cuestionario público
       } else if (user?.role === 'admin' && rest.path === '/') {
@@ -130,11 +131,11 @@ function AdminProtectedRoute({ component: Component, ...rest }: { component: any
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
-  
+
   const [_, navigate] = useLocation();
 
   useEffect(() => {
-    {/* Verificar si el usuario no está autenticado o no es admin*/}
+    {/* Verificar si el usuario no está autenticado o no es admin*/ }
     if (!isLoading) {
       if (!user) {
         navigate('/auth');
@@ -168,16 +169,16 @@ function Router() {
       </Route>
 
       <Route path="/EncuestaPage">
-  {() => <EncuestaPage />}
-</Route>
+        {() => <EncuestaPage />}
+      </Route>
 
 // Agregar estas rutas
-<Route path="/public-quiz/:quizId">
-  {(params) => <PublicActiveQuiz />}
-</Route>
-<Route path="/public-quiz-results">
-  {() => <PublicQuizResults />}
-</Route>
+      <Route path="/public-quiz/:quizId">
+        {(params) => <PublicActiveQuiz />}
+      </Route>
+      <Route path="/public-quiz-results">
+        {() => <PublicQuizResults />}
+      </Route>
 
 
       {/* Rutas de estudiante */}
@@ -210,6 +211,9 @@ function Router() {
       <Route path="/admin/quizzes">
         {() => <AdminProtectedRoute component={QuizzesAdmin} path="/admin/quizzes" />}
       </Route>
+      <Route path="/admin/users">
+        {() => <AdminProtectedRoute component={UsersAdmin} path="/admin/users" />}
+      </Route>
       <Route path="/admin/quizzes/:quizId/questions">
         {(params) => <AdminProtectedRoute component={QuestionsAdmin} path={`/admin/quizzes/${params.quizId}/questions`} />}
       </Route>
@@ -217,54 +221,54 @@ function Router() {
         {() => <AdminProtectedRoute component={Calificar} path="/admin/calificar" />}
       </Route>
       <Route path="/admin/review/:progressId">
-  {() => <AdminProtectedRoute component={AdminQuizReview} path="/admin/review/:progressId" />}
-</Route>
+        {() => <AdminProtectedRoute component={AdminQuizReview} path="/admin/review/:progressId" />}
+      </Route>
 
-<Route path="/admin/AdminDashboard">
+      <Route path="/admin/AdminDashboard">
         {() => <AdminProtectedRoute component={AdminDashboard} path="/admin/AdminDashboard" />}
       </Route>
-       
-{/*chat gpt calificar ruta para el boton que lleva a quiz-results*/}
-<AdminProtectedRoute path="/admin/quiz-results/:progressId" component={QuizResults} />
-{/*chat gpt*/}
+
+      {/*chat gpt calificar ruta para el boton que lleva a quiz-results*/}
+      <AdminProtectedRoute path="/admin/quiz-results/:progressId" component={QuizResults} />
+      {/*chat gpt*/}
 
 
-{/* Nueva ruta para administración de categorías por usuario */}
-     
+      {/* Nueva ruta para administración de categorías por usuario */}
+
       <Route path="/admin/urlusercategories">
-  <AdminProtectedRoute 
-    component={AllUsersCategoriesAdmin}
-    path="/admin/urlusercategories" 
-  />
-</Route>
+        <AdminProtectedRoute
+          component={AllUsersCategoriesAdmin}
+          path="/admin/urlusercategories"
+        />
+      </Route>
 
-{/*Ruta para subcategorias*/}
-<Route path="/admin/subcategories">
-  <AdminProtectedRoute 
-    component={subcategories}
-    path="/admin/subcategories" 
-  />
-</Route>
+      {/*Ruta para subcategorias*/}
+      <Route path="/admin/subcategories">
+        <AdminProtectedRoute
+          component={subcategories}
+          path="/admin/subcategories"
+        />
+      </Route>
 
 
 
-{/*chat gpt entrenamiento viejo funciona perfecto pero muy simple*/}
-<Route path="/training/:categoryId">
-  {(params) => <TrainingPage categoryId={params.categoryId} />}
-</Route>
+      {/*chat gpt entrenamiento viejo funciona perfecto pero muy simple*/}
+      <Route path="/training/:categoryId">
+        {(params) => <TrainingPage categoryId={params.categoryId} />}
+      </Route>
 
-<Route path="/training2/:categoryId/:subcategoryId">
-  <TrainingPageSub /> {/* Sin pasar props manualmente */}
-</Route>
+      <Route path="/training2/:categoryId/:subcategoryId">
+        <TrainingPageSub /> {/* Sin pasar props manualmente */}
+      </Route>
 
-<Route path="/admin/RegistrarPadres">
-  <AdminProtectedRoute 
-    component={RegistrarPadres}
-    path="/admin/RegistrarPadres" 
-  />
-</Route>
+      <Route path="/admin/RegistrarPadres">
+        <AdminProtectedRoute
+          component={RegistrarPadres}
+          path="/admin/RegistrarPadres"
+        />
+      </Route>
 
-<Route path="/parent-dashboard">
+      <Route path="/parent-dashboard">
         {() => <ProtectedRoute component={ParentDashboard} path="/parent-dashboard" />}
       </Route>
 

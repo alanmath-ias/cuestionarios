@@ -33,7 +33,7 @@ function AdminQuizReview() {
     enabled: !!progressId,
   });
 
- 
+
   const mutation = useMutation({
     mutationFn: async () => {
       const res = await fetch('/api/quiz-feedback', {
@@ -45,12 +45,12 @@ function AdminQuizReview() {
           quizSubmissionId: results?.progress.id
         }),
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Error al guardar feedback');
       }
-      
+
       const submissionRes = await fetch('/api/update-quiz-submission', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -110,7 +110,7 @@ function AdminQuizReview() {
   // Función mejorada para parsear contenido
   const renderContent = (content: string) => {
     if (!content) return null;
-    
+
     return content.split('¡').map((part, i) => {
       if (i % 2 === 0) {
         return <span key={i}>{part}</span>;
@@ -120,15 +120,15 @@ function AdminQuizReview() {
     });
   };
 
- 
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6 flex items-center">
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           className="mr-3"
-          onClick={() => setLocation('/admin/calificar')}
+          onClick={() => window.history.back()}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -204,9 +204,9 @@ function AdminQuizReview() {
                       <div className="mb-3">
                         {question?.imageUrl && (
                           <div className="mb-3">
-                            <img 
-                              src={question.imageUrl} 
-                              alt="Imagen de la pregunta" 
+                            <img
+                              src={question.imageUrl}
+                              alt="Imagen de la pregunta"
                               className="max-h-40 object-contain rounded border"
                             />
                           </div>
@@ -246,14 +246,14 @@ function AdminQuizReview() {
             </div>
 
             <h4 className="font-semibold text-lg mb-2">Retroalimentación para el estudiante</h4>
-            
+
             {existingFeedback?.feedback && (
               <div className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
                 <h5 className="font-medium text-purple-800 mb-1">Feedback existente:</h5>
                 <p className="text-purple-700 whitespace-pre-wrap">{existingFeedback.feedback}</p>
               </div>
             )}
-            
+
             <Textarea
               value={feedbackText}
               onChange={(e) => setFeedbackText(e.target.value)}
@@ -261,13 +261,13 @@ function AdminQuizReview() {
               className="mb-4 min-h-[120px]"
             />
 
-<Button 
-  onClick={handleSendFeedback} 
-  disabled={isLoading}
-  className="bg-purple-600 hover:bg-purple-700 text-white"
->
-  {isLoading ? 'Enviando...' : existingFeedback?.feedback ? 'Actualizar Feedback' : 'Enviar Feedback'}
-</Button>
+            <Button
+              onClick={handleSendFeedback}
+              disabled={isLoading}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {isLoading ? 'Enviando...' : existingFeedback?.feedback ? 'Actualizar Feedback' : 'Enviar Feedback'}
+            </Button>
           </CardContent>
         </Card>
       ) : (

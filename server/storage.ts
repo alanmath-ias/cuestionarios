@@ -7,8 +7,8 @@ import {
   studentProgress, StudentProgress, InsertStudentProgress,
   studentAnswers, StudentAnswer, InsertStudentAnswer
 } from "./schema.js";
-import { db } from './db.js'; // Aquí cambiamos la extensión al usar importaciones locales
-import { Child } from '../shared/quiz-types.js'; // Ajusta la ruta
+import { db } from './db.js';
+import { Child } from '../shared/quiz-types.js';
 
 export interface IStorage {
   // User methods
@@ -17,15 +17,15 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, userData: Partial<User>): Promise<User>;
-  //getChildByParentId(parentId: number): Promise<Child | null>;
-  
+  deleteUser(id: number): Promise<void>;
+
   // Category methods
   getCategories(): Promise<Category[]>;
   getCategory(id: number): Promise<Category | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategory(id: number, category: Partial<Category>): Promise<Category>;
   deleteCategory(id: number): Promise<void>;
-  
+
   // Quiz methods
   getQuizzes(): Promise<Quiz[]>;
   getPublicQuizzes(): Promise<Quiz[]>;
@@ -35,47 +35,74 @@ export interface IStorage {
   updateQuiz(id: number, quiz: Partial<Quiz>): Promise<Quiz>;
   deleteQuiz(id: number): Promise<void>;
 
-  
-//chat gpt quices a usuarios
-getUserQuizzes(userId: number): Promise<Quiz[]>;
-assignQuizToUser(userId: number, quizId: number): Promise<void>;
+  // User Quiz Assignment
+  getUserQuizzes(userId: number): Promise<Quiz[]>;
+  assignQuizToUser(userId: number, quizId: number): Promise<void>;
+  removeQuizFromUser(userId: number, quizId: number): Promise<void>;
 
-removeQuizFromUser(userId: number, quizId: number): Promise<void>;
-
-
-
-//const storage = new DatabaseStorage(db);
-
-// Función para obtener los usuarios asignados a un quiz
-
-
-//fin chat gpt quices a usuarios
-  
   // Question methods
   getQuestionsByQuiz(quizId: number): Promise<Question[]>;
   getQuestion(id: number): Promise<Question | undefined>;
   createQuestion(question: InsertQuestion): Promise<Question>;
   updateQuestion(id: number, question: Partial<Question>): Promise<Question>;
   deleteQuestion(id: number): Promise<void>;
-  
+
   // Answer methods
   getAnswersByQuestion(questionId: number): Promise<Answer[]>;
   getAnswer(id: number): Promise<Answer | undefined>;
   createAnswer(answer: InsertAnswer): Promise<Answer>;
   updateAnswer(id: number, answer: Partial<Answer>): Promise<Answer>;
   deleteAnswer(id: number): Promise<void>;
-  
+
   // Student Progress methods
   getStudentProgress(userId: number): Promise<StudentProgress[]>;
   getStudentProgressByQuiz(userId: number, quizId: number): Promise<StudentProgress | undefined>;
   createStudentProgress(progress: InsertStudentProgress): Promise<StudentProgress>;
   updateStudentProgress(id: number, progress: Partial<StudentProgress>): Promise<StudentProgress>;
-  
+  deleteStudentProgress(id: number): Promise<void>;
+
   // Student Answer methods
   getStudentAnswersByProgress(progressId: number): Promise<StudentAnswer[]>;
   createStudentAnswer(answer: InsertStudentAnswer): Promise<StudentAnswer>;
 
+  // Extended methods
+  getAllUsers(): Promise<User[]>;
+  getUsersAssignedToQuiz(quizId: number): Promise<any[]>;
+  getCategoriesByUserId(userId: number): Promise<any[]>;
+  getQuizzesByUserId(userId: number): Promise<any[]>;
+  updateUserCategories(userId: number, categoryIds: number[]): Promise<void>;
 
+  // Subcategory methods
+  getAllSubcategories(): Promise<any[]>;
+  getSubcategoriesByCategory(categoryId: number): Promise<any[]>;
+  createSubcategory(data: { name: string; categoryId: number; description?: string; youtube_sublink?: string | null }): Promise<any>;
+  deleteSubcategory(id: number): Promise<void>;
+  updateSubcategory(id: number, name: string, description?: string, youtube_sublink?: string | null): Promise<void>;
+  getQuizzesBySubcategory(subcategoryId: number): Promise<Quiz[]>;
+  getTrainingQuestionsByCategoryAndSubcategory(categoryId: number, subcategoryId: number): Promise<any[]>;
+
+  // Parent/Child methods
+  registerParentWithChild(parent: any, child: any): Promise<any>;
+  getChildByParentId(parentId: number): Promise<Child | null>;
+
+  // Dashboard/Admin methods
+  getUserProgressSummary(): Promise<any[]>;
+  countAssignedQuizzes(): Promise<number>;
+  countCompletedQuizzes(): Promise<number>;
+  countPendingReview(): Promise<number>;
+  getRecentPendingSubmissions(): Promise<any[]>;
+
+  // Quiz Submission/Feedback methods
+  saveQuizSubmission(submission: any): Promise<void>;
+  getQuizSubmissionsForAdmin(): Promise<any[]>;
+  getAllQuizSubmissions(): Promise<any[]>;
+  saveQuizFeedback(feedback: { progressId: number | string; text: string }): Promise<void>;
+  getQuizFeedback(progressId: number): Promise<any>;
+  markSubmissionAsReviewed(progressId: number): Promise<void>;
+  deleteSubmissionByProgressId(progressId: number): Promise<void>;
+  getQuizResults(progressId: number): Promise<any>;
+  getStudentAnswers(progressId: number): Promise<any>;
+  backfillQuizSubmissions(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -86,7 +113,7 @@ export class MemStorage implements IStorage {
   private answers: Map<number, Answer>;
   private studentProgress: Map<number, StudentProgress>;
   private studentAnswers: Map<number, StudentAnswer>;
-  
+
   private userId: number;
   private categoryId: number;
   private quizId: number;
@@ -103,7 +130,7 @@ export class MemStorage implements IStorage {
     this.answers = new Map();
     this.studentProgress = new Map();
     this.studentAnswers = new Map();
-    
+
     this.userId = 1;
     this.categoryId = 1;
     this.quizId = 1;
@@ -111,11 +138,45 @@ export class MemStorage implements IStorage {
     this.answerId = 1;
     this.progressId = 1;
     this.studentAnswerId = 1;
-    
+
     // Initialize with sample data
     this.initializeData();
   }
-  
+
+  // Dummy implementations for extended methods
+  async getAllUsers(): Promise<User[]> { return Array.from(this.users.values()); }
+  async getUsersAssignedToQuiz(quizId: number): Promise<any[]> { return []; }
+  async getCategoriesByUserId(userId: number): Promise<any[]> { return []; }
+  async getQuizzesByUserId(userId: number): Promise<any[]> { return []; }
+  async updateUserCategories(userId: number, categoryIds: number[]): Promise<void> { }
+
+  async getAllSubcategories(): Promise<any[]> { return []; }
+  async getSubcategoriesByCategory(categoryId: number): Promise<any[]> { return []; }
+  async createSubcategory(data: any): Promise<any> { throw new Error("Not implemented"); }
+  async deleteSubcategory(id: number): Promise<void> { }
+  async updateSubcategory(id: number, name: string): Promise<void> { }
+  async getQuizzesBySubcategory(subcategoryId: number): Promise<Quiz[]> { return []; }
+  async getTrainingQuestionsByCategoryAndSubcategory(categoryId: number, subcategoryId: number): Promise<any[]> { return []; }
+
+  async registerParentWithChild(parent: any, child: any): Promise<any> { throw new Error("Not implemented"); }
+  async getChildByParentId(parentId: number): Promise<Child | null> { return null; }
+
+  async getUserProgressSummary(): Promise<any[]> { return []; }
+  async countAssignedQuizzes(): Promise<number> { return 0; }
+  async countCompletedQuizzes(): Promise<number> { return 0; }
+  async countPendingReview(): Promise<number> { return 0; }
+  async getRecentPendingSubmissions(): Promise<any[]> { return []; }
+
+  async saveQuizSubmission(submission: any): Promise<void> { }
+  async getQuizSubmissionsForAdmin(): Promise<any[]> { return []; }
+  async getAllQuizSubmissions(): Promise<any[]> { return []; }
+  async saveQuizFeedback(feedback: any): Promise<void> { }
+  async getQuizFeedback(progressId: number): Promise<any> { return null; }
+  async markSubmissionAsReviewed(progressId: number): Promise<void> { }
+  async deleteSubmissionByProgressId(progressId: number): Promise<void> { }
+  async getQuizResults(progressId: number): Promise<any> { return null; }
+  async getStudentAnswers(progressId: number): Promise<any> { return []; }
+
   private async initializeData() {
     try {
       // Create default admin user
@@ -125,8 +186,7 @@ export class MemStorage implements IStorage {
         name: "Administrador",
         email: "admin@alanmath.com"
       });
-      //console.log(`Usuario creado: ${admin.username}, ID: ${admin.id}`);
-      
+
       // Create sample student
       const student = await this.createUser({
         username: "estudiante",
@@ -134,30 +194,26 @@ export class MemStorage implements IStorage {
         name: "María González",
         email: "maria@example.com"
       });
-      //console.log(`Usuario creado: ${student.username}, ID: ${student.id}`);
-      
+
       // Create categories
       const algebra = await this.createCategory({
         name: "Álgebra",
         description: "Ecuaciones, polinomios y sistemas lineales",
-        colorClass: "primary" // primary color class
+        colorClass: "primary"
       });
-      //console.log(`Categoría creada: ${algebra.name}, ID: ${algebra.id}`);
-      
+
       const geometria = await this.createCategory({
         name: "Geometría",
         description: "Figuras, ángulos y teoremas básicos",
-        colorClass: "secondary" // secondary color class
+        colorClass: "secondary"
       });
-      //console.log(`Categoría creada: ${geometria.name}, ID: ${geometria.id}`);
-      
+
       const calculo = await this.createCategory({
         name: "Cálculo",
         description: "Límites, derivadas e integrales",
-        colorClass: "accent" // accent color class
+        colorClass: "accent"
       });
-      //console.log(`Categoría creada: ${calculo.name}, ID: ${calculo.id}`);
-      
+
       // Create quizzes for Algebra
       const ecuacionesQuiz = await this.createQuiz({
         title: "Ecuaciones de primer grado",
@@ -167,8 +223,7 @@ export class MemStorage implements IStorage {
         difficulty: "basic",
         totalQuestions: 10
       });
-      //console.log(`Quiz creado: ${ecuacionesQuiz.title}, Categoría ID: ${ecuacionesQuiz.categoryId}`);
-      
+
       const sistemasQuiz = await this.createQuiz({
         title: "Sistemas de ecuaciones",
         description: "Resuelve sistemas lineales de dos ecuaciones.",
@@ -177,8 +232,7 @@ export class MemStorage implements IStorage {
         difficulty: "intermediate",
         totalQuestions: 8
       });
-      //console.log(`Quiz creado: ${sistemasQuiz.title}, Categoría ID: ${sistemasQuiz.categoryId}`);
-      
+
       const polinomiosQuiz = await this.createQuiz({
         title: "Polinomios",
         description: "Operaciones con polinomios y factorización.",
@@ -187,8 +241,7 @@ export class MemStorage implements IStorage {
         difficulty: "intermediate",
         totalQuestions: 12
       });
-      //console.log(`Quiz creado: ${polinomiosQuiz.title}, Categoría ID: ${polinomiosQuiz.categoryId}`);
-      
+
       // Create geometry quizzes
       const triangulosQuiz = await this.createQuiz({
         title: "Triángulos",
@@ -198,8 +251,7 @@ export class MemStorage implements IStorage {
         difficulty: "basic",
         totalQuestions: 10
       });
-      //console.log(`Quiz creado: ${triangulosQuiz.title}, Categoría ID: ${triangulosQuiz.categoryId}`);
-      
+
       const circulosQuiz = await this.createQuiz({
         title: "Círculos y áreas",
         description: "Cálculo de áreas y perímetros.",
@@ -208,8 +260,7 @@ export class MemStorage implements IStorage {
         difficulty: "intermediate",
         totalQuestions: 8
       });
-      //console.log(`Quiz creado: ${circulosQuiz.title}, Categoría ID: ${circulosQuiz.categoryId}`);
-      
+
       // Create calculus quizzes
       const limitesQuiz = await this.createQuiz({
         title: "Límites",
@@ -219,8 +270,7 @@ export class MemStorage implements IStorage {
         difficulty: "intermediate",
         totalQuestions: 10
       });
-      //console.log(`Quiz creado: ${limitesQuiz.title}, Categoría ID: ${limitesQuiz.categoryId}`);
-      
+
       const derivadasQuiz = await this.createQuiz({
         title: "Derivadas",
         description: "Reglas de derivación y aplicaciones.",
@@ -229,21 +279,19 @@ export class MemStorage implements IStorage {
         difficulty: "advanced",
         totalQuestions: 12
       });
-      //console.log(`Quiz creado: ${derivadasQuiz.title}, Categoría ID: ${derivadasQuiz.categoryId}`);
-      
+
     } catch (error) {
       console.error("Error inicializando datos:", error);
     }
-    
+
     // Crear preguntas y respuestas para el quiz de ecuaciones
     try {
-      // Obtenemos el primer quiz (ecuaciones) creado anteriormente
       const quizzes = await this.getQuizzesByCategory(1); // Álgebra
-      
+
       if (quizzes.length > 0) {
         const ecuacionesQuiz = quizzes[0];
-        
-        // Create sample questions for ecuaciones quiz
+
+        // Create sample questions
         const q1 = await this.createQuestion({
           quizId: ecuacionesQuiz.id,
           content: "Resuelve la siguiente ecuación: {a}x + {b} = {c}",
@@ -256,37 +304,35 @@ export class MemStorage implements IStorage {
             c: { min: 10, max: 50 }
           }
         });
-        
-        // Create sample answers for the first question
+
         await this.createAnswer({
           questionId: q1.id,
           content: "x = {answer}",
           isCorrect: true,
           explanation: "Para resolver {a}x + {b} = {c}, despejamos x: {a}x = {c} - {b}, entonces x = ({c} - {b}) / {a}"
         });
-        
+
         await this.createAnswer({
           questionId: q1.id,
           content: "x = {wrongAnswer1}",
           isCorrect: false,
           explanation: "Esta respuesta es incorrecta. Debes despejar x correctamente."
         });
-        
+
         await this.createAnswer({
           questionId: q1.id,
           content: "x = {wrongAnswer2}",
           isCorrect: false,
           explanation: "Esta respuesta es incorrecta. Recuerda que debes despejar la variable x."
         });
-        
+
         await this.createAnswer({
           questionId: q1.id,
           content: "x = {wrongAnswer3}",
           isCorrect: false,
           explanation: "Esta respuesta es incorrecta. Revisa tus cálculos."
         });
-        
-        // Create more questions for ecuaciones quiz
+
         const q2 = await this.createQuestion({
           quizId: ecuacionesQuiz.id,
           content: "Resuelve: {a}x - {b} = {c}",
@@ -299,30 +345,30 @@ export class MemStorage implements IStorage {
             c: { min: -10, max: 30 }
           }
         });
-        
-        // Create sample progress for the student
+
+        // Create sample progress
         const estudiantes = await this.getUsers();
-        if (estudiantes.length > 1) { // Asegurar que hay al menos 2 usuarios (admin y María)
-          const maria = estudiantes[1]; // Student María (id 2)
-          
+        if (estudiantes.length > 1) {
+          const maria = estudiantes[1];
+
           await this.createStudentProgress({
             userId: maria.id,
             quizId: ecuacionesQuiz.id,
             status: "completed",
             score: 90,
             completedQuestions: 10,
-            timeSpent: 720, // 12 minutes in seconds
+            timeSpent: 720,
             completedAt: new Date()
           });
-          
+
           const quizzesList = await this.getQuizzes();
           if (quizzesList.length > 1) {
             await this.createStudentProgress({
               userId: maria.id,
-              quizId: quizzesList[1].id, // Sistemas de ecuaciones (id 2)
+              quizId: quizzesList[1].id,
               status: "in_progress",
               completedQuestions: 4,
-              timeSpent: 480, // 8 minutes in seconds
+              timeSpent: 480,
             });
           }
         }
@@ -338,7 +384,7 @@ export class MemStorage implements IStorage {
   async getUsers(): Promise<User[]> {
     return Array.from(this.users.values());
   }
-  
+
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
   }
@@ -351,106 +397,100 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userId++;
-    const user: User = { 
-      ...insertUser, 
+    const user: User = {
+      ...insertUser,
       id,
-      email: insertUser.email ?? null,        // Asegura que sea string o null
-      role: insertUser.role ?? "student",     // Asegura que no sea undefined
+      email: insertUser.email ?? null,
+      role: insertUser.role ?? "student",
       createdAt: new Date().toISOString()
     };
     this.users.set(id, user);
     return user;
   }
-  
-  
+
   async updateUser(id: number, userData: Partial<User>): Promise<User> {
     const existingUser = this.users.get(id);
-    
     if (!existingUser) {
       throw new Error(`User with id ${id} not found`);
     }
-    
     const updatedUser: User = { ...existingUser, ...userData };
     this.users.set(id, updatedUser);
     return updatedUser;
   }
-  
+
+  async deleteUser(id: number): Promise<void> {
+    this.users.delete(id);
+  }
+
   // Category methods
   async getCategories(): Promise<Category[]> {
     return Array.from(this.categories.values());
   }
-  
+
   async getCategory(id: number): Promise<Category | undefined> {
     return this.categories.get(id);
   }
-  
+
   async createCategory(category: InsertCategory): Promise<Category> {
     const id = this.categoryId++;
-    const newCategory: Category = { 
-      ...category, 
-      id, 
-      youtubeLink: category.youtubeLink ?? null // Asigna null si es undefined
+    const newCategory: Category = {
+      ...category,
+      id,
+      youtubeLink: category.youtubeLink ?? null
     };
     this.categories.set(id, newCategory);
     return newCategory;
   }
-  
+
   // Quiz methods
   async getQuizzes(): Promise<Quiz[]> {
     return Array.from(this.quizzes.values());
   }
-  
+
   async getQuizzesByCategory(categoryId: number): Promise<Quiz[]> {
-    // Asegurarse de que categoryId es un número
     const catId = typeof categoryId === 'string' ? parseInt(categoryId) : categoryId;
-    
     const result = Array.from(this.quizzes.values()).filter(
       (quiz) => {
         const quizCatId = typeof quiz.categoryId === 'string' ? parseInt(quiz.categoryId) : quiz.categoryId;
-        //console.log(`Comparando quiz ${quiz.title}: ${quizCatId} con categoría: ${catId}`);
         return quizCatId === catId;
       }
     );
-    
-    //console.log(`Encontrados ${result.length} quizzes para la categoría ${catId}`);
     return result;
   }
-  
+
   async getQuiz(id: number): Promise<Quiz | undefined> {
     return this.quizzes.get(id);
   }
-  
+
   async createQuiz(quiz: InsertQuiz): Promise<Quiz> {
     const id = this.quizId++;
     const categoryId = typeof quiz.categoryId === 'string' ? parseInt(quiz.categoryId) : quiz.categoryId;
     const subcategoryId = quiz.subcategoryId ?? null;
-  
+
     const newQuiz: Quiz = {
       ...quiz,
       id,
       categoryId,
-      subcategoryId, // asegúrate de que siempre esté presente
-      isPublic: quiz.isPublic ?? null, // también importante si puede venir undefined
-      url: null // asignamos null porque no viene del input
+      subcategoryId,
+      isPublic: quiz.isPublic ?? null,
+      url: null
     };
-  
+
     this.quizzes.set(id, newQuiz);
-    //console.log(`Creando quiz: ${newQuiz.title}, categoryId: ${newQuiz.categoryId}`);
     return newQuiz;
   }
-  
-  
+
   // Question methods
   async getQuestionsByQuiz(quizId: number): Promise<Question[]> {
     return Array.from(this.questions.values()).filter(
       (question) => question.quizId === quizId
     );
   }
-  
+
   async getQuestion(id: number): Promise<Question | undefined> {
     return this.questions.get(id);
   }
-  
+
   async createQuestion(question: InsertQuestion): Promise<Question> {
     const id = this.questionId++;
     const newQuestion: Question = {
@@ -466,19 +506,18 @@ export class MemStorage implements IStorage {
     this.questions.set(id, newQuestion);
     return newQuestion;
   }
-  
-  
+
   // Answer methods
   async getAnswersByQuestion(questionId: number): Promise<Answer[]> {
     return Array.from(this.answers.values()).filter(
       (answer) => answer.questionId === questionId
     );
   }
-  
+
   async getAnswer(id: number): Promise<Answer | undefined> {
     return this.answers.get(id);
   }
-  
+
   async createAnswer(answer: InsertAnswer): Promise<Answer> {
     const id = this.answerId++;
     const newAnswer: Answer = {
@@ -491,21 +530,20 @@ export class MemStorage implements IStorage {
     this.answers.set(id, newAnswer);
     return newAnswer;
   }
-  
-  
+
   // Student Progress methods
   async getStudentProgress(userId: number): Promise<StudentProgress[]> {
     return Array.from(this.studentProgress.values()).filter(
       (progress) => progress.userId === userId
     );
   }
-  
+
   async getStudentProgressByQuiz(userId: number, quizId: number): Promise<StudentProgress | undefined> {
     return Array.from(this.studentProgress.values()).find(
       (progress) => progress.userId === userId && progress.quizId === quizId
     );
   }
-  
+
   async createStudentProgress(progress: InsertStudentProgress): Promise<StudentProgress> {
     const id = this.progressId++;
     const newProgress: StudentProgress = {
@@ -516,107 +554,66 @@ export class MemStorage implements IStorage {
       score: progress.score ?? null,
       completedQuestions: progress.completedQuestions ?? null,
       timeSpent: progress.timeSpent ?? null,
-      completedAt: progress.completedAt?.toISOString() ?? null, // Asegura string | null
+      completedAt: progress.completedAt?.toISOString() ?? null,
     };
     this.studentProgress.set(id, newProgress);
     return newProgress;
   }
-  
-  
+
   async updateStudentProgress(id: number, progress: Partial<StudentProgress>): Promise<StudentProgress> {
     const existingProgress = this.studentProgress.get(id);
     if (!existingProgress) {
       throw new Error(`Student progress with id ${id} not found`);
     }
-    
     const updatedProgress: StudentProgress = { ...existingProgress, ...progress };
     this.studentProgress.set(id, updatedProgress);
     return updatedProgress;
   }
-  
+
+  async deleteStudentProgress(id: number): Promise<void> {
+    this.studentProgress.delete(id);
+  }
+
   // Student Answer methods
   async getStudentAnswersByProgress(progressId: number): Promise<StudentAnswer[]> {
     return Array.from(this.studentAnswers.values()).filter(
       (answer) => answer.progressId === progressId
     );
   }
-  
+
   async createStudentAnswer(answer: InsertStudentAnswer): Promise<StudentAnswer> {
     const id = this.studentAnswerId++;
     const newAnswer: StudentAnswer = {
       id,
-      variables: answer.variables ?? {}, // default: objeto vacío
+      variables: answer.variables ?? {},
       questionId: answer.questionId,
-      isCorrect: answer.isCorrect ?? null, // default: null
-      timeSpent: answer.timeSpent ?? null, // default: null
+      isCorrect: answer.isCorrect ?? null,
+      timeSpent: answer.timeSpent ?? null,
       progressId: answer.progressId,
-      answerId: answer.answerId ?? null, // default: null
+      answerId: answer.answerId ?? null,
     };
     this.studentAnswers.set(id, newAnswer);
     return newAnswer;
   }
-  
-// Category methods
-async updateCategory(id: number, category: Partial<Category>): Promise<Category> {
-  throw new Error("Method not implemented.");
+
+  // Methods not implemented in MemStorage
+  async updateCategory(id: number, category: Partial<Category>): Promise<Category> { throw new Error("Method not implemented."); }
+  async deleteCategory(id: number): Promise<void> { throw new Error("Method not implemented."); }
+  async getPublicQuizzes(): Promise<Quiz[]> { throw new Error("Method not implemented."); }
+  async updateQuiz(id: number, quiz: Partial<Quiz>): Promise<Quiz> { throw new Error("Method not implemented."); }
+  async deleteQuiz(id: number): Promise<void> { throw new Error("Method not implemented."); }
+  async getUserQuizzes(userId: number): Promise<Quiz[]> { throw new Error("Method not implemented."); }
+  async assignQuizToUser(userId: number, quizId: number): Promise<void> { throw new Error("Method not implemented."); }
+  async removeQuizFromUser(userId: number, quizId: number): Promise<void> { throw new Error("Method not implemented."); }
+  async updateQuestion(id: number, question: Partial<Question>): Promise<Question> { throw new Error("Method not implemented."); }
+  async deleteQuestion(id: number): Promise<void> { throw new Error("Method not implemented."); }
+  async updateAnswer(id: number, answer: Partial<Answer>): Promise<Answer> { throw new Error("Method not implemented."); }
+  async deleteAnswer(id: number): Promise<void> { throw new Error("Method not implemented."); }
+  async backfillQuizSubmissions(): Promise<void> { throw new Error("Method not implemented."); }
 }
 
-async deleteCategory(id: number): Promise<void> {
-  throw new Error("Method not implemented.");
-}
-
-// Quiz methods
-async getPublicQuizzes(): Promise<Quiz[]> {
-  throw new Error("Method not implemented.");
-}
-
-async updateQuiz(id: number, quiz: Partial<Quiz>): Promise<Quiz> {
-  throw new Error("Method not implemented.");
-}
-
-async deleteQuiz(id: number): Promise<void> {
-  throw new Error("Method not implemented.");
-}
-
-// Métodos de asignación de quizzes a usuarios
-async getUserQuizzes(userId: number): Promise<Quiz[]> {
-  throw new Error("Method not implemented.");
-}
-
-async assignQuizToUser(userId: number, quizId: number): Promise<void> {
-  throw new Error("Method not implemented.");
-}
-
-async removeQuizFromUser(userId: number, quizId: number): Promise<void> {
-  throw new Error("Method not implemented.");
-}
-// Question methods
-async updateQuestion(id: number, question: Partial<Question>): Promise<Question> {
-  throw new Error("Method not implemented.");
-}
-
-async deleteQuestion(id: number): Promise<void> {
-  throw new Error("Method not implemented.");
-}
-
-// Answer methods
-async updateAnswer(id: number, answer: Partial<Answer>): Promise<Answer> {
-  throw new Error("Method not implemented.");
-}
-
-async deleteAnswer(id: number): Promise<void> {
-  throw new Error("Method not implemented.");
-}
-
-
-
-
-}
-
-// Importar la implementación de almacenamiento de base de datos
 import { DatabaseStorage } from "./database-storage.js";
 
-// Usar almacenamiento de base de datos en lugar de memoria
 export const storage = new DatabaseStorage(db);
 
 export const getUsersAssignedToQuiz = async (quizId: number) => {
@@ -628,7 +625,6 @@ export const getUsersAssignedToQuiz = async (quizId: number) => {
   }
 };
 
-//chat gpt dashboard personalizado
 export const getCategoriesByUserId = async (userId: number) => {
   try {
     return await storage.getCategoriesByUserId(userId);
@@ -646,5 +642,3 @@ export const getQuizzesByUserId = async (userId: number) => {
     throw error;
   }
 };
-
-//fin chat gpt dashboard personalizado

@@ -64,10 +64,10 @@ const getRandomMessage = (type: keyof typeof motivationalMessages) => {
 const TrainingPageSub = () => {
   const params = useParams<{ categoryId: string; subcategoryId: string }>();
   const { categoryId, subcategoryId } = params;
-  
+
   const categoryIdNum = Number(categoryId);
   const subcategoryIdNum = Number(subcategoryId);
-  
+
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -88,13 +88,13 @@ const TrainingPageSub = () => {
 
       try {
         const res = await apiRequest(
-          "GET", 
+          "GET",
           `/api/training-subcategory/${categoryIdNum}/${subcategoryIdNum}`
         );
         const data = await res.json();
         const questionsWithOptions = data.questions.map((q: any) => ({
           ...q,
-          options: q.options || []
+          options: (q.options || []).sort(() => Math.random() - 0.5)
         }));
         setQuestions(questionsWithOptions);
       } catch (error) {
@@ -123,7 +123,7 @@ const TrainingPageSub = () => {
     if (selectedOption !== null && questions[currentIndex]) {
       const currentQuestion = questions[currentIndex];
       const isCorrect = currentQuestion.options[selectedOption]?.isCorrect;
-      
+
       setAnsweredQuestions(prev => [
         ...prev,
         {
@@ -194,7 +194,7 @@ const TrainingPageSub = () => {
 
     return (
       <PageLayout>
-        <div className="max-w-2xl mx-auto p-6 space-y-6">
+        <div className="max-w-4xl mx-auto p-6 space-y-6">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -225,10 +225,10 @@ const TrainingPageSub = () => {
                     Acertaste el <span className={`font-bold ${isGoodScore ? 'text-green-600' : 'text-blue-600'}`}>{percentage}%</span>
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Progress 
-                    value={percentage} 
+                  <Progress
+                    value={percentage}
                     className="h-4 bg-gray-200"
                     indicatorClassName={isGoodScore ? 'bg-green-500' : 'bg-blue-500'}
                   />
@@ -236,7 +236,7 @@ const TrainingPageSub = () => {
                     Dificultad: {questions.reduce((acc, q) => acc + (q.difficulty === 'hard' ? 2 : q.difficulty === 'medium' ? 1 : 0), 0) / questions.length > 1.5 ? 'Alta' : 'Media'}
                   </p>
                 </div>
-                
+
                 <div className="flex flex-wrap justify-center gap-2">
                   {questions.map((q, i) => {
                     const answer = answeredQuestions.find(a => a.questionId === q.id);
@@ -271,7 +271,7 @@ const TrainingPageSub = () => {
   if (questions.length === 0) {
     return (
       <PageLayout>
-        <div className="p-6 max-w-2xl mx-auto">
+        <div className="p-6 max-w-4xl mx-auto">
           <Card className="bg-gradient-to-br from-gray-50 to-white">
             <CardHeader>
               <h1 className="text-2xl font-bold">Entrenamiento del Tema</h1>
@@ -305,7 +305,7 @@ const TrainingPageSub = () => {
 
   return (
     <PageLayout>
-      <div className="max-w-2xl mx-auto p-6 space-y-6">
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold">
@@ -326,8 +326,8 @@ const TrainingPageSub = () => {
             <div className="whitespace-pre-wrap">
               <h2 className="text-xl font-semibold">
                 {currentQuestion.content.split('¡').map((part, i) => (
-                  i % 2 === 0 ? 
-                    <span key={i}>{part}</span> : 
+                  i % 2 === 0 ?
+                    <span key={i}>{part}</span> :
                     <MathDisplay key={i} math={part.trim()} inline />
                 ))}
               </h2>
@@ -336,13 +336,12 @@ const TrainingPageSub = () => {
 
           <CardContent className="space-y-3">
             {reviewMode && previousAnswer && (
-              <div className={`p-3 rounded-md text-center font-medium ${
-                previousAnswer.isCorrect 
-                  ? 'bg-green-100 text-green-800' 
+              <div className={`p-3 rounded-md text-center font-medium ${previousAnswer.isCorrect
+                  ? 'bg-green-100 text-green-800'
                   : 'bg-red-100 text-red-800'
-              }`}>
-                {previousAnswer.isCorrect 
-                  ? "¡Respuesta correcta!" 
+                }`}>
+                {previousAnswer.isCorrect
+                  ? "¡Respuesta correcta!"
                   : "Respuesta incorrecta"}
               </div>
             )}
@@ -353,11 +352,10 @@ const TrainingPageSub = () => {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className={`p-3 rounded-md text-center font-medium ${
-                    selectedOption !== null && currentQuestion.options[selectedOption]?.isCorrect
+                  className={`p-3 rounded-md text-center font-medium ${selectedOption !== null && currentQuestion.options[selectedOption]?.isCorrect
                       ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
-                  }`}
+                    }`}
                 >
                   {feedbackMessage}
                 </motion.div>
@@ -365,58 +363,57 @@ const TrainingPageSub = () => {
             </AnimatePresence>
 
             {currentQuestion.options.map((option, index) => {
-  const isSelected = isAnswered 
-    ? previousAnswer?.selectedOption === index
-    : selectedOption === index;
-  
-  const isCorrectAnswer = option.isCorrect;
-  const showCorrect = (showResult || reviewMode) && isCorrectAnswer;
-  const showIncorrect = (showResult || reviewMode) && isSelected && !isCorrectAnswer;
+              const isSelected = isAnswered
+                ? previousAnswer?.selectedOption === index
+                : selectedOption === index;
 
-  return (
-    <Button
-      key={option.id}
-      variant={
-        reviewMode
-          ? isCorrectAnswer
-            ? "secondary"
-            : isSelected
-            ? "destructive"
-            : "outline"
-          : isAnswered
-          ? previousAnswer?.selectedOption === index
-            ? previousAnswer?.isCorrect
-              ? "secondary"
-              : "destructive"
-            : showCorrect
-            ? "secondary"
-            : "outline"
-          : isSelected
-          ? "secondary"
-          : "outline"
-      }
-      className={`w-full text-left justify-start h-auto py-3 whitespace-normal transition-all ${
-        showCorrect ? 'ring-2 ring-green-500' : ''
-      } ${showIncorrect ? 'ring-2 ring-red-500' : ''}`}
-      onClick={() => handleOptionSelect(index)}
-      disabled={isAnswered || reviewMode}
-    >
-      <span className="whitespace-pre-wrap">
-        {option.text.split('¡').map((part, i) => (
-          i % 2 === 0 ? 
-            <span key={i}>{part}</span> : 
-            <MathDisplay key={i} math={part.trim()} inline />
-        ))}
-      </span>
-      {showCorrect && <Star className="ml-2 h-4 w-4 text-yellow-500" />}
-    </Button>
-  );
-})}
+              const isCorrectAnswer = option.isCorrect;
+              const showCorrect = (showResult || reviewMode) && isCorrectAnswer;
+              const showIncorrect = (showResult || reviewMode) && isSelected && !isCorrectAnswer;
+
+              return (
+                <Button
+                  key={option.id}
+                  variant={
+                    reviewMode
+                      ? isCorrectAnswer
+                        ? "secondary"
+                        : isSelected
+                          ? "destructive"
+                          : "outline"
+                      : isAnswered
+                        ? previousAnswer?.selectedOption === index
+                          ? previousAnswer?.isCorrect
+                            ? "secondary"
+                            : "destructive"
+                          : showCorrect
+                            ? "secondary"
+                            : "outline"
+                        : isSelected
+                          ? "secondary"
+                          : "outline"
+                  }
+                  className={`w-full text-left justify-start h-auto py-3 whitespace-normal transition-all ${showCorrect ? 'ring-2 ring-green-500' : ''
+                    } ${showIncorrect ? 'ring-2 ring-red-500' : ''}`}
+                  onClick={() => handleOptionSelect(index)}
+                  disabled={isAnswered || reviewMode}
+                >
+                  <span className="whitespace-pre-wrap">
+                    {option.text.split('¡').map((part, i) => (
+                      i % 2 === 0 ?
+                        <span key={i}>{part}</span> :
+                        <MathDisplay key={i} math={part.trim()} inline />
+                    ))}
+                  </span>
+                  {showCorrect && <Star className="ml-2 h-4 w-4 text-yellow-500" />}
+                </Button>
+              );
+            })}
           </CardContent>
 
           <CardFooter className="flex justify-between">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               disabled={currentIndex === 0}
               onClick={() => {
                 setCurrentIndex(prev => prev - 1);
@@ -426,12 +423,12 @@ const TrainingPageSub = () => {
             >
               <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
             </Button>
-            <Button 
+            <Button
               onClick={handleNext}
               disabled={(!reviewMode && selectedOption === null && !isAnswered) || showResult}
             >
-              {currentIndex === questions.length - 1 
-                ? reviewMode ? "Finalizar revisión" : "Finalizar" 
+              {currentIndex === questions.length - 1
+                ? reviewMode ? "Finalizar revisión" : "Finalizar"
                 : "Siguiente"}
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>

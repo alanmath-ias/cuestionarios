@@ -96,7 +96,7 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
         const data = await res.json();
         const questionsWithOptions = data.questions.map((q: any) => ({
           ...q,
-          options: q.options || []
+          options: (q.options || []).sort(() => Math.random() - 0.5)
         }));
         setQuestions(questionsWithOptions);
       } catch (error) {
@@ -205,7 +205,7 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
 
     return (
       <PageLayout>
-        <div className="max-w-2xl mx-auto p-6 space-y-6">
+        <div className="max-w-4xl mx-auto p-6 space-y-6">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -282,7 +282,7 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
   if (questions.length === 0) {
     return (
       <PageLayout>
-        <div className="p-6 max-w-2xl mx-auto">
+        <div className="p-6 max-w-4xl mx-auto">
           <Card className="bg-gradient-to-br from-gray-50 to-white">
             <CardHeader>
               <h1 className="text-2xl font-bold">Entrenamiento</h1>
@@ -319,7 +319,7 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
 
   return (
     <PageLayout>
-      <div className="max-w-2xl mx-auto p-6 space-y-6">
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold">
