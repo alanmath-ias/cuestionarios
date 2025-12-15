@@ -300,11 +300,7 @@ export default function UserDashboard() {
 
   useEffect(() => {
     if (categories && categories.length > 0 && !selectedVideo) {
-      const categoriesWithVideo = categories.filter(cat =>
-        cat.youtubeLink &&
-        cat.youtubeLink !== 'NULL' &&
-        cat.youtubeLink.trim() !== ''
-      );
+      const categoriesWithVideo = categories.filter(cat => !!cat.youtubeLink);
       if (categoriesWithVideo.length > 0) {
         const randomCategory = categoriesWithVideo[Math.floor(Math.random() * categoriesWithVideo.length)];
         setSelectedVideo(randomCategory.youtubeLink!);
@@ -317,13 +313,7 @@ export default function UserDashboard() {
   }
 
   const completedQuizzes = quizzes?.filter((q) => q.status === "completed") || [];
-  const allPendingQuizzes = quizzes?.filter((q) => q.status !== "completed") || [];
-  const pendingQuizzes = allPendingQuizzes.reduce((acc, current) => {
-    const x = acc.find(item => item.id === current.id);
-    if (!x) return acc.concat([current]);
-    return acc;
-  }, [] as QuizWithFeedback[]);
-
+  const pendingQuizzes = quizzes?.filter((q) => q.status !== "completed") || [];
   const progressPercentage = quizzes && quizzes.length > 0 ? (completedQuizzes.length / quizzes.length) * 100 : 0;
   const sortedCompletedQuizzes = [...completedQuizzes].sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
 
@@ -403,7 +393,7 @@ export default function UserDashboard() {
             </ScrollArea>
           </div>
 
-          {/* 2. Video Section */}
+          {/* 2. Video Section (Moved here) */}
           {selectedVideo && (
             <div ref={videoSectionRef} className="w-full bg-black rounded-3xl overflow-hidden shadow-lg relative animate-in fade-in slide-in-from-top-4 duration-500">
               <div className="absolute top-2 right-2 z-10">
@@ -426,14 +416,6 @@ export default function UserDashboard() {
               <h3 className="font-bold text-lg text-yellow-900 flex items-center gap-2">
                 <PlayCircle className="w-5 h-5 text-orange-600" /> Actividades Pendientes ({pendingQuizzes.length})
               </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100"
-                onClick={() => setShowPendingDialog(true)}
-              >
-                Ver todo
-              </Button>
             </div>
             <ScrollArea className="flex-1 -mr-3 pr-3">
               <div className="space-y-2">
