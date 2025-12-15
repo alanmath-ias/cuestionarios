@@ -68,28 +68,29 @@ export function Header({ user, pendingCount }: HeaderProps) {
                 <li><Link href="/admin/users"><span className="hover:text-white/80 transition-colors cursor-pointer">Usuarios</span></Link></li>
                 <li><Link href="/admin/calificar"><span className="hover:text-white/80 transition-colors cursor-pointer">Calificar</span></Link></li>
                 <li><Link href="/admin/RegistrarPadres"><span className="hover:text-white/80 transition-colors cursor-pointer">Padres</span></Link></li>
-
-                {/* Redes sociales en versión móvil */}
-                <li className="md:hidden pt-2">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex gap-5">
-                      <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="hover:text-[#FF0000]" aria-label="YouTube"><Youtube size={22} /></a>
-                      <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-[#E1306C]" aria-label="Instagram"><Instagram size={22} /></a>
-                      <a href={socialLinks.tiktok} target="_blank" rel="noopener noreferrer" className="hover:text-[#000000]" aria-label="TikTok"><FaTiktok size={20} /></a>
-                      <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="hover:text-[#000000]" aria-label="Facebook"><FaFacebook size={20} /></a>
-                      <a href={socialLinks.website} target="_blank" rel="noopener noreferrer" className="hover:text-white/80" aria-label="Sitio Web"><Globe size={20} /></a>
-                    </div>
-                  </div>
-                </li>
               </>
             )}
+
+            {/* Redes sociales en versión móvil (Visible para todos) */}
+            <li className="md:hidden pt-2 border-t border-white/10 w-full mt-2">
+              <div className="flex flex-col gap-2">
+                <p className="text-xs opacity-70 uppercase tracking-wider">Síguenos</p>
+                <div className="flex gap-5">
+                  <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="hover:text-[#FF0000]" aria-label="YouTube"><Youtube size={22} /></a>
+                  <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-[#E1306C]" aria-label="Instagram"><Instagram size={22} /></a>
+                  <a href={socialLinks.tiktok} target="_blank" rel="noopener noreferrer" className="hover:text-[#000000]" aria-label="TikTok"><FaTiktok size={20} /></a>
+                  <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="hover:text-[#000000]" aria-label="Facebook"><FaFacebook size={20} /></a>
+                  <a href={socialLinks.website} target="_blank" rel="noopener noreferrer" className="hover:text-white/80" aria-label="Sitio Web"><Globe size={20} /></a>
+                </div>
+              </div>
+            </li>
           </ul>
         </nav>
 
         {/* Redes sociales (versión desktop) y menú de usuario */}
         <div className="flex items-center gap-2 md:gap-4">
-          {/* Buscador Global - Eliminado ancho fijo para que solo ocupe el icono */}
-          <div className="hidden md:block">
+          {/* Buscador Global - Visible en móvil */}
+          <div className="block">
             <GlobalSearch isAdmin={isAdmin} />
           </div>
 
