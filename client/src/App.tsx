@@ -15,6 +15,7 @@ import QuizzesAdmin from "@/pages/admin/quizzes";
 import QuestionsAdmin from "@/pages/admin/questions";
 import UsersAdmin from "@/pages/admin/users";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
+import HistoryPage from "@/pages/history";
 import { PageLayout } from "@/components/layout/page-layout";
 import { useQuery } from "@tanstack/react-query";
 import { User } from "@/types/types";
@@ -199,6 +200,9 @@ function Router() {
       </Route>
       <Route path="/free-quizzes">
         {() => <PageLayout><FreeQuizzes /></PageLayout>}
+      </Route>
+      <Route path="/history">
+        {() => <ProtectedRoute component={HistoryPage} path="/history" />}
       </Route>
 
       {/* Rutas administrativas */}

@@ -38,7 +38,7 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ youtubeLink }) => {
   console.log('VideoEmbed -> embedUrl:', embedUrl);
 
   return (
-    <div className="w-full max-w-full sm:max-w-md md:max-w-lg mx-auto mb-4">
+    <div className="w-full h-full">
       <div className="relative pb-[56.25%] h-0">
         <iframe
           src={embedUrl}

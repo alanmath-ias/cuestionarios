@@ -328,7 +328,9 @@ export class DatabaseStorage implements IStorage {
         difficulty: quizzes.difficulty,
         status: studentProgress.status,
         reviewed: quizSubmissions.reviewed,
-        progressId: studentProgress.id, // <- AquÃ­ estÃ¡ el cambio clave
+        progressId: studentProgress.id,
+        score: studentProgress.score,
+        timeSpent: studentProgress.timeSpent, // <- AquÃ­ estÃ¡ el cambio clave
         completedAt: studentProgress.completedAt, // <- AÃ±ade esta lÃ­nea
         url: quizzes.url, // â† AÃ±ade esta lÃ­nea
       })
