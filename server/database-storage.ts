@@ -462,8 +462,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStudentAnswer(answer: InsertStudentAnswer): Promise<StudentAnswer> {
-    const result = await this.db.insert(studentAnswers).values(answer).returning();
-    return result[0];
+    // Check if answer already exists for this progress and question
+    const existingAnswer = await this.db.select()
+      .from(studentAnswers)
+      .where(and(
+        eq(studentAnswers.progressId, answer.progressId),
+        eq(studentAnswers.questionId, answer.questionId)
+      ))
+      .limit(1);
+
+    if (existingAnswer.length > 0) {
+      // Update existing answer
+      const result = await this.db.update(studentAnswers)
+        .set(answer)
+        .where(eq(studentAnswers.id, existingAnswer[0].id))
+        .returning();
+      return result[0];
+    } else {
+      // Insert new answer
+      const result = await this.db.insert(studentAnswers).values(answer).returning();
+      return result[0];
+    }
   }
 
   async getQuizResults(progressId: number): Promise<QuizResult | null> {
@@ -476,6 +495,7 @@ export class DatabaseStorage implements IStorage {
       completedQuestions: number;
       timeSpent?: number;
       completedAt?: Date;
+      hintsUsed: number;
       quiz: {
         id: number;
         title: string;
@@ -505,6 +525,10 @@ export class DatabaseStorage implements IStorage {
           quizId: number;
           points: number;
           imageUrl: string | null;
+          explanation: string | null;
+          hint1: string | null;
+          hint2: string | null;
+          hint3: string | null;
         };
         answerDetails: {
           id: number;
@@ -571,7 +595,8 @@ export class DatabaseStorage implements IStorage {
         score: progressWithRelations.score ?? null,
         completedQuestions: progressWithRelations.completedQuestions,
         timeSpent: progressWithRelations.timeSpent ?? null,
-        completedAt: progressWithRelations.completedAt?.toISOString() ?? null
+        completedAt: progressWithRelations.completedAt?.toISOString() ?? null,
+        hintsUsed: progressWithRelations.hintsUsed
       },
       quiz: progressWithRelations.quiz,
       answers: enrichedAnswers
@@ -1011,5 +1036,26 @@ export class DatabaseStorage implements IStorage {
         });
       }
     }
+  }
+
+  async updateUserHintCredits(userId: number, credits: number): Promise<void> {
+    await this.db
+      .update(users)
+      .set({ hintCredits: credits })
+      .where(eq(users.id, userId));
+  }
+
+  async updateQuestionHints(questionId: number, hints: { hint1?: string, hint2?: string, hint3?: string, explanation?: string }): Promise<void> {
+    // Remove undefined values to avoid UNDEFINED_VALUE error in postgres.js
+    const cleanHints = Object.fromEntries(
+      Object.entries(hints).filter(([_, v]) => v !== undefined)
+    );
+
+    if (Object.keys(cleanHints).length === 0) return;
+
+    await this.db
+      .update(questions)
+      .set(cleanHints)
+      .where(eq(questions.id, questionId));
   }
 }

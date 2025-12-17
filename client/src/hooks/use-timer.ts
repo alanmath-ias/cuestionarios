@@ -2,20 +2,22 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface UseTimerProps {
   initialTime: number; // in seconds
+  initialElapsedTime?: number; // in seconds
   autoStart?: boolean;
   onTimeUp?: () => void;
 }
 
-export function useTimer({ initialTime, autoStart = false, onTimeUp }: UseTimerProps) {
-  const [timeRemaining, setTimeRemaining] = useState(initialTime);
+export function useTimer({ initialTime, initialElapsedTime = 0, autoStart = false, onTimeUp }: UseTimerProps) {
+  const [timeRemaining, setTimeRemaining] = useState(Math.max(0, initialTime - initialElapsedTime));
   const [isRunning, setIsRunning] = useState(autoStart);
-  const [elapsedTime, setElapsedTime] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(initialElapsedTime);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
   const start = useCallback(() => {
     setIsRunning(true);
-    startTimeRef.current = Date.now() - elapsedTime * 1000;
+    // Adjust start time based on already elapsed time
+    startTimeRef.current = Date.now() - (elapsedTime * 1000);
   }, [elapsedTime]);
 
   const pause = useCallback(() => {
@@ -34,24 +36,34 @@ export function useTimer({ initialTime, autoStart = false, onTimeUp }: UseTimerP
   }, [initialTime]);
 
   useEffect(() => {
+    // If initialElapsedTime changes (e.g. loaded from server), update state
+    if (initialElapsedTime > 0 && elapsedTime === 0) {
+      setElapsedTime(initialElapsedTime);
+      setTimeRemaining(Math.max(0, initialTime - initialElapsedTime));
+    }
+  }, [initialElapsedTime, initialTime]);
+
+  useEffect(() => {
     if (isRunning) {
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now() - (elapsedTime * 1000);
+      }
+
       intervalRef.current = setInterval(() => {
-        setTimeRemaining((prevTime) => {
-          if (prevTime <= 1) {
-            // Time is up
-            clearInterval(intervalRef.current!);
-            setIsRunning(false);
-            if (onTimeUp) {
-              onTimeUp();
-            }
-            return 0;
+        const now = Date.now();
+        const currentElapsed = Math.floor((now - startTimeRef.current!) / 1000);
+
+        setElapsedTime(currentElapsed);
+
+        const remaining = Math.max(0, initialTime - currentElapsed);
+        setTimeRemaining(remaining);
+
+        if (remaining <= 0) {
+          clearInterval(intervalRef.current!);
+          setIsRunning(false);
+          if (onTimeUp) {
+            onTimeUp();
           }
-          return prevTime - 1;
-        });
-        
-        if (startTimeRef.current) {
-          const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-          setElapsedTime(elapsed);
         }
       }, 1000);
     } else if (intervalRef.current) {
@@ -63,8 +75,8 @@ export function useTimer({ initialTime, autoStart = false, onTimeUp }: UseTimerP
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning, onTimeUp]);
-  
+  }, [isRunning, initialTime, onTimeUp]);
+
   // Format time as mm:ss
   const formattedTime = useCallback(() => {
     const minutes = Math.floor(timeRemaining / 60);

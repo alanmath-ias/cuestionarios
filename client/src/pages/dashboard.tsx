@@ -28,7 +28,8 @@ import {
   Trophy,
   Target,
   Globe,
-  BarChart3
+  BarChart3,
+  Lightbulb
 } from "lucide-react";
 import { Link } from "wouter";
 import { useEffect, useRef, useState } from "react";
@@ -353,6 +354,10 @@ export default function UserDashboard() {
             Hola, <span className="text-indigo-600">{currentUser?.username || 'Estudiante'}</span> 👋
           </h1>
           <p className="text-gray-500 mt-1">Aquí tienes el resumen de tu progreso hoy.</p>
+          <div className="mt-2 inline-flex items-center bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium border border-yellow-200">
+            <Lightbulb className="w-4 h-4 mr-2" />
+            {currentUser?.hintCredits ?? 0} Créditos de Pistas
+          </div>
         </div>
 
         {/* Alert Section */}

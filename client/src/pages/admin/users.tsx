@@ -256,146 +256,154 @@ function UserProgressDetails({ userId }: { userId: number }) {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Error al eliminar progreso");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-user-dashboard", userId] });
-      toast({ title: "Progreso eliminado", description: "La tarea ha sido eliminada del historial del usuario." });
-    },
-    onError: () => {
-      toast({ title: "Error", variant: "destructive", description: "No se pudo eliminar el progreso." });
-    }
-  });
 
-  // Mutación para eliminar asignación (definitivamente)
-  const deleteAssignmentMutation = useMutation({
-    mutationFn: async ({ userId, quizId }: { userId: number; quizId: number }) => {
-      const res = await fetch("/api/admin/assignments", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, quizId }),
-      });
-      if (!res.ok) throw new Error("Error al eliminar asignación");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-user-dashboard", userId] });
-      toast({ title: "Asignación eliminada", description: "El cuestionario ha sido eliminado definitivamente del usuario." });
-    },
-    onError: () => {
-      toast({ title: "Error", variant: "destructive", description: "No se pudo eliminar la asignación." });
-    }
-  });
+      const completedQuizzes = data?.quizzes.filter(q => q.status === 'completed') || [];
+      const pendingQuizzes = data?.quizzes.filter(q => q.status !== 'completed') || [];
 
-  const handleCategoryToggle = (categoryId: number, checked: boolean) => {
-    setSelectedCategories(prev =>
-      checked ? [...prev, categoryId] : prev.filter(id => id !== categoryId)
-    );
-  };
-
-  if (isLoading) return <Spinner className="h-8 w-8 mx-auto" />;
-
-  const completedQuizzes = data?.quizzes.filter(q => q.status === 'completed') || [];
-  const pendingQuizzes = data?.quizzes.filter(q => q.status !== 'completed') || [];
-
-  return (
-    <div className="space-y-8">
-      {/* Sección de Categorías */}
-      <div className="border p-4 rounded-lg bg-slate-50 dark:bg-slate-900">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Asignar Materias</h3>
-          <Button
-            onClick={() => saveCategoriesMutation.mutate(selectedCategories)}
-            disabled={saveCategoriesMutation.status === "pending"}
-            size="sm"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {saveCategoriesMutation.status === "pending" ? "Guardando..." : "Guardar Cambios"}
-          </Button>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {allCategories?.map((category) => (
-            <div key={category.id} className="flex items-center space-x-2">
-              <Checkbox
-                id={`cat-${category.id}`}
-                checked={selectedCategories.includes(category.id)}
-                onCheckedChange={(checked) => handleCategoryToggle(category.id, checked as boolean)}
-              />
-              <label
-                htmlFor={`cat-${category.id}`}
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+      return (
+        <div className="space-y-8">
+          {/* Sección de Categorías */}
+          <div className="border p-4 rounded-lg bg-slate-50 dark:bg-slate-900">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Asignar Materias</h3>
+              <Button
+                onClick={() => saveCategoriesMutation.mutate(selectedCategories)}
+                disabled={saveCategoriesMutation.status === "pending"}
+                size="sm"
               >
-                {category.name}
-              </label>
+                <Save className="w-4 h-4 mr-2" />
+                {saveCategoriesMutation.status === "pending" ? "Guardando..." : "Guardar Cambios"}
+              </Button>
             </div>
-          ))}
-        </div>
-      </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {allCategories?.map((category) => (
+                <div key={category.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`cat-${category.id}`}
+                    checked={selectedCategories.includes(category.id)}
+                    onCheckedChange={(checked) => handleCategoryToggle(category.id, checked as boolean)}
+                  />
+                  <label
+                    htmlFor={`cat-${category.id}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    {category.name}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* Sección de Progreso */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Progreso del Usuario</h3>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Tareas Completadas */}
+          {/* Sección de Progreso */}
           <div>
-            <h4 className="font-medium text-green-600 mb-2">Completados ({completedQuizzes.length})</h4>
-            <div className="space-y-2">
-              {completedQuizzes.length === 0 && <p className="text-sm text-muted-foreground">No hay tareas completadas.</p>}
-              {completedQuizzes.map(quiz => (
-                <div key={quiz.id} className="border p-3 rounded flex justify-between items-center bg-white dark:bg-slate-950">
-                  <div>
-                    <p className="font-medium">{quiz.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {quiz.completedAt && format(new Date(quiz.completedAt), "PPP p", { locale: es })}
-                    </p>
-                  </div>
-                  {quiz.progressId && (
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setLocation(`/admin/review/${quiz.progressId}`)}
-                        title="Ver detalles de revisión"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+            <h3 className="text-lg font-semibold mb-4">Progreso del Usuario</h3>
 
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-orange-500 hover:text-orange-700 hover:bg-orange-50" title="Resetear (Eliminar progreso)">
-                            <Trash2 className="h-4 w-4" />
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Tareas Completadas */}
+              <div>
+                <h4 className="font-medium text-green-600 mb-2">Completados ({completedQuizzes.length})</h4>
+                <div className="space-y-2">
+                  {completedQuizzes.length === 0 && <p className="text-sm text-muted-foreground">No hay tareas completadas.</p>}
+                  {completedQuizzes.map(quiz => (
+                    <div key={quiz.id} className="border p-3 rounded flex justify-between items-center bg-white dark:bg-slate-950">
+                      <div>
+                        <p className="font-medium">{quiz.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {quiz.completedAt && format(new Date(quiz.completedAt), "PPP p", { locale: es })}
+                        </p>
+                      </div>
+                      {quiz.progressId && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setLocation(`/admin/review/${quiz.progressId}`)}
+                            title="Ver detalles de revisión"
+                          >
+                            <Eye className="h-4 w-4" />
                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>¿Eliminar este progreso?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Se eliminará el registro de que el usuario completó "<strong>{quiz.title}</strong>".
-                              El usuario tendrá que volver a hacerlo.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteProgressMutation.mutate(quiz.progressId!)}
-                              className="bg-orange-500 hover:bg-orange-600"
-                            >
-                              Resetear
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
 
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-orange-500 hover:text-orange-700 hover:bg-orange-50" title="Resetear (Eliminar progreso)">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>¿Eliminar este progreso?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Se eliminará el registro de que el usuario completó "<strong>{quiz.title}</strong>".
+                                  El usuario tendrá que volver a hacerlo.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteProgressMutation.mutate(quiz.progressId!)}
+                                  className="bg-orange-500 hover:bg-orange-600"
+                                >
+                                  Resetear
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" title="Eliminar definitivamente">
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>¿Eliminar definitivamente?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Se eliminará el progreso Y la asignación del cuestionario. Desaparecerá del dashboard del usuario.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteAssignmentMutation.mutate({ userId, quizId: quiz.id })}
+                                  className="bg-destructive"
+                                >
+                                  Eliminar Todo
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tareas Pendientes */}
+              <div>
+                <h4 className="font-medium text-amber-600 mb-2">Pendientes / En Progreso ({pendingQuizzes.length})</h4>
+                <div className="space-y-2">
+                  {pendingQuizzes.length === 0 && <p className="text-sm text-muted-foreground">No hay tareas pendientes.</p>}
+                  {pendingQuizzes.map(quiz => (
+                    <div key={quiz.id} className="border p-3 rounded bg-slate-50 dark:bg-slate-900 opacity-75 flex justify-between items-center">
+                      <div>
+                        <p className="font-medium">{quiz.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Estado: {quiz.status || 'No iniciado'}
+                        </p>
+                      </div>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" title="Eliminar definitivamente">
+                          <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" title="Eliminar asignación">
                             <XCircle className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>¿Eliminar definitivamente?</AlertDialogTitle>
+                            <AlertDialogTitle>¿Eliminar asignación?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Se eliminará el progreso Y la asignación del cuestionario. Desaparecerá del dashboard del usuario.
+                              Se eliminará la asignación del cuestionario "<strong>{quiz.title}</strong>" para este usuario.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -404,61 +412,17 @@ function UserProgressDetails({ userId }: { userId: number }) {
                               onClick={() => deleteAssignmentMutation.mutate({ userId, quizId: quiz.id })}
                               className="bg-destructive"
                             >
-                              Eliminar Todo
+                              Eliminar
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Tareas Pendientes */}
-          <div>
-            <h4 className="font-medium text-amber-600 mb-2">Pendientes / En Progreso ({pendingQuizzes.length})</h4>
-            <div className="space-y-2">
-              {pendingQuizzes.length === 0 && <p className="text-sm text-muted-foreground">No hay tareas pendientes.</p>}
-              {pendingQuizzes.map(quiz => (
-                <div key={quiz.id} className="border p-3 rounded bg-slate-50 dark:bg-slate-900 opacity-75 flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">{quiz.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Estado: {quiz.status || 'No iniciado'}
-                    </p>
-                  </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" title="Eliminar asignación">
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>¿Eliminar asignación?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Se eliminará la asignación del cuestionario "<strong>{quiz.title}</strong>" para este usuario.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => deleteAssignmentMutation.mutate({ userId, quizId: quiz.id })}
-                          className="bg-destructive"
-                        >
-                          Eliminar
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
+      );
+    }

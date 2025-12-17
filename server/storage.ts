@@ -6,7 +6,7 @@ import {
   answers, Answer, InsertAnswer,
   studentProgress, StudentProgress, InsertStudentProgress,
   studentAnswers, StudentAnswer, InsertStudentAnswer
-} from "./schema.js";
+} from "../shared/schema.js";
 import { db } from './db.js';
 import { Child } from '../shared/quiz-types.js';
 
@@ -111,6 +111,10 @@ export interface IStorage {
   // Search methods
   searchUsers(query: string): Promise<User[]>;
   searchQuizzes(query: string): Promise<Quiz[]>;
+
+  // Hint methods
+  updateUserHintCredits(userId: number, credits: number): Promise<void>;
+  updateQuestionHints(questionId: number, hints: { hint1?: string, hint2?: string, hint3?: string, explanation?: string }): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -190,6 +194,8 @@ export class MemStorage implements IStorage {
 
   async searchUsers(query: string): Promise<User[]> { return []; }
   async searchQuizzes(query: string): Promise<Quiz[]> { return []; }
+
+
 
   private async initializeData() {
     try {
@@ -416,7 +422,8 @@ export class MemStorage implements IStorage {
       id,
       email: insertUser.email ?? null,
       role: insertUser.role ?? "student",
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      hintCredits: 50
     };
     this.users.set(id, user);
     return user;
@@ -516,6 +523,10 @@ export class MemStorage implements IStorage {
       points: question.points ?? 0,
       variables: question.variables ?? {},
       imageUrl: question.imageUrl ?? null,
+      explanation: null,
+      hint1: null,
+      hint2: null,
+      hint3: null,
     };
     this.questions.set(id, newQuestion);
     return newQuestion;
@@ -569,6 +580,7 @@ export class MemStorage implements IStorage {
       completedQuestions: progress.completedQuestions ?? null,
       timeSpent: progress.timeSpent ?? null,
       completedAt: progress.completedAt?.toISOString() ?? null,
+      hintsUsed: 0
     };
     this.studentProgress.set(id, newProgress);
     return newProgress;
@@ -605,6 +617,7 @@ export class MemStorage implements IStorage {
       timeSpent: answer.timeSpent ?? null,
       progressId: answer.progressId,
       answerId: answer.answerId ?? null,
+      hintsUsed: 0
     };
     this.studentAnswers.set(id, newAnswer);
     return newAnswer;
@@ -624,6 +637,14 @@ export class MemStorage implements IStorage {
   async updateAnswer(id: number, answer: Partial<Answer>): Promise<Answer> { throw new Error("Method not implemented."); }
   async deleteAnswer(id: number): Promise<void> { throw new Error("Method not implemented."); }
   async backfillQuizSubmissions(): Promise<void> { throw new Error("Method not implemented."); }
+  async updateUserHintCredits(userId: number, credits: number): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.hintCredits = credits;
+      this.users.set(userId, user);
+    }
+  }
+  async updateQuestionHints(questionId: number, hints: any): Promise<void> { }
 }
 
 import { DatabaseStorage } from "./database-storage.js";

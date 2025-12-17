@@ -1,466 +1,282 @@
-import { useState, useEffect } from 'react';
-import { useParams, useLocation } from 'wouter';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
-import { QuizOption } from '@/components/ui/quiz-option';
-import { QuestionProgress } from '@/components/ui/question-progress';
-import { Progress } from '@/components/ui/progress';
-import { useTimer } from '@/hooks/use-timer';
-import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, ArrowRight, Timer } from 'lucide-react';
-import { shuffleArray } from '@/lib/mathUtils';
-import { Badge } from '@/components/ui/badge';
-import { QuestionContent } from '@/components/QuestionContent';
-import { Textarea } from '@/components/ui/textarea';
-import { useSession } from '../hooks/useSession';
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useParams, useLocation } from "wouter";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb } from "lucide-react";
+import { useState, useEffect } from "react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useTimer } from "@/hooks/use-timer";
+import { QuizOption } from "@/components/QuizOption";
+import { QuestionProgress } from "@/components/QuestionProgress";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { useSession } from "@/hooks/useSession";
+import { ContentRenderer } from "@/components/ContentRenderer";
 
+// Interfaces
 interface Quiz {
   id: number;
   title: string;
-  description: string;
-  categoryId: number;
   timeLimit: number;
-  difficulty: string;
-  totalQuestions: number;
+  description?: string;
+  categoryId: number;
 }
 
 interface Question {
   id: number;
+  quizId: number;
+  type: 'text' | 'multiple_choice' | 'equation';
   content: string;
-  type: string;
-  difficulty: number;
   points: number;
-  answers: Answer[];
-  variables: Record<string, number>;
+  difficulty: 'easy' | 'medium' | 'hard';
   imageUrl?: string;
-}
-
-interface Answer {
-  id: number;
-  questionId: number;
-  content: string;
-  isCorrect: boolean;
-  explanation?: string;
+  answers?: any[];
+  variables?: any;
 }
 
 interface Progress {
-  id?: number;
-  userId?: number;
+  id: number;
+  userId: number;
   quizId: number;
-  status: 'not_started' | 'in_progress' | 'completed';
+  status: 'in_progress' | 'completed';
   score?: number;
   completedQuestions: number;
-  timeSpent?: number;
-  completedAt?: string | Date;
-}
-
-interface StudentAnswer {
-  progressId: number;
-  questionId: number;
-  answerId: number | null;
-  textAnswer?: string;
-  isCorrect: boolean;
-  variables: Record<string, number>;
   timeSpent: number;
+  completedAt?: string;
+  answers?: any[]; // Added this
 }
 
-function ActiveQuiz() {
-  const { quizId } = useParams<{ quizId: string }>();
-  const [_, setLocation] = useLocation();
-  const { toast } = useToast();
-  const { session } = useSession();
+// Componente para renderizar contenido con saltos de línea y matemáticas
+const QuestionContent = ({ content }: { content: string }) => {
+  return (
+    <div className="text-lg mb-6">
+      <ContentRenderer content={content} />
+    </div>
+  );
+};
 
-  // State
+const ActiveQuiz = () => {
+  const { quizId } = useParams();
+  const [location, setLocation] = useLocation();
+  const { toast } = useToast();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswerId, setSelectedAnswerId] = useState<number | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [studentAnswers, setStudentAnswers] = useState<any[]>([]);
   const [answeredQuestions, setAnsweredQuestions] = useState<Record<number, boolean>>({});
-  const [correctAnswers, setCorrectAnswers] = useState<Record<number, boolean>>({});
-  const [studentAnswers, setStudentAnswers] = useState<StudentAnswer[]>([]);
-  const [shuffledAnswers, setShuffledAnswers] = useState<Answer[]>([]);
   const [textAnswers, setTextAnswers] = useState<Record<number, string>>({});
-  const [quizResults, setQuizResults] = useState<{
-    score: number;
-    totalPoints: number;
-    percentage: number;
-    correctAnswers: number;
-    totalQuestions: number;
-  } | null>(null);
+  const [shuffledAnswers, setShuffledAnswers] = useState<any[]>([]);
+  const { session } = useSession();
+  const [isHintDialogOpen, setIsHintDialogOpen] = useState(false);
+  const [hintsRevealed, setHintsRevealed] = useState<Record<number, string[]>>({});
+  const [requestingHint, setRequestingHint] = useState(false);
 
-  // Fetch quiz data
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${quizId}`],
-    queryFn: async () => {
-      console.log('[DATA] Fetching quiz data...');
-      const res = await fetch(`/api/quizzes/${quizId}`);
-      if (!res.ok) throw new Error('Error fetching quiz');
-      const data = await res.json();
-      console.log('[DATA] Quiz loaded:', data);
-      return data;
-    },
   });
 
-  // Fetch questions
-  const { data: questions, isLoading: loadingQuestions } = useQuery<Question[]>({
+  const { data: questions, isLoading: loadingQuestions, error: errorQuestions } = useQuery<Question[]>({
     queryKey: [`/api/quizzes/${quizId}/questions`],
-    queryFn: async () => {
-      console.log('[DATA] Fetching questions...');
-      const res = await fetch(`/api/quizzes/${quizId}/questions`);
-      if (!res.ok) throw new Error('Error fetching questions');
-      const data = await res.json();
-      console.log(`[DATA] Questions loaded (count: ${data.length})`);
-      return data;
-    },
+    enabled: !!quizId,
   });
 
-  // Fetch progress
-  const { data: progress, isLoading: loadingProgress } = useQuery<Progress | null>({
+  const { data: progress } = useQuery<Progress>({
     queryKey: [`/api/progress/${quizId}`],
-    queryFn: async () => {
-      console.log('[DATA] Fetching progress...');
-      const res = await fetch(`/api/progress/${quizId}`);
-      if (!res.ok) return null;
-      const data = await res.json();
-      console.log('[DATA] Progress loaded:', data);
-      return data;
-    },
+    enabled: !!quizId && !!session?.userId,
   });
 
-  // Mutations
-  const createProgressMutation = useMutation({
-    mutationFn: async (progressData: Progress) => {
-      const dataToSend = {
-        ...progressData,
-        completedAt: progressData.completedAt instanceof Date
-          ? progressData.completedAt.toISOString()
-          : progressData.completedAt
-      };
-      return apiRequest('POST', '/api/progress', dataToSend);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/progress/${quizId}`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/progress'] });
-    },
+  // Updated useTimer call
+  const { formattedTime, elapsedTime, start } = useTimer({
+    initialTime: quiz?.timeLimit || 0,
+    initialElapsedTime: progress?.timeSpent || 0,
+    autoStart: true,
+    onTimeUp: () => handleFinishQuiz()
   });
 
-  const submitAnswerMutation = useMutation({
-    mutationFn: async (answerData: StudentAnswer) => {
-      return apiRequest('POST', '/api/answers', answerData);
-    },
-  });
-
-  // Timer
-  const {
-    timeRemaining,
-    elapsedTime,
-    formattedTime,
-    start: startTimer,
-    pause: pauseTimer,
-    reset: resetTimer
-  } = useTimer({
-    initialTime: quiz?.timeLimit ?? 1800,
-    onTimeUp: () => handleFinishQuiz(),
-  });
-
-  // Load existing answers function
-  const loadExistingAnswers = async (progressId: number, questions: Question[]) => {
-    console.log(`[LOAD] Loading answers for progress ${progressId}`);
-    try {
-      const res = await fetch(`/api/progress/${progressId}/answers`);
-      if (!res.ok) throw new Error('Failed to load answers');
-      
-      const existingAnswers = await res.json();
-      console.log(`[LOAD] Found ${existingAnswers.length} existing answers`);
-      
-      const answered: Record<number, boolean> = {};
-      const correct: Record<number, boolean> = {};
-      const studentAnswersData: StudentAnswer[] = [];
-      const textAnswersData: Record<number, string> = {};
-      
-      existingAnswers.forEach((answer: any) => {
-        const questionIndex = questions.findIndex(q => q.id === answer.questionId);
-        if (questionIndex >= 0) {
-          answered[questionIndex] = true;
-          correct[questionIndex] = answer.isCorrect;
-          studentAnswersData.push({
-            progressId: answer.progressId,
-            questionId: answer.questionId,
-            answerId: answer.answerId,
-            textAnswer: answer.textAnswer,
-            isCorrect: answer.isCorrect,
-            variables: answer.variables,
-            timeSpent: answer.timeSpent
-          });
-
-          if (answer.textAnswer) {
-            textAnswersData[answer.questionId] = answer.textAnswer;
-          }
-        }
-      });
-      
-      return { answered, correct, studentAnswersData, textAnswersData };
-    } catch (error) {
-      console.error('[ERROR] Error loading answers:', error);
-      return null;
-    }
-  };
-
-  // Initialize quiz progress
-  const initializeProgress = async () => {
-    if (!quiz) return;
-
-    try {
-      console.log('[INIT] Initializing new progress');
-      await createProgressMutation.mutateAsync({
-        quizId: parseInt(quizId),
-        status: 'in_progress',
-        completedQuestions: 0,
-      });
-      
-      resetTimer(quiz.timeLimit);
-      startTimer();
-    } catch (error) {
-      console.error('[ERROR] Error initializing quiz:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo iniciar el cuestionario.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Initialize or continue quiz
+  // Initialize state from progress
   useEffect(() => {
-    if (!quiz || loadingProgress || !questions) return;
-    
-    console.log('[INIT] Initializing quiz session');
-    
-
-    
-    const initializeQuiz = async () => {
-      if (progress) {
-        if (progress.status === 'completed') {
-          console.log('[INIT] Quiz already completed');
-          toast({
-            title: 'Grandioso, has completado este cuestionario!',
-            description: 'Ahora puedes ver los resultados en tu Dashboard',
-          });
-          setLocation(`/results/${progress.id}`);
-          return;
-        }
-
-        // Set initial time
-        const initialTime = progress.timeSpent !== undefined && quiz.timeLimit
-          ? Math.max(0, quiz.timeLimit - progress.timeSpent)
-          : quiz.timeLimit;
-
-        resetTimer(initialTime);
-        startTimer();
-
-        if (progress.completedQuestions > 0) {
-          console.log(`[INIT] Resuming at question ${progress.completedQuestions}`);
-          setCurrentQuestionIndex(progress.completedQuestions);
-        }
-
-        // Load existing answers
-        if (progress?.id) { // Esto verifica que progress no sea null/undefined y que id exista
-          const answersData = await loadExistingAnswers(progress.id, questions);
-          // ...
-        
-        if (answersData) {
-          setAnsweredQuestions(answersData.answered);
-          setCorrectAnswers(answersData.correct);
-          setStudentAnswers(answersData.studentAnswersData);
-          setTextAnswers(answersData.textAnswersData);
-          console.log('[INIT] Existing answers loaded');
-        }
-        }  
-      } else {
-        await initializeProgress();
+    if (progress && questions) {
+      if (progress.status === 'completed') {
+        setLocation(`/results/${progress.id}`);
+        return;
       }
-    };
 
-    initializeQuiz();
-  }, [quiz, progress, loadingProgress, questions]);
+      // Restore completed questions count
+      const completedCount = progress.completedQuestions || 0;
+      if (completedCount > 0 && completedCount < questions.length) {
+        setCurrentQuestionIndex(completedCount);
+      }
+
+      // Restore answers
+      if (progress.answers && Array.isArray(progress.answers)) {
+        console.log("[DEBUG] Restoring answers:", progress.answers);
+        // Backfill isCorrect if missing (e.g. from hint creation or old data)
+        const restoredAnswers = progress.answers.map((ans: any) => {
+          if (ans.isCorrect === null && ans.answerId) {
+            console.log(`[DEBUG] Backfilling answer ${ans.answerId} for question ${ans.questionId}`);
+            const question = questions.find(q => q.id === ans.questionId);
+            const answerDef = question?.answers?.find((a: any) => a.id === ans.answerId);
+            if (answerDef) {
+              console.log(`[DEBUG] Found answer def:`, answerDef);
+              return { ...ans, isCorrect: answerDef.isCorrect };
+            } else {
+              console.log(`[DEBUG] Answer def not found for answerId ${ans.answerId}`);
+            }
+          }
+          return ans;
+        });
+        console.log("[DEBUG] Restored answers with backfill:", restoredAnswers);
+        setStudentAnswers(restoredAnswers);
+
+        const answeredMap: Record<number, boolean> = {};
+        restoredAnswers.forEach((ans: any) => {
+          const qIndex = questions.findIndex(q => q.id === ans.questionId);
+          if (qIndex !== -1) {
+            answeredMap[qIndex] = true;
+          }
+        });
+        setAnsweredQuestions(answeredMap);
+      }
+    }
+  }, [progress, questions, setLocation]);
 
   // Shuffle answers when question changes
   useEffect(() => {
     if (questions && questions[currentQuestionIndex]) {
-      const currentQuestion = questions[currentQuestionIndex];
-      if (currentQuestion.type === 'multiple_choice') {
-        setShuffledAnswers(shuffleArray(currentQuestion.answers));
+      const currentQ = questions[currentQuestionIndex];
+      if (currentQ.answers && Array.isArray(currentQ.answers)) {
+        // Create a copy and shuffle
+        const shuffled = [...currentQ.answers].sort(() => Math.random() - 0.5);
+        setShuffledAnswers(shuffled);
       }
-      
-      // Find existing answer for current question
-      const currentAnswer = studentAnswers.find(a => a.questionId === currentQuestion.id);
-      setSelectedAnswerId(currentAnswer?.answerId || null);
-      
-      console.log(`[NAV] Changed to question ${currentQuestionIndex}`, {
-        questionId: currentQuestion.id,
-        hasAnswer: answeredQuestions[currentQuestionIndex],
-        selectedAnswerId: currentAnswer?.answerId
-      });
     }
   }, [questions, currentQuestionIndex]);
 
-  // Answer selection handlers
-  const handleSelectAnswer = (answerId: number) => {
-    if (!questions || answeredQuestions[currentQuestionIndex]) {
-      console.log('[WARN] Attempt to answer already answered question');
-      return;
+  const createProgressMutation = useMutation({
+    mutationFn: async (newProgress: any) => {
+      const res = await apiRequest("POST", "/api/progress", newProgress);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/progress/${quizId}`] });
+    },
+  });
+
+  const submitAnswerMutation = useMutation({
+    mutationFn: async (answer: any) => {
+      const res = await apiRequest("POST", "/api/answers", answer);
+      return res.json();
+    },
+  });
+
+  // Initialize progress if not exists
+  useEffect(() => {
+    if (quiz && session?.userId && !progress) {
+      createProgressMutation.mutate({
+        userId: session.userId,
+        quizId: parseInt(quizId!),
+        status: 'in_progress',
+        completedQuestions: 0,
+        timeSpent: 0
+      });
     }
-    
-    console.log(`[ANSWER] Selected answer ${answerId} for question ${currentQuestionIndex}`);
+  }, [quiz, session, progress, quizId]);
+
+  const handleSelectAnswer = (answerId: number) => {
+    if (answeredQuestions[currentQuestionIndex]) return;
     setSelectedAnswerId(answerId);
   };
 
   const submitCurrentAnswer = async () => {
-    if (!questions || !progress?.id || !selectedAnswerId || answeredQuestions[currentQuestionIndex]) {
-      console.log('[WARN] Cannot submit answer - missing data or already answered');
-      return;
-    }
+    if (!questions || !progress?.id || selectedAnswerId === null) return;
 
     const currentQuestion = questions[currentQuestionIndex];
-    const selectedAnswer = currentQuestion.answers.find(a => a.id === selectedAnswerId);
-    const isCorrect = selectedAnswer?.isCorrect || false;
+    const selectedAnswer = currentQuestion.answers?.find((a: any) => a.id === selectedAnswerId);
 
-    console.log(`[ANSWER] Submitting answer for question ${currentQuestion.id}`, {
-      answerId: selectedAnswerId,
-      isCorrect
-    });
-
-    const studentAnswer: StudentAnswer = {
+    const studentAnswer: any = {
       progressId: progress.id,
       questionId: currentQuestion.id,
       answerId: selectedAnswerId,
-      isCorrect,
-      variables: currentQuestion.variables,
-      timeSpent: elapsedTime,
+      isCorrect: selectedAnswer?.isCorrect || false,
+      variables: currentQuestion.variables, // Store variables used
+      timeSpent: elapsedTime, // Store current time
     };
 
     try {
       await submitAnswerMutation.mutateAsync(studentAnswer);
       setStudentAnswers([...studentAnswers, studentAnswer]);
-      setAnsweredQuestions({...answeredQuestions, [currentQuestionIndex]: true});
-      setCorrectAnswers({...correctAnswers, [currentQuestionIndex]: isCorrect});
-      
-      console.log('[ANSWER] Answer submitted successfully');
+      setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
     } catch (error) {
-      console.error('[ERROR] Error submitting answer:', error);
       toast({
         title: 'Error',
         description: 'No se pudo guardar tu respuesta.',
         variant: 'destructive',
       });
+      throw error;
     }
   };
 
-  // Navigation handlers
-  /*const handleNextQuestion = async () => {
-    if (!questions || !progress || session?.userId === 1) return;
+  const handleNextQuestion = async () => {
+    if (!questions || !progress) return;
 
-    console.log('[NAV] Moving to next question');
-
-    // Submit current answer if not already submitted
-    if (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex]) {
-      await submitCurrentAnswer();
-    }
-
-    // Update progress
+    setIsNavigating(true);
     try {
-      await createProgressMutation.mutateAsync({
-        ...progress,
-        completedQuestions: Math.max(progress.completedQuestions, currentQuestionIndex + 1),
-        timeSpent: elapsedTime,
-      });
-    } catch (error) {
-      console.error('[ERROR] Error updating progress:', error);
-    }
+      if (currentQuestionIndex < questions.length - 1) {
+        if (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex]) {
+          await submitCurrentAnswer();
+        }
 
-    // Move to next question or finish
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setSelectedAnswerId(null);
-    } else {
-      await handleFinishQuiz();
-    }
-  };*/
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-  const [isNavigating, setIsNavigating] = useState(false);
+        await createProgressMutation.mutateAsync({
+          ...progress,
+          completedQuestions: Math.max(progress.completedQuestions ?? 0, currentQuestionIndex + 1),
+          timeSpent: elapsedTime,
+        });
 
-const handleNextQuestion = async () => {
-  if (!questions || !progress || session?.userId === 1 || isNavigating) return;
-
-  setIsNavigating(true);
-  //console.log('[NAV] Moving to next question');
-
-  try {
-    // Guardar respuesta actual si es necesario (solo si no es la última pregunta)
-    if (currentQuestionIndex < questions.length - 1) {
-      if (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex]) {
-        await submitCurrentAnswer();
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+        setSelectedAnswerId(null);
+      } else {
+        await handleFinishQuiz();
       }
-
-      // Esperar 2 segundos mostrando los resultados
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Actualizar progreso
-      await createProgressMutation.mutateAsync({
-        ...progress,
-        completedQuestions: Math.max(progress.completedQuestions, currentQuestionIndex + 1),
-        timeSpent: elapsedTime,
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Ocurrió un error al avanzar',
+        variant: 'destructive',
       });
-
-      // Avanzar a siguiente pregunta
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setSelectedAnswerId(null);
-    } else {
-      await handleFinishQuiz();
+    } finally {
+      setIsNavigating(false);
     }
-  } catch (error) {
-    console.error('[ERROR] Error in navigation:', error);
-    toast({
-      title: 'Error',
-      description: 'Ocurrió un error al avanzar',
-      variant: 'destructive',
-    });
-  } finally {
-    setIsNavigating(false);
-  }
-};
+  };
 
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
-      console.log('[NAV] Moving to previous question');
       setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
   };
 
-  // Text answer handler
   const handleTextAnswerSubmit = async () => {
-    if (!questions || !progress?.id || !textAnswers[questions[currentQuestionIndex].id]) {
-      console.log('[WARN] Cannot submit text answer - missing data');
-      return;
-    }
+    if (!questions || !progress?.id || !textAnswers[questions[currentQuestionIndex].id]) return;
 
     const currentQuestion = questions[currentQuestionIndex];
     const answerText = textAnswers[currentQuestion.id];
 
-    console.log(`[ANSWER] Submitting text answer for question ${currentQuestion.id}`);
-
-    const studentAnswer: StudentAnswer = {
+    const studentAnswer: any = {
       progressId: progress.id,
       questionId: currentQuestion.id,
       answerId: null,
       textAnswer: answerText,
-      isCorrect: false,
+      isCorrect: false, // Needs manual grading or regex check
       variables: currentQuestion.variables,
       timeSpent: elapsedTime,
     };
@@ -468,18 +284,8 @@ const handleNextQuestion = async () => {
     try {
       await submitAnswerMutation.mutateAsync(studentAnswer);
       setStudentAnswers([...studentAnswers, studentAnswer]);
-      setAnsweredQuestions({...answeredQuestions, [currentQuestionIndex]: true});
-      
-      // Update progress
-      await createProgressMutation.mutateAsync({
-        ...progress,
-        completedQuestions: Math.max(progress.completedQuestions, currentQuestionIndex + 1),
-        timeSpent: elapsedTime,
-      });
-      
-      console.log('[ANSWER] Text answer submitted successfully');
+      setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
     } catch (error) {
-      console.error('[ERROR] Error submitting text answer:', error);
       toast({
         title: 'Error',
         description: 'No se pudo guardar tu respuesta.',
@@ -488,28 +294,74 @@ const handleNextQuestion = async () => {
     }
   };
 
-  // Finish quiz
-  /*const handleFinishQuiz = async () => {
-    if (!progress || !questions || session?.userId === 1) return;
+  const handleRequestHint = async (type: 'regular' | 'super') => {
+    if (!questions || !progress?.id) return;
 
-    console.log('[QUIZ] Finishing quiz');
+    const currentQuestion = questions[currentQuestionIndex];
+    const cost = type === 'regular' ? 1 : 2;
 
-    const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
-    const earnedPoints = studentAnswers
-      .filter(a => a.isCorrect)
-      .reduce((sum, a) => sum + (questions.find(q => q.id === a.questionId)?.points || 0), 0);
+    if ((session?.hintCredits || 0) < cost) {
+      toast({
+        title: 'Créditos insuficientes',
+        description: `Necesitas ${cost} créditos para esta pista.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setRequestingHint(true);
+    try {
+      const res = await apiRequest('POST', '/api/hints/request', {
+        questionId: currentQuestion.id,
+        hintType: type,
+        hintIndex: (hintsRevealed[currentQuestion.id] || []).length + 1,
+        progressId: progress.id
+      });
+
+      const data = await res.json();
+
+      setHintsRevealed(prev => ({
+        ...prev,
+        [currentQuestion.id]: [...(prev[currentQuestion.id] || []), data.content]
+      }));
+
+      toast({
+        title: 'Pista revelada',
+        description: 'Se ha descontado el costo de tus créditos.',
+      });
+      setIsHintDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo obtener la pista.',
+        variant: 'destructive',
+      });
+    } finally {
+      setRequestingHint(false);
+    }
+  };
+
+  const handleFinishQuiz = async () => {
+    if (!progress || !quiz) return;
 
     try {
+      // Calculate final score
+      const totalPoints = questions?.reduce((sum, q) => sum + (q.points || 0), 0) || 0;
+      const earnedPoints = studentAnswers.reduce((sum, a) => {
+        const question = questions?.find(q => q.id === a.questionId);
+        return sum + (a.isCorrect ? (question?.points || 0) : 0);
+      }, 0);
+
       const progressUpdate = {
         ...progress,
         status: 'completed' as const,
         score: Math.round((earnedPoints / totalPoints) * 10),
         timeSpent: elapsedTime,
-        completedAt: new Date()
+        completedAt: new Date().toISOString()
       };
 
       await createProgressMutation.mutateAsync(progressUpdate);
-      
+
       const score = Math.round((earnedPoints / totalPoints) * 10);
       await fetch("/api/quiz-submission", {
         method: "POST",
@@ -522,331 +374,288 @@ const handleNextQuestion = async () => {
         }),
       });
 
-      setQuizResults({
-        score: earnedPoints,
-        totalPoints,
-        percentage: Math.round((earnedPoints / totalPoints) * 100),
-        correctAnswers: studentAnswers.filter(a => a.isCorrect).length,
-        totalQuestions: questions.length
-      });
-      
-      console.log('[QUIZ] Quiz completed successfully');
+      setLocation(`/results/${progress.id}`);
     } catch (error) {
-      console.error('[ERROR] Error finishing quiz:', error);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al completar el cuestionario',
+        description: 'No se pudo finalizar el cuestionario.',
         variant: 'destructive',
       });
     }
-  };*/
-
-  const handleFinishQuiz = async () => {
-    if (!progress || !questions || session?.userId === 1) return;
-  
-    console.log('[QUIZ] Finishing quiz');
-  
-    // 1. Primero guardar la respuesta de la última pregunta si no está guardada
-    if (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex]) {
-      console.log('[QUIZ] Saving last question answer before finishing');
-      await submitCurrentAnswer();
-    }
-  
-    // 2. Calcular puntuación
-    const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
-    const earnedPoints = studentAnswers
-      .filter(a => a.isCorrect)
-      .reduce((sum, a) => sum + (questions.find(q => q.id === a.questionId)?.points || 0), 0);
-  
-    try {
-      // 3. Actualizar progreso como completado
-      const progressUpdate = {
-        ...progress,
-        status: 'completed' as const,
-        score: Math.round((earnedPoints / totalPoints) * 10),
-        timeSpent: elapsedTime,
-        completedAt: new Date()
-      };
-  
-      await createProgressMutation.mutateAsync(progressUpdate);
-      
-      // 4. Enviar submission del quiz
-      const score = Math.round((earnedPoints / totalPoints) * 10);
-      const submissionResponse = await fetch("/api/quiz-submission", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: session?.userId,
-          quizId: quiz?.id,
-          score,
-          progressId: progress.id,
-        }),
-      });
-  
-      if (!submissionResponse.ok) {
-        throw new Error('Failed to submit quiz results');
-      }
-  
-      // 5. Actualizar estado local
-      setQuizResults({
-        score: earnedPoints,
-        totalPoints,
-        percentage: Math.round((earnedPoints / totalPoints) * 100),
-        correctAnswers: studentAnswers.filter(a => a.isCorrect).length,
-        totalQuestions: questions.length
-      });
-      
-      console.log('[QUIZ] Quiz completed successfully');
-    } catch (error) {
-      console.error('[ERROR] Error finishing quiz:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al completar el cuestionario',
-        variant: 'destructive',
-      });
-      // No redirigir si hay error
-      return;
-    }
-  
-    // Redirigir a resultados solo si todo salió bien
-    setLocation(`/results/${progress.id}`);
   };
 
-  const currentQuestion = questions?.[currentQuestionIndex];
-  const isLoading = loadingQuiz || loadingQuestions || loadingProgress;
+  if (loadingQuiz || loadingQuestions) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (errorQuestions || !questions || questions.length === 0) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center">
+        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-2xl font-bold mb-4">Error al cargar las preguntas</h2>
+        <p className="text-gray-600 mb-4">No se pudieron encontrar preguntas para este cuestionario.</p>
+        <Button onClick={() => window.location.reload()}>Recargar</Button>
+      </div>
+    );
+  }
+
+  const currentQuestion = questions[currentQuestionIndex];
+  if (!currentQuestion) return <div>No questions found</div>;
+
+  // Calculate correct answers map for progress bar
+  const correctAnswers = questions?.reduce((acc: Record<number, boolean>, question, index) => {
+    const studentAnswer = studentAnswers.find(a => a.questionId === question.id);
+    if (studentAnswer) {
+      acc[index] = studentAnswer.isCorrect;
+    }
+    return acc;
+  }, {}) || {};
 
   return (
-    <div id="activeQuiz">
-      <div className="mb-6 flex justify-between items-center">
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="mr-3"
-            onClick={() => {
-              pauseTimer();
-              if (window.history.length > 1) {
-                window.history.back();
-              } else {
-                setLocation(`/category/${quiz?.categoryId}`);
-              }
-            }}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h2 className="text-2xl font-semibold">
-            {loadingQuiz ? 'Cargando...' : quiz?.title}
-          </h2>
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">{quiz?.title}</h1>
+          <div className="flex items-center text-gray-500 mt-1">
+            <Timer className="h-4 w-4 mr-1" />
+            <span className={`font-mono ${elapsedTime > (quiz?.timeLimit || 0) * 0.9 ? 'text-red-500' : ''}`}>
+              {formattedTime()}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center bg-gray-100 rounded-lg px-3 py-1.5">
-          <Timer className="text-gray-500 mr-1 h-5 w-5" />
-          <span id="quizTimer" className="text-gray-700 font-medium">
-            {formattedTime()}
-          </span>
+        <div className="text-right">
+          <div className="text-sm text-gray-500">Pregunta</div>
+          <div className="text-xl font-bold">
+            {currentQuestionIndex + 1} / {questions.length}
+          </div>
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="animate-pulse">
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="h-64 bg-gray-200 rounded"></div>
-            </CardContent>
-          </Card>
-        </div>
-      ) : currentQuestion ? (
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <div className="font-medium text-gray-500">
-                Pregunta <span>{currentQuestionIndex + 1}</span> de <span>{questions?.length}</span>
-              </div>
-              <div className="bg-primary text-white text-sm px-3 py-1 rounded-full">
-                {currentQuestion.points} puntos
-              </div>
+      {/* Question Card */}
+      <Card className="mb-6">
+        <CardContent className="p-6">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex gap-2">
+              <Badge variant={currentQuestion.difficulty === 'hard' ? 'destructive' : 'secondary'}>
+                {currentQuestion.difficulty === 'hard' ? 'Difícil' :
+                  currentQuestion.difficulty === 'medium' ? 'Medio' : 'Fácil'}
+              </Badge>
             </div>
-            
-            <div className="mb-6">
-              <h3 className="text-lg font-medium mb-2">
-                {currentQuestion.type === 'equation' 
-                  ? 'Resuelve la siguiente ecuación:' 
-                  : currentQuestion.type === 'text'
+            <div className="bg-primary text-white text-sm px-3 py-1 rounded-full">
+              {currentQuestion.points} puntos
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h3 className="text-lg font-medium mb-2">
+              {currentQuestion.type === 'equation'
+                ? 'Resuelve la siguiente ecuación:'
+                : currentQuestion.type === 'text'
                   ? 'Responde la siguiente pregunta:'
-                  : 'Selecciona la respuesta correcta y da click en SIGUIENTE'}
-              </h3>
-              
-              {currentQuestion.imageUrl && (
-                <Card className="mb-4 max-w-2xl mx-auto">
-                  <CardContent className="p-4 flex justify-center">
-                    <img 
-                      src={currentQuestion.imageUrl} 
-                      alt="Imagen de la pregunta" 
-                      className="max-h-60 object-contain rounded"
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              <QuestionContent content={currentQuestion.content} />
-            </div>
+                  : 'Selecciona la respuesta correcta'}
+            </h3>
 
-            {currentQuestion.type === 'text' ? (
-              <div className="space-y-4">
-                <Textarea
-                  value={textAnswers[currentQuestion.id] || ''}
-                  onChange={(e) => !answeredQuestions[currentQuestionIndex] && setTextAnswers({
-                    ...textAnswers,
-                    [currentQuestion.id]: e.target.value
-                  })}
-                  placeholder="Escribe tu respuesta aquí..."
-                  rows={4}
-                  disabled={answeredQuestions[currentQuestionIndex]}
+            {currentQuestion.imageUrl && (
+              <div className="mb-4 flex justify-center">
+                <img
+                  src={currentQuestion.imageUrl}
+                  alt="Imagen de la pregunta"
+                  className="max-h-60 object-contain rounded"
                 />
-                {!answeredQuestions[currentQuestionIndex] && (
-                  <Button
-                    onClick={handleTextAnswerSubmit}
-                    disabled={!textAnswers[currentQuestion.id]?.trim()}
-                  >
-                    Confirmar respuesta
-                  </Button>
-                )}
-                {answeredQuestions[currentQuestionIndex] && (
-                  <div className="mt-4 p-4 rounded-lg bg-gray-50 border">
-                    <h4 className="font-medium mb-2">Tu respuesta:</h4>
-                    <p>{textAnswers[currentQuestion.id]}</p>
-                  </div>
-                )}
               </div>
-            ) : (
-              <div className="space-y-3">
-                {shuffledAnswers.map((answer, index) => {
-                  const existingAnswer = studentAnswers.find(sa => 
-                    sa.questionId === currentQuestion.id && sa.answerId === answer.id
-                  );
-                  const isSelected = selectedAnswerId === answer.id || !!existingAnswer;
-                  const isAnswered = answeredQuestions[currentQuestionIndex];
+            )}
 
-                  return (
-                    <QuizOption
-                      key={answer.id}
-                      optionLabel={String.fromCharCode(65 + index)}
-                      content={answer.content}
-                      state={
-                        isAnswered
-                          ? answer.isCorrect
-                            ? 'correct'
-                            : isSelected
+            <QuestionContent content={currentQuestion.content} />
+
+            {/* Hint Display */}
+            {hintsRevealed[currentQuestion.id]?.map((hint, index) => (
+              <div key={index} className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <h4 className="font-medium text-yellow-800 mb-1 flex items-center">
+                  <Lightbulb className="h-4 w-4 mr-2" />
+                  Pista {index + 1}
+                </h4>
+                <p className="text-yellow-900">{hint}</p>
+              </div>
+            ))}
+          </div>
+
+          {currentQuestion.type === 'text' ? (
+            <div className="space-y-4">
+              <Textarea
+                value={textAnswers[currentQuestion.id] || ''}
+                onChange={(e) => !answeredQuestions[currentQuestionIndex] && setTextAnswers({
+                  ...textAnswers,
+                  [currentQuestion.id]: e.target.value
+                })}
+                placeholder="Escribe tu respuesta aquí..."
+                rows={4}
+                disabled={answeredQuestions[currentQuestionIndex]}
+              />
+              {!answeredQuestions[currentQuestionIndex] && (
+                <Button
+                  onClick={handleTextAnswerSubmit}
+                  disabled={!textAnswers[currentQuestion.id]?.trim()}
+                >
+                  Confirmar respuesta
+                </Button>
+              )}
+              {answeredQuestions[currentQuestionIndex] && (
+                <div className="mt-4 p-4 rounded-lg bg-gray-50 border">
+                  <h4 className="font-medium mb-2">Tu respuesta:</h4>
+                  <p>{textAnswers[currentQuestion.id]}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {shuffledAnswers.map((answer, index) => {
+                const existingAnswer = studentAnswers.find(sa =>
+                  sa.questionId === currentQuestion.id && sa.answerId === answer.id
+                );
+                const isSelected = selectedAnswerId === answer.id || !!existingAnswer;
+                const isAnswered = answeredQuestions[currentQuestionIndex];
+
+                return (
+                  <QuizOption
+                    key={answer.id}
+                    optionLabel={String.fromCharCode(65 + index)}
+                    content={answer.content}
+                    state={
+                      isAnswered
+                        ? answer.isCorrect
+                          ? 'correct'
+                          : isSelected
                             ? 'incorrect'
                             : 'default'
-                          : isSelected
+                        : isSelected
                           ? 'selected'
                           : 'default'
-                      }
-                      disabled={isAnswered}
-                      onClick={() => !isAnswered && handleSelectAnswer(answer.id)}
-                    />
-                  );
-                })}
-              </div>
-            )}
-            {/*
-            {(selectedAnswerId !== null || answeredQuestions[currentQuestionIndex]) && currentQuestion.type !== 'text' && (
-              <div className="mt-4 p-4 rounded-lg bg-gray-50 border">
-                <h4 className="font-medium mb-2">Explicación:</h4>
-                <p>
-                  {currentQuestion.answers.find(a => a.id === (
-                    selectedAnswerId || 
-                    studentAnswers.find(sa => sa.questionId === currentQuestion.id)?.answerId
-                  ))?.explanation || "No hay explicación disponible para esta respuesta."}
-                </p>
-              </div>
-            )}
-            */}
-            <div className="mt-8 flex justify-between">
-              <Button
-                variant="outline"
-                className="flex items-center"
-                onClick={handlePreviousQuestion}
-                disabled={currentQuestionIndex === 0}
-              >
-                <ArrowLeft className="mr-1 h-4 w-4" />
-                Anterior
-              </Button>
-              
-              {session?.role === 'parent' && currentQuestionIndex >= (questions?.length || 0) - 1 ? (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>
-                        <Button disabled>
-                          Finalizar
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Los padres no pueden finalizar cuestionarios.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : (
-
-
-                <Button 
-  id="nextButton"
-  onClick={handleNextQuestion}
-  disabled={isNavigating || (currentQuestion.type === 'text' 
-    ? !answeredQuestions[currentQuestionIndex]
-    : false)}
->
-  {isNavigating ? (
-    <span className="flex items-center">
-      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
-      Procesando...
-    </span>
-  ) : (
-    <>
-      {currentQuestionIndex >= (questions?.length || 0) - 1 ? 'Finalizar' : 'Siguiente'}
-      {currentQuestionIndex < (questions?.length || 0) - 1 && (
-        <ArrowRight className="ml-1 h-4 w-4" />
-      )}
-    </>
-  )}
-</Button>
-
-
-              )}
+                    }
+                    disabled={isAnswered}
+                    onClick={() => !isAnswered && handleSelectAnswer(answer.id)}
+                  />
+                );
+              })}
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="mb-6">
-          <CardContent className="p-6 text-center">
-            <p>No hay preguntas disponibles.</p>
-          </CardContent>
-        </Card>
-      )}
-      
-      <Card>
-        <CardContent className="p-4">
-          <h3 className="font-semibold text-lg mb-4">Tu progreso</h3>
-          <QuestionProgress
-            currentQuestionIndex={currentQuestionIndex}
-            totalQuestions={questions?.length || 0}
-            answeredQuestions={answeredQuestions}
-            correctAnswers={correctAnswers}
-            onQuestionClick={(index) => {
-              console.log(`[PROGRESS] Clicked on question ${index}`);
-              setCurrentQuestionIndex(index);
-            }}
-            disabled={false}
-          />
+          )}
         </CardContent>
       </Card>
+
+      <div className="flex justify-between items-center">
+        <Button
+          variant="outline"
+          className="flex items-center"
+          onClick={handlePreviousQuestion}
+          disabled={currentQuestionIndex === 0}
+        >
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Anterior
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+          onClick={() => setIsHintDialogOpen(true)}
+          disabled={!session?.userId || answeredQuestions[currentQuestionIndex]}
+        >
+          <Lightbulb className="mr-1 h-4 w-4" />
+          ¿Una Pista?
+        </Button>
+
+        <Button
+          onClick={handleNextQuestion}
+          disabled={isNavigating || (currentQuestion.type === 'text' && !answeredQuestions[currentQuestionIndex])}
+        >
+          {isNavigating ? (
+            'Procesando...'
+          ) : (
+            <>
+              {currentQuestionIndex >= (questions?.length || 0) - 1 ? 'Finalizar' : 'Siguiente'}
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </>
+          )}
+        </Button>
+      </div>
+
+      <div className="mt-6">
+        <QuestionProgress
+          totalQuestions={questions?.length || 0}
+          completedQuestions={Object.keys(answeredQuestions).length}
+          currentQuestionIndex={currentQuestionIndex}
+          onQuestionClick={(index) => {
+            console.log(`[PROGRESS] Clicked on question ${index}`);
+            setCurrentQuestionIndex(index);
+          }}
+          disabled={false}
+          correctAnswers={correctAnswers}
+        />
+      </div>
+
+      <Dialog open={isHintDialogOpen} onOpenChange={setIsHintDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Solicitar Pista</DialogTitle>
+            <DialogDescription>
+              ¿Qué tipo de pista necesitas?
+              <br />
+              <span className="text-sm text-gray-500">
+                Créditos disponibles: {session?.hintCredits ?? 0}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {requestingHint ? (
+              <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-center text-muted-foreground animate-pulse font-medium">
+                  Déjame ver, déjame ver, qué pista te doy... ¡ya sé!
+                </p>
+              </div>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  className="justify-between h-auto py-4"
+                  onClick={() => handleRequestHint('regular')}
+                  disabled={requestingHint || (session?.hintCredits || 0) < 1}
+                >
+                  <div className="text-left">
+                    <div className="font-semibold">Pista Regular</div>
+                    <div className="text-sm text-gray-500">Ayuda sutil para guiarte</div>
+                  </div>
+                  <Badge variant="secondary">1 Crédito</Badge>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="justify-between h-auto py-4 border-yellow-200 bg-yellow-50 hover:bg-yellow-100"
+                  onClick={() => handleRequestHint('super')}
+                  disabled={requestingHint || (session?.hintCredits || 0) < 2}
+                >
+                  <div className="text-left">
+                    <div className="font-semibold text-yellow-900">Súper Pista</div>
+                    <div className="text-sm text-yellow-700">Muy reveladora (casi la respuesta)</div>
+                  </div>
+                  <Badge className="bg-yellow-500 hover:bg-yellow-600">2 Créditos</Badge>
+                </Button>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsHintDialogOpen(false)}>
+              Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-}
+};
 
 export default ActiveQuiz;

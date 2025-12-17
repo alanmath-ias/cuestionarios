@@ -198,7 +198,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { password: _, ...userWithoutPassword } = user;
       res.json({
         ...userWithoutPassword,
-        role: user.role // Asegúrate de incluir el rol
+        role: user.role, // Asegúrate de incluir el rol
+        hintCredits: user.hintCredits
       });
     } catch (error) {
       console.error("Auth check error:", error);
@@ -287,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Usuario no autenticado" });
       }
 
-      const userId = req.user.id;
+      const userId = (req.user as any).id;
 
       const user = await storage.getUserById(userId);
       if (!user) {
@@ -299,6 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: user.name,
         username: user.username,
         email: user.email,
+        hintCredits: user.hintCredits,
       });
     } catch (error) {
       console.error("Error al obtener datos del usuario:", error);
@@ -718,7 +720,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(null); // No progress yet
       }
 
-      res.json(progress);
+      const answers = await storage.getStudentAnswersByProgress(progress.id);
+
+      res.json({
+        ...progress,
+        answers
+      });
     } catch (error) {
       console.error("Quiz progress fetch error:", error);
       res.status(500).json({ message: "Error fetching quiz progress" });
@@ -761,14 +768,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           progressForStorage
         );
 
-        // Si se completó, guardar en quizSubmissions para admin
-        if (progressForStorage.status === 'completed') {
+        // Si se completó (y no estaba completo antes), guardar en quizSubmissions y dar crédito
+        if (progressForStorage.status === 'completed' && existingProgress.status !== 'completed') {
           await storage.saveQuizSubmission({
             userId: userId,
             quizId: progressData.quizId,
             score: progressData.score || 0,
             progressId: existingProgress.id
           });
+
+          // Recharge Hint Credits (+1)
+          const user = await storage.getUser(userId);
+          if (user) {
+            await storage.updateUserHintCredits(userId, user.hintCredits + 1);
+          }
         }
 
         return res.json(updatedProgress);
@@ -777,7 +790,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Crear nuevo progreso
       const newProgress = await storage.createStudentProgress(progressData);
 
-      // Si se completó, guardar en quizSubmissions para admin
+      // Si se completó, guardar en quizSubmissions y dar crédito
       if (progressForStorage.status === 'completed') {
         await storage.saveQuizSubmission({
           userId: userId,
@@ -785,6 +798,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           score: progressData.score || 0,
           progressId: newProgress.id
         });
+
+        // Recharge Hint Credits (+1)
+        const user = await storage.getUser(userId);
+        if (user) {
+          await storage.updateUserHintCredits(userId, user.hintCredits + 1);
+        }
       }
 
       res.status(201).json(newProgress);
@@ -803,6 +822,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+
 
   // Eliminar asignación de cuestionario (Eliminar definitivamente)
   apiRouter.delete("/admin/assignments", requireAdmin, async (req, res) => {
@@ -899,6 +920,134 @@ Ejemplo de formato:
     }
   });
 
+  // Hint System Endpoint
+  apiRouter.post("/hints/request", async (req: Request, res: Response) => {
+    console.error("DEBUG: Received hint request:", JSON.stringify(req.body));
+    const userId = req.session.userId;
+    const { questionId, hintType, hintIndex, progressId } = req.body;
+
+    if (!userId) return res.status(401).json({ message: "Authentication required" });
+    if (!questionId || !hintType || !hintIndex || !progressId) return res.status(400).json({ message: "Missing required fields" });
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      // Check if hint already unlocked
+      let studentAnswer = (await storage.getStudentAnswersByProgress(progressId)).find(a => a.questionId === questionId);
+
+      if (!studentAnswer) {
+        console.log("Creating new student answer for hint request...");
+        studentAnswer = await storage.createStudentAnswer({
+          progressId,
+          questionId,
+          answerId: null,
+          isCorrect: null,
+          hintsUsed: 0,
+          variables: {} // Explicitly pass empty variables
+        });
+      }
+
+      const isAlreadyUnlocked = studentAnswer.hintsUsed >= hintIndex;
+
+      // 1. Check Credits (only if not unlocked)
+      const cost = hintType === 'super' ? 2 : 1;
+      if (!isAlreadyUnlocked && user.hintCredits < cost) {
+        return res.status(403).json({ message: "Insufficient credits", currentCredits: user.hintCredits });
+      }
+
+      // 2. Check Cache
+      const question = await storage.getQuestion(questionId);
+      if (!question) return res.status(404).json({ message: "Question not found" });
+
+      let hintContent = '';
+      let hintField: 'hint1' | 'hint2' | 'hint3' | null = null;
+
+      if (hintIndex === 1) hintField = 'hint1';
+      else if (hintIndex === 2) hintField = 'hint2';
+      else if (hintIndex === 3) hintField = 'hint3';
+
+      if (!hintField) return res.status(400).json({ message: "Invalid hint index" });
+
+      // Check if hint exists and is NOT a generic placeholder
+      const isGenericHint = question[hintField] && (question[hintField] as string).includes("Lee atentamente el enunciado");
+
+      if (question[hintField] && !isGenericHint) {
+        hintContent = question[hintField] as string;
+      } else {
+        // Generate with DeepSeek
+        console.log(`Generating ${hintField} for question ${questionId} using DeepSeek...`);
+        const quiz = await storage.getQuiz(question.quizId);
+        const answers = await storage.getAnswersByQuestion(questionId);
+        const correctAnswer = answers.find(a => a.isCorrect)?.content || "No especificada";
+
+        const prompt = `Eres un tutor experto. El estudiante necesita una pista para esta pregunta de ${quiz?.title || 'Matemáticas'}:
+        
+        Pregunta: ${question.content}
+        Respuesta Correcta: ${correctAnswer}
+        
+        Genera una ${hintType === 'super' ? 'SÚPER PISTA (muy reveladora pero sin dar la respuesta directa)' : 'PISTA (una ayuda sutil para guiar al estudiante)'}.
+        La pista debe ser breve (máximo 2 frases) y en Español.
+        NO des la respuesta final.`;
+
+        const apiKey = process.env.DEEPSEEK_API_KEY || process.env.VITE_DEEPSEEK_API_KEY;
+        if (!apiKey) {
+          console.error("DeepSeek API key missing in environment variables");
+          throw new Error("DeepSeek API key missing");
+        }
+
+        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.4,
+            max_tokens: 150,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("DeepSeek API error:", response.status, errorText);
+          throw new Error(`DeepSeek API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        hintContent = data.choices?.[0]?.message?.content || "No se pudo generar la pista.";
+
+        console.log(`Generated hint content: ${hintContent}`);
+
+        // Save to DB (Cache)
+        await storage.updateQuestionHints(questionId, { [hintField]: hintContent });
+      }
+
+      // 5. Deduct Credits & Update Usage (only if not unlocked)
+      if (!isAlreadyUnlocked) {
+        console.log("Updating user hint credits...");
+        console.log(`userId: ${userId}, newCredits: ${user.hintCredits - cost}`);
+        await storage.updateUserHintCredits(userId, user.hintCredits - cost);
+
+        console.log("Updating hintsUsed in studentAnswer...");
+        console.log(`studentAnswerId: ${studentAnswer.id}, hintsUsed: ${hintIndex}`);
+        // Update hintsUsed in studentAnswer
+        await db.update(studentAnswers)
+          .set({ hintsUsed: hintIndex })
+          .where(eq(studentAnswers.id, studentAnswer.id));
+      }
+
+      console.log("Sending response...");
+      res.json({ content: hintContent, remainingCredits: !isAlreadyUnlocked ? user.hintCredits - cost : user.hintCredits });
+
+    } catch (error) {
+      console.error("Hint request error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ message: `Error processing hint request: ${errorMessage}` });
+    }
+  });
 
   // Student answers endpoint
   apiRouter.post("/answers", async (req: Request, res: Response) => {
@@ -1475,7 +1624,7 @@ Ejemplo de formato:
 
       //const userId = req.user.id;
       // Cambio principal: Permitir user_id como parámetro opcional
-      const userId = req.query.user_id ? Number(req.query.user_id) : req.user.id; // Línea modificada
+      const userId = req.query.user_id ? Number(req.query.user_id) : (req.user as any).id; // Línea modificada
 
       const categories = await storage.getCategoriesByUserId(userId);
       res.json(categories);
@@ -1496,7 +1645,7 @@ Ejemplo de formato:
 
       //const userId = req.user.id;
       // Cambio principal: Permitir user_id como parámetro opcional
-      const userId = req.query.user_id ? Number(req.query.user_id) : req.user.id; // Línea modificada
+      const userId = req.query.user_id ? Number(req.query.user_id) : (req.user as any).id; // Línea modificada
 
       const quizzes = await storage.getQuizzesByUserId(userId);
       res.json(quizzes);
@@ -1810,7 +1959,7 @@ Ejemplo de formato:
     try {
 
       //const userId = req.user?.id;
-      const userId = req.query.user_id ? Number(req.query.user_id) : req.user?.id;
+      const userId = req.query.user_id ? Number(req.query.user_id) : (req.user as any)?.id;
 
       if (!userId) {
         return res.status(401).json({ error: "No autenticado" });
@@ -1912,7 +2061,7 @@ Ejemplo de formato:
         return res.status(401).json({ error: 'Usuario no autenticado' });
       }
 
-      const parentId = req.user.id;
+      const parentId = (req.user as any).id;
       const child = await storage.getChildByParentId(parentId);
 
       if (!child) {
@@ -1937,7 +2086,7 @@ Ejemplo de formato:
   app.get("/api/progress/:progressId/answers", requireAuth, async (req, res) => {
     try {
       const progressId = Number(req.params.progressId);
-      const userId = req.query.user_id ? Number(req.query.user_id) : req.user?.id;
+      const userId = req.query.user_id ? Number(req.query.user_id) : (req.user as any)?.id;
 
       if (!userId) {
         return res.status(401).json({ error: "No autenticado" });

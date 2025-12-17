@@ -23,7 +23,8 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       role: user.role,
       email: user.email,
       createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : null,
-      password: user.password, // Asegúrate de que `user.password` esté disponible
+      password: user.password,
+      hintCredits: user.hintCredits,
     };
 
     next();

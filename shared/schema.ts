@@ -1,5 +1,5 @@
 import { pgTable, foreignKey, serial, text, integer, index, varchar, json, timestamp, boolean, jsonb, unique, uuid, primaryKey } from "drizzle-orm/pg-core"
-import { sql } from "drizzle-orm"
+import { sql, relations } from "drizzle-orm"
 
 import { createInsertSchema } from "drizzle-zod";
 import * as z from "zod";  // ✅ Forma correcta para Zod v3+
@@ -17,10 +17,10 @@ export const subcategories = pgTable("subcategories", {
 	youtube_sublink: text("youtube_sublink").default(sql`NULL`), // Usar sql para establecer NULL como valor predeterminado
 }, (table) => [
 	foreignKey({
-			columns: [table.categoryId],
-			foreignColumns: [categories.id],
-			name: "subcategories_category_id_fkey"
-		}),
+		columns: [table.categoryId],
+		foreignColumns: [categories.id],
+		name: "subcategories_category_id_fkey"
+	}),
 ]);
 
 export const session = pgTable("session", {
@@ -52,10 +52,10 @@ export const quizzes = pgTable("quizzes", {
 	url: text("url"), // opcional, tipo texto
 }, (table) => [
 	foreignKey({
-			columns: [table.subcategoryId],
-			foreignColumns: [subcategories.id],
-			name: "quizzes_subcategory_id_fkey"
-		}),
+		columns: [table.subcategoryId],
+		foreignColumns: [subcategories.id],
+		name: "quizzes_subcategory_id_fkey"
+	}),
 ]);
 
 export const studentAnswers = pgTable("student_answers", {
@@ -66,14 +66,15 @@ export const studentAnswers = pgTable("student_answers", {
 	isCorrect: boolean("is_correct"),
 	variables: jsonb(),
 	timeSpent: integer("time_spent"),
+	hintsUsed: integer("hints_used").default(0).notNull(),
 });
 
 export const categories = pgTable("categories", {
-  id: serial().primaryKey().notNull(),
-  name: text().notNull(),
-  description: text().notNull(),
-  colorClass: text("color_class").notNull(),
-  youtubeLink: text("youtube_link"), // Columna sin valores predeterminados
+	id: serial().primaryKey().notNull(),
+	name: text().notNull(),
+	description: text().notNull(),
+	colorClass: text("color_class").notNull(),
+	youtubeLink: text("youtube_link"), // Columna sin valores predeterminados
 });
 
 export const questions = pgTable("questions", {
@@ -85,6 +86,10 @@ export const questions = pgTable("questions", {
 	points: integer().default(5).notNull(),
 	variables: jsonb(),
 	imageUrl: text("image_url"),
+	hint1: text("hint1"),
+	hint2: text("hint2"),
+	hint3: text("hint3"),
+	explanation: text("explanation"),
 });
 
 export const users = pgTable("users", {
@@ -95,6 +100,7 @@ export const users = pgTable("users", {
 	email: text(),
 	role: text().default('student').notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	hintCredits: integer("hint_credits").default(50).notNull(),
 }, (table) => [
 	unique("users_username_unique").on(table.username),
 ]);
@@ -108,6 +114,7 @@ export const studentProgress = pgTable("student_progress", {
 	completedQuestions: integer("completed_questions").default(0),
 	timeSpent: integer("time_spent"),
 	completedAt: timestamp("completed_at", { mode: 'string' }),
+	hintsUsed: integer("hints_used").default(0).notNull(),
 });
 
 export const quizSubmissions = pgTable("quiz_submissions", {
@@ -121,20 +128,20 @@ export const quizSubmissions = pgTable("quiz_submissions", {
 	progressId: integer("progress_id"),
 }, (table) => [
 	foreignKey({
-			columns: [table.progressId],
-			foreignColumns: [studentProgress.id],
-			name: "quiz_submissions_progress_id_fkey"
-		}).onDelete("set null"),
+		columns: [table.progressId],
+		foreignColumns: [studentProgress.id],
+		name: "quiz_submissions_progress_id_fkey"
+	}).onDelete("set null"),
 	foreignKey({
-			columns: [table.quizId],
-			foreignColumns: [quizzes.id],
-			name: "quiz_submissions_quiz_id_fkey"
-		}).onDelete("cascade"),
+		columns: [table.quizId],
+		foreignColumns: [quizzes.id],
+		name: "quiz_submissions_quiz_id_fkey"
+	}).onDelete("cascade"),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "quiz_submissions_user_id_fkey"
-		}).onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "quiz_submissions_user_id_fkey"
+	}).onDelete("cascade"),
 ]);
 
 export const quizfeedback = pgTable("quizfeedback", {
@@ -145,15 +152,15 @@ export const quizfeedback = pgTable("quizfeedback", {
 	createdat: timestamp({ withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
 	foreignKey({
-			columns: [table.quizid],
-			foreignColumns: [quizzes.id],
-			name: "fk_quiz"
-		}).onDelete("cascade"),
+		columns: [table.quizid],
+		foreignColumns: [quizzes.id],
+		name: "fk_quiz"
+	}).onDelete("cascade"),
 	foreignKey({
-			columns: [table.userid],
-			foreignColumns: [users.id],
-			name: "fk_user"
-		}).onDelete("cascade"),
+		columns: [table.userid],
+		foreignColumns: [users.id],
+		name: "fk_user"
+	}).onDelete("cascade"),
 ]);
 
 export const userCategories = pgTable("user_categories", {
@@ -162,15 +169,15 @@ export const userCategories = pgTable("user_categories", {
 	categoryId: integer("category_id").notNull(),
 }, (table) => [
 	foreignKey({
-			columns: [table.categoryId],
-			foreignColumns: [categories.id],
-			name: "user_categories_category_id_fkey"
-		}).onDelete("cascade"),
+		columns: [table.categoryId],
+		foreignColumns: [categories.id],
+		name: "user_categories_category_id_fkey"
+	}).onDelete("cascade"),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "user_categories_user_id_fkey"
-		}).onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "user_categories_user_id_fkey"
+	}).onDelete("cascade"),
 	unique("user_category_unique").on(table.userId, table.categoryId),
 ]);
 
@@ -186,65 +193,65 @@ export const userQuizzes = pgTable("user_quizzes", {
 	quizId: integer("quiz_id").notNull(),
 }, (table) => [
 	foreignKey({
-			columns: [table.quizId],
-			foreignColumns: [quizzes.id],
-			name: "user_quizzes_quiz_id_fkey"
-		}),
+		columns: [table.quizId],
+		foreignColumns: [quizzes.id],
+		name: "user_quizzes_quiz_id_fkey"
+	}),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "user_quizzes_user_id_fkey"
-		}),
-	primaryKey({ columns: [table.userId, table.quizId], name: "user_quizzes_pkey"}),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "user_quizzes_user_id_fkey"
+	}),
+	primaryKey({ columns: [table.userId, table.quizId], name: "user_quizzes_pkey" }),
 ]);
 
 
 
 export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-  name: true,
-  email: true,
-  role: true,
+	username: true,
+	password: true,
+	name: true,
+	email: true,
+	role: true,
 });
 
 export const insertCategorySchema = createInsertSchema(categories).pick({
-  name: true,
-  description: true,
-  colorClass: true,
-  youtubeLink: true, // Incluye youtubeLink en el esquema
+	name: true,
+	description: true,
+	colorClass: true,
+	youtubeLink: true, // Incluye youtubeLink en el esquema
 });
 
 
 
 export const insertQuizSchema = createInsertSchema(quizzes).pick({
-  title: true,
-  description: true,
-  categoryId: true,
-  subcategoryId: true, // ← ✅ Agrega esta línea
-  timeLimit: true,
-  difficulty: true,
-  totalQuestions: true,
-  isPublic: true,
+	title: true,
+	description: true,
+	categoryId: true,
+	subcategoryId: true, // ← ✅ Agrega esta línea
+	timeLimit: true,
+	difficulty: true,
+	totalQuestions: true,
+	isPublic: true,
 });
 
 
 export const insertQuestionSchema = createInsertSchema(questions).pick({
-  quizId: true,
-  content: true,
-  type: true,
-  difficulty: true,
-  points: true,
-  variables: true,
-  imageUrl: true, // ✅ Agrega esta línea
+	quizId: true,
+	content: true,
+	type: true,
+	difficulty: true,
+	points: true,
+	variables: true,
+	imageUrl: true, // ✅ Agrega esta línea
 });
 
 
 export const insertAnswerSchema = createInsertSchema(answers).pick({
-  questionId: true,
-  content: true,
-  isCorrect: true,
-  explanation: true,
+	questionId: true,
+	content: true,
+	isCorrect: true,
+	explanation: true,
 });
 
 
@@ -254,27 +261,28 @@ export type Progress = InferModel<typeof studentProgress>;
 
 
 export const insertStudentProgressSchema = createInsertSchema(studentProgress, {
-  completedAt: z.date()
-    .or(z.string().datetime().transform(str => new Date(str)))
-    .or(z.null())
-    .optional()
-    .transform(val => val === null ? undefined : val)
+	completedAt: z.date()
+		.or(z.string().datetime().transform(str => new Date(str)))
+		.or(z.null())
+		.optional()
+		.transform(val => val === null ? undefined : val)
 }).omit({ id: true });
 
 
 
 export const insertStudentAnswerSchema = createInsertSchema(studentAnswers).pick({
-  progressId: true,
-  questionId: true,
-  answerId: true,
-  isCorrect: true,
-  variables: true,
-  timeSpent: true,
+	progressId: true,
+	questionId: true,
+	answerId: true,
+	isCorrect: true,
+	variables: true,
+	timeSpent: true,
+	hintsUsed: true,
 });
 
 export const insertUserCategorySchema = createInsertSchema(userCategories).pick({
-  userId: true,
-  categoryId: true,
+	userId: true,
+	categoryId: true,
 });
 
 
@@ -283,7 +291,7 @@ export const parents = pgTable("parents", {
 	name: varchar("name", { length: 100 }).notNull(), // Ej: Ximena
 	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
 	childId: integer("child_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  });
+});
 
 // Types exports
 export type User = typeof users.$inferSelect;
@@ -316,5 +324,65 @@ export type InsertUserCategory = z.infer<typeof insertUserCategorySchema>;
 
 export type Subcategory = typeof subcategories.$inferSelect;
 export type Parent = typeof parents.$inferSelect;
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+	studentProgress: many(studentProgress),
+	quizSubmissions: many(quizSubmissions),
+}));
+
+export const quizzesRelations = relations(quizzes, ({ one, many }) => ({
+	questions: many(questions),
+	category: one(categories, {
+		fields: [quizzes.categoryId],
+		references: [categories.id],
+	}),
+	subcategory: one(subcategories, {
+		fields: [quizzes.subcategoryId],
+		references: [subcategories.id],
+	}),
+}));
+
+export const questionsRelations = relations(questions, ({ one, many }) => ({
+	quiz: one(quizzes, {
+		fields: [questions.quizId],
+		references: [quizzes.id],
+	}),
+	answers: many(answers),
+}));
+
+export const answersRelations = relations(answers, ({ one }) => ({
+	question: one(questions, {
+		fields: [answers.questionId],
+		references: [questions.id],
+	}),
+}));
+
+export const studentProgressRelations = relations(studentProgress, ({ one, many }) => ({
+	user: one(users, {
+		fields: [studentProgress.userId],
+		references: [users.id],
+	}),
+	quiz: one(quizzes, {
+		fields: [studentProgress.quizId],
+		references: [quizzes.id],
+	}),
+	answers: many(studentAnswers),
+}));
+
+export const studentAnswersRelations = relations(studentAnswers, ({ one }) => ({
+	progress: one(studentProgress, {
+		fields: [studentAnswers.progressId],
+		references: [studentProgress.id],
+	}),
+	question: one(questions, {
+		fields: [studentAnswers.questionId],
+		references: [questions.id],
+	}),
+	answerDetails: one(answers, {
+		fields: [studentAnswers.answerId],
+		references: [answers.id],
+	}),
+}));
 
 
