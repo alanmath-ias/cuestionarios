@@ -79,6 +79,7 @@ const ActiveQuiz = () => {
   const [isHintDialogOpen, setIsHintDialogOpen] = useState(false);
   const [hintsRevealed, setHintsRevealed] = useState<Record<number, string[]>>({});
   const [requestingHint, setRequestingHint] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${quizId}`],
@@ -104,7 +105,7 @@ const ActiveQuiz = () => {
 
   // Initialize state from progress
   useEffect(() => {
-    if (progress && questions) {
+    if (!isInitialized && progress && questions) {
       if (progress.status === 'completed') {
         setLocation(`/results/${progress.id}`);
         return;
@@ -146,8 +147,9 @@ const ActiveQuiz = () => {
         });
         setAnsweredQuestions(answeredMap);
       }
+      setIsInitialized(true);
     }
-  }, [progress, questions, setLocation]);
+  }, [progress, questions, setLocation, isInitialized]);
 
   // Shuffle answers when question changes
   useEffect(() => {

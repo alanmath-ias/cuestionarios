@@ -207,7 +207,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     }
   });
-
   // Add the /user endpoint as well
   apiRouter.get("/user", async (req: Request, res: Response) => {
     const userId = req.session.userId;
@@ -232,6 +231,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all users (Admin only)
+  apiRouter.get("/users", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const users = await storage.getUsers();
+      // Return users without passwords
+      const safeUsers = users.map(user => {
+        const { password: _, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      res.json(safeUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Error fetching users" });
+    }
+  });
+
+  // Get specific user progress (Admin only)
+  apiRouter.get("/users/:userId/progress", requireAdmin, async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    try {
+      const progress = await storage.getStudentProgress(userId);
+      res.json(progress);
+    } catch (error) {
+      console.error("Error fetching user progress:", error);
+      res.status(500).json({ message: "Error fetching user progress" });
+    }
+  });
+
   apiRouter.post("/auth/logout", (req: Request, res: Response) => {
     req.session.destroy((err: Error | null) => {
       if (err) {
@@ -249,7 +280,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json({ message: "Logged out successfully" });
     });
   });
-
 
   // Endpoint temporal para actualizar el rol del usuario
   apiRouter.post("/auth/make-admin", async (req: Request, res: Response) => {
@@ -820,6 +850,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Error creating/updating progress",
         error: error instanceof Error ? error.message : String(error),
       });
+    }
+  });
+
+  // Delete progress (Reset)
+  apiRouter.delete("/progress/:id", requireAdmin, async (req: Request, res: Response) => {
+    const progressId = parseInt(req.params.id);
+    if (isNaN(progressId)) {
+      return res.status(400).json({ message: "Invalid progress ID" });
+    }
+
+    try {
+      await storage.deleteStudentProgress(progressId);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting progress:", error);
+      res.status(500).json({ message: "Error deleting progress" });
     }
   });
 
