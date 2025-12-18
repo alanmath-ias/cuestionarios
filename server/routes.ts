@@ -231,6 +231,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Math Tip Endpoint
+  apiRouter.get("/user/math-tip", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    try {
+      // 1. Get recent completed quizzes (fetch more to allow random selection)
+      const allProgress = await storage.getStudentProgress(userId);
+      const completedProgress = allProgress
+        .filter(p => p.status === "completed" && p.score !== null)
+        .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime())
+        .slice(0, 10); // Get last 10 to have variety
+
+
+
+      if (completedProgress.length === 0) {
+        return res.json({ tip: "¡Bienvenido! Completa tu primer cuestionario para recibir tips personalizados." });
+      }
+
+      // 2. Pick ONE random quiz to focus on
+      const randomProgress = completedProgress[Math.floor(Math.random() * completedProgress.length)];
+      const quiz = await storage.getQuiz(randomProgress.quizId);
+
+      if (!quiz) return res.json({ tip: "Sigue practicando para mejorar tus habilidades matemáticas." });
+
+      // 3. Get context for this specific quiz
+      let context = `El estudiante completó el cuestionario "${quiz.title}".`;
+
+      // Check for mistakes in this specific attempt
+      const answers = await storage.getStudentAnswersByProgress(randomProgress.id);
+      const wrongAnswers = answers.filter(a => a.isCorrect === false);
+
+      if (wrongAnswers.length > 0) {
+        const questionIds = wrongAnswers.slice(0, 2).map(m => m.questionId);
+        const questions = await Promise.all(questionIds.map(id => storage.getQuestion(id)));
+
+        context += " Tuvo errores en preguntas sobre: ";
+        context += questions.map(q => q?.content.substring(0, 50) + "...").join(" y ");
+      } else {
+        context += " Respondió todo correctamente.";
+      }
+
+      console.log(`[MathTip] Selected topic: ${quiz.title}`);
+
+      // 4. Generate Tip with DeepSeek
+      const apiKey = process.env.VITE_DEEPSEEK_API_KEY;
+      if (!apiKey) {
+        return res.json({ tip: "Recuerda revisar siempre los signos en tus operaciones." });
+      }
+
+      const prompt = `Genera un tip matemático MUY BREVE (máximo 15 palabras) sobre el tema específico proporcionado.
+Contexto: ${context}
+Si hubo errores, da un consejo para evitarlos. Si no, da un dato clave sobre ese tema.
+IMPORTANTE: Incluye un PEQUEÑO ejemplo matemático (máx 10 caracteres) en formato LaTeX encerrado entre signos de exclamación invertidos (¡...¡). Ejemplo: ¡x^2+1¡
+Tono: Curioso y útil.
+Formato: Solo el texto del tip con el ejemplo.`;
+
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 60,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`[MathTip] DeepSeek API error: ${response.status}`, errText);
+        throw new Error("DeepSeek API error");
+      }
+
+      const data = await response.json();
+      const tip = data.choices?.[0]?.message?.content?.trim() || "La práctica hace al maestro.";
+
+      res.json({ tip });
+
+    } catch (error) {
+      console.error("[MathTip] Error generating math tip:", error);
+      res.json({ tip: "¡Sigue esforzándote! Cada error es una oportunidad de aprender." });
+    }
+  });
+
   // Get all users (Admin only)
   apiRouter.get("/users", requireAdmin, async (req: Request, res: Response) => {
     try {

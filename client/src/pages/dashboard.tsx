@@ -36,6 +36,8 @@ import { useEffect, useRef, useState } from "react";
 import VideoEmbed from './VideoEmbed';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { ContentRenderer } from "@/components/ContentRenderer";
 
 interface QuizWithFeedback extends UserQuiz {
   progressId?: string;
@@ -243,6 +245,8 @@ export default function UserDashboard() {
   const [showPendingDialog, setShowPendingDialog] = useState(false);
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const hasShownTip = useRef(false);
 
   const playVideo = (youtubeLink: string) => {
     if (!youtubeLink) return;
@@ -288,6 +292,37 @@ export default function UserDashboard() {
     queryFn: () => selectedQuiz?.progressId ? fetchQuizFeedback(selectedQuiz.progressId) : null,
     enabled: !!selectedQuiz?.progressId
   });
+
+  // Fetch Math Tip
+  const { data: mathTipData } = useQuery({
+    queryKey: ["math-tip"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/math-tip");
+      if (!res.ok) {
+        return null;
+      }
+      const data = await res.json();
+      return data;
+    },
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
+    refetchOnWindowFocus: false
+  });
+
+  useEffect(() => {
+    if (mathTipData?.tip && !hasShownTip.current) {
+      hasShownTip.current = true;
+      setTimeout(() => {
+        toast({
+          title: "💡 Tip Matemático",
+          description: <ContentRenderer content={mathTipData.tip} className="text-white/90 text-lg font-medium text-center mt-2" />,
+          duration: 10000,
+          className: "w-80 h-auto aspect-[4/3] flex flex-col justify-center items-center bg-indigo-600 text-white border-none shadow-2xl rounded-2xl p-6"
+        });
+      }, 1500);
+    }
+  }, [mathTipData, toast]);
+
+
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -359,6 +394,8 @@ export default function UserDashboard() {
             {currentUser?.hintCredits ?? 0} Créditos de Pistas
           </div>
         </div>
+
+
 
         {/* Alert Section */}
         {pendingQuizzes.length > 0 && (
