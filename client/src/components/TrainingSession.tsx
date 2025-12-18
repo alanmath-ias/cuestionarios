@@ -362,10 +362,20 @@ export function TrainingSession({ title, questions, loading, onExit }: TrainingS
                                 {reviewMode ? "Revisa tus errores y aciertos" : "Practica y mejora tus habilidades"}
                             </p>
                         </div>
-                        <div className="flex items-center gap-3 bg-white p-2 rounded-lg shadow-sm border">
+                        <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-lg shadow-sm border">
                             <Badge variant="secondary" className="text-sm px-3 py-1">
                                 Pregunta {currentIndex + 1} / {questions.length}
                             </Badge>
+                            <div className="h-4 w-px bg-gray-200" />
+                            <div className="flex items-center gap-2 text-sm font-medium text-green-600">
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>{answeredQuestions.filter(q => q.isCorrect).length}</span>
+                            </div>
+                            <div className="h-4 w-px bg-gray-200" />
+                            <div className="flex items-center gap-2 text-sm font-medium text-red-600">
+                                <XCircle className="w-4 h-4" />
+                                <span>{answeredQuestions.filter(q => !q.isCorrect).length}</span>
+                            </div>
                             <div className="h-4 w-px bg-gray-200" />
                             <span className="text-sm font-medium text-indigo-600">
                                 {score} pts
@@ -415,13 +425,26 @@ export function TrainingSession({ title, questions, loading, onExit }: TrainingS
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="w-full">
                     {/* Main Question Card */}
-                    <Card className="lg:col-span-8 border-0 shadow-md overflow-hidden">
+                    <Card className="border-0 shadow-md overflow-hidden">
                         <div className="bg-gray-50 border-b px-6 py-4 flex justify-between items-center">
-                            <Badge variant={currentQuestion.difficulty === 'hard' ? 'destructive' : currentQuestion.difficulty === 'medium' ? 'default' : 'secondary'}>
-                                {currentQuestion.difficulty === 'hard' ? 'Difícil' : currentQuestion.difficulty === 'medium' ? 'Medio' : 'Fácil'}
-                            </Badge>
+                            <div className="flex items-center gap-3">
+                                <Badge variant={currentQuestion.difficulty === 'hard' ? 'destructive' : currentQuestion.difficulty === 'medium' ? 'default' : 'secondary'}>
+                                    {currentQuestion.difficulty === 'hard' ? 'Difícil' : currentQuestion.difficulty === 'medium' ? 'Medio' : 'Fácil'}
+                                </Badge>
+                                {!reviewMode && !isAnswered && hasMoreHints && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50 gap-2 h-8"
+                                        onClick={handleRequestHint}
+                                    >
+                                        <Lightbulb className="w-4 h-4" />
+                                        <span className="hidden sm:inline">Pista ({availableHints.length - currentHints.length})</span>
+                                    </Button>
+                                )}
+                            </div>
                             <span className="text-sm font-medium text-gray-500">
                                 {currentQuestion.points} puntos
                             </span>
@@ -579,58 +602,6 @@ export function TrainingSession({ title, questions, loading, onExit }: TrainingS
                             </Button>
                         </CardFooter>
                     </Card>
-
-                    {/* Sidebar */}
-                    <div className="lg:col-span-4 space-y-6">
-                        {/* Hint Card */}
-                        {!reviewMode && !isAnswered && hasMoreHints && (
-                            <Card className="bg-yellow-50/50 border-yellow-200 shadow-sm">
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-lg flex items-center gap-2 text-yellow-800">
-                                        <Lightbulb className="w-5 h-5" />
-                                        ¿Necesitas ayuda?
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm text-yellow-700 mb-4">
-                                        Si estás atascado, puedes pedir una pista. Tienes {availableHints.length - currentHints.length} pistas disponibles para esta pregunta.
-                                    </p>
-                                    <Button
-                                        variant="outline"
-                                        className="w-full bg-white border-yellow-300 text-yellow-800 hover:bg-yellow-100 hover:text-yellow-900"
-                                        onClick={handleRequestHint}
-                                    >
-                                        Solicitar Pista
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Stats Card */}
-                        <Card className="shadow-sm">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-lg">Estadísticas</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                    <span className="text-sm text-gray-500">Aciertos</span>
-                                    <span className="font-bold text-green-600">
-                                        {answeredQuestions.filter(q => q.isCorrect).length}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                    <span className="text-sm text-gray-500">Errores</span>
-                                    <span className="font-bold text-red-600">
-                                        {answeredQuestions.filter(q => !q.isCorrect).length}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                    <span className="text-sm text-gray-500">Puntos Totales</span>
-                                    <span className="font-bold text-indigo-600">{score}</span>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
                 </div>
             </div>
 

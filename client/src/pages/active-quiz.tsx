@@ -430,16 +430,37 @@ const ActiveQuiz = () => {
             </span>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-sm text-gray-500">Pregunta</div>
-          <div className="text-xl font-bold">
-            {currentQuestionIndex + 1} / {questions.length}
+        <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-lg shadow-sm border">
+          <Badge variant="secondary" className="text-sm px-3 py-1">
+            Pregunta {currentQuestionIndex + 1} / {questions.length}
+          </Badge>
+          <div className="h-4 w-px bg-gray-200" />
+          <div className="flex items-center gap-2 text-sm font-medium text-green-600">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{studentAnswers.filter(a => a.isCorrect).length}</span>
           </div>
+          <div className="h-4 w-px bg-gray-200" />
+          <div className="flex items-center gap-2 text-sm font-medium text-red-600">
+            <XCircle className="w-4 h-4" />
+            <span>{studentAnswers.filter(a => !a.isCorrect).length}</span>
+          </div>
+          <div className="h-4 w-px bg-gray-200" />
+          <span className="text-sm font-medium text-indigo-600">
+            {studentAnswers.reduce((sum, a) => {
+              const question = questions?.find(q => q.id === a.questionId);
+              return sum + (a.isCorrect ? (question?.points || 0) : 0);
+            }, 0)} pts
+          </span>
         </div>
+
+
+
       </div>
 
+
+
       {/* Question Card */}
-      <Card className="mb-6">
+      < Card className="mb-6" >
         <CardContent className="p-6">
           <div className="flex justify-between items-start mb-4">
             <div className="flex gap-2">
@@ -481,7 +502,9 @@ const ActiveQuiz = () => {
                   <Lightbulb className="h-4 w-4 mr-2" />
                   Pista {index + 1}
                 </h4>
-                <p className="text-yellow-900">{hint}</p>
+                <div className="text-yellow-900">
+                  <ContentRenderer content={hint} />
+                </div>
               </div>
             ))}
           </div>
@@ -546,7 +569,7 @@ const ActiveQuiz = () => {
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card >
 
       <div className="flex justify-between items-center">
         <Button
@@ -656,7 +679,7 @@ const ActiveQuiz = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 };
 
