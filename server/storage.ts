@@ -115,6 +115,7 @@ export interface IStorage {
   // Hint methods
   updateUserHintCredits(userId: number, credits: number): Promise<void>;
   updateQuestionHints(questionId: number, hints: { hint1?: string, hint2?: string, hint3?: string, explanation?: string }): Promise<void>;
+  updateUserTourStatus(userId: number, tourType: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -423,7 +424,8 @@ export class MemStorage implements IStorage {
       email: insertUser.email ?? null,
       role: insertUser.role ?? "student",
       createdAt: new Date().toISOString(),
-      hintCredits: 50
+      hintCredits: 50,
+      tourStatus: {}
     };
     this.users.set(id, user);
     return user;
@@ -645,6 +647,7 @@ export class MemStorage implements IStorage {
     }
   }
   async updateQuestionHints(questionId: number, hints: any): Promise<void> { }
+  async updateUserTourStatus(userId: number, tourType: string): Promise<void> { }
 }
 
 import { DatabaseStorage } from "./database-storage.js";

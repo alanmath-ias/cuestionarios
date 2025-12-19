@@ -203,15 +203,16 @@ const ActiveQuiz = () => {
 
   // Auto-start tour for new users
   useEffect(() => {
-    if (!loadingQuiz && !loadingQuestions && session?.userId) {
-      const tourKey = `tour_seen_active_quiz_${session.userId}`;
-      const hasSeenTour = localStorage.getItem(tourKey);
-      if (!hasSeenTour) {
-        setTimeout(() => {
-          startActiveQuizTour();
-          localStorage.setItem(tourKey, 'true');
-        }, 1000);
-      }
+    if (!loadingQuiz && !loadingQuestions && session?.userId && !session.tourStatus?.activeQuiz) {
+      setTimeout(() => {
+        startActiveQuizTour();
+        // Update DB
+        fetch('/api/user/tour-seen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tourType: 'activeQuiz' })
+        });
+      }, 1000);
     }
   }, [loadingQuiz, loadingQuestions, session]);
 

@@ -8,6 +8,8 @@ export interface User {
   email?: string | null;
   role?: string;
   createdAt?: Date;
+  tourStatus?: Record<string, boolean>;
+  hintCredits?: number;
 }
 
 export interface Category {

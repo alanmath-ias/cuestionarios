@@ -6,6 +6,7 @@ interface SessionData {
   role?: string;
   username?: string;
   hintCredits?: number;
+  tourStatus?: Record<string, boolean>;
 }
 
 export function useSession() {
@@ -24,7 +25,8 @@ export function useSession() {
             userId: userData.id,
             role: userData.role,
             username: userData.username,
-            hintCredits: userData.hintCredits
+            hintCredits: userData.hintCredits,
+            tourStatus: userData.tourStatus
           });
         } else {
           setSession(null);

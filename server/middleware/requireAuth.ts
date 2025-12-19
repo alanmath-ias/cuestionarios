@@ -25,6 +25,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : null,
       password: user.password,
       hintCredits: user.hintCredits,
+      tourStatus: user.tourStatus,
     };
 
     next();

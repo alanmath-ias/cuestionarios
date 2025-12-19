@@ -101,6 +101,7 @@ export const users = pgTable("users", {
 	role: text().default('student').notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	hintCredits: integer("hint_credits").default(50).notNull(),
+	tourStatus: jsonb("tour_status").default({}),
 }, (table) => [
 	unique("users_username_unique").on(table.username),
 ]);

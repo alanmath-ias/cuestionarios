@@ -194,17 +194,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Return user without password but WITH role
+      // Return user without password but WITH role and tourStatus
       const { password: _, ...userWithoutPassword } = user;
       res.json({
         ...userWithoutPassword,
-        role: user.role, // Asegúrate de incluir el rol
-        hintCredits: user.hintCredits
+        role: user.role,
+        hintCredits: user.hintCredits,
+        tourStatus: user.tourStatus || {}
       });
     } catch (error) {
       console.error("Auth check error:", error);
       res.status(500).json({ message: "Error checking authentication" });
 
+    }
+  });
+
+  // Add /me endpoint as alias for /auth/me (since dashboard uses it)
+  apiRouter.get("/me", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const { password: _, ...userWithoutPassword } = user;
+      res.json({
+        ...userWithoutPassword,
+        role: user.role,
+        hintCredits: user.hintCredits,
+        tourStatus: user.tourStatus || {}
+      });
+    } catch (error) {
+      console.error("Auth check error:", error);
+      res.status(500).json({ message: "Error checking authentication" });
+    }
+  });
+
+  apiRouter.post("/user/tour-seen", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    const { tourType } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    if (!tourType) {
+      return res.status(400).json({ message: "Tour type is required" });
+    }
+
+    try {
+      await storage.updateUserTourStatus(userId, tourType);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating tour status:", error);
+      res.status(500).json({ message: "Error updating tour status" });
     }
   });
   // Add the /user endpoint as well
@@ -224,7 +268,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Return user without password
       const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      res.json({
+        ...userWithoutPassword,
+        tourStatus: user.tourStatus || {}
+      });
     } catch (error) {
       console.error("Auth check error:", error);
       res.status(500).json({ message: "Error checking authentication" });

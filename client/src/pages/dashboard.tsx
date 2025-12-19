@@ -241,6 +241,8 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback, onClick: (qui
   );
 }
 
+
+
 export default function UserDashboard() {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | null>(null);
@@ -249,7 +251,6 @@ export default function UserDashboard() {
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const hasShownTip = useRef(false);
 
   const playVideo = (youtubeLink: string) => {
     if (!youtubeLink) return;
@@ -312,16 +313,21 @@ export default function UserDashboard() {
   });
 
   useEffect(() => {
-    if (mathTipData?.tip && !hasShownTip.current) {
-      hasShownTip.current = true;
-      setTimeout(() => {
+    const today = new Date().toDateString();
+    const lastShown = localStorage.getItem('mathTipLastShown');
+
+    if (mathTipData?.tip && lastShown !== today) {
+      const timer = setTimeout(() => {
         toast({
           title: "💡 Tip Matemático",
           description: <ContentRenderer content={mathTipData.tip} className="text-white/90 text-lg font-medium text-center mt-2" />,
           duration: 10000,
           className: "w-80 h-auto aspect-[4/3] flex flex-col justify-center items-center bg-indigo-600 text-white border-none shadow-2xl rounded-2xl p-6"
         });
+        localStorage.setItem('mathTipLastShown', today);
       }, 1500);
+
+      return () => clearTimeout(timer);
     }
   }, [mathTipData, toast]);
 
@@ -329,17 +335,22 @@ export default function UserDashboard() {
 
   // Auto-start tour for new users
   useEffect(() => {
-    if (!isLoading && currentUser?.id) {
-      const tourKey = `tour_seen_dashboard_${currentUser.id}`;
-      const hasSeenTour = localStorage.getItem(tourKey);
-      if (!hasSeenTour) {
-        setTimeout(() => {
-          startDashboardTour();
-          localStorage.setItem(tourKey, 'true');
-        }, 1000);
-      }
+    if (!isLoading && currentUser?.id && !currentUser.tourStatus?.dashboard) {
+      setTimeout(() => {
+        startDashboardTour();
+        // Update DB
+        fetch('/api/user/tour-seen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tourType: 'dashboard' })
+        }).then(res => {
+          if (res.ok) {
+            queryClient.invalidateQueries({ queryKey: ["current-user"] });
+          }
+        });
+      }, 1000);
     }
-  }, [isLoading, currentUser]);
+  }, [isLoading, currentUser, queryClient]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {

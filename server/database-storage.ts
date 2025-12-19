@@ -1058,4 +1058,17 @@ export class DatabaseStorage implements IStorage {
       .set(cleanHints)
       .where(eq(questions.id, questionId));
   }
+
+  async updateUserTourStatus(userId: number, tourType: string): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user) return;
+
+    const currentStatus = (user.tourStatus as Record<string, boolean>) || {};
+    const newStatus = { ...currentStatus, [tourType]: true };
+
+    await this.db
+      .update(users)
+      .set({ tourStatus: newStatus })
+      .where(eq(users.id, userId));
+  }
 }

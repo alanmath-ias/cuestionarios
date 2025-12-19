@@ -10,6 +10,7 @@ import type { QuizResult } from '@shared/quiz-types.js';
 // En la parte superior del archivo QuizResults.tsx, añade:
 import { useState } from 'react';
 import { ExplanationModal } from './explicacion'; // Asegúrate de crear este componente
+import { useSession } from "@/hooks/useSession";
 
 
 interface Question {
@@ -25,6 +26,7 @@ interface Question {
 
 function QuizResults() {
   const { progressId } = useParams<{ progressId: string }>();
+  const { session } = useSession();
   //const [_, setLocation] = useLocation();
 
   const handleGoBack = () => {
@@ -88,17 +90,18 @@ function QuizResults() {
 
   // Auto-start tour for new users
   useEffect(() => {
-    if (!isLoading && results?.progress?.userId) {
-      const tourKey = `tour_seen_quiz_results_${results.progress.userId}`;
-      const hasSeenTour = localStorage.getItem(tourKey);
-      if (!hasSeenTour) {
-        setTimeout(() => {
-          startQuizResultsTour();
-          localStorage.setItem(tourKey, 'true');
-        }, 1000);
-      }
+    if (!isLoading && session?.userId && !session.tourStatus?.quizResults) {
+      setTimeout(() => {
+        startQuizResultsTour();
+        // Update DB
+        fetch('/api/user/tour-seen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tourType: 'quizResults' })
+        });
+      }, 1000);
     }
-  }, [isLoading, results]);
+  }, [isLoading, session]);
 
   const correctAnswers = results?.answers.filter((a) => a.isCorrect).length || 0;
   const totalQuestions = results?.answers.length || 0;
