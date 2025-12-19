@@ -351,6 +351,22 @@ Formato: Solo el texto del tip con el ejemplo.`;
     }
   });
 
+  // Delete user (Admin only)
+  apiRouter.delete("/users/:userId", requireAdmin, async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    try {
+      await storage.deleteUser(userId);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Error deleting user" });
+    }
+  });
+
   apiRouter.post("/auth/logout", (req: Request, res: Response) => {
     req.session.destroy((err: Error | null) => {
       if (err) {
