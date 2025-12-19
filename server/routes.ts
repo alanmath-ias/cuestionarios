@@ -674,9 +674,19 @@ Formato: Solo el texto del tip con el ejemplo.`;
       }
 
       const questions = await storage.getQuestionsByQuiz(quizId);
+      const mode = req.query.mode as string;
+
+      // If mini mode, shuffle and take 50%
+      let selectedQuestions = questions;
+      if (mode === 'mini') {
+        const count = Math.ceil(questions.length * 0.5);
+        selectedQuestions = questions
+          .sort(() => 0.5 - Math.random())
+          .slice(0, count);
+      }
 
       // Generate actual questions with random values
-      const randomizedQuestions = await Promise.all(questions.map(async (question) => {
+      const randomizedQuestions = await Promise.all(selectedQuestions.map(async (question) => {
         // Clone question to avoid modifying original
         const { variables, ...questionData } = question;
 
@@ -865,6 +875,8 @@ Formato: Solo el texto del tip con el ejemplo.`;
         userId,
       });
 
+      const mode = req.body.mode || 'standard';
+
       // Verificar progreso existente
       const existingProgress = await storage.getStudentProgressByQuiz(
         userId,
@@ -877,6 +889,7 @@ Formato: Solo el texto del tip con el ejemplo.`;
         completedAt: progressData.completedAt
           ? progressData.completedAt.toISOString()
           : undefined,
+        mode, // Add mode to storage object
       };
 
       if (existingProgress) {

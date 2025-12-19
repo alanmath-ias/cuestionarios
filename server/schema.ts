@@ -17,10 +17,10 @@ export const subcategories = pgTable("subcategories", {
 	youtube_sublink: text("youtube_sublink").default(sql`NULL`), // Usar sql para establecer NULL como valor predeterminado
 }, (table) => [
 	foreignKey({
-			columns: [table.categoryId],
-			foreignColumns: [categories.id],
-			name: "subcategories_category_id_fkey"
-		}),
+		columns: [table.categoryId],
+		foreignColumns: [categories.id],
+		name: "subcategories_category_id_fkey"
+	}),
 ]);
 
 export const session = pgTable("session", {
@@ -52,10 +52,10 @@ export const quizzes = pgTable("quizzes", {
 	url: text("url"), // opcional, tipo texto
 }, (table) => [
 	foreignKey({
-			columns: [table.subcategoryId],
-			foreignColumns: [subcategories.id],
-			name: "quizzes_subcategory_id_fkey"
-		}),
+		columns: [table.subcategoryId],
+		foreignColumns: [subcategories.id],
+		name: "quizzes_subcategory_id_fkey"
+	}),
 ]);
 
 export const studentAnswers = pgTable("student_answers", {
@@ -108,6 +108,7 @@ export const studentProgress = pgTable("student_progress", {
 	completedQuestions: integer("completed_questions").default(0),
 	timeSpent: integer("time_spent"),
 	completedAt: timestamp("completed_at", { mode: 'string' }),
+	mode: text("mode").default('standard'),
 });
 
 export const quizSubmissions = pgTable("quiz_submissions", {
@@ -121,20 +122,20 @@ export const quizSubmissions = pgTable("quiz_submissions", {
 	progressId: integer("progress_id"),
 }, (table) => [
 	foreignKey({
-			columns: [table.progressId],
-			foreignColumns: [studentProgress.id],
-			name: "quiz_submissions_progress_id_fkey"
-		}).onDelete("set null"),
+		columns: [table.progressId],
+		foreignColumns: [studentProgress.id],
+		name: "quiz_submissions_progress_id_fkey"
+	}).onDelete("set null"),
 	foreignKey({
-			columns: [table.quizId],
-			foreignColumns: [quizzes.id],
-			name: "quiz_submissions_quiz_id_fkey"
-		}).onDelete("cascade"),
+		columns: [table.quizId],
+		foreignColumns: [quizzes.id],
+		name: "quiz_submissions_quiz_id_fkey"
+	}).onDelete("cascade"),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "quiz_submissions_user_id_fkey"
-		}).onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "quiz_submissions_user_id_fkey"
+	}).onDelete("cascade"),
 ]);
 
 export const quizfeedback = pgTable("quizfeedback", {
@@ -145,15 +146,15 @@ export const quizfeedback = pgTable("quizfeedback", {
 	createdat: timestamp({ withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
 	foreignKey({
-			columns: [table.quizid],
-			foreignColumns: [quizzes.id],
-			name: "fk_quiz"
-		}).onDelete("cascade"),
+		columns: [table.quizid],
+		foreignColumns: [quizzes.id],
+		name: "fk_quiz"
+	}).onDelete("cascade"),
 	foreignKey({
-			columns: [table.userid],
-			foreignColumns: [users.id],
-			name: "fk_user"
-		}).onDelete("cascade"),
+		columns: [table.userid],
+		foreignColumns: [users.id],
+		name: "fk_user"
+	}).onDelete("cascade"),
 ]);
 
 export const userCategories = pgTable("user_categories", {
@@ -162,15 +163,15 @@ export const userCategories = pgTable("user_categories", {
 	categoryId: integer("category_id").notNull(),
 }, (table) => [
 	foreignKey({
-			columns: [table.categoryId],
-			foreignColumns: [categories.id],
-			name: "user_categories_category_id_fkey"
-		}).onDelete("cascade"),
+		columns: [table.categoryId],
+		foreignColumns: [categories.id],
+		name: "user_categories_category_id_fkey"
+	}).onDelete("cascade"),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "user_categories_user_id_fkey"
-		}).onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "user_categories_user_id_fkey"
+	}).onDelete("cascade"),
 	unique("user_category_unique").on(table.userId, table.categoryId),
 ]);
 
@@ -186,16 +187,16 @@ export const userQuizzes = pgTable("user_quizzes", {
 	quizId: integer("quiz_id").notNull(),
 }, (table) => [
 	foreignKey({
-			columns: [table.quizId],
-			foreignColumns: [quizzes.id],
-			name: "user_quizzes_quiz_id_fkey"
-		}),
+		columns: [table.quizId],
+		foreignColumns: [quizzes.id],
+		name: "user_quizzes_quiz_id_fkey"
+	}),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "user_quizzes_user_id_fkey"
-		}),
-	primaryKey({ columns: [table.userId, table.quizId], name: "user_quizzes_pkey"}),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "user_quizzes_user_id_fkey"
+	}),
+	primaryKey({ columns: [table.userId, table.quizId], name: "user_quizzes_pkey" }),
 ]);
 
 //fin schema nuevo
@@ -222,11 +223,11 @@ export const userQuizzes = pgTable("user_quizzes", {
 });*/
 
 export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-  name: true,
-  email: true,
-  role: true,
+	username: true,
+	password: true,
+	name: true,
+	email: true,
+	role: true,
 });
 
 // Categories model
@@ -238,10 +239,10 @@ export const insertUserSchema = createInsertSchema(users).pick({
 });*/
 
 export const insertCategorySchema = createInsertSchema(categories).pick({
-  name: true,
-  description: true,
-  colorClass: true,
-  youtubeLink: true, // Incluye youtubeLink en el esquema
+	name: true,
+	description: true,
+	colorClass: true,
+	youtubeLink: true, // Incluye youtubeLink en el esquema
 });
 
 // Quizzes model
@@ -265,14 +266,14 @@ export const insertCategorySchema = createInsertSchema(categories).pick({
 
 
 export const insertQuizSchema = createInsertSchema(quizzes).pick({
-  title: true,
-  description: true,
-  categoryId: true,
-  subcategoryId: true, // ← ✅ Agrega esta línea
-  timeLimit: true,
-  difficulty: true,
-  totalQuestions: true,
-  isPublic: true,
+	title: true,
+	description: true,
+	categoryId: true,
+	subcategoryId: true, // ← ✅ Agrega esta línea
+	timeLimit: true,
+	difficulty: true,
+	totalQuestions: true,
+	isPublic: true,
 });
 
 // Questions model (template questions that can be randomized)
@@ -289,13 +290,13 @@ export const insertQuizSchema = createInsertSchema(quizzes).pick({
 });*/
 
 export const insertQuestionSchema = createInsertSchema(questions).pick({
-  quizId: true,
-  content: true,
-  type: true,
-  difficulty: true,
-  points: true,
-  variables: true,
-  imageUrl: true, // ✅ Agrega esta línea
+	quizId: true,
+	content: true,
+	type: true,
+	difficulty: true,
+	points: true,
+	variables: true,
+	imageUrl: true, // ✅ Agrega esta línea
 });
 
 // Answers model (for each question)
@@ -310,10 +311,10 @@ export const insertQuestionSchema = createInsertSchema(questions).pick({
 
 
 export const insertAnswerSchema = createInsertSchema(answers).pick({
-  questionId: true,
-  content: true,
-  isCorrect: true,
-  explanation: true,
+	questionId: true,
+	content: true,
+	isCorrect: true,
+	explanation: true,
 });
 
 // Student Progress model
@@ -335,11 +336,11 @@ export type Progress = InferModel<typeof studentProgress>;
 
 
 export const insertStudentProgressSchema = createInsertSchema(studentProgress, {
-  completedAt: z.date()
-    .or(z.string().datetime().transform(str => new Date(str)))
-    .or(z.null())
-    .optional()
-    .transform(val => val === null ? undefined : val)
+	completedAt: z.date()
+		.or(z.string().datetime().transform(str => new Date(str)))
+		.or(z.null())
+		.optional()
+		.transform(val => val === null ? undefined : val)
 }).omit({ id: true });
 
 
@@ -358,12 +359,12 @@ export const insertStudentProgressSchema = createInsertSchema(studentProgress, {
 
 
 export const insertStudentAnswerSchema = createInsertSchema(studentAnswers).pick({
-  progressId: true,
-  questionId: true,
-  answerId: true,
-  isCorrect: true,
-  variables: true,
-  timeSpent: true,
+	progressId: true,
+	questionId: true,
+	answerId: true,
+	isCorrect: true,
+	variables: true,
+	timeSpent: true,
 });
 
 // User-Categories relation (many-to-many)
@@ -376,8 +377,8 @@ export const insertStudentAnswerSchema = createInsertSchema(studentAnswers).pick
 }));*/
 
 export const insertUserCategorySchema = createInsertSchema(userCategories).pick({
-  userId: true,
-  categoryId: true,
+	userId: true,
+	categoryId: true,
 });
 // Subcategorias Model
 /*export const subcategories = pgTable("subcategories", {
@@ -389,12 +390,12 @@ export const insertUserCategorySchema = createInsertSchema(userCategories).pick(
 });*/
 
 export type UserQuiz = {
-  id: number;
-  title: string;
-  categoryId: number;
-  difficulty: string;
-  status?: "not_started" | "in_progress" | "completed"; // Puede ser opcional
-  reviewed?: boolean;
+	id: number;
+	title: string;
+	categoryId: number;
+	difficulty: string;
+	status?: "not_started" | "in_progress" | "completed"; // Puede ser opcional
+	reviewed?: boolean;
 };
 
 
@@ -430,7 +431,7 @@ export const parents = pgTable("parents", {
 	name: varchar("name", { length: 100 }).notNull(), // Ej: Ximena
 	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
 	childId: integer("child_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  });
+});
 
 
 // Types exports

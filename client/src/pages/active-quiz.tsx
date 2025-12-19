@@ -67,6 +67,8 @@ const QuestionContent = ({ content }: { content: string }) => {
 const ActiveQuiz = () => {
   const { quizId } = useParams();
   const [location, setLocation] = useLocation();
+  const searchParams = new URLSearchParams(window.location.search);
+  const mode = searchParams.get('mode');
   const { toast } = useToast();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswerId, setSelectedAnswerId] = useState<number | null>(null);
@@ -86,7 +88,11 @@ const ActiveQuiz = () => {
   });
 
   const { data: questions, isLoading: loadingQuestions, error: errorQuestions } = useQuery<Question[]>({
-    queryKey: [`/api/quizzes/${quizId}/questions`],
+    queryKey: [`/api/quizzes/${quizId}/questions`, mode],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/quizzes/${quizId}/questions${mode ? `?mode=${mode}` : ''}`);
+      return res.json();
+    },
     enabled: !!quizId,
   });
 
@@ -188,7 +194,8 @@ const ActiveQuiz = () => {
         quizId: parseInt(quizId!),
         status: 'in_progress',
         completedQuestions: 0,
-        timeSpent: 0
+        timeSpent: 0,
+        mode: mode || 'standard'
       });
     }
   }, [quiz, session, progress, quizId]);

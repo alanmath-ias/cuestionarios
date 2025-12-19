@@ -31,10 +31,10 @@ import {
   BarChart3,
   Lightbulb
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useEffect, useRef, useState } from "react";
 import VideoEmbed from './VideoEmbed';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { ContentRenderer } from "@/components/ContentRenderer";
@@ -243,6 +243,7 @@ export default function UserDashboard() {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | null>(null);
   const [showPendingDialog, setShowPendingDialog] = useState(false);
+  const [miniQuizId, setMiniQuizId] = useState<number | null>(null);
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -347,6 +348,22 @@ export default function UserDashboard() {
       }
     }
   }, [categories, selectedVideo]);
+
+  const [_, setLocation] = useLocation();
+
+  const handleMiniStart = (e: React.MouseEvent, quizId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMiniQuizId(quizId);
+  };
+
+  const confirmMiniStart = () => {
+    if (miniQuizId) {
+      setLocation(`/quiz/${miniQuizId}?mode=mini`);
+      setMiniQuizId(null);
+      setShowPendingDialog(false); // Close pending dialog if open
+    }
+  };
 
   if (loadingUser || loadingCategories || loadingQuizzes) {
     return <div className="flex justify-center items-center min-h-screen"><Spinner className="h-12 w-12" /></div>;
@@ -481,18 +498,32 @@ export default function UserDashboard() {
               <div className="space-y-2">
                 {pendingQuizzes.length > 0 ? (
                   pendingQuizzes.map((quiz) => (
-                    <Link key={quiz.id} href={`/quiz/${quiz.id}`}>
-                      <div className="group flex items-center gap-3 p-3 rounded-xl bg-white/60 hover:bg-white cursor-pointer transition-all border border-yellow-100/50 hover:border-yellow-200">
-                        <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                          <PlayCircle className="h-5 w-5 text-yellow-700" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-sm truncate text-gray-900 group-hover:text-orange-700 transition-colors">{quiz.title}</h4>
-                          <p className="text-xs text-gray-500 truncate">{quiz.difficulty}</p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-yellow-400 group-hover:text-yellow-600" />
+                    <div key={quiz.id} className="group flex items-center gap-3 p-3 rounded-xl bg-white/60 border border-yellow-100/50 hover:border-yellow-200 transition-all">
+                      <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+                        <PlayCircle className="h-5 w-5 text-yellow-700" />
                       </div>
-                    </Link>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm truncate text-gray-900">{quiz.title}</h4>
+                        <p className="text-xs text-gray-500 truncate">{quiz.difficulty}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+                          onClick={(e) => handleMiniStart(e, quiz.id)}
+                        >
+                          Mini
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-7 px-3 text-xs bg-yellow-400 hover:bg-yellow-500 text-yellow-900 border-none shadow-sm"
+                          onClick={() => setLocation(`/quiz/${quiz.id}`)}
+                        >
+                          Normal
+                        </Button>
+                      </div>
+                    </div>
                   ))
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-center p-4 text-gray-400">
@@ -661,18 +692,32 @@ export default function UserDashboard() {
             <div className="space-y-3 py-2">
               {pendingQuizzes.length > 0 ? (
                 pendingQuizzes.map((quiz) => (
-                  <Link key={quiz.id} href={`/quiz/${quiz.id}`}>
-                    <div className="group flex items-center gap-3 p-3 rounded-xl bg-yellow-50 hover:bg-yellow-100 cursor-pointer transition-all border border-yellow-100 hover:border-yellow-200">
-                      <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-sm">
-                        <PlayCircle className="h-5 w-5 text-orange-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm text-gray-900 group-hover:text-orange-800 transition-colors">{quiz.title}</h4>
-                        <p className="text-xs text-gray-600">{quiz.difficulty}</p>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-yellow-400 group-hover:text-yellow-600" />
+                  <div key={quiz.id} className="group flex items-center gap-3 p-3 rounded-xl bg-yellow-50 border border-yellow-100 hover:border-yellow-200 transition-all">
+                    <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
+                      <PlayCircle className="h-5 w-5 text-orange-600" />
                     </div>
-                  </Link>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm text-gray-900">{quiz.title}</h4>
+                      <p className="text-xs text-gray-600">{quiz.difficulty}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs bg-white border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                        onClick={(e) => handleMiniStart(e, quiz.id)}
+                      >
+                        Mini
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-7 px-3 text-xs bg-orange-500 hover:bg-orange-600 text-white border-none shadow-sm"
+                        onClick={() => setLocation(`/quiz/${quiz.id}`)}
+                      >
+                        Normal
+                      </Button>
+                    </div>
+                  </div>
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center text-center p-8 text-gray-400">
@@ -687,6 +732,40 @@ export default function UserDashboard() {
           <div className="flex justify-end">
             <Button variant="outline" onClick={() => setShowPendingDialog(false)}>Cerrar</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mini Quiz Confirmation Dialog */}
+      <Dialog open={!!miniQuizId} onOpenChange={(open) => !open && setMiniQuizId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              Versión Mini del Cuestionario
+            </DialogTitle>
+            <DialogDescription className="space-y-3 pt-2">
+              <p>
+                Estás a punto de iniciar una <strong>versión reducida (50%)</strong> de este cuestionario con preguntas al azar.
+              </p>
+              <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 text-amber-800 text-sm">
+                <p className="font-semibold mb-1">⚠️ Importante:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Esta versión es ideal para repasos rápidos.</li>
+                  <li>Ganarás <strong>menos créditos</strong> que en la versión completa.</li>
+                  <li>Si tienes tiempo, te recomendamos hacer la versión completa.</li>
+                </ul>
+              </div>
+              <p>¿Deseas continuar con la versión mini?</p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setMiniQuizId(null)}>
+              Cancelar, haré la completa
+            </Button>
+            <Button className="bg-amber-600 hover:bg-amber-700 text-white" onClick={confirmMiniStart}>
+              Sí, iniciar versión Mini
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

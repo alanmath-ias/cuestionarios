@@ -87,7 +87,7 @@ export function ExplanationModal({ question, correctAnswer, quizTitle, onClose }
             const parts = paragraph.split(mathRegex);
 
             return (
-                <div key={`para-${paraIndex}`} className="mb-3">
+                <div key={`para-${paraIndex}`} className="mb-3 break-words whitespace-normal">
                     {parts.map((part, partIndex) => {
                         if (!part) return null;
 
@@ -160,17 +160,17 @@ export function ExplanationModal({ question, correctAnswer, quizTitle, onClose }
                             <div className="space-y-6">
                                 <div className="p-4 bg-blue-50 rounded-lg">
                                     <h4 className="font-medium text-blue-800 mb-2">Pregunta:</h4>
-                                    <div className="text-gray-700">{renderContent(question)}</div>
+                                    <div className="text-gray-700 break-words whitespace-normal">{renderContent(question)}</div>
                                 </div>
 
                                 <div className="p-4 bg-green-50 rounded-lg">
                                     <h4 className="font-medium text-green-800 mb-2">Respuesta correcta:</h4>
-                                    <div className="text-gray-700">{renderContent(correctAnswer)}</div>
+                                    <div className="text-gray-700 break-words whitespace-normal">{renderContent(correctAnswer)}</div>
                                 </div>
 
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <h4 className="font-medium text-gray-800 mb-2">Solución paso a paso:</h4>
-                                    <div className="text-gray-700 space-y-4">
+                                    <div className="text-gray-700 space-y-4 break-words whitespace-normal">
                                         {explanation && renderContent(explanation)}
                                     </div>
                                 </div>

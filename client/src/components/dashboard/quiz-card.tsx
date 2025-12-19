@@ -15,6 +15,7 @@ interface QuizCardProps {
   onStart: () => void;
   onContinue: () => void;
   onRetry: () => void;
+  onMiniStart?: () => void;
   className?: string; // Agregar esta propiedad opcional
 }
 
@@ -30,9 +31,10 @@ export function QuizCard({
   score,
   onStart,
   onContinue,
-  onRetry
+  onRetry,
+  onMiniStart
 }: QuizCardProps) {
-  
+
   const getDifficultyLabel = () => {
     switch (difficulty) {
       case 'basic':
@@ -45,7 +47,7 @@ export function QuizCard({
         return difficulty;
     }
   };
-  
+
   const getStatusColor = () => {
     switch (status) {
       case 'completed':
@@ -56,7 +58,7 @@ export function QuizCard({
         return 'text-gray-500';
     }
   };
-  
+
   const getStatusLabel = () => {
     switch (status) {
       case 'completed':
@@ -101,9 +103,14 @@ export function QuizCard({
           )}
         </div>
         {status === 'not_started' && (
-          <Button size="sm" onClick={onStart}>
-            Comenzar
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={onMiniStart} className="text-xs px-2 h-8 border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50">
+              Versión Mini
+            </Button>
+            <Button size="sm" onClick={onStart}>
+              Comenzar
+            </Button>
+          </div>
         )}
         {status === 'in_progress' && (
           <Button size="sm" onClick={onContinue}>

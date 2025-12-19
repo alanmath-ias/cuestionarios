@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import VideoEmbed from './VideoEmbed';
 import { useState, useRef, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertTriangle } from "lucide-react";
 
 interface Category {
   id: number;
@@ -52,6 +54,7 @@ function QuizList() {
   const { categoryId } = useParams<{ categoryId: string }>();
   const [_, setLocation] = useLocation();
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [miniQuizId, setMiniQuizId] = useState<number | null>(null);
   const videoSectionRef = useRef<HTMLDivElement>(null);
 
   const { data: category, isLoading: loadingCategory } = useQuery<Category>({
@@ -69,49 +72,49 @@ function QuizList() {
     }
   }, [category]);
 
-// Reproduce video/playlist en el contenedor superior y hace scroll hacia él
-const playVideo = (youtubeLink: string) => {
-  if (!youtubeLink) return;
-  setSelectedVideo(youtubeLink);
-  setTimeout(() => {
-    videoSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 80);
-};
+  // Reproduce video/playlist en el contenedor superior y hace scroll hacia él
+  const playVideo = (youtubeLink: string) => {
+    if (!youtubeLink) return;
+    setSelectedVideo(youtubeLink);
+    setTimeout(() => {
+      videoSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  };
 
-// Función para convertir un enlace normal a uno embed
-const getEmbedUrl = (url: string) => {
-  if (!url) return "";
+  // Función para convertir un enlace normal a uno embed
+  const getEmbedUrl = (url: string) => {
+    if (!url) return "";
 
-  // URL limpia sin espacios
-  url = url.trim();
+    // URL limpia sin espacios
+    url = url.trim();
 
-  // Intenta extraer video ID de url 'youtube.com/watch?v=...'
-  let videoIdMatch = url.match(/[?&]v=([^&]+)/);
+    // Intenta extraer video ID de url 'youtube.com/watch?v=...'
+    let videoIdMatch = url.match(/[?&]v=([^&]+)/);
 
-  // Intenta extraer playlist ID de url 'list=...'
-  let listIdMatch = url.match(/[?&]list=([^&]+)/);
+    // Intenta extraer playlist ID de url 'list=...'
+    let listIdMatch = url.match(/[?&]list=([^&]+)/);
 
-  // Intenta extraer video ID de url corta 'youtu.be/VIDEO_ID'
-  let shortUrlMatch = url.match(/youtu\.be\/([^?&]+)/);
+    // Intenta extraer video ID de url corta 'youtu.be/VIDEO_ID'
+    let shortUrlMatch = url.match(/youtu\.be\/([^?&]+)/);
 
-  if (listIdMatch) {
-    return `https://www.youtube.com/embed/videoseries?list=${listIdMatch[1]}`;
-  }
-  if (videoIdMatch) {
-    return `https://www.youtube.com/embed/${videoIdMatch[1]}`;
-  }
-  if (shortUrlMatch) {
-    return `https://www.youtube.com/embed/${shortUrlMatch[1]}`;
-  }
+    if (listIdMatch) {
+      return `https://www.youtube.com/embed/videoseries?list=${listIdMatch[1]}`;
+    }
+    if (videoIdMatch) {
+      return `https://www.youtube.com/embed/${videoIdMatch[1]}`;
+    }
+    if (shortUrlMatch) {
+      return `https://www.youtube.com/embed/${shortUrlMatch[1]}`;
+    }
 
-  // Si ya es URL embed, la dejamos tal cual (pero con seguridad)
-  if (url.includes("youtube.com/embed/")) {
+    // Si ya es URL embed, la dejamos tal cual (pero con seguridad)
+    if (url.includes("youtube.com/embed/")) {
+      return url;
+    }
+
+    // Si nada coincide, devuelve el url original (puede que falle)
     return url;
-  }
-
-  // Si nada coincide, devuelve el url original (puede que falle)
-  return url;
-};
+  };
 
 
 
@@ -120,11 +123,11 @@ const getEmbedUrl = (url: string) => {
     queryFn: async () => {
       const res = await fetch(`/api/admin/subcategories/by-category/${categoryId}`);
       const data = await res.json();
-      
+
       return data.map((sub: Subcategory) => ({
         ...sub,
-        youtube_sublink: sub.youtube_sublink?.toUpperCase() === "NULL" 
-          ? null 
+        youtube_sublink: sub.youtube_sublink?.toUpperCase() === "NULL"
+          ? null
           : sub.youtube_sublink?.trim() || null
       }));
     },
@@ -140,9 +143,9 @@ const getEmbedUrl = (url: string) => {
 
   const quizzesBySubcategory = Array.isArray(subcategories)
     ? subcategories.map(subcategory => ({
-        ...subcategory,
-        quizzes: quizzes?.filter(quiz => quiz.subcategoryId === subcategory.id) || [],
-      }))
+      ...subcategory,
+      quizzes: quizzes?.filter(quiz => quiz.subcategoryId === subcategory.id) || [],
+    }))
     : [];
 
   const quizzesWithoutSubcategory = quizzes?.filter(quiz => !quiz.subcategoryId) || [];
@@ -155,11 +158,11 @@ const getEmbedUrl = (url: string) => {
   const calculateSubcategoryProgress = (subcategoryId: number) => {
     const subcategoryQuizzes = quizzes?.filter(q => q.subcategoryId === subcategoryId) || [];
     if (subcategoryQuizzes.length === 0) return 0;
-    
-    const completed = progress?.filter(p => 
+
+    const completed = progress?.filter(p =>
       subcategoryQuizzes.some(q => q.id === p.quizId) && p.status === 'completed'
     ).length || 0;
-    
+
     return (completed / subcategoryQuizzes.length) * 100;
   };
 
@@ -169,6 +172,17 @@ const getEmbedUrl = (url: string) => {
 
   const handleTraining = (subcategoryId: number) => {
     setLocation(`/training2/${categoryId}/${subcategoryId}`);
+  };
+
+  const handleMiniStart = (quizId: number) => {
+    setMiniQuizId(quizId);
+  };
+
+  const confirmMiniStart = () => {
+    if (miniQuizId) {
+      setLocation(`/quiz/${miniQuizId}?mode=mini`);
+      setMiniQuizId(null);
+    }
   };
 
   const isLoading = loadingCategory || loadingSubcategories || loadingQuizzes || loadingProgress;
@@ -224,8 +238,8 @@ const getEmbedUrl = (url: string) => {
                   const progressPercentage = calculateSubcategoryProgress(subcategory.id);
 
                   return (
-                    <Card 
-                      key={subcategory.id} 
+                    <Card
+                      key={subcategory.id}
                       className="rounded-xl bg-gradient-to-br from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 border border-blue-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
                     >
                       <CardHeader className="pb-3">
@@ -244,9 +258,9 @@ const getEmbedUrl = (url: string) => {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <Progress 
-                          value={progressPercentage} 
-                          className="h-2 bg-blue-100 dark:bg-blue-900" 
+                        <Progress
+                          value={progressPercentage}
+                          className="h-2 bg-blue-100 dark:bg-blue-900"
                         />
                         <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
                           {subcategory.description || 'Sin descripción'}
@@ -299,8 +313,8 @@ const getEmbedUrl = (url: string) => {
 
           {/* Listado de Cuestionarios por Subcategoría */}
           {quizzesBySubcategory.map(subcategory => (
-            <section 
-              key={`quizzes-${subcategory.id}`} 
+            <section
+              key={`quizzes-${subcategory.id}`}
               id={`subcategory-${subcategory.id}`}
               className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 dark:border-gray-700"
             >
@@ -347,6 +361,7 @@ const getEmbedUrl = (url: string) => {
                           onStart={() => handleQuizAction(quiz.id)}
                           onContinue={() => handleQuizAction(quiz.id)}
                           onRetry={() => handleQuizAction(quiz.id)}
+                          onMiniStart={() => handleMiniStart(quiz.id)}
                           className="bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"
                         />
                       );
@@ -364,7 +379,7 @@ const getEmbedUrl = (url: string) => {
               {/* Si quieres seguir mostrando el botón general de la subcategoría al final */}
               {subcategory.youtube_sublink && (
                 <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 rounded-b-xl">
-                  <Button 
+                  <Button
                     size="sm"
                     className="w-full font-semibold flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-800 dark:hover:bg-gray-700"
                     onClick={() => playVideo(subcategory.youtube_sublink!)}
@@ -381,6 +396,39 @@ const getEmbedUrl = (url: string) => {
           {/* Cuestionarios Generales, Sin Contenido, etc. (dejé tal cual) */}
         </div>
       )}
+
+      <Dialog open={!!miniQuizId} onOpenChange={(open) => !open && setMiniQuizId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              Versión Mini del Cuestionario
+            </DialogTitle>
+            <DialogDescription className="space-y-3 pt-2">
+              <p>
+                Estás a punto de iniciar una <strong>versión reducida (50%)</strong> de este cuestionario con preguntas al azar.
+              </p>
+              <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 text-amber-800 text-sm">
+                <p className="font-semibold mb-1">⚠️ Importante:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Esta versión es ideal para repasos rápidos.</li>
+                  <li>Ganarás <strong>menos créditos</strong> que en la versión completa.</li>
+                  <li>Si tienes tiempo, te recomendamos hacer la versión completa.</li>
+                </ul>
+              </div>
+              <p>¿Deseas continuar con la versión mini?</p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setMiniQuizId(null)}>
+              Cancelar, haré la completa
+            </Button>
+            <Button className="bg-amber-600 hover:bg-amber-700 text-white" onClick={confirmMiniStart}>
+              Sí, iniciar versión Mini
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
