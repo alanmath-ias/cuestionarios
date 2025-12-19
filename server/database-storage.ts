@@ -296,7 +296,9 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: categories.id,
         name: categories.name,
-        youtubeLink: categories.youtubeLink, // Incluye youtubeLink
+        description: categories.description,
+        colorClass: categories.colorClass,
+        youtubeLink: categories.youtubeLink,
       })
       .from(userCategories)
       .innerJoin(categories, eq(userCategories.categoryId, categories.id))
@@ -345,8 +347,11 @@ export class DatabaseStorage implements IStorage {
         eq(quizSubmissions.quizId, quizzes.id)
       ))
       .where(eq(userQuizzes.userId, userId));
-    // .orderBy(desc(quizzes.id)) la idea es que sean llevados en orden, revisar esto mas adelante
-    return result;
+
+    // Deduplicate by quiz id to handle multiple submissions/progress records
+    const uniqueResult = Array.from(new Map(result.map(item => [item.id, item])).values());
+
+    return uniqueResult;
   }
 
 
@@ -1071,4 +1076,7 @@ export class DatabaseStorage implements IStorage {
       .set({ tourStatus: newStatus })
       .where(eq(users.id, userId));
   }
+
+
+
 }

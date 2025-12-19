@@ -16,7 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Trash2, Eye, Search, RotateCcw } from "lucide-react";
+import { Loader2, ArrowLeft, Trash2, Eye, Search, RotateCcw, BookOpen } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -33,6 +33,7 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { UserCategoriesDialog } from "@/components/admin/UserCategoriesDialog";
 
 export default function UsersAdmin() {
   const { data: users, isLoading } = useQuery<any[]>({
@@ -52,11 +53,16 @@ export default function UsersAdmin() {
     }
   }, [searchString]);
 
+  // Sort users alphabetically by username
+  const sortedUsers = users ? [...users].sort((a: any, b: any) =>
+    (a.username || "").localeCompare(b.username || "")
+  ) : [];
+
   useEffect(() => {
     if (highlightId && rowRefs.current[highlightId]) {
       rowRefs.current[highlightId]?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [highlightId, users]);
+  }, [highlightId, sortedUsers]);
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
@@ -79,6 +85,7 @@ export default function UsersAdmin() {
   });
 
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [managingCategoriesUser, setManagingCategoriesUser] = useState<any>(null);
 
   if (isLoading) {
     return (
@@ -131,7 +138,7 @@ export default function UsersAdmin() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users?.map((user: any) => (
+                {sortedUsers?.map((user: any) => (
                   <TableRow
                     key={user.id}
                     ref={(el) => (rowRefs.current[user.id] = el)}
@@ -151,6 +158,16 @@ export default function UsersAdmin() {
                       {new Date(user.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setManagingCategoriesUser(user)}
+                        title="Gestionar Materias"
+                      >
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        Materias
+                      </Button>
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -193,6 +210,13 @@ export default function UsersAdmin() {
           </CardContent>
         </Card>
       </div>
+
+      <UserCategoriesDialog
+        userId={managingCategoriesUser?.id}
+        username={managingCategoriesUser?.username}
+        isOpen={!!managingCategoriesUser}
+        onClose={() => setManagingCategoriesUser(null)}
+      />
     </div>
   );
 }
@@ -201,12 +225,9 @@ function UserProgressDetails({ userId, username, onBack }: { userId: number, use
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
-  const { data: progress, isLoading: isLoadingProgress } = useQuery<any[]>({
-    queryKey: [`/api/users/${userId}/progress`],
-  });
-
-  const { data: quizzes, isLoading: isLoadingQuizzes } = useQuery<any[]>({
-    queryKey: ["/api/quizzes"],
+  // Fetch comprehensive dashboard data (quizzes + categories)
+  const { data: dashboardData, isLoading } = useQuery<any>({
+    queryKey: [`/api/admin/users/${userId}/dashboard`],
   });
 
   const deleteProgressMutation = useMutation({
@@ -214,7 +235,7 @@ function UserProgressDetails({ userId, username, onBack }: { userId: number, use
       await apiRequest("DELETE", `/api/progress/${progressId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${userId}/progress`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/dashboard`] });
       toast({
         title: "Progreso reseteado",
         description: "El progreso del cuestionario ha sido eliminado. El usuario puede volver a intentarlo.",
@@ -231,10 +252,11 @@ function UserProgressDetails({ userId, username, onBack }: { userId: number, use
 
   const deleteAssignmentMutation = useMutation({
     mutationFn: async ({ userId, quizId }: { userId: number, quizId: number }) => {
-      await apiRequest("DELETE", "/api/admin/assignments", { userId, quizId });
+      // Use the correct endpoint for removing assignments
+      await apiRequest("DELETE", "/api/admin/users/quizzes", { userId, quizId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${userId}/progress`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/dashboard`] });
       toast({
         title: "Asignación eliminada",
         description: "El cuestionario ha sido eliminado definitivamente para este usuario.",
@@ -249,7 +271,7 @@ function UserProgressDetails({ userId, username, onBack }: { userId: number, use
     },
   });
 
-  if (isLoadingProgress || isLoadingQuizzes) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -257,19 +279,23 @@ function UserProgressDetails({ userId, username, onBack }: { userId: number, use
     );
   }
 
-  // Filter and sort logic
-  const filteredProgress = progress?.filter((p: any) => {
-    const quiz = quizzes?.find((q: any) => q.id === p.quizId);
-    if (!quiz) return false;
-    return quiz.title.toLowerCase().includes(searchTerm.toLowerCase());
-  }).sort((a: any, b: any) => {
-    const quizA = quizzes?.find((q: any) => q.id === a.quizId);
-    const quizB = quizzes?.find((q: any) => q.id === b.quizId);
-    return (quizA?.title || "").localeCompare(quizB?.title || "");
-  }) || [];
+  const quizzes = dashboardData?.quizzes || [];
 
-  const completedQuizzes = filteredProgress.filter((p: any) => p.status === 'completed');
-  const inProgressQuizzes = filteredProgress.filter((p: any) => p.status === 'in_progress');
+  // Filter and sort logic
+  const filteredQuizzes = quizzes.filter((q: any) => {
+    return q.title.toLowerCase().includes(searchTerm.toLowerCase());
+  }).sort((a: any, b: any) => {
+    return (a.title || "").localeCompare(b.title || "");
+  });
+
+  const completedQuizzes = filteredQuizzes.filter((q: any) => q.status === 'completed');
+  const pendingOrInProgressQuizzes = filteredQuizzes.filter((q: any) => q.status !== 'completed').sort((a: any, b: any) => {
+    // Sort by status: In Progress (has status) comes before Pending (no status)
+    if (a.status && !b.status) return -1;
+    if (!a.status && b.status) return 1;
+    // Secondary sort by title
+    return (a.title || "").localeCompare(b.title || "");
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -312,33 +338,33 @@ function UserProgressDetails({ userId, username, onBack }: { userId: number, use
               </Card>
             ) : (
               <div className="space-y-4">
-                {completedQuizzes.map((p: any) => {
-                  const quiz = quizzes?.find((q: any) => q.id === p.quizId);
-
-                  return (
-                    <Card key={p.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1">
-                            <h3 className="font-medium text-gray-900 mb-1">{quiz?.title}</h3>
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                              <span>Completado: {new Date(p.completedAt).toLocaleDateString()}</span>
-                            </div>
+                {completedQuizzes.map((q: any) => (
+                  <Card key={q.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1">
+                          <h3 className="font-medium text-gray-900 mb-1">{q.title}</h3>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <span>Completado: {q.completedAt ? new Date(q.completedAt).toLocaleDateString() : 'N/A'}</span>
                           </div>
-                          <div className="flex flex-col items-end gap-2">
-                            <Badge variant={p.score >= 7 ? "default" : "secondary"} className="text-sm px-3 py-1">
-                              Nota: {p.score}/10
-                            </Badge>
-                            <Link href={`/results/${p.id}`}>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant={q.score >= 7 ? "default" : "secondary"} className="text-sm px-3 py-1">
+                            Nota: {q.score}/10
+                          </Badge>
+                          {q.progressId && (
+                            <Link href={`/results/${q.progressId}`}>
                               <Button variant="secondary" size="sm" className="h-7 text-xs">
                                 <Eye className="h-3 w-3 mr-1" />
                                 Ver Detalles
                               </Button>
                             </Link>
-                          </div>
+                          )}
                         </div>
+                      </div>
 
-                        <div className="mt-4 flex justify-end gap-2 pt-4 border-t">
+                      <div className="mt-4 flex justify-end gap-2 pt-4 border-t">
+                        {q.progressId && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200">
@@ -358,7 +384,7 @@ function UserProgressDetails({ userId, username, onBack }: { userId: number, use
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => deleteProgressMutation.mutate(p.id)}
+                                  onClick={() => deleteProgressMutation.mutate(q.progressId)}
                                   className="bg-orange-600 hover:bg-orange-700"
                                 >
                                   Resetear
@@ -366,42 +392,42 @@ function UserProgressDetails({ userId, username, onBack }: { userId: number, use
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+                        )}
 
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200">
-                                <Trash2 className="h-3 w-3 mr-2" />
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200">
+                              <Trash2 className="h-3 w-3 mr-2" />
+                              Eliminar Definitivamente
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="text-red-600">¿Eliminar definitivamente?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta acción es irreversible.
+                                <ul className="list-disc pl-4 mt-2 space-y-1">
+                                  <li>Se borrará todo el progreso y calificación.</li>
+                                  <li>Se eliminará la asignación del cuestionario.</li>
+                                  <li>El cuestionario desaparecerá del dashboard del estudiante.</li>
+                                </ul>
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteAssignmentMutation.mutate({ userId, quizId: q.id })}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
                                 Eliminar Definitivamente
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle className="text-red-600">¿Eliminar definitivamente?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Esta acción es irreversible.
-                                  <ul className="list-disc pl-4 mt-2 space-y-1">
-                                    <li>Se borrará todo el progreso y calificación.</li>
-                                    <li>Se eliminará la asignación del cuestionario.</li>
-                                    <li>El cuestionario desaparecerá del dashboard del estudiante.</li>
-                                  </ul>
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteAssignmentMutation.mutate({ userId, quizId: p.quizId })}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Eliminar Definitivamente
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </div>
@@ -411,11 +437,11 @@ function UserProgressDetails({ userId, username, onBack }: { userId: number, use
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-blue-500" />
-                Pendientes / En Curso ({inProgressQuizzes.length})
+                Pendientes / En Curso ({pendingOrInProgressQuizzes.length})
               </h2>
             </div>
 
-            {inProgressQuizzes.length === 0 ? (
+            {pendingOrInProgressQuizzes.length === 0 ? (
               <Card className="bg-gray-50 border-dashed">
                 <CardContent className="pt-6 text-center text-gray-500">
                   No hay cuestionarios pendientes que coincidan con tu búsqueda.
@@ -423,49 +449,61 @@ function UserProgressDetails({ userId, username, onBack }: { userId: number, use
               </Card>
             ) : (
               <div className="space-y-4">
-                {inProgressQuizzes.map((p: any) => {
-                  const quiz = quizzes?.find((q: any) => q.id === p.quizId);
+                {pendingOrInProgressQuizzes.map((q: any) => {
+                  const isStarted = !!q.status;
                   return (
-                    <Card key={p.id} className="hover:shadow-md transition-shadow">
+                    <Card key={q.id} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start gap-4">
                           <div>
-                            <h3 className="font-medium text-gray-900 mb-1">{quiz?.title}</h3>
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                              <span>Progreso: {p.completedQuestions} preguntas</span>
-                            </div>
-                            <div className="text-xs text-gray-400 mt-1">
-                              Última actividad: {new Date(p.updatedAt || p.startedAt).toLocaleDateString()}
-                            </div>
+                            <h3 className="font-medium text-gray-900 mb-1">{q.title}</h3>
+                            {isStarted ? (
+                              <>
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <span>Progreso: {q.completedQuestions || 0} preguntas</span>
+                                </div>
+                                <div className="text-xs text-gray-400 mt-1">
+                                  Última actividad: {q.updatedAt ? new Date(q.updatedAt).toLocaleDateString() : 'Reciente'}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <Badge variant="outline" className="text-gray-500 border-gray-300">
+                                  Pendiente
+                                </Badge>
+                              </div>
+                            )}
                           </div>
                         </div>
 
                         <div className="mt-4 flex justify-end gap-2 pt-4 border-t">
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200">
-                                <RotateCcw className="h-3 w-3 mr-2" />
-                                Reiniciar
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>¿Reiniciar cuestionario?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Se borrará el avance actual ({p.completedQuestions} preguntas). El estudiante comenzará desde cero.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteProgressMutation.mutate(p.id)}
-                                  className="bg-orange-600 hover:bg-orange-700"
-                                >
+                          {isStarted && q.progressId && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200">
+                                  <RotateCcw className="h-3 w-3 mr-2" />
                                   Reiniciar
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>¿Reiniciar cuestionario?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Se borrará el avance actual ({q.completedQuestions} preguntas). El estudiante comenzará desde cero.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteProgressMutation.mutate(q.progressId)}
+                                    className="bg-orange-600 hover:bg-orange-700"
+                                  >
+                                    Reiniciar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
 
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -478,7 +516,7 @@ function UserProgressDetails({ userId, username, onBack }: { userId: number, use
                               <AlertDialogHeader>
                                 <AlertDialogTitle className="text-red-600">¿Eliminar asignación?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Se eliminará el cuestionario "<strong>{quiz?.title}</strong>" y todo su progreso.
+                                  Se eliminará el cuestionario "<strong>{q.title}</strong>" y todo su progreso.
                                   <br />
                                   El estudiante ya no verá este cuestionario en su lista.
                                 </AlertDialogDescription>
@@ -486,7 +524,7 @@ function UserProgressDetails({ userId, username, onBack }: { userId: number, use
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => deleteAssignmentMutation.mutate({ userId, quizId: p.quizId })}
+                                  onClick={() => deleteAssignmentMutation.mutate({ userId, quizId: q.id })}
                                   className="bg-red-600 hover:bg-red-700"
                                 >
                                   Eliminar Definitivamente

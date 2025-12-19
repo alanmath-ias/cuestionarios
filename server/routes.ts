@@ -1589,6 +1589,25 @@ Ejemplo de formato:
     }
   });
 
+  // Quitar un quiz de un usuario
+  apiRouter.delete("/admin/users/quizzes", requireAdmin, async (req, res) => {
+    let { userId, quizId } = req.body;
+
+    // Fallback to query parameters if body is empty (common in some clients for DELETE)
+    if (!userId && req.query.userId) userId = parseInt(req.query.userId as string);
+    if (!quizId && req.query.quizId) quizId = parseInt(req.query.quizId as string);
+
+    if (!userId || !quizId) return res.status(400).json({ message: "Missing data" });
+
+    try {
+      await storage.removeQuizFromUser(userId, quizId);
+      res.status(204).end();
+    } catch (err) {
+      console.error("Error removing quiz:", err);
+      res.status(500).json({ message: "Error removing quiz" });
+    }
+  });
+
   // Eliminar usuario y todos sus datos asociados
   apiRouter.delete("/admin/users/:userId", requireAdmin, async (req, res) => {
     const userId = parseInt(req.params.userId);
@@ -1784,19 +1803,7 @@ Ejemplo de formato:
   });
 
 
-  // Quitar un quiz de un usuario
-  apiRouter.delete("/admin/users/quizzes", requireAdmin, async (req, res) => {
-    const { userId, quizId } = req.body;
-    if (!userId || !quizId) return res.status(400).json({ message: "Missing data" });
 
-    try {
-      await storage.removeQuizFromUser(userId, quizId);
-      res.status(204).end();
-    } catch (err) {
-      console.error("Error removing quiz:", err);
-      res.status(500).json({ message: "Error removing quiz" });
-    }
-  });
 
   // Suponiendo que estás usando Express en tu backend
 
@@ -2323,6 +2330,44 @@ Ejemplo de formato:
     } catch (error) {
       console.error("Error al cargar respuestas:", error);
       res.status(500).json({ error: "Error al cargar respuestas" });
+    }
+  });
+
+  // Get user categories
+  app.get("/api/users/:userId/categories", async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
+    try {
+      const categories = await storage.getCategoriesByUserId(userId);
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching user categories:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Update user categories (matching frontend expectation)
+  app.put("/api/users/:userId/categories", async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const { categoryIds } = req.body;
+    if (isNaN(userId) || !Array.isArray(categoryIds)) return res.status(400).json({ error: "Invalid input" });
+    try {
+      await storage.updateUserCategories(userId, categoryIds);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating user categories:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get all categories
+  app.get("/api/categories", async (req, res) => {
+    try {
+      const categories = await storage.getCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
