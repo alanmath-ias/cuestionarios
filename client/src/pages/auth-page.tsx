@@ -5,12 +5,12 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 //import { useNavigate } from 'react-router-dom';
-import { 
-  BookOpen, 
-  LineChart, 
-  ListChecks, 
-  Video, 
-  Rocket, 
+import {
+  BookOpen,
+  LineChart,
+  ListChecks,
+  Video,
+  Rocket,
   Award,
   BrainCircuit,
   Youtube,
@@ -33,7 +33,7 @@ interface User {
 export default function AuthPage() {
   const { toast } = useToast();
   const [_, setLocation] = useLocation();
-  
+
   const [showLoginForm, setShowLoginForm] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -62,12 +62,12 @@ export default function AuthPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       const normalizedUsername = username.toLowerCase();
-      await apiRequest('POST', '/api/auth/login', { 
-        username: normalizedUsername, 
-        password 
+      await apiRequest('POST', '/api/auth/login', {
+        username: normalizedUsername,
+        password
       });
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       setUsername('');
@@ -92,33 +92,33 @@ export default function AuthPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       const normalizedUsername = username.toLowerCase();
-      await apiRequest('POST', '/api/auth/register', { 
-        username: normalizedUsername, 
+      await apiRequest('POST', '/api/auth/register', {
+        username: normalizedUsername,
         password,
         name,
-        email 
+        email
       });
-      
+
       setRegisteredName(name);
       setUsername('');
       setPassword('');
       setName('');
       setEmail('');
-      
+
       toast({
         title: 'Registro exitoso',
         description: '¡Bienvenido a AlanMath!',
       });
-      
+
       setRegistrationSuccess(true);
       setShouldShowWelcome(true);
-      
+
       // Invalidamos la query pero no esperamos por ella
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      
+
     } catch (error) {
       console.error('Register error:', error);
       toast({
@@ -139,7 +139,7 @@ export default function AuthPage() {
     localStorage.removeItem('surveyFormData');
     localStorage.removeItem('completedTests');
     sessionStorage.removeItem('quizResult');
-    
+
     setAgeModalOpen(true);
   };
 
@@ -159,40 +159,23 @@ export default function AuthPage() {
             <h1 className="text-4xl font-bold text-primary mb-2">¡Bienvenid@ a AlanMath!</h1>
             <h2 className="text-2xl font-semibold">Hola {registeredName}</h2>
           </div>
-          
+
           <div className="space-y-6 text-lg">
             <div className="flex items-start gap-4">
               <BookOpen className="flex-shrink-0 mt-1 text-blue-500" size={24} />
               <p>
-                Aquí encontrarás Cuestionarios tipo Evaluación con los cuales podrás prepararte para tus exámenes de Matemáticas, Física y otras Áreas tanto del Colegio como de la Universidad.
+                Aquí encontrarás Cuestionarios tipo Evaluación para prepararte para tus exámenes.
+                <br />
+                <span className="text-base text-gray-600">
+                  A continuación, te haremos un breve recorrido para que aprendas a usar la plataforma.
+                </span>
               </p>
             </div>
-            
-            <div className="flex items-start gap-4">
-              <LineChart className="flex-shrink-0 mt-1 text-green-500" size={24} />
-              <p>
-                Además, si estás estudiando con AlanMath podrás ver el progreso de tus Cursos y las Actividades que te son asignadas para que pasito a pasito seas cada día mejor con estas hermosas Ciencias.
-              </p>
-            </div>
-            
-            <div className="flex items-start gap-4">
-              <ListChecks className="flex-shrink-0 mt-1 text-purple-500" size={24} />
-              <p>
-                Los Cuestionarios están organizados por Materias y tienes la posibilidad de ir a la sección de Entrenamiento, en donde encontrarás Cuestionarios con preguntas variadas de toda una Materia o de todo un Tema en particular que estés estudiando.
-              </p>
-            </div>
-            
-            <div className="flex items-start gap-4">
-              <Video className="flex-shrink-0 mt-1 text-red-500" size={24} />
-              <p>
-                Contarás también con los enlaces a los videos de AlanMath tanto para las materias completas, como para los temas en particular.
-              </p>
-            </div>
-            
+
             <div className="flex items-start gap-4">
               <BrainCircuit className="flex-shrink-0 mt-1 text-yellow-500" size={24} />
               <p className="font-semibold">
-                Diviértete aprendiendo y no olvides que... 
+                Diviértete aprendiendo y no olvides que...
                 <br />
                 <span className="text-primary flex items-center gap-2 mt-2">
                   <Award className="inline" /> Si Yo lo puedo hacer, Tú también lo puedes hacer!
@@ -200,7 +183,7 @@ export default function AuthPage() {
               </p>
             </div>
           </div>
-          
+
           <div className="text-center mt-10">
             <Button
               size="lg"
@@ -226,7 +209,7 @@ export default function AuthPage() {
           <h1 className="text-4xl font-bold text-primary mb-2">AlanMath</h1>
           <p className="text-gray-600">Plataforma de Entrenamiento en Matemáticas</p>
         </div>
-        
+
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="flex justify-center mb-6">
             <div className="flex space-x-2">
@@ -244,37 +227,37 @@ export default function AuthPage() {
               </Button>
 
               <Button onClick={handleDiagnosticClick}>
-              📊Diagnóstico Inicial
-      </Button>
+                📊Diagnóstico Inicial
+              </Button>
 
-      <Dialog open={ageModalOpen} onOpenChange={setAgeModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Selecciona tu grupo de edad</DialogTitle>
-          </DialogHeader>
-          <div className="flex gap-4 mt-4">
-            <Button 
-              onClick={() => handleAgeSelection(true)}
-              className="w-full"
-            >
-              7 a 11 años
-            </Button>
-            <Button 
-              onClick={() => handleAgeSelection(false)}
-              className="w-full"
-            >
-              12 a 16 años
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+              <Dialog open={ageModalOpen} onOpenChange={setAgeModalOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Selecciona tu grupo de edad</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex gap-4 mt-4">
+                    <Button
+                      onClick={() => handleAgeSelection(true)}
+                      className="w-full"
+                    >
+                      7 a 11 años
+                    </Button>
+                    <Button
+                      onClick={() => handleAgeSelection(false)}
+                      className="w-full"
+                    >
+                      12 a 16 años
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
 
 
 
 
             </div>
           </div>
-          
+
           {showLoginForm ? (
             <form onSubmit={handleLogin}>
               <div className="mb-4">
@@ -387,41 +370,41 @@ export default function AuthPage() {
           {/* Sección de redes sociales */}
           <div className="mt-8 pt-6 border-t border-gray-200">
             <div className="flex justify-center space-x-6">
-              <a 
-                href="https://youtube.com/alanmath" 
-                target="_blank" 
+              <a
+                href="https://youtube.com/alanmath"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-red-500"
               >
                 <Youtube className="h-6 w-6" />
               </a>
-              <a 
-                href="https://instagram.com/alanmath" 
-                target="_blank" 
+              <a
+                href="https://instagram.com/alanmath"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-pink-600"
               >
                 <Instagram className="h-6 w-6" />
               </a>
-              <a 
-                href="https://facebook.com/alanmath" 
-                target="_blank" 
+              <a
+                href="https://facebook.com/alanmath"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-blue-600"
               >
                 <Facebook className="h-6 w-6" />
               </a>
-              <a 
-                href="https://tiktok.com/@alanmath" 
-                target="_blank" 
+              <a
+                href="https://tiktok.com/@alanmath"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-black"
               >
                 <FaTiktok className="h-6 w-6" />
               </a>
-              <a 
-                href="https://alanmath.com" 
-                target="_blank" 
+              <a
+                href="https://alanmath.com"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-primary"
               >

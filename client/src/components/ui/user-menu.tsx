@@ -8,10 +8,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { startTour } from '@/lib/tour';
 //import { useNavigate } from "wouter";
 
 
@@ -29,7 +30,7 @@ interface UserMenuProps {
 
 export function UserMenu({ user }: UserMenuProps) {
   const { toast } = useToast();
-  const [_, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
 
   // Get user initials
@@ -41,31 +42,31 @@ export function UserMenu({ user }: UserMenuProps) {
       .toUpperCase();
   };
 
-//chat gpt cierra sesion completamente
-const handleLogout = async () => {
-  try {
-    await apiRequest("POST", "/api/auth/logout", {});
+  //chat gpt cierra sesion completamente
+  const handleLogout = async () => {
+    try {
+      await apiRequest("POST", "/api/auth/logout", {});
 
-    // Limpia toda la caché de React Query
-    queryClient.clear();
+      // Limpia toda la caché de React Query
+      queryClient.clear();
 
-    toast({
-      title: "Sesión cerrada",
-      description: "Has cerrado sesión correctamente.",
-    });
+      toast({
+        title: "Sesión cerrada",
+        description: "Has cerrado sesión correctamente.",
+      });
 
-    // Redirige al login
-    setLocation('/auth');
-  } catch (error) {
-    console.error("Error cerrando sesión:", error);
-    toast({
-      title: "Error",
-      description: "No se pudo cerrar sesión.",
-      variant: "destructive",
-    });
-  }
-};
-// fin chat gpt cierra sesion completamente
+      // Redirige al login
+      setLocation('/auth');
+    } catch (error) {
+      console.error("Error cerrando sesión:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo cerrar sesión.",
+        variant: "destructive",
+      });
+    }
+  };
+  // fin chat gpt cierra sesion completamente
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -82,7 +83,7 @@ const handleLogout = async () => {
         <DropdownMenuItem onClick={() => setLocation('/profile')}>
           Mi Perfil
         </DropdownMenuItem>
-        
+
         {user.role === 'admin' ? (
           <DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>
             Quizzes Gratuitos
@@ -93,11 +94,11 @@ const handleLogout = async () => {
               Dashboard
             </DropdownMenuItem>
             {/*<DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>*/}
-              {/*Quizzes Gratuitos*/}
+            {/*Quizzes Gratuitos*/}
             {/*</DropdownMenuItem>*/}
           </>
         )}
-        
+
         {user.role === 'admin' && (
           <>
             <DropdownMenuSeparator />
@@ -120,12 +121,17 @@ const handleLogout = async () => {
               Registrar Padres
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLocation('/admin/Calificar')}>
-             Calificar
+              Calificar
             </DropdownMenuItem>
-            
+
 
           </>
         )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => startTour(location)}>
+          <HelpCircle className="mr-2 h-4 w-4" />
+          <span>Ayuda</span>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           Cerrar Sesión

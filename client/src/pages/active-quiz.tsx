@@ -3,7 +3,8 @@ import { useParams, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, HelpCircle } from "lucide-react";
+import { startActiveQuizTour } from "@/lib/tour";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useTimer } from "@/hooks/use-timer";
@@ -199,6 +200,20 @@ const ActiveQuiz = () => {
       });
     }
   }, [quiz, session, progress, quizId]);
+
+  // Auto-start tour for new users
+  useEffect(() => {
+    if (!loadingQuiz && !loadingQuestions && session?.userId) {
+      const tourKey = `tour_seen_active_quiz_${session.userId}`;
+      const hasSeenTour = localStorage.getItem(tourKey);
+      if (!hasSeenTour) {
+        setTimeout(() => {
+          startActiveQuizTour();
+          localStorage.setItem(tourKey, 'true');
+        }, 1000);
+      }
+    }
+  }, [loadingQuiz, loadingQuestions, session]);
 
   const handleSelectAnswer = (answerId: number) => {
     if (answeredQuestions[currentQuestionIndex]) return;
@@ -430,11 +445,13 @@ const ActiveQuiz = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold">{quiz?.title}</h1>
-          <div className="flex items-center text-gray-500 mt-1">
-            <Timer className="h-4 w-4 mr-1" />
-            <span className={`font-mono ${elapsedTime > (quiz?.timeLimit || 0) * 0.9 ? 'text-red-500' : ''}`}>
-              {formattedTime()}
-            </span>
+          <div className="flex items-center gap-2">
+            <div id="tour-timer" className="flex items-center text-gray-500 mt-1">
+              <Timer className="h-4 w-4 mr-1" />
+              <span className={`font-mono ${elapsedTime > (quiz?.timeLimit || 0) * 0.9 ? 'text-red-500' : ''}`}>
+                {formattedTime()}
+              </span>
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-lg shadow-sm border">
@@ -590,6 +607,7 @@ const ActiveQuiz = () => {
         </Button>
 
         <Button
+          id="tour-hint-button"
           variant="outline"
           size="sm"
           className="h-9 border-yellow-500 text-yellow-600 hover:bg-yellow-50"
@@ -615,7 +633,7 @@ const ActiveQuiz = () => {
         </Button>
       </div>
 
-      <div className="mt-6">
+      <div id="tour-quiz-navigation" className="mt-6">
         <QuestionProgress
           totalQuestions={questions?.length || 0}
           completedQuestions={Object.keys(answeredQuestions).length}

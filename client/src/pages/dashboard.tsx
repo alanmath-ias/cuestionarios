@@ -29,8 +29,10 @@ import {
   Target,
   Globe,
   BarChart3,
-  Lightbulb
+  Lightbulb,
+  HelpCircle
 } from "lucide-react";
+import { startDashboardTour } from "@/lib/tour";
 import { Link, useLocation } from "wouter";
 import { useEffect, useRef, useState } from "react";
 import VideoEmbed from './VideoEmbed';
@@ -323,7 +325,21 @@ export default function UserDashboard() {
     }
   }, [mathTipData, toast]);
 
+  const isLoading = loadingUser || loadingCategories || loadingQuizzes;
 
+  // Auto-start tour for new users
+  useEffect(() => {
+    if (!isLoading && currentUser?.id) {
+      const tourKey = `tour_seen_dashboard_${currentUser.id}`;
+      const hasSeenTour = localStorage.getItem(tourKey);
+      if (!hasSeenTour) {
+        setTimeout(() => {
+          startDashboardTour();
+          localStorage.setItem(tourKey, 'true');
+        }, 1000);
+      }
+    }
+  }, [isLoading, currentUser]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -400,11 +416,13 @@ export default function UserDashboard() {
   return (
     <div className="container mx-auto p-4 max-w-7xl space-y-8">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div id="tour-welcome" className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-            Hola, <span className="text-indigo-600">{currentUser?.username || 'Estudiante'}</span> 👋
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+              Hola, <span className="text-indigo-600">{currentUser?.username || 'Estudiante'}</span> 👋
+            </h1>
+          </div>
           <p className="text-gray-500 mt-1">Aquí tienes el resumen de tu progreso hoy.</p>
           <div className="mt-2 inline-flex items-center bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium border border-yellow-200">
             <Lightbulb className="w-4 h-4 mr-2" />
@@ -480,7 +498,7 @@ export default function UserDashboard() {
           )}
 
           {/* 3. Pending Activities (Yellow, Play Icon) */}
-          <div className="rounded-3xl bg-gradient-to-br from-yellow-50 to-orange-50 p-5 h-[300px] flex flex-col border border-yellow-100">
+          <div id="tour-pending" className="rounded-3xl bg-gradient-to-br from-yellow-50 to-orange-50 p-5 h-[300px] flex flex-col border border-yellow-100">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg text-yellow-900 flex items-center gap-2">
                 <PlayCircle className="w-5 h-5 text-orange-600" /> Actividades Pendientes ({pendingQuizzes.length})
@@ -536,7 +554,7 @@ export default function UserDashboard() {
           </div>
 
           {/* 4. Materias Disponibles (White) */}
-          <div className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 h-[320px] flex flex-col">
+          <div id="tour-quiz-list" className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 h-[320px] flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-indigo-500" /> Materias Disponibles
@@ -579,7 +597,7 @@ export default function UserDashboard() {
         {/* Right Column: Sidebar */}
         <div className="space-y-4">
           {/* Progress Card */}
-          <div className="h-auto min-h-[220px]">
+          <div id="tour-stats" className="h-auto min-h-[220px]">
             <StatCard
               title="Progreso General"
               value={`${progressPercentage.toFixed(0)}%`}

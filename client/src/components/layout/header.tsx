@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { UserMenu } from '@/components/ui/user-menu';
-import { Menu as MenuIcon, X as CloseIcon, Youtube, Instagram, Globe } from 'lucide-react';
+import { Menu as MenuIcon, X as CloseIcon, Youtube, Instagram, Globe, HelpCircle } from 'lucide-react';
 import { FaTiktok, FaFacebook } from 'react-icons/fa';
 import logo from '@/assets/images/logo.png';
 import { GlobalSearch } from '@/components/ui/global-search';
+import { startTour } from '@/lib/tour';
 
 interface User {
   id: number;
@@ -21,6 +22,7 @@ interface HeaderProps {
 
 export function Header({ user, pendingCount }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [location] = useLocation();
   const isAdmin = user?.role === 'admin';
 
   const socialLinks = {
@@ -89,6 +91,16 @@ export function Header({ user, pendingCount }: HeaderProps) {
 
         {/* Redes sociales (versión desktop) y menú de usuario */}
         <div className="flex items-center gap-2 md:gap-4">
+
+          {/* Botón de Ayuda (Visible siempre) */}
+          <button
+            onClick={() => startTour(location)}
+            className="text-white hover:text-white/80 focus:outline-none"
+            title="Ayuda"
+          >
+            <HelpCircle size={24} />
+          </button>
+
           {/* Buscador Global - Visible en móvil */}
           <div className="block">
             <GlobalSearch isAdmin={isAdmin} />
