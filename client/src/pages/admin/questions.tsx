@@ -18,6 +18,7 @@ import { Question, Answer, Quiz } from "@/types/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useRoute } from "wouter";
+import { ContentRenderer } from "@/components/ContentRenderer";
 
 const questionTypeOptions = [
   { value: "multiple_choice", label: "Opción múltiple" },
@@ -49,7 +50,7 @@ export default function QuestionsAdmin() {
   const { toast } = useToast();
   const [, params] = useRoute("/admin/quizzes/:quizId/questions");
   const quizId = params?.quizId;
-  
+
   const [editingId, setEditingId] = useState<number | null>(null);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [newAnswer, setNewAnswer] = useState({ content: "", isCorrect: false, explanation: "" });
@@ -91,7 +92,7 @@ export default function QuestionsAdmin() {
         answers: values.type === 'multiple_choice' ? answers : [],
         imageUrl: values.imageUrl || null,
       };
-      
+
       const response = await fetch("/api/admin/questions", {
         method: "POST",
         headers: {
@@ -99,18 +100,18 @@ export default function QuestionsAdmin() {
         },
         body: JSON.stringify(payload),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || errorData.error || "Error al crear la pregunta");
       }
-      
+
       return response.json();
     },
     onSuccess: (data: Question) => {
       if (answers.length > 0) {
         Promise.all(
-          answers.map(answer => 
+          answers.map(answer =>
             fetch("/api/admin/answers", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -158,11 +159,11 @@ export default function QuestionsAdmin() {
       const response = await fetch(`/api/admin/questions/${id}`, {
         method: "DELETE"
       });
-      
+
       if (!response.ok) {
         throw new Error("Error al eliminar la pregunta");
       }
-      
+
       return response;
     },
     onSuccess: () => {
@@ -239,8 +240,8 @@ export default function QuestionsAdmin() {
       return;
     }
 
-    setAnswers([...answers, { 
-      ...newAnswer, 
+    setAnswers([...answers, {
+      ...newAnswer,
       id: Math.floor(Math.random() * -1000),
       questionId: editingId || 0
     }]);
@@ -283,15 +284,15 @@ export default function QuestionsAdmin() {
           </Button>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
           <Card className="sticky top-4">
             <CardHeader className="bg-muted/50">
               <CardTitle>{editingId ? "Editar Pregunta" : "Nueva Pregunta"}</CardTitle>
               <CardDescription>
-                {editingId 
-                  ? "Actualiza los detalles de la pregunta" 
+                {editingId
+                  ? "Actualiza los detalles de la pregunta"
                   : "Añade una nueva pregunta al cuestionario"}
               </CardDescription>
             </CardHeader>
@@ -306,7 +307,7 @@ export default function QuestionsAdmin() {
                     )}
                   </TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="question" className="pt-4">
                   <Form {...form}>
                     <form className="space-y-4">
@@ -317,17 +318,17 @@ export default function QuestionsAdmin() {
                           <FormItem>
                             <FormLabel>Enunciado de la pregunta</FormLabel>
                             <FormControl>
-                              <Textarea 
-                                placeholder="Escribe aquí el enunciado de la pregunta..." 
+                              <Textarea
+                                placeholder="Escribe aquí el enunciado de la pregunta..."
                                 rows={3}
-                                {...field} 
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="imageUrl"
@@ -384,7 +385,7 @@ export default function QuestionsAdmin() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
@@ -413,7 +414,7 @@ export default function QuestionsAdmin() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name="points"
@@ -428,7 +429,7 @@ export default function QuestionsAdmin() {
                           )}
                         />
                       </div>
-                      
+
                       {form.watch("type") === "formula" && (
                         <FormField
                           control={form.control}
@@ -451,7 +452,7 @@ export default function QuestionsAdmin() {
                           )}
                         />
                       )}
-                      
+
                       {form.watch("type") === "multiple_choice" && (
                         <div className="pt-2">
                           <Button
@@ -466,12 +467,12 @@ export default function QuestionsAdmin() {
                     </form>
                   </Form>
                 </TabsContent>
-                
+
                 <TabsContent value="answers" className="pt-4">
                   <div className="space-y-4">
                     <div className="bg-muted rounded-lg p-4">
                       <h3 className="font-medium mb-3">Añadir respuesta</h3>
-                      
+
                       <div className="space-y-3">
                         <div>
                           <label className="text-sm font-medium">Contenido</label>
@@ -481,7 +482,7 @@ export default function QuestionsAdmin() {
                             placeholder="Escribe aquí la respuesta..."
                           />
                         </div>
-                        
+
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="is-correct"
@@ -495,7 +496,7 @@ export default function QuestionsAdmin() {
                             Respuesta correcta
                           </label>
                         </div>
-                        
+
                         <div>
                           <label className="text-sm font-medium">Explicación (opcional)</label>
                           <Textarea
@@ -505,7 +506,7 @@ export default function QuestionsAdmin() {
                             rows={2}
                           />
                         </div>
-                        
+
                         <Button
                           type="button"
                           onClick={handleAddAnswer}
@@ -516,7 +517,7 @@ export default function QuestionsAdmin() {
                         </Button>
                       </div>
                     </div>
-                    
+
                     {answers.length > 0 ? (
                       <div>
                         <h3 className="font-medium mb-2">Respuestas configuradas</h3>
@@ -560,7 +561,7 @@ export default function QuestionsAdmin() {
                         <p className="text-muted-foreground">No hay respuestas configuradas</p>
                       </div>
                     )}
-                    
+
                     <div className="flex justify-between pt-2">
                       <Button
                         type="button"
@@ -588,21 +589,21 @@ export default function QuestionsAdmin() {
                   </div>
                 </TabsContent>
               </Tabs>
-              
+
               {currentTab === "question" && (
                 <div className="flex justify-end gap-2 pt-4">
                   {editingId && (
-                    <Button 
-                      type="button" 
-                      variant="outline" 
+                    <Button
+                      type="button"
+                      variant="outline"
                       onClick={resetFormAndState}
                     >
                       Cancelar
                     </Button>
                   )}
                   {form.watch("type") !== "multiple_choice" && (
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       disabled={createMutation.isPending}
                       onClick={() => form.handleSubmit(onSubmit)()}
                     >
@@ -615,7 +616,7 @@ export default function QuestionsAdmin() {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="md:col-span-2">
           <Card>
             <CardHeader className="bg-muted/50">
@@ -641,7 +642,7 @@ export default function QuestionsAdmin() {
                               <Badge variant="secondary">{getDifficultyName(question.difficulty)}</Badge>
                               <Badge variant="default">{question.points} puntos</Badge>
                             </div>
-                            <p className="font-medium">{question.content}</p>
+                            <ContentRenderer content={question.content} className="font-medium" />
                             {question.imageUrl && (
                               <div className="mt-2">
                                 <p className="text-sm text-muted-foreground">
@@ -651,8 +652,8 @@ export default function QuestionsAdmin() {
                             )}
                           </div>
                           <div className="flex space-x-2 ml-4">
-                            <Button 
-                              variant="destructive" 
+                            <Button
+                              variant="destructive"
                               size="sm"
                               onClick={() => handleDelete(question.id)}
                               title="Eliminar pregunta"
