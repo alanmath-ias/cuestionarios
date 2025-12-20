@@ -971,10 +971,44 @@ Formato: Solo el texto del tip con el ejemplo.`;
             progressId: existingProgress.id
           });
 
-          // Recharge Hint Credits (+1)
-          const user = await storage.getUser(userId);
-          if (user) {
-            await storage.updateUserHintCredits(userId, user.hintCredits + 1);
+          // Calculate credits based on score and mode
+          let creditsEarned = 0;
+          const score = progressData.score || 0;
+
+          if (mode === 'mini') {
+            if (score > 8) creditsEarned = 2;
+          } else {
+            // Standard
+            if (score >= 9) creditsEarned = 3;
+            else if (score >= 8) creditsEarned = 2;
+            else if (score >= 7) creditsEarned = 1;
+          }
+
+          // Check for "All Tasks Completed" bonus
+          const assignedQuizzes = await storage.getQuizzesByUserId(userId);
+          const userProgress = await storage.getStudentProgress(userId);
+
+          // Check if there are any quizzes that are NOT completed
+          // We just updated the current quiz to completed, so it should be reflected in userProgress if we re-fetched, 
+          // but userProgress here is from the *start* of the request (if we fetched it). 
+          // Actually we didn't fetch all progress, only specific progress.
+          // So we need to fetch all progress now to be sure.
+          const allUserProgress = await storage.getStudentProgress(userId);
+
+          const hasPendingTasks = assignedQuizzes.some(q => {
+            const p = allUserProgress.find(prog => prog.quizId === q.id);
+            return !p || p.status !== 'completed';
+          });
+
+          if (!hasPendingTasks) {
+            creditsEarned += 5;
+          }
+
+          if (creditsEarned > 0) {
+            const user = await storage.getUser(userId);
+            if (user) {
+              await storage.updateUserHintCredits(userId, user.hintCredits + creditsEarned);
+            }
           }
         }
 
@@ -993,10 +1027,37 @@ Formato: Solo el texto del tip con el ejemplo.`;
           progressId: newProgress.id
         });
 
-        // Recharge Hint Credits (+1)
-        const user = await storage.getUser(userId);
-        if (user) {
-          await storage.updateUserHintCredits(userId, user.hintCredits + 1);
+        // Calculate credits based on score and mode
+        let creditsEarned = 0;
+        const score = progressData.score || 0;
+
+        if (mode === 'mini') {
+          if (score > 8) creditsEarned = 2;
+        } else {
+          // Standard
+          if (score >= 9) creditsEarned = 3;
+          else if (score >= 8) creditsEarned = 2;
+          else if (score >= 7) creditsEarned = 1;
+        }
+
+        // Check for "All Tasks Completed" bonus
+        const assignedQuizzes = await storage.getQuizzesByUserId(userId);
+        const allUserProgress = await storage.getStudentProgress(userId);
+
+        const hasPendingTasks = assignedQuizzes.some(q => {
+          const p = allUserProgress.find(prog => prog.quizId === q.id);
+          return !p || p.status !== 'completed';
+        });
+
+        if (!hasPendingTasks) {
+          creditsEarned += 5;
+        }
+
+        if (creditsEarned > 0) {
+          const user = await storage.getUser(userId);
+          if (user) {
+            await storage.updateUserHintCredits(userId, user.hintCredits + creditsEarned);
+          }
         }
       }
 

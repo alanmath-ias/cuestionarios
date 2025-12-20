@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { Category } from "@/types/types";
+import { Category, Quiz } from "@/types/types";
 import { UserQuiz } from "@/types/types";
 import {
   BookOpen,
@@ -30,7 +30,8 @@ import {
   Globe,
   BarChart3,
   Lightbulb,
-  HelpCircle
+  HelpCircle,
+  Search
 } from "lucide-react";
 import { startDashboardTour } from "@/lib/tour";
 import { Link, useLocation } from "wouter";
@@ -40,6 +41,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { ContentRenderer } from "@/components/ContentRenderer";
+import { Input } from "@/components/ui/input";
 
 interface QuizWithFeedback extends UserQuiz {
   progressId?: string;
@@ -93,6 +95,12 @@ async function fetchQuizFeedback(progressId: string) {
   if (!progressId) return null;
   const res = await fetch(`/api/quiz-feedback/${progressId}`);
   if (!res.ok) return null;
+  return res.json();
+}
+
+async function fetchCategoryQuizzes(categoryId: number) {
+  const res = await fetch(`/api/categories/${categoryId}/quizzes`);
+  if (!res.ok) throw new Error("Error al obtener cuestionarios de la categoría");
   return res.json();
 }
 
@@ -248,6 +256,12 @@ export default function UserDashboard() {
   const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | null>(null);
   const [showPendingDialog, setShowPendingDialog] = useState(false);
   const [miniQuizId, setMiniQuizId] = useState<number | null>(null);
+
+  // New states for enhancements
+  const [showCreditsInfo, setShowCreditsInfo] = useState(false);
+  const [selectedCategoryForDetails, setSelectedCategoryForDetails] = useState<Category | null>(null);
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
+
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -282,6 +296,13 @@ export default function UserDashboard() {
     queryKey: ["user-quizzes"],
     queryFn: fetchQuizzes,
     ...queryOptions,
+  });
+
+  // Fetch quizzes for selected category
+  const { data: categoryQuizzes, isLoading: loadingCategoryQuizzes } = useQuery<Quiz[]>({
+    queryKey: ["category-quizzes", selectedCategoryForDetails?.id],
+    queryFn: () => selectedCategoryForDetails ? fetchCategoryQuizzes(selectedCategoryForDetails.id) : Promise.resolve([]),
+    enabled: !!selectedCategoryForDetails,
   });
 
   const { data: alerts } = useQuery({
@@ -389,7 +410,13 @@ export default function UserDashboard() {
       setLocation(`/quiz/${miniQuizId}?mode=mini`);
       setMiniQuizId(null);
       setShowPendingDialog(false); // Close pending dialog if open
+      setSelectedCategoryForDetails(null); // Close category details if open
     }
+  };
+
+  const handleCategoryClick = (category: Category) => {
+    setSelectedCategoryForDetails(category);
+    setCategorySearchQuery("");
   };
 
   if (loadingUser || loadingCategories || loadingQuizzes) {
@@ -424,6 +451,11 @@ export default function UserDashboard() {
     return acc;
   }, {} as Record<string, number>);
 
+  // Filter quizzes for category details
+  const filteredCategoryQuizzes = categoryQuizzes?.filter(quiz =>
+    quiz.title.toLowerCase().includes(categorySearchQuery.toLowerCase())
+  ) || [];
+
   return (
     <div className="container mx-auto p-4 max-w-7xl space-y-8">
       {/* Header Section */}
@@ -435,7 +467,10 @@ export default function UserDashboard() {
             </h1>
           </div>
           <p className="text-gray-500 mt-1">Aquí tienes el resumen de tu progreso hoy.</p>
-          <div className="mt-2 inline-flex items-center bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium border border-yellow-200">
+          <div
+            className="mt-2 inline-flex items-center bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium border border-yellow-200 cursor-pointer hover:bg-yellow-200 transition-colors"
+            onClick={() => setShowCreditsInfo(true)}
+          >
             <Lightbulb className="w-4 h-4 mr-2" />
             {currentUser?.hintCredits ?? 0} Créditos de Pistas
           </div>
@@ -575,14 +610,21 @@ export default function UserDashboard() {
             <ScrollArea className="flex-1 -mr-3 pr-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {categories?.map((category) => (
-                  <div key={category.id} className="group bg-gray-50 rounded-xl p-3 hover:bg-gray-100 transition-all border border-transparent hover:border-gray-200 flex flex-col justify-between h-full min-h-[100px]">
+                  <div
+                    key={category.id}
+                    className="group bg-gray-50 rounded-xl p-3 hover:bg-gray-100 transition-all border border-transparent hover:border-gray-200 flex flex-col justify-between h-full min-h-[100px] cursor-pointer"
+                    onClick={() => handleCategoryClick(category)}
+                  >
                     <div className="flex items-start justify-between mb-2">
                       <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center text-indigo-600 shadow-sm">
                         <BookOpen className="w-4 h-4" />
                       </div>
                       {category.youtubeLink && (
                         <button
-                          onClick={() => playVideo(category.youtubeLink!)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            playVideo(category.youtubeLink!);
+                          }}
                           className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded-full flex items-center gap-1 transition-colors"
                         >
                           <Youtube className="w-3 h-3" /> Video
@@ -592,11 +634,13 @@ export default function UserDashboard() {
 
                     <div>
                       <h4 className="font-bold text-sm text-gray-900 group-hover:text-indigo-700 transition-colors mb-2">{category.name}</h4>
-                      <Link href={`/training/${category.id}`} className="w-full">
-                        <Button size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-8 text-xs">
-                          Entrenamiento
-                        </Button>
-                      </Link>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Link href={`/training/${category.id}`} className="w-full">
+                          <Button size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-8 text-xs">
+                            Entrenamiento
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -795,6 +839,156 @@ export default function UserDashboard() {
               Sí, iniciar versión Mini
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Credits Info Dialog */}
+      <Dialog open={showCreditsInfo} onOpenChange={setShowCreditsInfo}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-indigo-600">
+              <Lightbulb className="w-6 h-6" />
+              Créditos de Pistas
+            </DialogTitle>
+            <DialogDescription>
+              Descubre cómo funcionan los créditos en AlanMath.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+              <h4 className="font-semibold text-indigo-900 mb-2 flex items-center gap-2">
+                <HelpCircle className="w-4 h-4" /> ¿Para qué sirven?
+              </h4>
+              <p className="text-sm text-indigo-800">
+                Los créditos te permiten solicitar pistas cuando estés atascado en una pregunta difícil.
+                <br />
+                <span className="font-medium mt-1 block">
+                  *Hay dos tipos de pistas, la Pista Regular te cuesta 1 Crédito, la Súper Pista te cuesta 2 Créditos.
+                </span>
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="font-semibold text-gray-800">¿Cómo conseguir Créditos?</h4>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                  <span><strong>Cuestionarios Largos:</strong> ¡Tu esfuerzo tiene recompensa! Obtén 1 crédito si sacas entre 7 y 8, 2 créditos entre 8 y 9, ¡y 3 créditos si logras más de 9!</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                  <span><strong>Mini Cuestionarios:</strong> Si obtienes más de 8 puntos, te llevas 2 créditos.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                  <span><strong>Tareas Completas:</strong> Terminar todas tus actividades pendientes te da 5 créditos.</span>
+                </li>
+              </ul>
+              <p className="text-sm text-indigo-800 mt-4 pt-3 border-t border-indigo-100 font-medium">
+                Contacta al equipo AlanMath para que además puedas intercambiar Créditos por clases en vivo.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setShowCreditsInfo(false)} className="w-full bg-indigo-600 hover:bg-indigo-700">
+              ¡Entendido!
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category Details Dialog (All Quizzes) */}
+      <Dialog open={!!selectedCategoryForDetails} onOpenChange={(open) => !open && setSelectedCategoryForDetails(null)}>
+        <DialogContent className="sm:max-w-2xl h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <div className="p-6 pb-2 border-b">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-2xl">
+                <BookOpen className="w-6 h-6 text-indigo-600" />
+                {selectedCategoryForDetails?.name}
+              </DialogTitle>
+              <DialogDescription>
+                Explora todos los cuestionarios disponibles en esta materia.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-4 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Buscar cuestionario..."
+                className="pl-9 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
+                value={categorySearchQuery}
+                onChange={(e) => setCategorySearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <ScrollArea className="flex-1 p-6 pt-2">
+            {loadingCategoryQuizzes ? (
+              <div className="flex justify-center items-center h-40">
+                <Spinner className="h-8 w-8 text-indigo-600" />
+              </div>
+            ) : filteredCategoryQuizzes.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3">
+                {filteredCategoryQuizzes.map((quiz) => (
+                  <div
+                    key={quiz.id}
+                    className="group flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all"
+                  >
+                    <div className="flex-1 min-w-0 mr-4">
+                      <h4 className="font-semibold text-gray-900 truncate">{quiz.title}</h4>
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{quiz.description}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wide border ${quiz.difficulty === 'basic' ? 'bg-green-50 text-green-700 border-green-100' :
+                          quiz.difficulty === 'intermediate' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                            'bg-red-50 text-red-700 border-red-100'
+                          }`}>
+                          {quiz.difficulty === 'basic' ? 'Básico' : quiz.difficulty === 'intermediate' ? 'Intermedio' : 'Avanzado'}
+                        </span>
+                        <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                          <Target className="w-3 h-3" /> {quiz.totalQuestions} preguntas
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                        onClick={() => {
+                          setLocation(`/quiz/${quiz.id}`);
+                          setSelectedCategoryForDetails(null);
+                        }}
+                      >
+                        Iniciar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                        onClick={(e) => handleMiniStart(e, quiz.id)}
+                      >
+                        Mini
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64 text-center text-gray-400">
+                <Search className="w-12 h-12 mb-3 opacity-20" />
+                <p className="font-medium">No se encontraron cuestionarios</p>
+                <p className="text-sm">Intenta con otra búsqueda o selecciona otra materia.</p>
+              </div>
+            )}
+          </ScrollArea>
+
+          <div className="p-4 border-t bg-gray-50 flex justify-end">
+            <Button variant="outline" onClick={() => setSelectedCategoryForDetails(null)}>
+              Cerrar
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
