@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
-import { Search, User, FileText, Loader2, X } from 'lucide-react';
+import { Search, User, FileText, Loader2, X, CheckCircle2, AlertTriangle, Ban } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { QuizDetailsDialog } from '@/components/dialogs/QuizDetailsDialog';
 
 // Simple debounce hook implementation
 function useDebounceValue<T>(value: T, delay: number): T {
@@ -27,6 +28,7 @@ export function GlobalSearch({ isAdmin }: GlobalSearchProps) {
     const [_, navigate] = useLocation();
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const [selectedQuiz, setSelectedQuiz] = useState<any>(null);
 
     // Close on click outside
     useEffect(() => {
@@ -72,14 +74,18 @@ export function GlobalSearch({ isAdmin }: GlobalSearchProps) {
     const isLoading = isLoadingUsers || isLoadingQuizzes;
     const hasResults = (userResults?.length > 0) || (quizResults?.length > 0);
 
-    const handleSelect = (type: 'user' | 'quiz', id: number) => {
+    const handleSelect = (type: 'user' | 'quiz', item: any) => {
         setIsExpanded(false);
         setQuery('');
         if (type === 'user') {
             // Navigate to users page with highlight param
-            navigate(`/admin/users?highlight=${id}`);
+            navigate(`/admin/users?highlight=${item.id}`);
         } else {
-            navigate(`/quiz/${id}`);
+            if (item.userStatus === 'completed') {
+                setSelectedQuiz(item);
+            } else {
+                navigate(`/quiz/${item.id}`);
+            }
         }
     };
 
@@ -134,7 +140,7 @@ export function GlobalSearch({ isAdmin }: GlobalSearchProps) {
                                         <button
                                             key={`user-${user.id}`}
                                             className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors"
-                                            onClick={() => handleSelect('user', user.id)}
+                                            onClick={() => handleSelect('user', user)}
                                         >
                                             <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 shrink-0">
                                                 <User className="h-4 w-4" />
@@ -153,27 +159,50 @@ export function GlobalSearch({ isAdmin }: GlobalSearchProps) {
                                     <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-slate-50">
                                         Cuestionarios
                                     </div>
-                                    {quizResults.map((quiz: any) => (
-                                        <button
-                                            key={`quiz-${quiz.id}`}
-                                            className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors"
-                                            onClick={() => handleSelect('quiz', quiz.id)}
-                                        >
-                                            <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 shrink-0">
-                                                <FileText className="h-4 w-4" />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-medium text-slate-900 truncate">{quiz.title}</p>
-                                                <p className="text-xs text-muted-foreground truncate">{quiz.description}</p>
-                                            </div>
-                                        </button>
-                                    ))}
+                                    {quizResults.map((quiz: any) => {
+                                        let StatusIcon = FileText;
+                                        let statusColor = "text-indigo-700 bg-indigo-100";
+
+                                        if (quiz.userStatus === 'completed') {
+                                            StatusIcon = CheckCircle2;
+                                            statusColor = "text-green-600 bg-green-100";
+                                        } else if (quiz.userStatus === 'pending') {
+                                            StatusIcon = AlertTriangle;
+                                            statusColor = "text-yellow-600 bg-yellow-100";
+                                        } else if (quiz.userStatus === 'optional') {
+                                            StatusIcon = Ban;
+                                            statusColor = "text-gray-400 bg-gray-100 opacity-50";
+                                        }
+
+                                        return (
+                                            <button
+                                                key={`quiz-${quiz.id}`}
+                                                className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                                                onClick={() => handleSelect('quiz', quiz)}
+                                            >
+                                                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center shrink-0", statusColor)}>
+                                                    <StatusIcon className="h-4 w-4" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-slate-900 truncate">{quiz.title}</p>
+                                                    <p className="text-xs text-muted-foreground truncate">{quiz.description}</p>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </>
                     )}
                 </div>
             )}
+
+
+            <QuizDetailsDialog
+                open={!!selectedQuiz}
+                onOpenChange={(open) => !open && setSelectedQuiz(null)}
+                quiz={selectedQuiz}
+            />
         </div>
     );
 }

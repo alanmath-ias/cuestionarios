@@ -17,7 +17,7 @@ import {
   CheckCircle2,
   ClipboardList,
   ClipboardCheck,
-  MessageCircle,
+  ClipboardCheck,
   AlertTriangle,
   Youtube,
   ExternalLink,
@@ -31,8 +31,10 @@ import {
   BarChart3,
   Lightbulb,
   HelpCircle,
-  Search
+  Search,
+  Ban
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { startDashboardTour } from "@/lib/tour";
 import { Link, useLocation } from "wouter";
 import { useEffect, useRef, useState } from "react";
@@ -42,6 +44,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { ContentRenderer } from "@/components/ContentRenderer";
 import { Input } from "@/components/ui/input";
+import { QuizDetailsDialog } from "@/components/dialogs/QuizDetailsDialog";
 
 interface QuizWithFeedback extends UserQuiz {
   progressId?: string;
@@ -311,12 +314,7 @@ export default function UserDashboard() {
     ...queryOptions,
   });
 
-  // Fetch feedback for selected quiz
-  const { data: feedbackData, isLoading: loadingFeedback } = useQuery({
-    queryKey: ['quiz-feedback', selectedQuiz?.progressId],
-    queryFn: () => selectedQuiz?.progressId ? fetchQuizFeedback(selectedQuiz.progressId) : null,
-    enabled: !!selectedQuiz?.progressId
-  });
+
 
   // Fetch Math Tip
   const { data: mathTipData } = useQuery({
@@ -701,52 +699,11 @@ export default function UserDashboard() {
       </div>
 
       {/* Quiz Details Dialog */}
-      <Dialog open={!!selectedQuiz} onOpenChange={(open) => !open && setSelectedQuiz(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-              {selectedQuiz?.title}
-            </DialogTitle>
-            <DialogDescription>
-              Completado el {selectedQuiz?.completedAt ? new Date(selectedQuiz.completedAt).toLocaleDateString() : ''}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-3 rounded-lg text-center">
-                <p className="text-xs text-gray-500 uppercase">Puntaje</p>
-                <p className="text-xl font-bold text-gray-900">{((selectedQuiz?.score || 0)).toFixed(1)}/10</p>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-lg text-center">
-                <p className="text-xs text-gray-500 uppercase">Tiempo</p>
-                <p className="text-xl font-bold text-gray-900">{selectedQuiz?.timeSpent || 0}m</p>
-              </div>
-            </div>
-
-            {loadingFeedback ? (
-              <div className="flex justify-center py-4"><Spinner /></div>
-            ) : feedbackData?.feedback ? (
-              <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
-                <h4 className="text-sm font-bold text-purple-900 mb-2 flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4" /> Feedback de AlanMath
-                </h4>
-                <p className="text-sm text-purple-800 whitespace-pre-wrap">{feedbackData.feedback}</p>
-              </div>
-            ) : (
-              <p className="text-sm text-center text-gray-500 italic">Sin feedback disponible aún.</p>
-            )}
-          </div>
-
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setSelectedQuiz(null)}>Cerrar</Button>
-            <Link href={`/results/${selectedQuiz?.progressId}`}>
-              <Button className="bg-indigo-600 hover:bg-indigo-700">Ver Detalles Completos</Button>
-            </Link>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <QuizDetailsDialog
+        open={!!selectedQuiz}
+        onOpenChange={(open) => !open && setSelectedQuiz(null)}
+        quiz={selectedQuiz}
+      />
 
       {/* Pending Activities Dialog */}
       <Dialog open={showPendingDialog} onOpenChange={setShowPendingDialog}>
@@ -931,49 +888,73 @@ export default function UserDashboard() {
               </div>
             ) : filteredCategoryQuizzes.length > 0 ? (
               <div className="grid grid-cols-1 gap-3">
-                {filteredCategoryQuizzes.map((quiz) => (
-                  <div
-                    key={quiz.id}
-                    className="group flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all"
-                  >
-                    <div className="flex-1 min-w-0 mr-4">
-                      <h4 className="font-semibold text-gray-900 truncate">{quiz.title}</h4>
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{quiz.description}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wide border ${quiz.difficulty === 'basic' ? 'bg-green-50 text-green-700 border-green-100' :
-                          quiz.difficulty === 'intermediate' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
-                            'bg-red-50 text-red-700 border-red-100'
-                          }`}>
-                          {quiz.difficulty === 'basic' ? 'Básico' : quiz.difficulty === 'intermediate' ? 'Intermedio' : 'Avanzado'}
-                        </span>
-                        <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                          <Target className="w-3 h-3" /> {quiz.totalQuestions} preguntas
-                        </span>
+                {filteredCategoryQuizzes.map((quiz: any) => {
+                  let StatusIcon = Target;
+                  let statusColor = "text-indigo-600 bg-indigo-100";
+
+                  if (quiz.userStatus === 'completed') {
+                    StatusIcon = CheckCircle2;
+                    statusColor = "text-green-600 bg-green-100";
+                  } else if (quiz.userStatus === 'pending') {
+                    StatusIcon = AlertTriangle;
+                    statusColor = "text-yellow-600 bg-yellow-100";
+                  } else if (quiz.userStatus === 'optional') {
+                    StatusIcon = Ban;
+                    statusColor = "text-gray-400 bg-gray-100 opacity-50";
+                  }
+
+                  return (
+                    <div
+                      key={quiz.id}
+                      className="group flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all"
+                    >
+                      <div className={cn("h-10 w-10 rounded-full flex items-center justify-center shrink-0 mr-4", statusColor)}>
+                        <StatusIcon className="h-5 w-5" />
+                      </div>
+
+                      <div className="flex-1 min-w-0 mr-4">
+                        <h4 className="font-semibold text-gray-900 truncate">{quiz.title}</h4>
+                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{quiz.description}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wide border ${quiz.difficulty === 'basic' ? 'bg-green-50 text-green-700 border-green-100' :
+                            quiz.difficulty === 'intermediate' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                              'bg-red-50 text-red-700 border-red-100'
+                            }`}>
+                            {quiz.difficulty === 'basic' ? 'Básico' : quiz.difficulty === 'intermediate' ? 'Intermedio' : 'Avanzado'}
+                          </span>
+                          <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                            <Target className="w-3 h-3" /> {quiz.totalQuestions} preguntas
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                          onClick={() => {
+                            if (quiz.userStatus === 'completed') {
+                              setSelectedQuiz(quiz);
+                            } else {
+                              setLocation(`/quiz/${quiz.id}`);
+                              setSelectedCategoryForDetails(null);
+                            }
+                          }}
+                        >
+                          {quiz.userStatus === 'completed' ? 'Ver Detalles' : 'Iniciar'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                          onClick={(e) => handleMiniStart(e, quiz.id)}
+                        >
+                          Mini
+                        </Button>
                       </div>
                     </div>
-
-                    <div className="flex flex-col gap-2 shrink-0">
-                      <Button
-                        size="sm"
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-                        onClick={() => {
-                          setLocation(`/quiz/${quiz.id}`);
-                          setSelectedCategoryForDetails(null);
-                        }}
-                      >
-                        Iniciar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                        onClick={(e) => handleMiniStart(e, quiz.id)}
-                      >
-                        Mini
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-64 text-center text-gray-400">

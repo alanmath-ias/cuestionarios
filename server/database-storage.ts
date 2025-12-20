@@ -205,8 +205,44 @@ export class DatabaseStorage implements IStorage {
     return await this.db.select().from(quizzes).where(eq(quizzes.isPublic, true));
   }
 
-  async getQuizzesByCategory(categoryId: number): Promise<Quiz[]> {
-    return await this.db.select().from(quizzes).where(eq(quizzes.categoryId, categoryId));
+  async getQuizzesByCategory(categoryId: number, userId?: number): Promise<any[]> {
+    if (!userId) {
+      return await this.db.select().from(quizzes).where(eq(quizzes.categoryId, categoryId));
+    }
+
+    const results = await this.db
+      .select()
+      .from(quizzes)
+      .leftJoin(studentProgress, and(
+        eq(quizzes.id, studentProgress.quizId),
+        eq(studentProgress.userId, userId)
+      ))
+      .leftJoin(userQuizzes, and(
+        eq(quizzes.id, userQuizzes.quizId),
+        eq(userQuizzes.userId, userId)
+      ))
+      .where(eq(quizzes.categoryId, categoryId));
+
+    return results.map(row => {
+      const quiz = row.quizzes;
+      const progress = row.student_progress;
+      const assignment = row.user_quizzes;
+
+      let status = 'optional';
+      if (progress?.status === 'completed') {
+        status = 'completed';
+      } else if (assignment) {
+        status = 'pending';
+      }
+      return {
+        ...quiz,
+        userStatus: status,
+        score: progress?.score,
+        timeSpent: progress?.timeSpent,
+        completedAt: progress?.completedAt,
+        progressId: progress?.id
+      };
+    });
   }
 
   async getQuiz(id: number): Promise<Quiz | undefined> {
@@ -812,12 +848,34 @@ export class DatabaseStorage implements IStorage {
       .limit(10);
   }
 
-  async searchQuizzes(query: string): Promise<Quiz[]> {
+  async searchQuizzes(query: string, userId?: number): Promise<any[]> {
     if (!query) return [];
     const searchPattern = `%${query}%`;
-    return await this.db
+
+    if (!userId) {
+      return await this.db
+        .select()
+        .from(quizzes)
+        .where(
+          or(
+            ilike(quizzes.title, searchPattern),
+            ilike(quizzes.description, searchPattern)
+          )
+        )
+        .limit(10);
+    }
+
+    const results = await this.db
       .select()
       .from(quizzes)
+      .leftJoin(studentProgress, and(
+        eq(quizzes.id, studentProgress.quizId),
+        eq(studentProgress.userId, userId)
+      ))
+      .leftJoin(userQuizzes, and(
+        eq(quizzes.id, userQuizzes.quizId),
+        eq(userQuizzes.userId, userId)
+      ))
       .where(
         or(
           ilike(quizzes.title, searchPattern),
@@ -825,6 +883,27 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .limit(10);
+
+    return results.map(row => {
+      const quiz = row.quizzes;
+      const progress = row.student_progress;
+      const assignment = row.user_quizzes;
+
+      let status = 'optional';
+      if (progress?.status === 'completed') {
+        status = 'completed';
+      } else if (assignment) {
+        status = 'pending';
+      }
+      return {
+        ...quiz,
+        userStatus: status,
+        score: progress?.score,
+        timeSpent: progress?.timeSpent,
+        completedAt: progress?.completedAt,
+        progressId: progress?.id
+      };
+    });
   }
 
   async registerParentWithChild(

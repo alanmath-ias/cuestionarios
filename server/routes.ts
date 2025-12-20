@@ -684,7 +684,8 @@ Formato: Solo el texto del tip con el ejemplo.`;
         return res.status(404).json({ message: "Category not found" });
       }
 
-      const quizzes = await storage.getQuizzesByCategory(categoryId);
+      const userId = req.session.userId;
+      const quizzes = await storage.getQuizzesByCategory(categoryId, userId);
       res.json(quizzes);
     } catch (error) {
       console.error("Category quizzes fetch error:", error);
@@ -1824,7 +1825,8 @@ Ejemplo de formato:
       const query = req.query.q as string;
       if (!query || query.length < 2) return res.json([]);
 
-      const quizzes = await storage.searchQuizzes(query);
+      const userId = req.session.userId;
+      const quizzes = await storage.searchQuizzes(query, userId);
       res.json(quizzes);
     } catch (err) {
       console.error("Error searching quizzes:", err);
