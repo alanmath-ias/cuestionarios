@@ -565,21 +565,21 @@ export default function UserDashboard() {
                         <PlayCircle className="h-5 w-5 text-yellow-700" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm truncate text-gray-900">{quiz.title}</h4>
+                        <h4 className="font-semibold text-sm text-gray-900">{quiz.title}</h4>
                         <p className="text-xs text-gray-500 truncate">{quiz.difficulty}</p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex shrink-0 items-center gap-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 px-2 text-xs border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+                          className="h-7 px-2 text-xs bg-white border-indigo-200 text-indigo-600 hover:bg-indigo-50"
                           onClick={(e) => handleMiniStart(e, quiz.id)}
                         >
                           Mini
                         </Button>
                         <Button
                           size="sm"
-                          className="h-7 px-3 text-xs bg-yellow-400 hover:bg-yellow-500 text-yellow-900 border-none shadow-sm"
+                          className="h-7 px-3 text-xs bg-orange-500 hover:bg-orange-600 text-white border-none shadow-sm"
                           onClick={() => setLocation(`/quiz/${quiz.id}`)}
                         >
                           Normal

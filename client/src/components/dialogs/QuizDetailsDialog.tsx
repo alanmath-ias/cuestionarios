@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, MessageCircle } from "lucide-react";
 import { Link } from "wouter";
@@ -25,12 +25,19 @@ export function QuizDetailsDialog({ open, onOpenChange, quiz }: QuizDetailsDialo
 
     if (!quiz) return null;
 
+    const formatTime = (seconds: number | undefined) => {
+        if (seconds === undefined) return "0:00 minutos";
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')} minutos`;
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
                         {quiz.title}
                     </DialogTitle>
                     <DialogDescription>
@@ -38,44 +45,49 @@ export function QuizDetailsDialog({ open, onOpenChange, quiz }: QuizDetailsDialo
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gray-50 p-3 rounded-lg text-center">
-                            <p className="text-xs text-gray-500 uppercase">Puntaje</p>
-                            <p className="text-xl font-bold text-gray-900">{((quiz.score || 0)).toFixed(1)}/10</p>
-                        </div>
-                        <div className="bg-gray-50 p-3 rounded-lg text-center">
-                            <p className="text-xs text-gray-500 uppercase">Tiempo</p>
-                            <p className="text-xl font-bold text-gray-900">{quiz.timeSpent || 0}m</p>
-                        </div>
+                <div className="grid grid-cols-2 gap-4 py-4">
+                    <div className="bg-slate-50 p-4 rounded-lg text-center">
+                        <div className="text-xs font-medium text-slate-500 uppercase mb-1">Puntaje</div>
+                        <div className="text-2xl font-bold text-slate-900">{quiz.score !== undefined ? quiz.score : 'N/A'}/10</div>
                     </div>
-
-                    {loadingFeedback ? (
-                        <div className="flex justify-center py-4"><Spinner /></div>
-                    ) : feedbackData?.feedback ? (
-                        <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
-                            <h4 className="text-sm font-bold text-purple-900 mb-2 flex items-center gap-2">
-                                <MessageCircle className="w-4 h-4" /> Feedback de AlanMath
-                            </h4>
-                            <p className="text-sm text-purple-800 whitespace-pre-wrap">{feedbackData.feedback}</p>
-                        </div>
-                    ) : (
-                        <p className="text-sm text-center text-gray-500 italic">Sin feedback disponible aún.</p>
-                    )}
-
-                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 text-center">
-                        <p className="text-xs text-blue-800">
-                            Si quieres practicar de nuevo este cuestionario comunícate con el equipo de AlanMath
-                        </p>
+                    <div className="bg-slate-50 p-4 rounded-lg text-center">
+                        <div className="text-xs font-medium text-slate-500 uppercase mb-1">Tiempo</div>
+                        <div className="text-2xl font-bold text-slate-900">{formatTime(quiz.timeSpent)}</div>
                     </div>
                 </div>
 
-                <div className="flex gap-2 justify-end">
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cerrar</Button>
-                    <Link href={`/results/${quiz.progressId}`}>
-                        <Button className="bg-indigo-600 hover:bg-indigo-700">Ver Detalles Completos</Button>
-                    </Link>
+                {loadingFeedback ? (
+                    <div className="flex justify-center py-4"><Spinner /></div>
+                ) : feedbackData?.feedback ? (
+                    <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                        <h4 className="text-sm font-bold text-purple-900 mb-2 flex items-center gap-2">
+                            <MessageCircle className="w-4 h-4" /> Feedback de AlanMath
+                        </h4>
+                        <p className="text-sm text-purple-800 whitespace-pre-wrap">{feedbackData.feedback}</p>
+                    </div>
+                ) : (
+                    <div className="text-center py-4 text-sm text-muted-foreground italic">
+                        Sin feedback disponible aún.
+                    </div>
+                )}
+
+                <div className="bg-blue-50 border border-blue-100 rounded-md p-4 mt-4">
+                    <p className="text-sm text-blue-800 text-center">
+                        Si quieres practicar de nuevo este cuestionario comunícate con el equipo de AlanMath
+                    </p>
                 </div>
+
+                <DialogFooter className="sm:justify-between gap-2">
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        Cerrar
+                    </Button>
+                    <Button
+                        className="bg-indigo-600 hover:bg-indigo-700"
+                        onClick={() => window.location.href = `/results/${quiz.progressId}`}
+                    >
+                        Ver Detalles Completos
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

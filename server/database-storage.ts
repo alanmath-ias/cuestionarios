@@ -10,7 +10,7 @@
 } from "../shared/schema.js";
 
 import { db, DbClient } from "./db.js";
-import { eq, and, desc, inArray, sql, ilike, or } from "drizzle-orm";
+import { eq, and, desc, inArray, sql, ilike, or, isNotNull } from "drizzle-orm";
 import { IStorage } from "./storage.js";
 import { userQuizzes } from "../shared/schema.js";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -372,8 +372,11 @@ export class DatabaseStorage implements IStorage {
         completedAt: studentProgress.completedAt, // <- AÃ±ade esta lÃ­nea
         url: quizzes.url, // â† AÃ±ade esta lÃ­nea
       })
-      .from(userQuizzes)
-      .innerJoin(quizzes, eq(userQuizzes.quizId, quizzes.id))
+      .from(quizzes)
+      .leftJoin(userQuizzes, and(
+        eq(userQuizzes.quizId, quizzes.id),
+        eq(userQuizzes.userId, userId)
+      ))
       .leftJoin(studentProgress, and(
         eq(studentProgress.userId, userId),
         eq(studentProgress.quizId, quizzes.id)
@@ -382,7 +385,10 @@ export class DatabaseStorage implements IStorage {
         eq(quizSubmissions.userId, userId),
         eq(quizSubmissions.quizId, quizzes.id)
       ))
-      .where(eq(userQuizzes.userId, userId));
+      .where(or(
+        isNotNull(userQuizzes.quizId),
+        isNotNull(studentProgress.id)
+      ));
 
     // Deduplicate by quiz id to handle multiple submissions/progress records
     const uniqueResult = Array.from(new Map(result.map(item => [item.id, item])).values());

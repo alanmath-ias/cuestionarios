@@ -1,0 +1,36 @@
+﻿Loading environment from .env...
+CWD: L:\PAGINA WEB\APP CUESTIONARIOS\app cuestionarios GITHUB DIRECTAMENTE\cuestionarios
+__dirname: L:\PAGINA WEB\APP CUESTIONARIOS\app cuestionarios GITHUB DIRECTAMENTE\cuestionarios\scripts
+Env file path: L:\PAGINA WEB\APP CUESTIONARIOS\app cuestionarios GITHUB DIRECTAMENTE\cuestionarios\.env
+DB URL type: string
+DB URL length: 108
+DB URL starts with: postgres://post
+Has user info: true
+DATABASE_URL loaded: YES
+Starting score fix migration...
+Altering table columns...
+node.exe : Migration failed: PostgresError: la autentificaci´┐¢n password fall´┐¢ para el usuario ´┐¢Sin mascara´┐¢
+At C:\Program Files\nodejs\npx.ps1:29 char:3
++   & $NODE_EXE $NPX_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Migration faile...¢Sin mascara´┐¢:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    at ErrorResponse (file:///L:/PAGINA%20WEB/APP%20CUESTIONARIOS/app%20cuestionarios%20GITHUB%20DIRECTAMENTE/cuestiona
+rios/node_modules/postgres/src/connection.js:788:26)
+    at handle (file:///L:/PAGINA%20WEB/APP%20CUESTIONARIOS/app%20cuestionarios%20GITHUB%20DIRECTAMENTE/cuestionarios/no
+de_modules/postgres/src/connection.js:474:6)
+    at Socket.data (file:///L:/PAGINA%20WEB/APP%20CUESTIONARIOS/app%20cuestionarios%20GITHUB%20DIRECTAMENTE/cuestionari
+os/node_modules/postgres/src/connection.js:315:9)
+    at Socket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+  severity_local: 'FATAL',
+  severity: 'FATAL',
+  code: '28P01',
+  file: 'auth.c',
+  line: '324',
+  routine: 'auth_failed'
+}

@@ -1,4 +1,4 @@
-import { pgTable, foreignKey, serial, text, integer, index, varchar, json, timestamp, boolean, jsonb, unique, uuid, primaryKey } from "drizzle-orm/pg-core"
+import { pgTable, foreignKey, serial, text, integer, index, varchar, json, timestamp, boolean, jsonb, unique, uuid, primaryKey, real } from "drizzle-orm/pg-core"
 import { sql, relations } from "drizzle-orm"
 
 import { createInsertSchema } from "drizzle-zod";
@@ -111,7 +111,7 @@ export const studentProgress = pgTable("student_progress", {
 	userId: integer("user_id").notNull(),
 	quizId: integer("quiz_id").notNull(),
 	status: text().notNull(),
-	score: integer(),
+	score: real(),
 	completedQuestions: integer("completed_questions").default(0),
 	timeSpent: integer("time_spent"),
 	completedAt: timestamp("completed_at", { mode: 'string' }),
@@ -123,7 +123,7 @@ export const quizSubmissions = pgTable("quiz_submissions", {
 	userId: integer("user_id"),
 	quizId: integer("quiz_id"),
 	completedAt: timestamp("completed_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-	score: integer().notNull(),
+	score: real().notNull(),
 	feedback: text(),
 	reviewed: boolean().default(false),
 	progressId: integer("progress_id"),

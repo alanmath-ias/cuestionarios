@@ -20,6 +20,15 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useSession } from "@/hooks/useSession";
 import { ContentRenderer } from "@/components/ContentRenderer";
 
@@ -83,6 +92,7 @@ const ActiveQuiz = () => {
   const [hintsRevealed, setHintsRevealed] = useState<Record<number, string[]>>({});
   const [requestingHint, setRequestingHint] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isIncompleteDialogOpen, setIsIncompleteDialogOpen] = useState(false);
 
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${quizId}`],
@@ -271,6 +281,12 @@ const ActiveQuiz = () => {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         setSelectedAnswerId(null);
       } else {
+        // Check for incomplete questions before finishing
+        const answeredCount = Object.keys(answeredQuestions).length;
+        if (questions && answeredCount < questions.length) {
+          setIsIncompleteDialogOpen(true);
+          return;
+        }
         await handleFinishQuiz();
       }
     } catch (error) {
@@ -380,14 +396,14 @@ const ActiveQuiz = () => {
       const progressUpdate = {
         ...progress,
         status: 'completed' as const,
-        score: Math.round((earnedPoints / totalPoints) * 10),
+        score: studentAnswers.length > 0 ? Number(((studentAnswers.filter(a => a.isCorrect).length / studentAnswers.length) * 10).toFixed(1)) : 0,
         timeSpent: elapsedTime,
         completedAt: new Date().toISOString()
       };
 
       await createProgressMutation.mutateAsync(progressUpdate);
 
-      const score = Math.round((earnedPoints / totalPoints) * 10);
+      const score = studentAnswers.length > 0 ? Number(((studentAnswers.filter(a => a.isCorrect).length / studentAnswers.length) * 10).toFixed(1)) : 0;
       await fetch("/api/quiz-submission", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -705,6 +721,24 @@ const ActiveQuiz = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isIncompleteDialogOpen} onOpenChange={setIsIncompleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Preguntas pendientes</AlertDialogTitle>
+            <AlertDialogDescription>
+              No puedes finalizar el cuestionario todavía. Tienes {questions ? questions.length - Object.keys(answeredQuestions).length : 0} preguntas sin responder.
+              <br /><br />
+              Por favor, contesta todas las preguntas para poder ver tus resultados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setIsIncompleteDialogOpen(false)}>
+              Entendido, volver al cuestionario
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div >
   );
 };
