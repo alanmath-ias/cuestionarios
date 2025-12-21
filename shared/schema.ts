@@ -404,3 +404,16 @@ export const insertQuestionReportSchema = createInsertSchema(questionReports);
 export const selectQuestionReportSchema = createInsertSchema(questionReports);
 export type QuestionReport = z.infer<typeof selectQuestionReportSchema>;
 export type InsertQuestionReport = z.infer<typeof insertQuestionReportSchema>;
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+	id: serial("id").primaryKey(),
+	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	token: text("token").notNull().unique(),
+	expiresAt: timestamp("expires_at", { mode: 'string' }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens);
+export const selectPasswordResetTokenSchema = createInsertSchema(passwordResetTokens);
+export type PasswordResetToken = z.infer<typeof selectPasswordResetTokenSchema>;
+export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;

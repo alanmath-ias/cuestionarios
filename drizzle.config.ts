@@ -1,4 +1,9 @@
 import { defineConfig } from "drizzle-kit";
+import dotenv from "dotenv";
+import path from "path";
+
+const envFile = process.env.NODE_ENV === "production" ? ".envproduction" : ".env";
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
 // Verifica si la variable de entorno DATABASE_URL está disponible
 //console.log(process.env.DATABASE_URL);  // Esta línea imprimirá la URL en la consola

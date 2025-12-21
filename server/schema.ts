@@ -199,6 +199,24 @@ export const userQuizzes = pgTable("user_quizzes", {
 	primaryKey({ columns: [table.userId, table.quizId], name: "user_quizzes_pkey" }),
 ]);
 
+export const questionReports = pgTable("question_reports", {
+	id: serial("id").primaryKey(),
+	quizId: integer("quiz_id").notNull(),
+	questionId: integer("question_id").notNull(),
+	userId: integer("user_id").notNull().references(() => users.id),
+	description: text("description").notNull(),
+	status: text("status").default("pending").notNull(), // pending, resolved
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+	id: serial("id").primaryKey(),
+	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	token: text("token").notNull().unique(),
+	expiresAt: timestamp("expires_at", { mode: 'string' }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
 //fin schema nuevo
 
 
@@ -464,5 +482,3 @@ export type UserCategory = typeof userCategories.$inferSelect;
 export type InsertUserCategory = z.infer<typeof insertUserCategorySchema>;
 
 export type Subcategory = typeof subcategories.$inferSelect;
-
-

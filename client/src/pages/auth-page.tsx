@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 //import { useNavigate } from 'react-router-dom';
@@ -287,6 +287,13 @@ export default function AuthPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+              </div>
+              <div className="flex justify-end mb-4">
+                <Link href="/forgot-password">
+                  <span className="text-sm text-primary hover:underline cursor-pointer">
+                    ¿Olvidaste tu contraseña?
+                  </span>
+                </Link>
               </div>
               <div className="flex items-center justify-between">
                 <Button

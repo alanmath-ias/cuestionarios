@@ -8,6 +8,7 @@
   type StudentProgress, type InsertStudentProgress,
   type StudentAnswer, type InsertStudentAnswer,
   questionReports, type QuestionReport, type InsertQuestionReport,
+  passwordResetTokens, type PasswordResetToken, type InsertPasswordResetToken,
 } from "../shared/schema.js";
 
 import { db, DbClient } from "./db.js";
@@ -1188,4 +1189,19 @@ export class DatabaseStorage implements IStorage {
 
 
 
+
+  // Password Reset Methods
+  async createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    const result = await this.db.insert(passwordResetTokens).values(token).returning();
+    return result[0];
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const result = await this.db.select().from(passwordResetTokens).where(eq(passwordResetTokens.token, token));
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async deletePasswordResetToken(token: string): Promise<void> {
+    await this.db.delete(passwordResetTokens).where(eq(passwordResetTokens.token, token));
+  }
 }

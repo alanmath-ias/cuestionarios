@@ -32,6 +32,8 @@ import { DatabaseStorage } from './database-storage.js'; // Ruta ajustada para u
 //chat gpt dashboar personalizado
 import { User, studentAnswers } from "../shared/schema.js"; // Asegúrate de que este tipo esté bien definido
 import { userQuizzes, studentProgress, quizSubmissions, parents } from "../shared/schema.js";
+import nodemailer from "nodemailer";
+import crypto from "crypto";
 //import bcrypt from 'bcrypt';
 
 
@@ -178,6 +180,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Registration error:", error);
       res.status(500).json({ message: "Error during registration" });
+    }
+  });
+
+  // Password Recovery
+  apiRouter.post("/auth/forgot-password", async (req: Request, res: Response) => {
+    const { email, username } = req.body;
+
+    if (!email || !username) {
+      return res.status(400).json({ message: "Email and Username are required" });
+    }
+
+    try {
+      // Find user by username
+      const usersList = await storage.getAllUsers();
+      const user = usersList.find(u => u.username === username);
+
+      // Verify user exists AND email matches
+      if (!user || user.email !== email) {
+        // Return generic error to prevent enumeration, or specific if desired (user asked for specific check but security best practice is generic)
+        // User explicitly asked: "debería en dicha recuperación intorducirse el correo real que se registro al inicio y que coincida con dicho nombre de usuario y ahí si dejar enviar el correo, en otro caso avisar en el formulario de recuperación que ese no es el correo de dicho usuario"
+        // So we will return a specific error if they don't match, as requested, although it leaks some info.
+        return res.status(400).json({ message: "The provided email does not match the registered email for this username." });
+      }
+
+      // Generate token
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token,
+        expiresAt: expiresAt.toISOString(),
+      });
+
+      // Send email (Mock for now)
+      const resetLink = `${req.protocol}://${req.get("host")}/reset-password?token=${token}`;
+
+      if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: parseInt(process.env.SMTP_PORT || "587"),
+          secure: parseInt(process.env.SMTP_PORT || "587") === 465, // true for 465, false for other ports
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+        });
+
+        await transporter.sendMail({
+          from: `"AlanMath" <${process.env.SMTP_USER}>`,
+          to: email,
+          subject: "Restablecer Contraseña - AlanMath",
+          html: `
+            <h1>Restablecer Contraseña</h1>
+            <p>Has solicitado restablecer tu contraseña en AlanMath.</p>
+            <p>Haz clic en el siguiente enlace para continuar:</p>
+            <a href="${resetLink}">${resetLink}</a>
+            <p>Si no solicitaste esto, puedes ignorar este correo.</p>
+            <p>El enlace expirará en 1 hora.</p>
+          `,
+        });
+        console.log(`📧 Email sent to ${email}`);
+      } else {
+        console.log("---------------------------------------------------");
+        console.log("🔑 PASSWORD RESET LINK (MOCK EMAIL SERVICE - MISSING CREDENTIALS)");
+        console.log(`To: ${email}`);
+        console.log(`Link: ${resetLink}`);
+        console.log("---------------------------------------------------");
+      }
+
+      res.json({ message: "If an account exists with this email, a reset link has been sent." });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Error processing request" });
+    }
+  });
+
+  apiRouter.post("/auth/reset-password", async (req: Request, res: Response) => {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: "Token and new password are required" });
+    }
+
+    try {
+      const resetToken = await storage.getPasswordResetToken(token);
+
+      if (!resetToken) {
+        return res.status(400).json({ message: "Invalid or expired token" });
+      }
+
+      if (new Date(resetToken.expiresAt) < new Date()) {
+        await storage.deletePasswordResetToken(token);
+        return res.status(400).json({ message: "Token expired" });
+      }
+
+      // Update password
+      // Note: Storing as plain text to match existing system behavior. 
+      // TODO: Upgrade entire system to use hashed passwords.
+      await storage.updateUser(resetToken.userId, { password: newPassword });
+      await storage.deletePasswordResetToken(token);
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Error resetting password" });
     }
   });
 

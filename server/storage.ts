@@ -6,7 +6,8 @@ import {
   answers, Answer, InsertAnswer,
   studentProgress, StudentProgress, InsertStudentProgress,
   studentAnswers, StudentAnswer, InsertStudentAnswer,
-  questionReports, QuestionReport, InsertQuestionReport
+  questionReports, QuestionReport, InsertQuestionReport,
+  passwordResetTokens, PasswordResetToken, InsertPasswordResetToken
 } from "../shared/schema.js";
 import { db } from './db.js';
 import { Child } from '../shared/quiz-types.js';
@@ -122,6 +123,11 @@ export interface IStorage {
   createQuestionReport(report: InsertQuestionReport): Promise<QuestionReport>;
   getQuestionReports(): Promise<QuestionReport[]>;
   updateQuestionReportStatus(id: number, status: string): Promise<QuestionReport>;
+
+  // Password Reset
+  createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  deletePasswordResetToken(token: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -661,6 +667,11 @@ export class MemStorage implements IStorage {
   async createQuestionReport(report: InsertQuestionReport): Promise<QuestionReport> { throw new Error("Method not implemented."); }
   async getQuestionReports(): Promise<QuestionReport[]> { return []; }
   async updateQuestionReportStatus(id: number, status: string): Promise<QuestionReport> { throw new Error("Method not implemented."); }
+
+  // Password Reset
+  async createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken> { throw new Error("Method not implemented."); }
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> { return undefined; }
+  async deletePasswordResetToken(token: string): Promise<void> { }
 }
 
 import { DatabaseStorage } from "./database-storage.js";

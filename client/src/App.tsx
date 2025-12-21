@@ -40,6 +40,8 @@ import EncuestaPage from '@/pages/EncuestaPage';
 // En tu router.tsx o App.tsx
 import PublicActiveQuiz from '@/pages/PublicActiveQuiz';
 import PublicQuizResults from '@/pages/PublicQuizResults';
+import ForgotPasswordPage from '@/pages/forgot-password';
+import ResetPasswordPage from '@/pages/reset-password';
 
 
 //Protectroute que permite el ingreso a cuestionarios publicos:
@@ -168,6 +170,12 @@ function Router() {
     <Switch>
       <Route path="/auth">
         {() => <AuthPage />}
+      </Route>
+      <Route path="/forgot-password">
+        {() => <ForgotPasswordPage />}
+      </Route>
+      <Route path="/reset-password">
+        {() => <ResetPasswordPage />}
       </Route>
 
       <Route path="/EncuestaPage">
