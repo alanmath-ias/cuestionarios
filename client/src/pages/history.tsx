@@ -5,6 +5,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { CheckCircle2, ChevronLeft, Clock, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import { UserQuiz } from "@/types/types";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 interface QuizWithFeedback extends UserQuiz {
     progressId?: string;
@@ -20,7 +23,10 @@ async function fetchQuizzes() {
     return response.json();
 }
 
+
+
 export default function HistoryPage() {
+    const [searchTerm, setSearchTerm] = useState("");
     const { data: quizzes, isLoading } = useQuery<QuizWithFeedback[]>({
         queryKey: ["user-quizzes"],
         queryFn: fetchQuizzes,
@@ -30,18 +36,32 @@ export default function HistoryPage() {
         return <div className="flex justify-center items-center min-h-screen"><Spinner className="h-12 w-12" /></div>;
     }
 
-    const completedQuizzes = quizzes?.filter((q) => q.status === "completed")
-        .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime()) || [];
+    const completedQuizzes = quizzes?.filter((q) =>
+        q.status === "completed" &&
+        q.title.toLowerCase().includes(searchTerm.toLowerCase())
+    ).sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime()) || [];
 
     return (
         <div className="container mx-auto p-4 max-w-4xl space-y-6">
-            <div className="flex items-center gap-4 mb-6">
-                <Link href="/">
-                    <Button variant="ghost" size="icon">
-                        <ChevronLeft className="w-5 h-5" />
-                    </Button>
-                </Link>
-                <h1 className="text-2xl font-bold text-gray-900">Historial de Actividades</h1>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-4">
+                    <Link href="/">
+                        <Button variant="ghost" size="icon">
+                            <ChevronLeft className="w-5 h-5" />
+                        </Button>
+                    </Link>
+                    <h1 className="text-2xl font-bold text-gray-900">Historial de Actividades</h1>
+                </div>
+
+                <div className="relative w-full md:w-72">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+                    <Input
+                        placeholder="Buscar actividad..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-8 bg-white"
+                    />
+                </div>
             </div>
 
             <div className="grid gap-4">

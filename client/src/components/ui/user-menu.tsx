@@ -8,7 +8,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, HelpCircle } from 'lucide-react';
+import { ChevronDown, HelpCircle, Gamepad2 } from 'lucide-react';
+import { RestZoneDialog } from '@/components/dialogs/RestZoneDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -32,6 +33,7 @@ export function UserMenu({ user }: UserMenuProps) {
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
+  const [showRestZone, setShowRestZone] = useState(false);
 
   // Get user initials
   const getInitials = (name: string) => {
@@ -128,6 +130,10 @@ export function UserMenu({ user }: UserMenuProps) {
           </>
         )}
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => setShowRestZone(true)}>
+          <Gamepad2 className="mr-2 h-4 w-4" />
+          <span>Zona de Descanso</span>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => startTour(location)}>
           <HelpCircle className="mr-2 h-4 w-4" />
           <span>Ayuda</span>
@@ -137,6 +143,11 @@ export function UserMenu({ user }: UserMenuProps) {
           Cerrar Sesión
         </DropdownMenuItem>
       </DropdownMenuContent>
+
+      <RestZoneDialog
+        open={showRestZone}
+        onOpenChange={setShowRestZone}
+      />
     </DropdownMenu>
   );
 }

@@ -17,7 +17,6 @@ import {
   CheckCircle2,
   ClipboardList,
   ClipboardCheck,
-  ClipboardCheck,
   AlertTriangle,
   Youtube,
   ExternalLink,
@@ -31,8 +30,9 @@ import {
   BarChart3,
   Lightbulb,
   HelpCircle,
-  Search,
-  Ban
+  Search, Ban,
+  Gamepad2,
+  ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { startDashboardTour } from "@/lib/tour";
@@ -45,6 +45,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ContentRenderer } from "@/components/ContentRenderer";
 import { Input } from "@/components/ui/input";
 import { QuizDetailsDialog } from "@/components/dialogs/QuizDetailsDialog";
+import { RestZoneDialog } from "@/components/dialogs/RestZoneDialog";
 
 interface QuizWithFeedback extends UserQuiz {
   progressId?: string;
@@ -258,6 +259,7 @@ export default function UserDashboard() {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | null>(null);
   const [showPendingDialog, setShowPendingDialog] = useState(false);
+  const [showRestZone, setShowRestZone] = useState(false);
   const [miniQuizId, setMiniQuizId] = useState<number | null>(null);
 
   // New states for enhancements
@@ -695,6 +697,25 @@ export default function UserDashboard() {
             buttonText="Visitar"
             compact={true}
           />
+
+          {/* Rest Zone Card */}
+          <div className="rounded-3xl bg-gradient-to-br from-teal-500 to-emerald-600 p-6 text-white shadow-lg shadow-teal-200 cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => setShowRestZone(true)}>
+            <div className="flex items-start justify-between mb-4">
+              <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
+                <Gamepad2 className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold mb-2">Zona de Descanso</h3>
+            <p className="text-teal-100 text-sm mb-6">
+              ¿Necesitas un respiro? Relájate con nuestra selección de juegos y puzzles.
+            </p>
+            <button
+              className="flex items-center text-sm font-semibold hover:text-teal-100 transition-colors group"
+            >
+              Entrar
+              <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -972,6 +993,11 @@ export default function UserDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <RestZoneDialog
+        open={showRestZone}
+        onOpenChange={setShowRestZone}
+      />
     </div>
   );
 }
