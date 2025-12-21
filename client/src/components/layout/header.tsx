@@ -70,6 +70,7 @@ export function Header({ user, pendingCount }: HeaderProps) {
                 <li><Link href="/admin/users"><span className="hover:text-white/80 transition-colors cursor-pointer">Usuarios</span></Link></li>
                 <li><Link href="/admin/calificar"><span className="hover:text-white/80 transition-colors cursor-pointer">Calificar</span></Link></li>
                 <li><Link href="/admin/reports"><span className="hover:text-white/80 transition-colors cursor-pointer">Reportes</span></Link></li>
+                <li><Link href="/admin/send-email"><span className="hover:text-white/80 transition-colors cursor-pointer">Correos</span></Link></li>
                 <li><Link href="/admin/RegistrarPadres"><span className="hover:text-white/80 transition-colors cursor-pointer">Padres</span></Link></li>
               </>
             )}

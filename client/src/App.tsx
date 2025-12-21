@@ -10,6 +10,7 @@ import QuizResults from "@/pages/quiz-results";
 import FreeQuizzes from "@/pages/free-quizzes";
 import ProfilePage from "@/pages/profile";
 import AuthPage from "@/pages/auth-page";
+import WelcomePage from "@/pages/welcome";
 import CategoriesAdmin from "@/pages/admin/categories";
 import QuizzesAdmin from "@/pages/admin/quizzes";
 import QuestionsAdmin from "@/pages/admin/questions";
@@ -24,6 +25,7 @@ import AllUsersCategoriesAdmin from './pages/admin/AllUsersCategoriesAdmin';
 
 import AdminQuizReview from './pages/admin/AdminQuizReview';
 import AdminReports from './pages/admin/reports';
+import SendEmail from './pages/admin/SendEmail';
 
 {/*chat gpt entrenamiento*/ }
 import TrainingPage from "@/pages/training/[categoryId]";
@@ -88,47 +90,6 @@ function ProtectedRoute({ component: Component, ...rest }: { component: any, pat
   return <PageLayout><Component {...rest} /></PageLayout>;
 }
 
-/*
-function ProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user'],
-    retry: false,
-    staleTime: 5 * 60 * 1000,
-  });
-  
-  const [_, navigate] = useLocation();
-
-  useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        navigate('/auth'); // Redirige a la página de inicio de sesión si no está autenticado
-      } else if (user.role === 'admin' && rest.path === '/') {
-        navigate('/admin'); // Redirige a /admin si el usuario es administrador
-      } else if (user.role === 'parent') {
-        navigate('/parent-dashboard'); // Redirige a /parent-dashboard si el usuario es un padre
-      }
-    }
-  }, [user, isLoading, navigate]);
-
-
-
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="text-center">
-        <h2 className="text-2xl font-semibold mb-4">Cargando...</h2>
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-      </div>
-    </div>;
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  return <PageLayout><Component {...rest} /></PageLayout>;
-}
-
-*/
 function AdminProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
@@ -171,6 +132,9 @@ function Router() {
       <Route path="/auth">
         {() => <AuthPage />}
       </Route>
+      <Route path="/welcome">
+        {() => <WelcomePage />}
+      </Route>
       <Route path="/forgot-password">
         {() => <ForgotPasswordPage />}
       </Route>
@@ -182,7 +146,7 @@ function Router() {
         {() => <EncuestaPage />}
       </Route>
 
-// Agregar estas rutas
+      {/* Agregar estas rutas */}
       <Route path="/public-quiz/:quizId">
         {(params) => <PublicActiveQuiz />}
       </Route>
@@ -238,6 +202,9 @@ function Router() {
       </Route>
       <Route path="/admin/reports">
         {() => <AdminProtectedRoute component={AdminReports} path="/admin/reports" />}
+      </Route>
+      <Route path="/admin/send-email">
+        {() => <AdminProtectedRoute component={SendEmail} path="/admin/send-email" />}
       </Route>
 
       <Route path="/admin/AdminDashboard">

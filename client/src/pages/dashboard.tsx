@@ -357,19 +357,24 @@ export default function UserDashboard() {
   // Auto-start tour for new users
   useEffect(() => {
     if (!isLoading && currentUser?.id && !currentUser.tourStatus?.dashboard) {
-      setTimeout(() => {
-        startDashboardTour();
-        // Update DB
-        fetch('/api/user/tour-seen', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tourType: 'dashboard' })
-        }).then(res => {
-          if (res.ok) {
-            queryClient.invalidateQueries({ queryKey: ["current-user"] });
-          }
-        });
-      }, 1000);
+      const timer = setTimeout(() => {
+        // Ensure the element exists before starting the tour to prevent freeze
+        if (document.getElementById('tour-welcome')) {
+          startDashboardTour();
+          // Update DB to mark tour as seen
+          fetch('/api/user/tour-seen', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tourType: 'dashboard' })
+          }).then(res => {
+            if (res.ok) {
+              queryClient.invalidateQueries({ queryKey: ["current-user"] });
+            }
+          });
+        }
+      }, 2000); // Increased delay to 2 seconds for safety
+
+      return () => clearTimeout(timer);
     }
   }, [isLoading, currentUser, queryClient]);
 

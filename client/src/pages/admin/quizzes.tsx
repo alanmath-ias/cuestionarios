@@ -14,15 +14,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Trash, Clock, BookOpen, Link as LinkIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Category, Quiz, Subcategory } from "@/types/types";
+import { Category, Quiz, Subcategory, User } from "@/types/types";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { User } from '@/types/types';
-import { 
-  Accordion, 
-  AccordionContent, 
-  AccordionItem, 
-  AccordionTrigger 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
 } from "@/components/ui/accordion";
 
 const difficultyOptions = [
@@ -50,37 +49,24 @@ export default function QuizzesAdmin() {
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  // Cargar todas las categorías
+  // Queries
   const { data: categories, isLoading: loadingCategories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
 
-  // Cargar todos los cuestionarios
   const { data: quizzes, isLoading: loadingQuizzes } = useQuery<Quiz[]>({
     queryKey: ["/api/quizzes"],
   });
 
-  // Cargar todas las subcategorías con formato corregido
-  /*
-  const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = useQuery({
+  const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = useQuery<Subcategory[]>({
     queryKey: ["/api/admin/subcategories"],
     queryFn: async () => {
       const res = await fetch("/api/admin/subcategories");
-      const data = await res.json();
-      // Extraer solo las subcategorías del formato anidado
-      return data.map((item: any) => item.subcategories);
+      if (!res.ok) throw new Error(res.statusText);
+      return res.json();
     }
   });
-*/
-// Query corregida para subcategorías
-const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = useQuery<Subcategory[]>({
-  queryKey: ["/api/admin/subcategories"],
-  queryFn: async () => {
-    const res = await fetch("/api/admin/subcategories");
-    if (!res.ok) throw new Error(res.statusText);
-    return res.json(); // Devuelve los datos directamente
-  }
-});
+
   const isLoading = loadingCategories || loadingQuizzes || loadingSubcategoriesList;
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -98,7 +84,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
 
   const categoryId = form.watch("categoryId");
 
-  // Efecto para cargar subcategorías específicas cuando cambia la categoría seleccionada en el formulario
+  // Effects
   useEffect(() => {
     const fetchSubcategories = async () => {
       if (!categoryId) {
@@ -110,14 +96,13 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
       try {
         const res = await fetch(`/api/admin/subcategories/by-category/${categoryId}`);
         if (!res.ok) throw new Error(res.statusText);
-        
+
         const data = await res.json();
-        
+
         if (!Array.isArray(data)) {
           throw new Error("Formato de datos inválido");
         }
-        
-        // Si estamos editando y la subcategoría actual pertenece a esta categoría, la mantenemos
+
         if (editingId && form.getValues("subcategoryId")) {
           const currentSub = data.find((sub: any) => sub.id === Number(form.getValues("subcategoryId")));
           if (!currentSub) {
@@ -141,52 +126,6 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
     fetchSubcategories();
   }, [categoryId, editingId, form, toast]);
 
-  // Función para organizar los datos jerárquicamente
-  const organizeQuizzesHierarchically = () => {
-    if (!quizzes || !categories || !subcategoriesResponse) return [];
-    
-    /*console.log("Datos para estructura jerárquica:", {
-      quizzes: quizzes.length,
-      categories: categories.length,
-      subcategories: subcategoriesResponse.length
-    });*/
-
-    // 1. Agrupar quizzes por subcategoría
-    const quizzesBySubcategory = quizzes.reduce((acc, quiz) => {
-      const subcatId = quiz.subcategoryId;
-      if (!subcatId) return acc;
-      
-      if (!acc[subcatId]) {
-        acc[subcatId] = [];
-      }
-      acc[subcatId].push(quiz);
-      return acc;
-    }, {} as Record<number, Quiz[]>);
-
-    // 2. Crear la estructura jerárquica final
-    const result = categories.map(category => {
-      // Filtrar subcategorías que pertenecen a esta categoría
-      const categorySubcategories = subcategoriesResponse
-        .filter((sub: any) => sub.categoryId === category.id)
-        .map((sub: any) => ({
-          ...sub,
-          quizzes: quizzesBySubcategory[sub.id] || []
-        }));
-
-      return {
-        ...category,
-        subcategories: categorySubcategories
-      };
-    });
-
-    //console.log("Estructura jerárquica resultante:", result);
-    return result;
-  };
-
-  const hierarchicalData = organizeQuizzesHierarchically();
-  const quizzesWithoutClassification = quizzes?.filter(q => !q.categoryId || !q.subcategoryId) || [];
-
-  // Cargar usuarios asignados
   useEffect(() => {
     const loadUsers = async () => {
       try {
@@ -201,6 +140,42 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
     loadUsers();
   }, []);
 
+  // Helper functions
+  const organizeQuizzesHierarchically = () => {
+    if (!quizzes || !categories || !subcategoriesResponse) return [];
+
+    const quizzesBySubcategory = quizzes.reduce((acc, quiz) => {
+      const subcatId = quiz.subcategoryId;
+      if (!subcatId) return acc;
+
+      if (!acc[subcatId]) {
+        acc[subcatId] = [];
+      }
+      acc[subcatId].push(quiz);
+      return acc;
+    }, {} as Record<number, Quiz[]>);
+
+    const result = categories.map(category => {
+      const categorySubcategories = subcategoriesResponse
+        .filter((sub: any) => sub.categoryId === category.id)
+        .map((sub: any) => ({
+          ...sub,
+          quizzes: quizzesBySubcategory[sub.id] || []
+        }));
+
+      return {
+        ...category,
+        subcategories: categorySubcategories
+      };
+    });
+
+    return result;
+  };
+
+  const hierarchicalData = organizeQuizzesHierarchically();
+  const quizzesWithoutClassification = quizzes?.filter(q => !q.categoryId || !q.subcategoryId) || [];
+
+  // Async functions
   const fetchAssignedUsers = async (quizId: number) => {
     try {
       const res = await fetch(`/api/admin/users/quizzes/${quizId}`);
@@ -220,26 +195,52 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
     userId: number,
     isAssigned: boolean
   ) => {
-    const method = isAssigned ? "DELETE" : "POST";
     try {
-      const res = await fetch(`/api/admin/users/quizzes`, {
+      let url = "/api/admin/users/quizzes";
+      let method = "DELETE";
+      let body: any = { userId, quizId };
+
+      if (!isAssigned) {
+        url = `/api/admin/users/${userId}/quizzes`;
+        method = "POST";
+        body = { quizIds: [quizId] };
+      }
+
+      const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ userId, quizId }),
+        body: JSON.stringify(body),
       });
 
       if (res.ok) {
         fetchAssignedUsers(quizId);
+        toast({
+          title: isAssigned ? "Asignación eliminada" : "Cuestionario asignado",
+          description: isAssigned
+            ? "El usuario ya no tiene acceso a este cuestionario"
+            : "Se ha asignado el cuestionario y enviado un correo de notificación",
+        });
       } else {
         console.error("Error in toggleQuizAssignment:", res.status);
+        toast({
+          title: "Error",
+          description: "No se pudo cambiar la asignación",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error in toggleQuizAssignment:", error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error inesperado",
+        variant: "destructive",
+      });
     }
   };
 
+  // Mutations
   const createMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
       const payload = {
@@ -249,7 +250,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
         timeLimit: parseInt(values.timeLimit),
         totalQuestions: 0,
       };
-      
+
       const response = await fetch("/api/admin/quizzes", {
         method: "POST",
         headers: {
@@ -257,11 +258,11 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
         },
         body: JSON.stringify(payload),
       });
-      
+
       if (!response.ok) {
         throw new Error("Error al crear el cuestionario");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -290,7 +291,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
         subcategoryId: parseInt(values.subcategoryId),
         timeLimit: parseInt(values.timeLimit),
       };
-      
+
       const response = await fetch(`/api/admin/quizzes/${values.id}`, {
         method: "PUT",
         headers: {
@@ -298,11 +299,11 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
         },
         body: JSON.stringify(payload),
       });
-      
+
       if (!response.ok) {
         throw new Error("Error al actualizar el cuestionario");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -329,11 +330,11 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
       const response = await fetch(`/api/admin/quizzes/${id}`, {
         method: "DELETE"
       });
-      
+
       if (!response.ok) {
         throw new Error("Error al eliminar el cuestionario");
       }
-      
+
       return response;
     },
     onSuccess: () => {
@@ -353,6 +354,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
     },
   });
 
+  // Handlers
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (editingId) {
       updateMutation.mutate({ ...values, id: editingId });
@@ -384,7 +386,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
       deleteMutation.mutate(id);
     }
   }
-  
+
   function handleManageQuestions(quizId: number) {
     window.location.href = `/admin/quizzes/${quizId}/questions`;
   }
@@ -402,15 +404,15 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
           </Button>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
           <Card className="sticky top-4">
             <CardHeader className="bg-muted/50">
               <CardTitle>{editingId ? "Editar Cuestionario" : "Nuevo Cuestionario"}</CardTitle>
               <CardDescription>
-                {editingId 
-                  ? "Actualiza los detalles del cuestionario" 
+                {editingId
+                  ? "Actualiza los detalles del cuestionario"
                   : "Añade un nuevo cuestionario al sistema"}
               </CardDescription>
             </CardHeader>
@@ -430,7 +432,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="description"
@@ -438,17 +440,17 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                       <FormItem>
                         <FormLabel>Descripción</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="Describe brevemente de qué trata este cuestionario" 
+                          <Textarea
+                            placeholder="Describe brevemente de qué trata este cuestionario"
                             rows={3}
-                            {...field} 
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="categoryId"
@@ -477,7 +479,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="subcategoryId"
@@ -537,7 +539,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="difficulty"
@@ -566,7 +568,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                       )}
                     />
                   </div>
-                  
+
                   <FormField
                     control={form.control}
                     name="isPublic"
@@ -587,19 +589,19 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                       </FormItem>
                     )}
                   />
-                  
+
                   <div className="flex justify-end gap-2 pt-4">
                     {editingId && (
-                      <Button 
-                        type="button" 
-                        variant="outline" 
+                      <Button
+                        type="button"
+                        variant="outline"
                         onClick={handleCancelEdit}
                       >
                         Cancelar
                       </Button>
                     )}
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       disabled={createMutation.isPending || updateMutation.isPending}
                     >
                       {(createMutation.isPending || updateMutation.isPending) && <Spinner className="mr-2 h-4 w-4" />}
@@ -611,7 +613,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="md:col-span-2">
           <Card>
             <CardHeader className="bg-muted/50">
@@ -642,8 +644,8 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                         <Accordion type="multiple" className="space-y-2">
                           {category.subcategories.map((subcategory: any) => (
                             subcategory.quizzes.length > 0 && (
-                              <AccordionItem 
-                                key={subcategory.id} 
+                              <AccordionItem
+                                key={subcategory.id}
                                 value={`subcat-${subcategory.id}`}
                                 className="border rounded-md"
                               >
@@ -674,15 +676,15 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                                                 <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
                                               </div>
                                               <div className="flex space-x-2">
-                                                <Button 
-                                                  variant="outline" 
-                                                  size="sm" 
+                                                <Button
+                                                  variant="outline"
+                                                  size="sm"
                                                   onClick={() => handleEdit(quiz)}
                                                 >
                                                   Editar
                                                 </Button>
-                                                <Button 
-                                                  variant="destructive" 
+                                                <Button
+                                                  variant="destructive"
                                                   size="sm"
                                                   onClick={() => handleDelete(quiz.id)}
                                                   title="Eliminar cuestionario"
@@ -691,7 +693,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                                                 </Button>
                                               </div>
                                             </div>
-                                            
+
                                             <Button
                                               size="sm"
                                               variant="secondary"
@@ -736,8 +738,8 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                                               </div>
                                               <div>
                                                 <Badge variant={
-                                                  quiz.difficulty === "básico" ? "default" : 
-                                                  quiz.difficulty === "intermedio" ? "secondary" : "destructive"
+                                                  quiz.difficulty === "básico" ? "default" :
+                                                    quiz.difficulty === "intermedio" ? "secondary" : "destructive"
                                                 }>
                                                   {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
                                                 </Badge>
@@ -748,12 +750,12 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                                                 </Badge>
                                               </div>
                                             </div>
-                                            
+
                                             <Separator />
-                                            
+
                                             <div className="flex justify-end">
-                                              <Button 
-                                                size="sm" 
+                                              <Button
+                                                size="sm"
                                                 onClick={() => handleManageQuestions(quiz.id)}
                                               >
                                                 Gestionar preguntas
@@ -803,15 +805,15 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                                       <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
                                     </div>
                                     <div className="flex space-x-2">
-                                      <Button 
-                                        variant="outline" 
-                                        size="sm" 
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
                                         onClick={() => handleEdit(quiz)}
                                       >
                                         Editar
                                       </Button>
-                                      <Button 
-                                        variant="destructive" 
+                                      <Button
+                                        variant="destructive"
                                         size="sm"
                                         onClick={() => handleDelete(quiz.id)}
                                         title="Eliminar cuestionario"
@@ -820,7 +822,7 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                                       </Button>
                                     </div>
                                   </div>
-                                  
+
                                   <Button
                                     size="sm"
                                     variant="secondary"
@@ -865,8 +867,8 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                                     </div>
                                     <div>
                                       <Badge variant={
-                                        quiz.difficulty === "básico" ? "default" : 
-                                        quiz.difficulty === "intermedio" ? "secondary" : "destructive"
+                                        quiz.difficulty === "básico" ? "default" :
+                                          quiz.difficulty === "intermedio" ? "secondary" : "destructive"
                                       }>
                                         {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
                                       </Badge>
@@ -877,12 +879,12 @@ const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = use
                                       </Badge>
                                     </div>
                                   </div>
-                                  
+
                                   <Separator />
-                                  
+
                                   <div className="flex justify-end">
-                                    <Button 
-                                      size="sm" 
+                                    <Button
+                                      size="sm"
                                       onClick={() => handleManageQuestions(quiz.id)}
                                     >
                                       Gestionar preguntas

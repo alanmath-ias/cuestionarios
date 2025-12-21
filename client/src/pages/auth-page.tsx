@@ -4,7 +4,6 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useLocation, Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
-//import { useNavigate } from 'react-router-dom';
 import {
   BookOpen,
   LineChart,
@@ -43,7 +42,6 @@ export default function AuthPage() {
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredName, setRegisteredName] = useState('');
   const [shouldShowWelcome, setShouldShowWelcome] = useState(false);
-  //const navigate = useNavigate();
   const [location] = useLocation();
 
 
@@ -114,7 +112,8 @@ export default function AuthPage() {
       });
 
       setRegistrationSuccess(true);
-      setShouldShowWelcome(true);
+      // Redirect to welcome page instead of showing inline welcome
+      setLocation('/welcome');
 
       // Invalidamos la query pero no esperamos por ella
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -149,58 +148,6 @@ export default function AuthPage() {
     // Navegar a EncuestaPage con parámetros de edad y reset
     window.location.href = `/encuestapage?ageGroup=${isUnder12 ? 'child' : 'teen'}&reset=true`;
   };
-
-
-  if (shouldShowWelcome) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-        <div className="w-full max-w-2xl mx-4 bg-white rounded-lg shadow-lg p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-primary mb-2">¡Bienvenid@ a AlanMath!</h1>
-            <h2 className="text-2xl font-semibold">Hola {registeredName}</h2>
-          </div>
-
-          <div className="space-y-6 text-lg">
-            <div className="flex items-start gap-4">
-              <BookOpen className="flex-shrink-0 mt-1 text-blue-500" size={24} />
-              <p>
-                Aquí encontrarás Cuestionarios tipo Evaluación para prepararte para tus exámenes.
-                <br />
-                <span className="text-base text-gray-600">
-                  A continuación, te haremos un breve recorrido para que aprendas a usar la plataforma.
-                </span>
-              </p>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <BrainCircuit className="flex-shrink-0 mt-1 text-yellow-500" size={24} />
-              <p className="font-semibold">
-                Diviértete aprendiendo y no olvides que...
-                <br />
-                <span className="text-primary flex items-center gap-2 mt-2">
-                  <Award className="inline" /> Si Yo lo puedo hacer, Tú también lo puedes hacer!
-                </span>
-              </p>
-            </div>
-          </div>
-
-          <div className="text-center mt-10">
-            <Button
-              size="lg"
-              className="gap-2"
-              onClick={() => {
-                setShouldShowWelcome(false);
-                setLocation('/');
-              }}
-            >
-              <Rocket size={20} />
-              ¡Comencemos!
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
@@ -251,10 +198,6 @@ export default function AuthPage() {
                   </div>
                 </DialogContent>
               </Dialog>
-
-
-
-
             </div>
           </div>
 

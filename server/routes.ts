@@ -173,6 +173,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.role = safeRole;
 
       const { password: _, ...userWithoutPassword } = newUser;
+
+      // Enviar correo de bienvenida
+      if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS && newUser.email) {
+        try {
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT || "587"),
+            secure: parseInt(process.env.SMTP_PORT || "587") === 465,
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+            },
+          });
+
+          const bannerUrl = "https://imagenes.alanmath.com/nueva-actividad.jpg";
+
+          await transporter.sendMail({
+            from: `"AlanMath" <${process.env.SMTP_USER}>`,
+            to: newUser.email,
+            subject: "¡Bienvenido a la familia AlanMath! 🚀",
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                  <img src="${bannerUrl}" alt="Bienvenido a AlanMath" style="max-width: 250px; height: auto; border-radius: 8px;">
+                </div>
+                
+                <h1 style="color: #4F46E5; text-align: center;">¡Hola ${newUser.name || newUser.username}!</h1>
+                
+                <p style="font-size: 16px; line-height: 1.5; color: #374151;">
+                  Estamos muy felices de que te hayas unido a <strong>AlanMath</strong>. 
+                  Aquí encontrarás un espacio diseñado para potenciar tu aprendizaje de una manera divertida y efectiva.
+                </p>
+
+                <div style="background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                  <h3 style="color: #111827; margin-top: 0;">¿Qué puedes hacer aquí?</h3>
+                  <ul style="color: #4B5563; padding-left: 20px;">
+                    <li style="margin-bottom: 10px;">🧠 <strong>Ejercicios Adaptativos:</strong> Practica a tu propio ritmo.</li>
+                    <li style="margin-bottom: 10px;">📊 <strong>Sigue tu Progreso:</strong> Mira cómo mejoras día a día.</li>
+                    <li style="margin-bottom: 10px;">🏆 <strong>Supera Retos:</strong> Gana confianza en cada tema.</li>
+                  </ul>
+                </div>
+
+                <p style="text-align: center; font-weight: bold; color: #4F46E5; font-size: 18px;">
+                  ¡Tu camino hacia el dominio de las matemáticas comienza hoy!
+                </p>
+
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="https://app.alanmath.com/" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 10px;">Ir a la App</a>
+                  <a href="https://alanmath.com/" style="background-color: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Visitar Sitio Web</a>
+                </div>
+
+                <p style="margin-top: 30px; font-size: 12px; color: #6B7280; text-align: center;">
+                  Este es un mensaje automático de bienvenida. ¡Nos vemos en clase!
+                </p>
+              </div>
+            `,
+          });
+          console.log(`📧 Welcome email sent to ${newUser.email}`);
+        } catch (emailError) {
+          console.error("Failed to send welcome email:", emailError);
+          // No fallamos el registro si el correo falla
+        }
+      }
+
       res.status(201).json(userWithoutPassword);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -569,6 +633,44 @@ Formato: Solo el texto del tip con el ejemplo.`;
     } catch (error) {
       console.error("Error actualizando rol de usuario:", error);
       res.status(500).json({ message: "Error al actualizar el rol" });
+    }
+  });
+
+  // Admin Send Email Endpoint
+  apiRouter.post("/admin/send-email", requireAdmin, async (req: Request, res: Response) => {
+    const { to, subject, message } = req.body;
+
+    if (!to || !subject || !message) {
+      return res.status(400).json({ message: "To, Subject, and Message are required" });
+    }
+
+    try {
+      if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        throw new Error("SMTP credentials not configured");
+      }
+
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || "587"),
+        secure: parseInt(process.env.SMTP_PORT || "587") === 465,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+
+      await transporter.sendMail({
+        from: `"AlanMath" <${process.env.SMTP_USER}>`,
+        to: to,
+        subject: subject,
+        html: `<p>${message.replace(/\n/g, "<br>")}</p>`, // Simple text to HTML conversion
+      });
+
+      console.log(`📧 Admin sent email to ${to}`);
+      res.json({ message: "Email sent successfully" });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      res.status(500).json({ message: "Error sending email" });
     }
   });
   //Obtener el nombre del usuario
@@ -1959,18 +2061,92 @@ Ejemplo de formato:
 
 
   // Asignar un quiz a un usuario
-  apiRouter.post("/admin/users/quizzes", requireAdmin, async (req, res) => {
-    //console.log("📥 Body recibido en POST /admin/users/quizzes:", req.body);
-    const { userId, quizId } = req.body;
-    if (!userId || !quizId) return res.status(400).json({ message: "Missing data" });
+  // Asignar múltiples quizzes a un usuario con notificación por correo
+  apiRouter.post("/admin/users/:userId/quizzes", requireAdmin, async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    const { quizIds } = req.body;
+
+    if (isNaN(userId) || !Array.isArray(quizIds)) {
+      return res.status(400).json({ message: "Invalid input" });
+    }
 
     try {
-      //console.log(req.body)
-      await storage.assignQuizToUser(userId, quizId);
-      res.status(204).end();
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const results = [];
+
+      for (const quizId of quizIds) {
+        // Asignar quiz
+        await storage.assignQuizToUser(userId, quizId);
+
+        // Obtener detalles del quiz para el correo
+        const quiz = await storage.getQuiz(quizId);
+
+        if (quiz && user.email && process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+          try {
+            const transporter = nodemailer.createTransport({
+              host: process.env.SMTP_HOST,
+              port: parseInt(process.env.SMTP_PORT || "587"),
+              secure: parseInt(process.env.SMTP_PORT || "587") === 465,
+              auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+              },
+            });
+
+            const imageUrl = quiz.url ? `<img src="${quiz.url}" alt="Quiz Image" style="max-width: 100%; height: auto; margin-top: 10px; border-radius: 8px;">` : '';
+            const bannerUrl = "https://imagenes.alanmath.com/nueva-actividad.jpg";
+
+            await transporter.sendMail({
+              from: `"AlanMath" <${process.env.SMTP_USER}>`,
+              to: user.email,
+              subject: `Nuevo Cuestionario Asignado: ${quiz.title}`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <div style="text-align: center; margin-bottom: 20px;">
+                    <img src="${bannerUrl}" alt="Nueva Actividad" style="max-width: 250px; height: auto; border-radius: 8px;">
+                  </div>
+                  <h1 style="color: #4F46E5; text-align: center;">¡Nuevo Reto Asignado!</h1>
+                  <p>Hola ${user.name},</p>
+                  <p>Se te ha asignado un nuevo cuestionario para practicar:</p>
+                  
+                  <div style="background-color: #F3F4F6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <h2 style="margin-top: 0; color: #111827;">${quiz.title}</h2>
+                    <p style="margin-bottom: 5px;"><strong>Dificultad:</strong> ${quiz.difficulty}</p>
+                    <p style="margin-bottom: 0;"><strong>Preguntas:</strong> ${quiz.totalQuestions}</p>
+                  </div>
+
+                  <p>¡Tú puedes lograrlo! La práctica hace al maestro.</p>
+                  
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="https://app.alanmath.com/" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 10px;">Ir a la App</a>
+                    <a href="https://alanmath.com/" style="background-color: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Visitar Sitio Web</a>
+                  </div>
+
+                  ${imageUrl}
+                  
+                  <p style="margin-top: 30px; font-size: 12px; color: #6B7280; text-align: center;">
+                    Este es un mensaje automático de AlanMath.
+                  </p>
+                </div>
+              `,
+            });
+            console.log(`📧 Notification email sent to ${user.email} for quiz ${quizId}`);
+          } catch (emailError) {
+            console.error(`Failed to send email for quiz ${quizId}:`, emailError);
+            // No fallamos la request si falla el correo, solo logueamos
+          }
+        }
+        results.push(quizId);
+      }
+
+      res.json({ message: "Quizzes assigned successfully", assigned: results });
     } catch (err) {
-      console.error("Error assigning quiz:", err); // <-- Esto lo va a mostrar en consola
-      res.status(500).json({ message: "Error assigning quiz", error: String(err) }); // <-- Mostramos el error
+      console.error("Error assigning quizzes:", err);
+      res.status(500).json({ message: "Error assigning quizzes", error: String(err) });
     }
   });
 
