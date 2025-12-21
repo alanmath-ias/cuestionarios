@@ -3,7 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, HelpCircle } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, HelpCircle, Flag } from "lucide-react";
 import { startActiveQuizTour } from "@/lib/tour";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -62,7 +62,7 @@ interface Progress {
   completedQuestions: number;
   timeSpent: number;
   completedAt?: string;
-  answers?: any[]; // Added this
+  answers?: any[];
 }
 
 // Componente para renderizar contenido con saltos de línea y matemáticas
@@ -80,6 +80,8 @@ const ActiveQuiz = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const mode = searchParams.get('mode');
   const { toast } = useToast();
+
+  // State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswerId, setSelectedAnswerId] = useState<number | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -94,6 +96,11 @@ const ActiveQuiz = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isIncompleteDialogOpen, setIsIncompleteDialogOpen] = useState(false);
 
+  // Report Error State
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [reportDescription, setReportDescription] = useState("");
+
+  // Queries
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${quizId}`],
   });
@@ -112,73 +119,28 @@ const ActiveQuiz = () => {
     enabled: !!quizId && !!session?.userId,
   });
 
-  // Updated useTimer call
-  const { formattedTime, elapsedTime, start } = useTimer({
-    initialTime: quiz?.timeLimit || 0,
-    initialElapsedTime: progress?.timeSpent || 0,
-    autoStart: true,
-    onTimeUp: () => handleFinishQuiz()
+  // Mutations
+  const reportErrorMutation = useMutation({
+    mutationFn: async (data: { quizId: number; questionId: number; description: string }) => {
+      const res = await apiRequest("POST", "/api/reports", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Reporte enviado",
+        description: "Gracias por ayudarnos a mejorar.",
+      });
+      setIsReportDialogOpen(false);
+      setReportDescription("");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "No se pudo enviar el reporte.",
+        variant: "destructive",
+      });
+    },
   });
-
-  // Initialize state from progress
-  useEffect(() => {
-    if (!isInitialized && progress && questions) {
-      if (progress.status === 'completed') {
-        setLocation(`/results/${progress.id}`);
-        return;
-      }
-
-      // Restore completed questions count
-      const completedCount = progress.completedQuestions || 0;
-      if (completedCount > 0 && completedCount < questions.length) {
-        setCurrentQuestionIndex(completedCount);
-      }
-
-      // Restore answers
-      if (progress.answers && Array.isArray(progress.answers)) {
-        console.log("[DEBUG] Restoring answers:", progress.answers);
-        // Backfill isCorrect if missing (e.g. from hint creation or old data)
-        const restoredAnswers = progress.answers.map((ans: any) => {
-          if (ans.isCorrect === null && ans.answerId) {
-            console.log(`[DEBUG] Backfilling answer ${ans.answerId} for question ${ans.questionId}`);
-            const question = questions.find(q => q.id === ans.questionId);
-            const answerDef = question?.answers?.find((a: any) => a.id === ans.answerId);
-            if (answerDef) {
-              console.log(`[DEBUG] Found answer def:`, answerDef);
-              return { ...ans, isCorrect: answerDef.isCorrect };
-            } else {
-              console.log(`[DEBUG] Answer def not found for answerId ${ans.answerId}`);
-            }
-          }
-          return ans;
-        });
-        console.log("[DEBUG] Restored answers with backfill:", restoredAnswers);
-        setStudentAnswers(restoredAnswers);
-
-        const answeredMap: Record<number, boolean> = {};
-        restoredAnswers.forEach((ans: any) => {
-          const qIndex = questions.findIndex(q => q.id === ans.questionId);
-          if (qIndex !== -1) {
-            answeredMap[qIndex] = true;
-          }
-        });
-        setAnsweredQuestions(answeredMap);
-      }
-      setIsInitialized(true);
-    }
-  }, [progress, questions, setLocation, isInitialized]);
-
-  // Shuffle answers when question changes
-  useEffect(() => {
-    if (questions && questions[currentQuestionIndex]) {
-      const currentQ = questions[currentQuestionIndex];
-      if (currentQ.answers && Array.isArray(currentQ.answers)) {
-        // Create a copy and shuffle
-        const shuffled = [...currentQ.answers].sort(() => Math.random() - 0.5);
-        setShuffledAnswers(shuffled);
-      }
-    }
-  }, [questions, currentQuestionIndex]);
 
   const createProgressMutation = useMutation({
     mutationFn: async (newProgress: any) => {
@@ -197,7 +159,75 @@ const ActiveQuiz = () => {
     },
   });
 
-  // Initialize progress if not exists
+  // Handlers
+  const handleReportSubmit = () => {
+    if (!quiz || !questions || !reportDescription.trim()) return;
+    const currentQuestion = questions[currentQuestionIndex];
+
+    reportErrorMutation.mutate({
+      quizId: quiz.id,
+      questionId: currentQuestion.id,
+      description: reportDescription,
+    });
+  };
+
+  // Timer
+  const { formattedTime, elapsedTime, start } = useTimer({
+    initialTime: quiz?.timeLimit || 0,
+    initialElapsedTime: progress?.timeSpent || 0,
+    autoStart: true,
+    onTimeUp: () => handleFinishQuiz()
+  });
+
+  // Effects
+  useEffect(() => {
+    if (!isInitialized && progress && questions) {
+      if (progress.status === 'completed') {
+        setLocation(`/results/${progress.id}`);
+        return;
+      }
+
+      const completedCount = progress.completedQuestions || 0;
+      if (completedCount > 0 && completedCount < questions.length) {
+        setCurrentQuestionIndex(completedCount);
+      }
+
+      if (progress.answers && Array.isArray(progress.answers)) {
+        const restoredAnswers = progress.answers.map((ans: any) => {
+          if (ans.isCorrect === null && ans.answerId) {
+            const question = questions.find(q => q.id === ans.questionId);
+            const answerDef = question?.answers?.find((a: any) => a.id === ans.answerId);
+            if (answerDef) {
+              return { ...ans, isCorrect: answerDef.isCorrect };
+            }
+          }
+          return ans;
+        });
+        setStudentAnswers(restoredAnswers);
+
+        const answeredMap: Record<number, boolean> = {};
+        restoredAnswers.forEach((ans: any) => {
+          const qIndex = questions.findIndex(q => q.id === ans.questionId);
+          if (qIndex !== -1) {
+            answeredMap[qIndex] = true;
+          }
+        });
+        setAnsweredQuestions(answeredMap);
+      }
+      setIsInitialized(true);
+    }
+  }, [progress, questions, setLocation, isInitialized]);
+
+  useEffect(() => {
+    if (questions && questions[currentQuestionIndex]) {
+      const currentQ = questions[currentQuestionIndex];
+      if (currentQ.answers && Array.isArray(currentQ.answers)) {
+        const shuffled = [...currentQ.answers].sort(() => Math.random() - 0.5);
+        setShuffledAnswers(shuffled);
+      }
+    }
+  }, [questions, currentQuestionIndex]);
+
   useEffect(() => {
     if (quiz && session?.userId && !progress) {
       createProgressMutation.mutate({
@@ -211,12 +241,10 @@ const ActiveQuiz = () => {
     }
   }, [quiz, session, progress, quizId]);
 
-  // Auto-start tour for new users
   useEffect(() => {
     if (!loadingQuiz && !loadingQuestions && session?.userId && !session.tourStatus?.activeQuiz) {
       setTimeout(() => {
         startActiveQuizTour();
-        // Update DB
         fetch('/api/user/tour-seen', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -242,8 +270,8 @@ const ActiveQuiz = () => {
       questionId: currentQuestion.id,
       answerId: selectedAnswerId,
       isCorrect: selectedAnswer?.isCorrect || false,
-      variables: currentQuestion.variables, // Store variables used
-      timeSpent: elapsedTime, // Store current time
+      variables: currentQuestion.variables,
+      timeSpent: elapsedTime,
     };
 
     try {
@@ -281,7 +309,6 @@ const ActiveQuiz = () => {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         setSelectedAnswerId(null);
       } else {
-        // Check for incomplete questions before finishing
         const answeredCount = Object.keys(answeredQuestions).length;
         if (questions && answeredCount < questions.length) {
           setIsIncompleteDialogOpen(true);
@@ -317,7 +344,7 @@ const ActiveQuiz = () => {
       questionId: currentQuestion.id,
       answerId: null,
       textAnswer: answerText,
-      isCorrect: false, // Needs manual grading or regex check
+      isCorrect: false,
       variables: currentQuestion.variables,
       timeSpent: elapsedTime,
     };
@@ -386,24 +413,18 @@ const ActiveQuiz = () => {
     if (!progress || !quiz) return;
 
     try {
-      // Calculate final score
-      const totalPoints = questions?.reduce((sum, q) => sum + (q.points || 0), 0) || 0;
-      const earnedPoints = studentAnswers.reduce((sum, a) => {
-        const question = questions?.find(q => q.id === a.questionId);
-        return sum + (a.isCorrect ? (question?.points || 0) : 0);
-      }, 0);
+      const score = studentAnswers.length > 0 ? Number(((studentAnswers.filter(a => a.isCorrect).length / studentAnswers.length) * 10).toFixed(1)) : 0;
 
       const progressUpdate = {
         ...progress,
         status: 'completed' as const,
-        score: studentAnswers.length > 0 ? Number(((studentAnswers.filter(a => a.isCorrect).length / studentAnswers.length) * 10).toFixed(1)) : 0,
+        score,
         timeSpent: elapsedTime,
         completedAt: new Date().toISOString()
       };
 
       await createProgressMutation.mutateAsync(progressUpdate);
 
-      const score = studentAnswers.length > 0 ? Number(((studentAnswers.filter(a => a.isCorrect).length / studentAnswers.length) * 10).toFixed(1)) : 0;
       await fetch("/api/quiz-submission", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -447,7 +468,6 @@ const ActiveQuiz = () => {
   const currentQuestion = questions[currentQuestionIndex];
   if (!currentQuestion) return <div>No questions found</div>;
 
-  // Calculate correct answers map for progress bar
   const correctAnswers = questions?.reduce((acc: Record<number, boolean>, question, index) => {
     const studentAnswer = studentAnswers.find(a => a.questionId === question.id);
     if (studentAnswer) {
@@ -458,7 +478,6 @@ const ActiveQuiz = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold">{quiz?.title}</h1>
@@ -493,15 +512,9 @@ const ActiveQuiz = () => {
             }, 0)} pts
           </span>
         </div>
-
-
-
       </div>
 
-
-
-      {/* Question Card */}
-      < Card className="mb-6" >
+      <Card className="mb-6">
         <CardContent className="p-6">
           <div className="flex justify-between items-start mb-4">
             <div className="flex gap-2">
@@ -536,7 +549,6 @@ const ActiveQuiz = () => {
 
             <QuestionContent content={currentQuestion.content} />
 
-            {/* Hint Display */}
             {hintsRevealed[currentQuestion.id]?.map((hint, index) => (
               <div key={index} className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <h4 className="font-medium text-yellow-800 mb-1 flex items-center">
@@ -610,7 +622,7 @@ const ActiveQuiz = () => {
             </div>
           )}
         </CardContent>
-      </Card >
+      </Card>
 
       <div className="flex justify-between items-center">
         <Button
@@ -634,6 +646,18 @@ const ActiveQuiz = () => {
           <Lightbulb className="mr-1 h-4 w-4" />
           ¿Una Pista?
         </Button>
+
+        {session?.userId === 2 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 border-red-200 text-red-600 hover:bg-red-50 ml-2"
+            onClick={() => setIsReportDialogOpen(true)}
+          >
+            <Flag className="mr-1 h-4 w-4" />
+            Reportar Error
+          </Button>
+        )}
 
         <Button
           onClick={handleNextQuestion}
@@ -722,6 +746,36 @@ const ActiveQuiz = () => {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reportar Error en la Pregunta</DialogTitle>
+            <DialogDescription>
+              Describe el error que encontraste en esta pregunta.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              value={reportDescription}
+              onChange={(e) => setReportDescription(e.target.value)}
+              placeholder="Ej: La respuesta correcta está mal marcada, o hay un error tipográfico..."
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsReportDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleReportSubmit}
+              disabled={!reportDescription.trim() || reportErrorMutation.isPending}
+            >
+              {reportErrorMutation.isPending ? "Enviando..." : "Enviar Reporte"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={isIncompleteDialogOpen} onOpenChange={setIsIncompleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -739,7 +793,7 @@ const ActiveQuiz = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div >
+    </div>
   );
 };
 

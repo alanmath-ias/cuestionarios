@@ -18,6 +18,7 @@ import { getUsersAssignedToQuiz } from './storage.js'; // Ruta ajustada para usa
 import { questions as questionsTable } from "../shared/schema.js";
 import { inArray } from "drizzle-orm";
 //deep seek entrenamiento:
+
 import { answers } from "../shared/schema.js"; // Asegúrate de importar correctamente
 
 //chat gpt dashboar personalizado
@@ -2145,6 +2146,50 @@ Ejemplo de formato:
     } catch (error) {
       console.error("Error guardando quiz submission:", error);
       res.status(500).json({ error: "Error interno" });
+    }
+  });
+
+  // Reportes de errores
+  apiRouter.post("/reports", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) return res.status(401).send("No autorizado");
+
+      const report = await storage.createQuestionReport({
+        ...req.body,
+        userId: req.user.id,
+      });
+
+      res.status(201).json(report);
+    } catch (error) {
+      console.error("Error creating report:", error);
+      res.status(500).send("Error al crear el reporte");
+    }
+  });
+
+  apiRouter.get("/admin/reports", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user || req.user.role !== "admin") return res.status(403).send("No autorizado");
+
+      const reports = await storage.getQuestionReports();
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+      res.status(500).send("Error al obtener reportes");
+    }
+  });
+
+  apiRouter.patch("/admin/reports/:id", async (req: Request, res: Response) => {
+    try {
+      if (!req.user || req.user.role !== "admin") return res.status(403).send("No autorizado");
+
+      const reportId = parseInt(req.params.id);
+      const { status } = req.body;
+
+      const updatedReport = await storage.updateQuestionReportStatus(reportId, status);
+      res.json(updatedReport);
+    } catch (error) {
+      console.error("Error updating report:", error);
+      res.status(500).send("Error al actualizar el reporte");
     }
   });
 

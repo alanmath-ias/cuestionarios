@@ -5,7 +5,8 @@ import {
   questions, Question, InsertQuestion,
   answers, Answer, InsertAnswer,
   studentProgress, StudentProgress, InsertStudentProgress,
-  studentAnswers, StudentAnswer, InsertStudentAnswer
+  studentAnswers, StudentAnswer, InsertStudentAnswer,
+  questionReports, QuestionReport, InsertQuestionReport
 } from "../shared/schema.js";
 import { db } from './db.js';
 import { Child } from '../shared/quiz-types.js';
@@ -116,6 +117,11 @@ export interface IStorage {
   updateUserHintCredits(userId: number, credits: number): Promise<void>;
   updateQuestionHints(questionId: number, hints: { hint1?: string, hint2?: string, hint3?: string, explanation?: string }): Promise<void>;
   updateUserTourStatus(userId: number, tourType: string): Promise<void>;
+
+  // Question Reports
+  createQuestionReport(report: InsertQuestionReport): Promise<QuestionReport>;
+  getQuestionReports(): Promise<QuestionReport[]>;
+  updateQuestionReportStatus(id: number, status: string): Promise<QuestionReport>;
 }
 
 export class MemStorage implements IStorage {
@@ -582,7 +588,9 @@ export class MemStorage implements IStorage {
       completedQuestions: progress.completedQuestions ?? null,
       timeSpent: progress.timeSpent ?? null,
       completedAt: progress.completedAt?.toISOString() ?? null,
-      hintsUsed: 0
+      hintsUsed: 0,
+      isMini: false,
+      assignedQuestionIds: null
     };
     this.studentProgress.set(id, newProgress);
     return newProgress;
@@ -648,6 +656,11 @@ export class MemStorage implements IStorage {
   }
   async updateQuestionHints(questionId: number, hints: any): Promise<void> { }
   async updateUserTourStatus(userId: number, tourType: string): Promise<void> { }
+
+  // Question Reports
+  async createQuestionReport(report: InsertQuestionReport): Promise<QuestionReport> { throw new Error("Method not implemented."); }
+  async getQuestionReports(): Promise<QuestionReport[]> { return []; }
+  async updateQuestionReportStatus(id: number, status: string): Promise<QuestionReport> { throw new Error("Method not implemented."); }
 }
 
 import { DatabaseStorage } from "./database-storage.js";

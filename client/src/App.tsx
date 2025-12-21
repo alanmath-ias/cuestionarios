@@ -23,6 +23,7 @@ import { useEffect } from "react";
 import AllUsersCategoriesAdmin from './pages/admin/AllUsersCategoriesAdmin';
 
 import AdminQuizReview from './pages/admin/AdminQuizReview';
+import AdminReports from './pages/admin/reports';
 
 {/*chat gpt entrenamiento*/ }
 import TrainingPage from "@/pages/training/[categoryId]";
@@ -226,6 +227,9 @@ function Router() {
       </Route>
       <Route path="/admin/review/:progressId">
         {() => <AdminProtectedRoute component={AdminQuizReview} path="/admin/review/:progressId" />}
+      </Route>
+      <Route path="/admin/reports">
+        {() => <AdminProtectedRoute component={AdminReports} path="/admin/reports" />}
       </Route>
 
       <Route path="/admin/AdminDashboard">

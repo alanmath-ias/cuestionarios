@@ -7,6 +7,7 @@
   type Answer, type InsertAnswer,
   type StudentProgress, type InsertStudentProgress,
   type StudentAnswer, type InsertStudentAnswer,
+  questionReports, type QuestionReport, type InsertQuestionReport,
 } from "../shared/schema.js";
 
 import { db, DbClient } from "./db.js";
@@ -543,6 +544,8 @@ export class DatabaseStorage implements IStorage {
       timeSpent?: number;
       completedAt?: Date;
       hintsUsed: number;
+      isMini: boolean | null;
+      assignedQuestionIds: unknown;
       quiz: {
         id: number;
         title: string;
@@ -643,7 +646,9 @@ export class DatabaseStorage implements IStorage {
         completedQuestions: progressWithRelations.completedQuestions,
         timeSpent: progressWithRelations.timeSpent ?? null,
         completedAt: progressWithRelations.completedAt?.toISOString() ?? null,
-        hintsUsed: progressWithRelations.hintsUsed
+        hintsUsed: progressWithRelations.hintsUsed,
+        isMini: progressWithRelations.isMini ?? false,
+        assignedQuestionIds: progressWithRelations.assignedQuestionIds ?? null
       },
       quiz: progressWithRelations.quiz,
       answers: enrichedAnswers
@@ -1160,6 +1165,25 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({ tourStatus: newStatus })
       .where(eq(users.id, userId));
+  }
+
+  // Question Reports
+  async createQuestionReport(report: InsertQuestionReport): Promise<QuestionReport> {
+    const result = await this.db.insert(questionReports).values(report).returning();
+    return result[0];
+  }
+
+  async getQuestionReports(): Promise<QuestionReport[]> {
+    return await this.db.select().from(questionReports).orderBy(desc(questionReports.createdAt));
+  }
+
+  async updateQuestionReportStatus(id: number, status: string): Promise<QuestionReport> {
+    const result = await this.db
+      .update(questionReports)
+      .set({ status })
+      .where(eq(questionReports.id, id))
+      .returning();
+    return result[0];
   }
 
 

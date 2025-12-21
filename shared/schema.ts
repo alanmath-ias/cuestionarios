@@ -116,6 +116,8 @@ export const studentProgress = pgTable("student_progress", {
 	timeSpent: integer("time_spent"),
 	completedAt: timestamp("completed_at", { mode: 'string' }),
 	hintsUsed: integer("hints_used").default(0).notNull(),
+	isMini: boolean("is_mini").default(false), // Added to sync with DB
+	assignedQuestionIds: jsonb("assigned_question_ids"), // Added to sync with DB
 });
 
 export const quizSubmissions = pgTable("quiz_submissions", {
@@ -387,3 +389,18 @@ export const studentAnswersRelations = relations(studentAnswers, ({ one }) => ({
 }));
 
 
+
+export const questionReports = pgTable("question_reports", {
+	id: serial().primaryKey().notNull(),
+	quizId: integer("quiz_id").notNull(),
+	questionId: integer("question_id").notNull(),
+	userId: integer("user_id").notNull(),
+	description: text().notNull(),
+	status: text().default("pending").notNull(), // pending, resolved
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertQuestionReportSchema = createInsertSchema(questionReports);
+export const selectQuestionReportSchema = createInsertSchema(questionReports);
+export type QuestionReport = z.infer<typeof selectQuestionReportSchema>;
+export type InsertQuestionReport = z.infer<typeof insertQuestionReportSchema>;
