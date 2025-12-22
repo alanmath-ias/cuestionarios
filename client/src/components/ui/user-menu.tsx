@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,14 +7,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, HelpCircle, Gamepad2 } from 'lucide-react';
+import { ChevronDown, HelpCircle, Gamepad2, BrainCircuit } from 'lucide-react';
 import { RestZoneDialog } from '@/components/dialogs/RestZoneDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { startTour } from '@/lib/tour';
-//import { useNavigate } from "wouter";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface User {
   id: number;
@@ -34,6 +32,7 @@ export function UserMenu({ user }: UserMenuProps) {
   const [location, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
   const [showRestZone, setShowRestZone] = useState(false);
+  const [ageModalOpen, setAgeModalOpen] = useState(false);
 
   // Get user initials
   const getInitials = (name: string) => {
@@ -70,84 +69,121 @@ export function UserMenu({ user }: UserMenuProps) {
   };
   // fin chat gpt cierra sesion completamente
 
+  const handleDiagnosticClick = () => {
+    // Limpiar datos existentes antes de abrir el modal
+    localStorage.removeItem('surveyFormData');
+    localStorage.removeItem('completedTests');
+    sessionStorage.removeItem('quizResult');
+
+    setAgeModalOpen(true);
+    setOpen(false); // Close dropdown
+  };
+
+  const handleAgeSelection = (isUnder12: boolean) => {
+    setAgeModalOpen(false);
+    // Navegar a EncuestaPage con parámetros de edad y reset
+    window.location.href = `/encuestapage?ageGroup=${isUnder12 ? 'child' : 'teen'}&reset=true`;
+  };
+
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="flex items-center space-x-2 focus:outline-none">
-          <span className="hidden md:block">{user.name}</span>
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-medium">
-            <span>{getInitials(user.name)}</span>
-          </div>
-          <ChevronDown size={16} />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={() => setLocation('/profile')}>
-          Mi Perfil
-        </DropdownMenuItem>
-
-        {user.role === 'admin' ? (
-          <DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>
-            Quizzes Gratuitos
+    <>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="flex items-center space-x-2 focus:outline-none">
+            <span className="hidden md:block">{user.name}</span>
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-medium">
+              <span>{getInitials(user.name)}</span>
+            </div>
+            <ChevronDown size={16} />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onClick={() => setLocation('/profile')}>
+            Mi Perfil
           </DropdownMenuItem>
-        ) : (
-          <>
-            <DropdownMenuItem onClick={() => setLocation('/admin/AdminDashboard')}>
-              Dashboard
-            </DropdownMenuItem>
-            {/*<DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>*/}
-            {/*Quizzes Gratuitos*/}
-            {/*</DropdownMenuItem>*/}
-          </>
-        )}
 
-        {user.role === 'admin' && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setLocation('/admin')}>
-              Panel Administrativo
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/admin/categories')}>
-              Gestionar Materias
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/admin/subcategories')}>
-              Gestionar Temas
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/admin/quizzes')}>
-              Gestionar Cuestionarios
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/admin/urlusercategories')}>
-              Gestionar Usuarios
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/admin/RegistrarPadres')}>
-              Registrar Padres
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/admin/Calificar')}>
-              Calificar
-            </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleDiagnosticClick}>
+            <BrainCircuit className="mr-2 h-4 w-4" />
+            <span>Diagnóstico IA</span>
+          </DropdownMenuItem>
 
+          {user.role === 'admin' ? (
+            <DropdownMenuItem onClick={() => setLocation('/free-quizzes')}>
+              Quizzes Gratuitos
+            </DropdownMenuItem>
+          ) : (
+            <>
+              <DropdownMenuItem onClick={() => setLocation('/admin/AdminDashboard')}>
+                Dashboard
+              </DropdownMenuItem>
+            </>
+          )}
 
-          </>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => setShowRestZone(true)}>
-          <Gamepad2 className="mr-2 h-4 w-4" />
-          <span>Zona de Descanso</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => startTour(location)}>
-          <HelpCircle className="mr-2 h-4 w-4" />
-          <span>Ayuda</span>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
-          Cerrar Sesión
-        </DropdownMenuItem>
-      </DropdownMenuContent>
+          {user.role === 'admin' && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setLocation('/admin')}>
+                Panel Administrativo
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation('/admin/categories')}>
+                Gestionar Materias
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation('/admin/subcategories')}>
+                Gestionar Temas
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation('/admin/quizzes')}>
+                Gestionar Cuestionarios
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation('/admin/urlusercategories')}>
+                Gestionar Usuarios
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation('/admin/RegistrarPadres')}>
+                Registrar Padres
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation('/admin/Calificar')}>
+                Calificar
+              </DropdownMenuItem>
+            </>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setShowRestZone(true)}>
+            <Gamepad2 className="mr-2 h-4 w-4" />
+            <span>Zona de Descanso</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => startTour(location)}>
+            <HelpCircle className="mr-2 h-4 w-4" />
+            <span>Ayuda / Tour</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+            Cerrar Sesión
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-      <RestZoneDialog
-        open={showRestZone}
-        onOpenChange={setShowRestZone}
-      />
-    </DropdownMenu>
+      <RestZoneDialog open={showRestZone} onOpenChange={setShowRestZone} />
+
+      <Dialog open={ageModalOpen} onOpenChange={setAgeModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Selecciona tu grupo de edad</DialogTitle>
+          </DialogHeader>
+          <div className="flex gap-4 mt-4">
+            <Button
+              onClick={() => handleAgeSelection(true)}
+              className="w-full"
+            >
+              7 a 11 años
+            </Button>
+            <Button
+              onClick={() => handleAgeSelection(false)}
+              className="w-full"
+            >
+              12 a 16 años
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

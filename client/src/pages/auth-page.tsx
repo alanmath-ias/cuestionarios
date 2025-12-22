@@ -17,8 +17,7 @@ import {
   Facebook,
   Globe
 } from 'lucide-react';
-import { FaTiktok } from 'react-icons/fa';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FaTiktok, FaWhatsapp } from 'react-icons/fa';
 
 
 interface User {
@@ -130,25 +129,6 @@ export default function AuthPage() {
     }
   };
 
-  const [ageModalOpen, setAgeModalOpen] = useState(false);
-  const [userAgeGroup, setUserAgeGroup] = useState<'child' | 'teen' | null>(null);
-
-  const handleDiagnosticClick = () => {
-    // Limpiar datos existentes antes de abrir el modal
-    localStorage.removeItem('surveyFormData');
-    localStorage.removeItem('completedTests');
-    sessionStorage.removeItem('quizResult');
-
-    setAgeModalOpen(true);
-  };
-
-  const handleAgeSelection = (isUnder12: boolean) => {
-    setUserAgeGroup(isUnder12 ? 'child' : 'teen');
-    setAgeModalOpen(false);
-    // Navegar a EncuestaPage con parámetros de edad y reset
-    window.location.href = `/encuestapage?ageGroup=${isUnder12 ? 'child' : 'teen'}&reset=true`;
-  };
-
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-md mx-4">
@@ -172,32 +152,6 @@ export default function AuthPage() {
               >
                 Registrarse
               </Button>
-
-              <Button onClick={handleDiagnosticClick}>
-                📊Diagnóstico Inicial
-              </Button>
-
-              <Dialog open={ageModalOpen} onOpenChange={setAgeModalOpen}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Selecciona tu grupo de edad</DialogTitle>
-                  </DialogHeader>
-                  <div className="flex gap-4 mt-4">
-                    <Button
-                      onClick={() => handleAgeSelection(true)}
-                      className="w-full"
-                    >
-                      7 a 11 años
-                    </Button>
-                    <Button
-                      onClick={() => handleAgeSelection(false)}
-                      className="w-full"
-                    >
-                      12 a 16 años
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
             </div>
           </div>
 
@@ -320,6 +274,14 @@ export default function AuthPage() {
           {/* Sección de redes sociales */}
           <div className="mt-8 pt-6 border-t border-gray-200">
             <div className="flex justify-center space-x-6">
+              <a
+                href="https://wa.me/573208056799?text=Hola,%20tengo%20una%20duda%20sobre%20la%20app%20alanmath"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-green-500"
+              >
+                <FaWhatsapp className="h-6 w-6" />
+              </a>
               <a
                 href="https://youtube.com/alanmath"
                 target="_blank"

@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { FloatingWhatsApp } from "@/components/ui/FloatingWhatsApp";
 import {
   Card,
   CardContent,
@@ -1003,6 +1004,7 @@ export default function UserDashboard() {
         open={showRestZone}
         onOpenChange={setShowRestZone}
       />
+      <FloatingWhatsApp />
     </div>
   );
 }
