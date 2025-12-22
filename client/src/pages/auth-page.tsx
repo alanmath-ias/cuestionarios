@@ -271,56 +271,17 @@ export default function AuthPage() {
             </form>
           )}
 
-          {/* Sección de redes sociales */}
+          {/* Sección de ayuda */}
           <div className="mt-8 pt-6 border-t border-gray-200">
-            <div className="flex justify-center space-x-6">
+            <div className="flex justify-center">
               <a
                 href="https://wa.me/573208056799?text=Hola,%20tengo%20una%20duda%20sobre%20la%20app%20alanmath"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-green-500"
+                className="flex items-center gap-2 text-gray-500 hover:text-green-600 transition-colors text-sm font-medium"
               >
-                <FaWhatsapp className="h-6 w-6" />
-              </a>
-              <a
-                href="https://youtube.com/alanmath"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-red-500"
-              >
-                <Youtube className="h-6 w-6" />
-              </a>
-              <a
-                href="https://instagram.com/alanmath"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-pink-600"
-              >
-                <Instagram className="h-6 w-6" />
-              </a>
-              <a
-                href="https://facebook.com/alanmath"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-blue-600"
-              >
-                <Facebook className="h-6 w-6" />
-              </a>
-              <a
-                href="https://tiktok.com/@alanmath"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-black"
-              >
-                <FaTiktok className="h-6 w-6" />
-              </a>
-              <a
-                href="https://alanmath.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-primary"
-              >
-                <Globe className="h-6 w-6" />
+                <FaWhatsapp className="h-5 w-5" />
+                <span>¿Necesitas ayuda para ingresar?</span>
               </a>
             </div>
           </div>
