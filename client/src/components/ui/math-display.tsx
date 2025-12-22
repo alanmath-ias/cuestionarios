@@ -29,8 +29,8 @@ export function MathDisplay({ math, display = false, className = '' }: MathDispl
   }, [math, display]);
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className={`math ${display ? 'block my-4' : 'inline'} ${className}`}
     />
   );
@@ -45,7 +45,8 @@ export function MathText({ children, className = '' }: { children: string, class
       // Automatically searches for $...$ delimiters and renders math
       try {
         // Basic regex to match $...$ patterns
-        const mathRegex = /\$(.¡?)\$/g;
+        // Regex to match $...$ or ¡...¡ patterns
+        const mathRegex = /(\$|¡)(.+?)(\1)/g;
         let content = children;
         let match;
         let lastIndex = 0;
@@ -61,7 +62,7 @@ export function MathText({ children, className = '' }: { children: string, class
 
           // Create span for the math
           const mathSpan = document.createElement('span');
-          katex.render(match[1], mathSpan, {
+          katex.render(match[2], mathSpan, {
             throwOnError: false,
             displayMode: false,
           });

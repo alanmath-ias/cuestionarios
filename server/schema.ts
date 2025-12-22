@@ -1,5 +1,5 @@
 import { pgTable, foreignKey, serial, text, integer, index, varchar, json, timestamp, boolean, jsonb, unique, uuid, primaryKey } from "drizzle-orm/pg-core"
-import { sql } from "drizzle-orm"
+import { sql, relations } from "drizzle-orm"
 
 import { createInsertSchema } from "drizzle-zod";
 import * as z from "zod";  // ✅ Forma correcta para Zod v3+
@@ -7,6 +7,14 @@ import { drizzle } from "drizzle-orm/postgres-js";
 //import * as schema from './schema'; // ✅ corregido con extensión .js
 
 //schema nuevo
+
+export const categories = pgTable("categories", {
+	id: serial().primaryKey().notNull(),
+	name: text().notNull(),
+	description: text().notNull(),
+	colorClass: text("color_class").notNull(),
+	youtubeLink: text("youtube_link"), // Columna sin valores predeterminados
+});
 
 export const subcategories = pgTable("subcategories", {
 	id: serial().primaryKey().notNull(),
@@ -68,13 +76,7 @@ export const studentAnswers = pgTable("student_answers", {
 	timeSpent: integer("time_spent"),
 });
 
-export const categories = pgTable("categories", {
-	id: serial().primaryKey().notNull(),
-	name: text().notNull(),
-	description: text().notNull(),
-	colorClass: text("color_class").notNull(),
-	youtubeLink: text("youtube_link"), // Columna sin valores predeterminados
-});
+
 
 export const questions = pgTable("questions", {
 	id: serial().primaryKey().notNull(),
@@ -208,6 +210,21 @@ export const questionReports = pgTable("question_reports", {
 	status: text("status").default("pending").notNull(), // pending, resolved
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
+
+export const questionReportsRelations = relations(questionReports, ({ one }) => ({
+	user: one(users, {
+		fields: [questionReports.userId],
+		references: [users.id],
+	}),
+	quiz: one(quizzes, {
+		fields: [questionReports.quizId],
+		references: [quizzes.id],
+	}),
+	question: one(questions, {
+		fields: [questionReports.questionId],
+		references: [questions.id],
+	}),
+}));
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
 	id: serial("id").primaryKey(),

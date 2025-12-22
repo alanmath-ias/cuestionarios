@@ -122,26 +122,20 @@ export function UserMenu({ user }: UserMenuProps) {
           {user.role === 'admin' && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setLocation('/admin')}>
-                Panel Administrativo
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setLocation('/admin/categories')}>
                 Gestionar Materias
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setLocation('/admin/subcategories')}>
                 Gestionar Temas
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLocation('/admin/quizzes')}>
-                Gestionar Cuestionarios
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLocation('/admin/urlusercategories')}>
-                Gestionar Usuarios
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setLocation('/admin/RegistrarPadres')}>
                 Registrar Padres
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLocation('/admin/Calificar')}>
-                Calificar
+              <DropdownMenuItem onClick={() => setLocation('/admin/reports')}>
+                Reportes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation('/admin/send-email')}>
+                Enviar Correos
               </DropdownMenuItem>
             </>
           )}
@@ -150,10 +144,12 @@ export function UserMenu({ user }: UserMenuProps) {
             <Gamepad2 className="mr-2 h-4 w-4" />
             <span>Zona de Descanso</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => startTour(location)}>
-            <HelpCircle className="mr-2 h-4 w-4" />
-            <span>Ayuda / Tour</span>
-          </DropdownMenuItem>
+          {user.role !== 'admin' && (
+            <DropdownMenuItem onClick={() => startTour(location)}>
+              <HelpCircle className="mr-2 h-4 w-4" />
+              <span>Ayuda / Tour</span>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout} className="text-red-600">
             Cerrar Sesión

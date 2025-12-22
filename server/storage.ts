@@ -122,6 +122,7 @@ export interface IStorage {
   // Question Reports
   createQuestionReport(report: InsertQuestionReport): Promise<QuestionReport>;
   getQuestionReports(): Promise<QuestionReport[]>;
+  getQuestionReportDetails(id: number): Promise<any>;
   updateQuestionReportStatus(id: number, status: string): Promise<QuestionReport>;
 
   // Password Reset
@@ -666,6 +667,7 @@ export class MemStorage implements IStorage {
   // Question Reports
   async createQuestionReport(report: InsertQuestionReport): Promise<QuestionReport> { throw new Error("Method not implemented."); }
   async getQuestionReports(): Promise<QuestionReport[]> { return []; }
+  async getQuestionReportDetails(id: number): Promise<any> { return null; }
   async updateQuestionReportStatus(id: number, status: string): Promise<QuestionReport> { throw new Error("Method not implemented."); }
 
   // Password Reset

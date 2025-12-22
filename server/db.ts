@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import * as schema from "./schema.js"; // Agregado .js a la importación de schema
+import * as schema from "../shared/schema.js"; // Usar el esquema compartido
 
 // Connection string se toma de variables de entorno
 const connectionString = process.env.DATABASE_URL || "";

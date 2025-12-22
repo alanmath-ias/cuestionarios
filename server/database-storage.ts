@@ -1187,6 +1187,34 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getQuestionReportDetails(id: number): Promise<any> {
+    const report = await this.db.query.questionReports.findFirst({
+      where: eq(questionReports.id, id),
+      with: {
+        user: {
+          columns: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        quiz: {
+          columns: {
+            id: true,
+            title: true
+          }
+        },
+        question: {
+          with: {
+            answers: true
+          }
+        }
+      }
+    });
+
+    return report;
+  }
+
 
 
 

@@ -8,6 +8,14 @@ import { drizzle } from "drizzle-orm/postgres-js";
 
 //schema nuevo
 
+export const categories = pgTable("categories", {
+	id: serial().primaryKey().notNull(),
+	name: text().notNull(),
+	description: text().notNull(),
+	colorClass: text("color_class").notNull(),
+	youtubeLink: text("youtube_link"), // Columna sin valores predeterminados
+});
+
 export const subcategories = pgTable("subcategories", {
 	id: serial().primaryKey().notNull(),
 	name: text().notNull(),
@@ -69,13 +77,7 @@ export const studentAnswers = pgTable("student_answers", {
 	hintsUsed: integer("hints_used").default(0).notNull(),
 });
 
-export const categories = pgTable("categories", {
-	id: serial().primaryKey().notNull(),
-	name: text().notNull(),
-	description: text().notNull(),
-	colorClass: text("color_class").notNull(),
-	youtubeLink: text("youtube_link"), // Columna sin valores predeterminados
-});
+
 
 export const questions = pgTable("questions", {
 	id: serial().primaryKey().notNull(),
@@ -119,6 +121,8 @@ export const studentProgress = pgTable("student_progress", {
 	isMini: boolean("is_mini").default(false), // Added to sync with DB
 	assignedQuestionIds: jsonb("assigned_question_ids"), // Added to sync with DB
 });
+
+
 
 export const quizSubmissions = pgTable("quiz_submissions", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
@@ -296,6 +300,16 @@ export const parents = pgTable("parents", {
 	childId: integer("child_id").notNull().references(() => users.id, { onDelete: "cascade" }),
 });
 
+export const questionReports = pgTable("question_reports", {
+	id: serial().primaryKey().notNull(),
+	quizId: integer("quiz_id").notNull(),
+	questionId: integer("question_id").notNull(),
+	userId: integer("user_id").notNull(),
+	description: text().notNull(),
+	status: text().default("pending").notNull(), // pending, resolved
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Types exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -388,17 +402,24 @@ export const studentAnswersRelations = relations(studentAnswers, ({ one }) => ({
 	}),
 }));
 
+export const questionReportsRelations = relations(questionReports, ({ one }) => ({
+	user: one(users, {
+		fields: [questionReports.userId],
+		references: [users.id],
+	}),
+	quiz: one(quizzes, {
+		fields: [questionReports.quizId],
+		references: [quizzes.id],
+	}),
+	question: one(questions, {
+		fields: [questionReports.questionId],
+		references: [questions.id],
+	}),
+}));
 
 
-export const questionReports = pgTable("question_reports", {
-	id: serial().primaryKey().notNull(),
-	quizId: integer("quiz_id").notNull(),
-	questionId: integer("question_id").notNull(),
-	userId: integer("user_id").notNull(),
-	description: text().notNull(),
-	status: text().default("pending").notNull(), // pending, resolved
-	createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+
+
 
 export const insertQuestionReportSchema = createInsertSchema(questionReports);
 export const selectQuestionReportSchema = createInsertSchema(questionReports);

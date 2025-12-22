@@ -64,14 +64,9 @@ export function Header({ user, pendingCount }: HeaderProps) {
 
             {isAdmin && (
               <>
-                <li><Link href="/admin/categories"><span className="hover:text-white/80 transition-colors cursor-pointer">Materias</span></Link></li>
-                <li><Link href="/admin/subcategories"><span className="hover:text-white/80 transition-colors cursor-pointer">Temas</span></Link></li>
                 <li><Link href="/admin/quizzes"><span className="hover:text-white/80 transition-colors cursor-pointer">Cuestionarios</span></Link></li>
                 <li><Link href="/admin/users"><span className="hover:text-white/80 transition-colors cursor-pointer">Usuarios</span></Link></li>
                 <li><Link href="/admin/calificar"><span className="hover:text-white/80 transition-colors cursor-pointer">Calificar</span></Link></li>
-                <li><Link href="/admin/reports"><span className="hover:text-white/80 transition-colors cursor-pointer">Reportes</span></Link></li>
-                <li><Link href="/admin/send-email"><span className="hover:text-white/80 transition-colors cursor-pointer">Correos</span></Link></li>
-                <li><Link href="/admin/RegistrarPadres"><span className="hover:text-white/80 transition-colors cursor-pointer">Padres</span></Link></li>
               </>
             )}
 
@@ -95,13 +90,16 @@ export function Header({ user, pendingCount }: HeaderProps) {
         <div className="flex items-center gap-2 md:gap-4">
 
           {/* Botón de Ayuda (Visible siempre) */}
-          <button
-            onClick={() => startTour(location)}
-            className="text-white hover:text-white/80 focus:outline-none"
-            title="Ayuda"
-          >
-            <HelpCircle size={24} />
-          </button>
+          {/* Botón de Ayuda (Visible siempre excepto admin) */}
+          {!isAdmin && (
+            <button
+              onClick={() => startTour(location)}
+              className="text-white hover:text-white/80 focus:outline-none"
+              title="Ayuda"
+            >
+              <HelpCircle size={24} />
+            </button>
+          )}
 
           {/* Buscador Global - Visible en móvil */}
           <div className="block">

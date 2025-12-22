@@ -2477,6 +2477,101 @@ Ejemplo de formato:
     }
   });
 
+  apiRouter.get("/admin/reports/:id/details", async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).send("No autenticado");
+
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== "admin") return res.status(403).send("No autorizado");
+
+      const reportId = parseInt(req.params.id);
+      const report = await storage.getQuestionReportDetails(reportId);
+
+      if (!report) return res.status(404).send("Reporte no encontrado");
+
+      res.json(report);
+    } catch (error) {
+      console.error("Error fetching report details:", error);
+      res.status(500).send("Error al obtener detalles del reporte");
+    }
+  });
+
+  apiRouter.post("/admin/reports/:id/solve-ai", async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).send("No autenticado");
+
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== "admin") return res.status(403).send("No autorizado");
+
+      const reportId = parseInt(req.params.id);
+      const report = await storage.getQuestionReportDetails(reportId);
+
+      if (!report || !report.question) return res.status(404).send("Reporte o pregunta no encontrada");
+
+      const question = report.question;
+      const answers = question.answers || [];
+
+      // Prepare prompt for DeepSeek
+      const prompt = `
+        Actúa como un profesor experto de matemáticas. Analiza la siguiente pregunta y sus opciones de respuesta.
+        Resuelve el problema paso a paso y determina cuál es la respuesta correcta.
+        
+        Pregunta: ${question.content}
+        Tipo: ${question.type}
+        
+        Opciones:
+        ${answers.map((a: any) => `- ${a.content} (Correcta: ${a.isCorrect})`).join('\n')}
+        
+        Tu respuesta debe tener este formato:
+        **Análisis:** [Tu explicación paso a paso]
+        **Conclusión:** [Cuál es la opción correcta y por qué]
+        **Veredicto:** [Indica si la pregunta o las respuestas tienen algún error]
+
+        IMPORTANTE:
+        - Usa notación LaTeX encerrada entre signos de exclamación invertidos (¡...¡) para todas las expresiones matemáticas. Ejemplo: ¡x^2 + 2x + 1 = 0¡
+        - NO uses $...$ ni \\(...\\) para matemáticas.
+        - Asegúrate de que el contenido matemático se renderice correctamente con este formato.
+      `;
+
+      const apiKey = process.env.VITE_DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY;
+
+      if (!apiKey) {
+        return res.status(500).json({ error: "API Key de DeepSeek no configurada" });
+      }
+
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: "system", content: "Eres un asistente experto en matemáticas y pedagogía." },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.3
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`DeepSeek API error: ${response.status} `);
+      }
+
+      const data = await response.json();
+      const aiResponse = data.choices[0].message.content;
+
+      res.json({ aiResponse });
+
+    } catch (error) {
+      console.error("Error calling AI solver:", error);
+      res.status(500).json({ error: "Error al consultar a la IA" });
+    }
+  });
+
   //y ahora Calificaciones pide los datos anteriormente creados:
   app.get("/api/admin/quiz-submissions", async (req, res) => {
     try {
