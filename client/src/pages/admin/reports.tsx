@@ -25,11 +25,8 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import 'katex/dist/katex.min.css';
 import { MathText } from "@/components/ui/math-display";
+import { AIMarkdown } from "@/components/ui/ai-markdown";
 
 interface QuestionReport {
     id: number;
@@ -304,13 +301,8 @@ export default function AdminReports() {
                                     </div>
 
                                     {aiResponse && (
-                                        <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 text-sm prose prose-sm max-w-none">
-                                            <ReactMarkdown
-                                                remarkPlugins={[remarkMath]}
-                                                rehypePlugins={[rehypeKatex]}
-                                            >
-                                                {aiResponse.replace(/¡/g, '$').replace(/\\\[/g, '$$').replace(/\\\]/g, '$$').replace(/\\\(/g, '$').replace(/\\\)/g, '$')}
-                                            </ReactMarkdown>
+                                        <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 text-sm">
+                                            <AIMarkdown content={aiResponse} />
                                         </div>
                                     )}
                                 </div>

@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useSession } from "@/hooks/useSession";
 import { ContentRenderer } from "@/components/ContentRenderer";
+import { AIMarkdown } from "@/components/ui/ai-markdown";
 
 // Interfaces
 interface Quiz {
@@ -556,7 +557,7 @@ const ActiveQuiz = () => {
                   Pista {index + 1}
                 </h4>
                 <div className="text-yellow-900">
-                  <ContentRenderer content={hint} />
+                  <AIMarkdown content={hint} />
                 </div>
               </div>
             ))}
