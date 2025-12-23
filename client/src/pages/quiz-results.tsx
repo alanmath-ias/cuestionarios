@@ -316,7 +316,7 @@ function QuizResults() {
                                   answer.question.content,
                                   correctContent || ''
                                 )}
-                                className="ml-2 border-white/10 text-slate-300 hover:text-white hover:bg-white/10"
+                                className="ml-2 border-white/10 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
                               >
                                 <BookOpen className="h-4 w-4 mr-2" />
                                 Explicación

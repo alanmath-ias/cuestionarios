@@ -299,7 +299,10 @@ const ActiveQuiz = () => {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         setSelectedAnswerId(null);
       } else {
-        const answeredCount = Object.keys(answeredQuestions).length;
+        if (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex]) {
+          await submitCurrentAnswer();
+        }
+        const answeredCount = Object.keys(answeredQuestions).length + (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex] ? 1 : 0);
         if (questions && answeredCount < questions.length) {
           setIsIncompleteDialogOpen(true);
           return;
@@ -477,6 +480,17 @@ const ActiveQuiz = () => {
       <div className="container mx-auto px-4 py-8 max-w-5xl relative z-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
+            <div className="flex items-center gap-4 mb-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-slate-400 hover:text-white hover:bg-white/10 -ml-2"
+                onClick={() => window.history.back()}
+              >
+                <ArrowLeft className="h-5 w-5 mr-1" />
+                Salir
+              </Button>
+            </div>
             <h1 className="text-2xl font-bold flex items-center gap-2 text-white">
               {quiz?.title}
               {session?.userId === 1 && (
@@ -818,6 +832,36 @@ const ActiveQuiz = () => {
               </Button>
               <Button onClick={handleReportSubmit} className="bg-red-600 hover:bg-red-700 text-white">
                 Enviar Reporte
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isIncompleteDialogOpen} onOpenChange={setIsIncompleteDialogOpen}>
+          <DialogContent className="bg-slate-900 border-white/10 text-slate-200">
+            <DialogHeader>
+              <DialogTitle className="text-white flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-yellow-500" />
+                Preguntas sin contestar
+              </DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Aún tienes {questions ? questions.length - Object.keys(answeredQuestions).length : 0} preguntas sin contestar.
+                <br />
+                Si finalizas ahora, las preguntas no contestadas se marcarán como incorrectas (o no sumarán puntos).
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setIsIncompleteDialogOpen(false)} className="text-slate-400 hover:text-white hover:bg-white/5">
+                Volver al cuestionario
+              </Button>
+              <Button
+                onClick={() => {
+                  setIsIncompleteDialogOpen(false);
+                  handleFinishQuiz();
+                }}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white"
+              >
+                Finalizar de todos modos
               </Button>
             </DialogFooter>
           </DialogContent>

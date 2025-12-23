@@ -852,13 +852,25 @@ export default function UserDashboard() {
                 <AlertTriangle className="h-5 w-5" />
                 Confirmar Modo Mini
               </DialogTitle>
-              <DialogDescription className="text-slate-400">
-                El modo mini es una versión rápida del cuestionario con menos preguntas.
-                ¿Deseas continuar?
+              <DialogDescription className="space-y-4 pt-4 text-slate-300">
+                <p>
+                  Esta versión tiene <strong>menos preguntas</strong> y es útil si ya conoces el tema y solo quieres repasar, o si no tienes tiempo para realizar el cuestionario completo.
+                </p>
+                <div className="bg-yellow-500/10 p-4 rounded-xl border border-yellow-500/20 text-yellow-200 text-sm">
+                  <p className="font-semibold mb-2">⚠️ Ten en cuenta:</p>
+                  <ul className="list-disc list-inside space-y-1 text-yellow-200/80">
+                    <li>Es una versión reducida (50% de preguntas).</li>
+                    <li>Otorga un máximo de <strong>2 créditos</strong>.</li>
+                  </ul>
+                </div>
+                <p className="text-sm text-slate-400">
+                  Te aconsejamos realizar la versión completa siempre que sea posible para asegurar un mejor aprendizaje.
+                </p>
+                <p className="font-medium text-white pt-2">¿Deseas continuar con la versión mini?</p>
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setMiniQuizId(null)} className="border-slate-700 text-slate-300 hover:bg-white/10">Cancelar</Button>
+              <Button onClick={() => setMiniQuizId(null)} className="bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white border border-slate-700">Cancelar</Button>
               <Button onClick={confirmMiniStart} className="bg-yellow-600 hover:bg-yellow-700 text-white">Comenzar Mini Quiz</Button>
             </DialogFooter>
           </DialogContent>
@@ -972,20 +984,23 @@ export default function UserDashboard() {
               ) : filteredCategoryQuizzes.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4">
                   {filteredCategoryQuizzes.map((quiz) => (
-                    <div key={quiz.id} className="bg-white/5 border border-white/5 rounded-xl p-4 hover:border-blue-500/30 transition-all flex flex-col justify-between gap-3">
-                      <div>
-                        <h4 className="font-semibold text-slate-200">{quiz.title}</h4>
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{quiz.description}</p>
+                    <div key={quiz.id} className="group flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-blue-500/30 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.15)]">
+                      <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                        <BookOpen className="h-5 w-5 text-blue-400" />
                       </div>
-                      <div className="flex items-center justify-between mt-auto pt-2">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${quiz.difficulty === 'Fácil' ? 'bg-green-500/20 text-green-400' :
-                          quiz.difficulty === 'Medio' ? 'bg-yellow-500/20 text-yellow-400' :
-                            'bg-red-500/20 text-red-400'
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm text-slate-200 truncate">{quiz.title}</h4>
+                        <p className="text-xs text-slate-500 truncate">{quiz.description}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${quiz.difficulty === 'Fácil' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                          quiz.difficulty === 'Medio' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                            'bg-red-500/10 text-red-400 border border-red-500/20'
                           }`}>
                           {quiz.difficulty}
                         </span>
-                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setLocation(`/quiz/${quiz.id}`)}>
-                          Iniciar
+                        <Button size="sm" className="h-8 w-8 p-0 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20" onClick={() => setLocation(`/quiz/${quiz.id}`)}>
+                          <PlayCircle className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>

@@ -6,26 +6,25 @@ interface ContentRendererProps {
 }
 
 export function ContentRenderer({ content, className }: ContentRendererProps) {
-    // Split by ¡...¡ or ¡¡...¡¡ to handle math content
-    // This regex matches content surrounded by one or more ¡ characters
-    const parts = content.split(/(¡+.*?¡+)/g);
+    // Split by ¡...¡, ¡¡...¡¡, $...$, or $$...$$ to handle math content
+    const parts = content.split(/((?:¡+|\\?\$+).*?(?:¡+|\\?\$+))/g);
 
     return (
         <div className={className}>
             {parts.map((part, index) => {
                 const trimmedPart = part.trim();
-                // Check if the part is wrapped in ¡ or ¡¡
-                const match = trimmedPart.match(/^(¡+)(.*?)(¡+)$/);
+                // Check if the part is wrapped in delimiters
+                const match = trimmedPart.match(/^((?:¡+|\\?\$+))(.*?)(\1)$/);
 
                 if (match) {
                     const [fullMatch, startDelim, equation, endDelim] = match;
-                    // Ensure delimiters match and are valid (¡ or ¡¡)
-                    if (startDelim === endDelim && (startDelim === '¡' || startDelim === '¡¡')) {
+                    // Ensure delimiters match
+                    if (startDelim === endDelim) {
                         return (
                             <span key={index} className="mx-1 inline-block align-middle">
                                 <MathDisplay
                                     math={equation.trim()}
-                                    display={false}
+                                    display={startDelim.length >= 2 || startDelim.includes('$$')}
                                     className="inline-block"
                                 />
                             </span>

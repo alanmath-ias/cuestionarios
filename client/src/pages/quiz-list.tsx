@@ -343,21 +343,23 @@ function QuizList() {
               </DialogTitle>
               <DialogDescription className="space-y-4 pt-4 text-slate-300">
                 <p>
-                  Estás a punto de iniciar una <strong className="text-white">versión reducida (50%)</strong> de este cuestionario con preguntas al azar.
+                  Esta versión tiene <strong>menos preguntas</strong> y es útil si ya conoces el tema y solo quieres repasar, o si no tienes tiempo para realizar el cuestionario completo.
                 </p>
                 <div className="bg-yellow-500/10 p-4 rounded-xl border border-yellow-500/20 text-yellow-200 text-sm">
-                  <p className="font-semibold mb-2">⚠️ Importante:</p>
+                  <p className="font-semibold mb-2">⚠️ Ten en cuenta:</p>
                   <ul className="list-disc list-inside space-y-1 text-yellow-200/80">
-                    <li>Esta versión es ideal para repasos rápidos.</li>
-                    <li>Ganarás <strong>menos créditos</strong> que en la versión completa.</li>
-                    <li>Si tienes tiempo, te recomendamos hacer la versión completa.</li>
+                    <li>Es una versión reducida (50% de preguntas).</li>
+                    <li>Otorga un máximo de <strong>2 créditos</strong>.</li>
                   </ul>
                 </div>
-                <p>¿Deseas continuar con la versión mini?</p>
+                <p className="text-sm text-slate-400">
+                  Te aconsejamos realizar la versión completa siempre que sea posible para asegurar un mejor aprendizaje.
+                </p>
+                <p className="font-medium text-white pt-2">¿Deseas continuar con la versión mini?</p>
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-3 sm:gap-0 mt-4">
-              <Button variant="ghost" onClick={() => setMiniQuizId(null)} className="text-slate-400 hover:text-white hover:bg-white/10">
+              <Button onClick={() => setMiniQuizId(null)} className="bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white border border-slate-700">
                 Cancelar
               </Button>
               <Button className="bg-yellow-600 hover:bg-yellow-700 text-white" onClick={confirmMiniStart}>

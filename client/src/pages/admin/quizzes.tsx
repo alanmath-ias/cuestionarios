@@ -11,7 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash, Clock, BookOpen, Link as LinkIcon } from "lucide-react";
+import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Category, Quiz, Subcategory, User } from "@/types/types";
@@ -399,7 +399,8 @@ export default function QuizzesAdmin() {
           <p className="text-muted-foreground">Gestiona los cuestionarios y sus preguntas</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => window.history.back()}>
+          <Button variant="outline" onClick={() => window.history.back()} className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
+            <ArrowLeft className="w-4 h-4 mr-2" />
             Volver
           </Button>
         </div>
