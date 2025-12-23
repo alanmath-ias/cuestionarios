@@ -424,6 +424,20 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async updateQuestionExplanation(id: number, explanation: string): Promise<Question> {
+    const [updatedQuestion] = await db
+      .update(questions)
+      .set({ explanation })
+      .where(eq(questions.id, id))
+      .returning();
+
+    if (!updatedQuestion) {
+      throw new Error("Question not found");
+    }
+
+    return updatedQuestion;
+  }
+
   async deleteQuestion(id: number): Promise<void> {
     await this.db.delete(questions).where(eq(questions.id, id));
   }

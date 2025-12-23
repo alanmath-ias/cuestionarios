@@ -1,17 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MathDisplay } from '@/components/ui/math-display';
-import { ArrowLeft, Download, Clock, CheckCircle, XCircle, HelpCircle, BookOpen } from 'lucide-react';
+import { ArrowLeft, Download, Clock, CheckCircle, XCircle, BookOpen } from 'lucide-react';
 import { startQuizResultsTour } from "@/lib/tour";
 import type { QuizResult } from '@shared/quiz-types.js';
-// En la parte superior del archivo QuizResults.tsx, añade:
-import { useState } from 'react';
-import { ExplanationModal } from './explicacion'; // Asegúrate de crear este componente
+import { ExplanationModal } from './explicacion';
 import { useSession } from "@/hooks/useSession";
-
 
 interface Question {
   id: number;
@@ -23,24 +20,18 @@ interface Question {
   }[];
 }
 
-
 function QuizResults() {
   const { progressId } = useParams<{ progressId: string }>();
   const { session } = useSession();
-  //const [_, setLocation] = useLocation();
 
   const handleGoBack = () => {
-    // Verificamos si hay historial previo
     if (window.history.state && window.history.state.idx > 0) {
       window.history.back();
     } else {
-      // Si no hay historial, redirigimos a una ruta por defecto
       window.location.href = '/';
     }
   };
 
-
-  // Obtener el parámetro `user_id` de la URL
   const searchParams = new URLSearchParams(window.location.search);
   const userId = searchParams.get('user_id');
 
@@ -54,7 +45,7 @@ function QuizResults() {
       if (!res.ok) throw new Error('Error fetching results');
       return res.json();
     },
-    enabled: !!progressId, // Solo depende de `progressId`
+    enabled: !!progressId,
   });
 
   const { data: quizQuestions, isLoading: loadingQuestions } = useQuery<Question[]>({
@@ -77,23 +68,12 @@ function QuizResults() {
     enabled: !!progressId,
   });
 
-  useEffect(() => {
-    if (results) {
-      console.log('Quiz results data:', results);
-    }
-    if (quizQuestions) {
-      console.log('Quiz questions data:', quizQuestions);
-    }
-  }, [results, quizQuestions]);
-
   const isLoading = loadingResults || loadingQuestions;
 
-  // Auto-start tour for new users
   useEffect(() => {
     if (!isLoading && session?.userId && !session.tourStatus?.quizResults) {
       setTimeout(() => {
         startQuizResultsTour();
-        // Update DB
         fetch('/api/user/tour-seen', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -120,10 +100,8 @@ function QuizResults() {
     return correctAnswer?.content;
   };
 
-  // Función mejorada para parsear contenido (preguntas y respuestas)
   const renderContent = (content: string) => {
     if (!content) return null;
-
     return content.split('¡').map((part, i) => {
       if (i % 2 === 0) {
         return <span key={i}>{part}</span>;
@@ -133,8 +111,7 @@ function QuizResults() {
     });
   };
 
-  //Puntaje preciso:
-  const preciseScore = ((correctAnswers / totalQuestions) * 10).toFixed(1);
+  const preciseScore = totalQuestions > 0 ? ((correctAnswers / totalQuestions) * 10).toFixed(1) : "0.0";
 
   const handleDownloadResults = () => {
     if (!results) return;
@@ -148,7 +125,7 @@ function QuizResults() {
     ]);
 
     rows.push([
-      `Puntuación: ${preciseScore}/10`,  // Usar el mismo cálculo
+      `Puntuación: ${preciseScore}/10`,
       `Correctas: ${correctAnswers}/${totalQuestions}`,
       `Tiempo total: ${formatTimeSpent(results.progress.timeSpent)}`,
       ''
@@ -171,16 +148,15 @@ function QuizResults() {
     document.body.removeChild(link);
   };
 
-  // Dentro del componente QuizResults, añade este estado:
   const [showExplanation, setShowExplanation] = useState(false);
   const [currentExplanation, setCurrentExplanation] = useState<{
+    questionId: number;
     question: string;
     correctAnswer: string;
   } | null>(null);
 
-  // Añade esta función para manejar la solicitud de explicación
-  const handleRequestExplanation = (question: string, correctAnswer: string) => {
-    setCurrentExplanation({ question, correctAnswer });
+  const handleRequestExplanation = (questionId: number, question: string, correctAnswer: string) => {
+    setCurrentExplanation({ questionId, question, correctAnswer });
     setShowExplanation(true);
   };
 
@@ -309,6 +285,7 @@ function QuizResults() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleRequestExplanation(
+                                  answer.question.id,
                                   answer.question.content,
                                   correctContent || ''
                                 )}
@@ -371,20 +348,15 @@ function QuizResults() {
 
       {showExplanation && currentExplanation && (
         <ExplanationModal
+          questionId={currentExplanation.questionId}
           question={currentExplanation.question}
           correctAnswer={currentExplanation.correctAnswer}
-          quizTitle={results?.quiz.title || 'Matemáticas'} // Asegúrate de pasar el título
+          quizTitle={results?.quiz.title || 'Matemáticas'}
           onClose={() => setShowExplanation(false)}
         />
       )}
-
     </div>
-
   );
-
-
-
-
 }
 
 export default QuizResults;

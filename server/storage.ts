@@ -36,22 +36,6 @@ export interface IStorage {
   createQuiz(quiz: InsertQuiz): Promise<Quiz>;
   updateQuiz(id: number, quiz: Partial<Quiz>): Promise<Quiz>;
   deleteQuiz(id: number): Promise<void>;
-
-  // User Quiz Assignment
-  getUserQuizzes(userId: number): Promise<Quiz[]>;
-  assignQuizToUser(userId: number, quizId: number): Promise<void>;
-  removeQuizFromUser(userId: number, quizId: number): Promise<void>;
-
-  // Question methods
-  getQuestionsByQuiz(quizId: number): Promise<Question[]>;
-  getQuestion(id: number): Promise<Question | undefined>;
-  createQuestion(question: InsertQuestion): Promise<Question>;
-  updateQuestion(id: number, question: Partial<Question>): Promise<Question>;
-  deleteQuestion(id: number): Promise<void>;
-
-  // Answer methods
-  getAnswersByQuestion(questionId: number): Promise<Answer[]>;
-  getAnswer(id: number): Promise<Answer | undefined>;
   createAnswer(answer: InsertAnswer): Promise<Answer>;
   updateAnswer(id: number, answer: Partial<Answer>): Promise<Answer>;
   deleteAnswer(id: number): Promise<void>;

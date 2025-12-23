@@ -6,13 +6,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { AIMarkdown } from '@/components/ui/ai-markdown';
 
 interface ExplanationModalProps {
+    questionId: number;
     question: string;
     correctAnswer: string;
     quizTitle: string; // Asegúrate que esta prop está definida
     onClose: () => void;
 }
 
-export function ExplanationModal({ question, correctAnswer, quizTitle, onClose }: ExplanationModalProps) {
+export function ExplanationModal({ questionId, question, correctAnswer, quizTitle, onClose }: ExplanationModalProps) {
     const [explanation, setExplanation] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export function ExplanationModal({ question, correctAnswer, quizTitle, onClose }
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
+                        questionId,
                         question,
                         correctAnswer,
                         quizTitle,

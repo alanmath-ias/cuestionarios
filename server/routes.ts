@@ -1337,13 +1337,22 @@ Formato: Solo el texto del tip con el ejemplo.`;
 
   // DeepSeek API proxy endpoint
   apiRouter.post("/explain-answer", async (req: Request, res: Response) => {
-    const { question, correctAnswer, quizTitle } = req.body;
+    const { questionId, question, correctAnswer, quizTitle } = req.body;
 
     if (!question || !correctAnswer || !quizTitle) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
     try {
+      // 1. Check if explanation already exists in DB (if questionId provided)
+      if (questionId) {
+        const existingQuestion = await storage.getQuestion(questionId);
+        if (existingQuestion && existingQuestion.explanation) {
+          console.log(`Returning cached explanation for question ${questionId}`);
+          return res.json({ content: existingQuestion.explanation });
+        }
+      }
+
       const prompt = `Eres un tutor experto en ${quizTitle}. Resuelve este problema paso a paso:
 
 **Contexto del Cuestionario:** ${quizTitle}
@@ -1396,7 +1405,20 @@ Ejemplo de formato:
         throw new Error('La API no devolvió contenido');
       }
 
-      res.json({ content: data.choices[0].message.content });
+      const generatedExplanation = data.choices[0].message.content;
+
+      // 2. Save explanation to DB (if questionId provided)
+      if (questionId) {
+        try {
+          await storage.updateQuestionExplanation(questionId, generatedExplanation);
+          console.log(`Cached explanation for question ${questionId}`);
+        } catch (dbError) {
+          console.error("Error caching explanation:", dbError);
+          // Continue execution, don't fail the request if caching fails
+        }
+      }
+
+      res.json({ content: generatedExplanation });
     } catch (error) {
       console.error("Error generating explanation:", error);
       res.status(500).json({ message: "Error generating explanation" });
