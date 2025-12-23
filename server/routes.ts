@@ -680,7 +680,7 @@ Formato: Solo el texto del tip con el ejemplo.`;
         return res.status(401).json({ error: "Usuario no autenticado" });
       }
 
-      const userId = (req.user as any).id;
+      const userId = req.user.id;
 
       const user = await storage.getUserById(userId);
       if (!user) {
@@ -2267,7 +2267,7 @@ Ejemplo de formato:
 
       //const userId = req.user.id;
       // Cambio principal: Permitir user_id como parámetro opcional
-      const userId = req.query.user_id ? Number(req.query.user_id) : (req.user as any).id; // Línea modificada
+      const userId = req.query.user_id ? Number(req.query.user_id) : req.user!.id; // Línea modificada
 
       const quizzes = await storage.getQuizzesByUserId(userId);
       res.json(quizzes);
@@ -2725,7 +2725,7 @@ Ejemplo de formato:
     try {
 
       //const userId = req.user?.id;
-      const userId = req.query.user_id ? Number(req.query.user_id) : (req.user as any)?.id;
+      const userId = req.query.user_id ? Number(req.query.user_id) : req.user?.id;
 
       if (!userId) {
         return res.status(401).json({ error: "No autenticado" });
@@ -2827,7 +2827,7 @@ Ejemplo de formato:
         return res.status(401).json({ error: 'Usuario no autenticado' });
       }
 
-      const parentId = (req.user as any).id;
+      const parentId = req.user.id;
       const child = await storage.getChildByParentId(parentId);
 
       if (!child) {
@@ -2852,7 +2852,7 @@ Ejemplo de formato:
   app.get("/api/progress/:progressId/answers", requireAuth, async (req, res) => {
     try {
       const progressId = Number(req.params.progressId);
-      const userId = req.query.user_id ? Number(req.query.user_id) : (req.user as any)?.id;
+      const userId = req.query.user_id ? Number(req.query.user_id) : req.user?.id;
 
       if (!userId) {
         return res.status(401).json({ error: "No autenticado" });

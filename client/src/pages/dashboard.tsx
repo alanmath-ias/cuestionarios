@@ -43,6 +43,7 @@ import VideoEmbed from './VideoEmbed';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
 import { ContentRenderer } from "@/components/ContentRenderer";
 import { Input } from "@/components/ui/input";
 import { QuizDetailsDialog } from "@/components/dialogs/QuizDetailsDialog";
@@ -138,19 +139,19 @@ function PromoBanner({
       className={`group relative overflow-hidden rounded-3xl p-6 flex flex-col justify-between w-full transition-all duration-300 hover:shadow-xl hover:scale-[1.02] ${colorClass} ${compact ? 'h-[140px] min-h-[140px]' : 'h-full min-h-[160px]'}`}
       style={bgImage ? { backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
     >
-      {bgImage && <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors z-0" />}
+      {bgImage && <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover:via-black/50 transition-colors z-0" />}
 
       <div className="relative z-10 flex justify-between items-start">
-        <div className={`p-2 rounded-full ${bgImage ? 'bg-white/20 backdrop-blur-md text-white' : 'bg-white/80'}`}>
+        <div className={`p-2 rounded-full ${bgImage ? 'bg-white/20 backdrop-blur-md text-white' : 'bg-white/20 backdrop-blur-sm text-white'}`}>
           <Icon className="w-5 h-5" />
         </div>
-        <ExternalLink className={`w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity ${bgImage ? 'text-white' : ''}`} />
+        <ExternalLink className={`w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-white`} />
       </div>
 
       <div className="relative z-10 mt-2">
-        <h3 className={`text-lg font-bold mb-0.5 leading-tight ${bgImage ? 'text-white' : ''}`}>{title}</h3>
-        <p className={`text-xs font-medium mb-2 ${bgImage ? 'text-white/90' : 'opacity-80'}`}>{subtitle}</p>
-        <div className={`inline-flex items-center text-xs font-bold ${bgImage ? 'text-white' : ''}`}>
+        <h3 className={`text-lg font-bold mb-0.5 leading-tight text-white`}>{title}</h3>
+        <p className={`text-xs font-medium mb-2 text-white/90`}>{subtitle}</p>
+        <div className={`inline-flex items-center text-xs font-bold text-white`}>
           {buttonText} <ChevronRight className="w-3 h-3 ml-1" />
         </div>
       </div>
@@ -237,19 +238,19 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback, onClick: (qui
   return (
     <div
       onClick={() => onClick(quiz)}
-      className="group flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors border border-transparent hover:border-gray-100"
+      className="group flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 cursor-pointer transition-all hover:bg-slate-800/60 hover:border-purple-500/30 hover:shadow-[0_0_15px_-3px_rgba(168,85,247,0.15)]"
     >
-      <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-        <CheckCircle2 className="h-5 w-5 text-green-600" />
+      <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+        <CheckCircle2 className="h-5 w-5 text-green-400" />
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-semibold text-sm truncate text-gray-900">{quiz.title}</h4>
-        <p className="text-xs text-gray-500 truncate">{quiz.difficulty} • {new Date(quiz.completedAt || '').toLocaleDateString()}</p>
+        <h4 className="font-semibold text-sm truncate text-slate-200">{quiz.title}</h4>
+        <p className="text-xs text-slate-500 truncate">{quiz.difficulty} • {new Date(quiz.completedAt || '').toLocaleDateString()}</p>
       </div>
       <div className="text-right shrink-0">
-        <span className="block text-sm font-bold text-green-700">{(quiz.score || 0)}/10</span>
+        <span className="block text-sm font-bold text-green-400">{(quiz.score || 0)}/10</span>
       </div>
-      <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-gray-600" />
+      <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-slate-400" />
     </div>
   );
 }
@@ -344,7 +345,7 @@ export default function UserDashboard() {
           title: "💡 Tip Matemático",
           description: <ContentRenderer content={mathTipData.tip} className="text-white/90 text-lg font-medium text-center mt-2" />,
           duration: 10000,
-          className: "w-80 h-auto aspect-[4/3] flex flex-col justify-center items-center bg-indigo-600 text-white border-none shadow-2xl rounded-2xl p-6"
+          className: "w-80 h-auto aspect-[4/3] flex flex-col justify-center items-center bg-slate-900 border border-indigo-500/30 text-slate-200 shadow-2xl rounded-2xl p-6"
         });
         localStorage.setItem('mathTipLastShown', today);
       }, 1500);
@@ -425,8 +426,12 @@ export default function UserDashboard() {
     setCategorySearchQuery("");
   };
 
+  if (currentUser?.role === 'admin') {
+    return <AdminDashboard />;
+  }
+
   if (loadingUser || loadingCategories || loadingQuizzes) {
-    return <div className="flex justify-center items-center min-h-screen"><Spinner className="h-12 w-12" /></div>;
+    return <div className="flex justify-center items-center min-h-screen bg-slate-950"><Spinner className="h-12 w-12 text-purple-500" /></div>;
   }
 
   const completedQuizzes = quizzes?.filter((q) => q.status === "completed") || [];
@@ -463,131 +468,359 @@ export default function UserDashboard() {
   ) || [];
 
   return (
-    <div className="container mx-auto p-4 max-w-7xl space-y-8">
-      {/* Header Section */}
-      <div id="tour-welcome" className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-              Hola, <span className="text-indigo-600">{currentUser?.username || 'Estudiante'}</span> 👋
-            </h1>
+    <div className="min-h-screen bg-slate-950 text-slate-50 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500/10 rounded-full blur-[100px]" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px]" />
+      </div>
+
+      <div className="container mx-auto p-4 max-w-7xl space-y-8 relative z-10">
+        {/* Header Section */}
+        <div id="tour-welcome" className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-white tracking-tight">
+                Hola, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">{currentUser?.username || 'Estudiante'}</span> 👋
+              </h1>
+            </div>
+            <p className="text-slate-400 mt-1">Aquí tienes el resumen de tu progreso hoy.</p>
+            <div
+              className="mt-2 inline-flex items-center bg-yellow-500/10 text-yellow-400 px-3 py-1 rounded-full text-sm font-medium border border-yellow-500/20 cursor-pointer hover:bg-yellow-500/20 transition-colors"
+              onClick={() => setShowCreditsInfo(true)}
+            >
+              <Lightbulb className="w-4 h-4 mr-2" />
+              {currentUser?.hintCredits ?? 0} Créditos de Pistas
+            </div>
           </div>
-          <p className="text-gray-500 mt-1">Aquí tienes el resumen de tu progreso hoy.</p>
-          <div
-            className="mt-2 inline-flex items-center bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium border border-yellow-200 cursor-pointer hover:bg-yellow-200 transition-colors"
-            onClick={() => setShowCreditsInfo(true)}
-          >
-            <Lightbulb className="w-4 h-4 mr-2" />
-            {currentUser?.hintCredits ?? 0} Créditos de Pistas
+
+
+
+          {/* Alert Section */}
+          {pendingQuizzes.length > 0 && (
+            <div
+              onClick={() => setShowPendingDialog(true)}
+              className="animate-pulse flex items-center gap-2 bg-yellow-500/10 text-yellow-400 px-4 py-2 rounded-full border border-yellow-500/20 shadow-sm cursor-pointer hover:bg-yellow-500/20 transition-colors"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-sm font-bold">Tienes {pendingQuizzes.length} actividades pendientes</span>
+            </div>
+          )}
+        </div>
+
+        {/* Main Layout: 2 Columns (Content | Sidebar) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* 1. Recent Activity */}
+            <div className="rounded-3xl bg-slate-900/50 border border-white/10 backdrop-blur-sm shadow-xl p-5 h-[300px] flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-lg text-slate-200 flex items-center gap-2">
+                  <ListChecks className="w-5 h-5 text-purple-500" /> Actividad Reciente
+                </h3>
+                <Link href="/history">
+                  <Button variant="ghost" size="sm" className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10">
+                    Ver todo
+                  </Button>
+                </Link>
+              </div>
+
+              <ScrollArea className="flex-1 -mr-3 pr-3">
+                <div className="space-y-2">
+                  {uniqueCompletedQuizzes.length > 0 ? (
+                    uniqueCompletedQuizzes.slice(0, 5).map((quiz) => (
+                      <ActivityItem key={quiz.id} quiz={quiz} onClick={setSelectedQuiz} />
+                    ))
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500">
+                      <ClipboardList className="w-12 h-12 mb-2 opacity-20" />
+                      <p className="text-sm">Aún no has completado cuestionarios</p>
+                      <Link href="/training">
+                        <Button variant="link" className="text-purple-400 mt-2">Comenzar ahora</Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+
+            {/* 2. Video Section */}
+            {selectedVideo && (
+              <div ref={videoSectionRef} className="w-full bg-black rounded-3xl overflow-hidden shadow-2xl shadow-purple-900/20 relative animate-in fade-in slide-in-from-top-4 duration-500 border border-white/10">
+                <div className="absolute top-2 right-2 z-10">
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="h-6 w-6 rounded-full bg-black/50 hover:bg-black/70 text-white border-none"
+                    onClick={() => setSelectedVideo(null)}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+                <VideoEmbed youtubeLink={selectedVideo} />
+              </div>
+            )}
+
+            {/* 3. Pending Activities (Yellow, Play Icon) */}
+            <div id="tour-pending" className="rounded-3xl bg-slate-900/50 border border-yellow-500/20 backdrop-blur-sm p-5 h-[300px] flex flex-col relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl -z-10" />
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-lg text-yellow-500 flex items-center gap-2">
+                  <PlayCircle className="w-5 h-5" /> Actividades Pendientes ({pendingQuizzes.length})
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10"
+                  onClick={() => setShowPendingDialog(true)}
+                >
+                  Ver todo
+                </Button>
+              </div>
+              <ScrollArea className="flex-1 -mr-3 pr-3">
+                <div className="space-y-2">
+                  {pendingQuizzes.length > 0 ? (
+                    pendingQuizzes.map((quiz) => (
+                      <div key={quiz.id} className="group flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-yellow-500/30 hover:shadow-[0_0_15px_-3px_rgba(234,179,8,0.15)]">
+                        <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
+                          <PlayCircle className="h-5 w-5 text-yellow-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-sm text-slate-200">{quiz.title}</h4>
+                          <p className="text-xs text-slate-500 truncate">{quiz.difficulty}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-xs bg-transparent border-slate-700 text-slate-400 hover:text-white hover:bg-white/10"
+                            onClick={(e) => handleMiniStart(e, quiz.id)}
+                          >
+                            Mini
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-7 px-3 text-xs bg-yellow-600 hover:bg-yellow-700 text-white border-none shadow-sm"
+                            onClick={() => setLocation(`/quiz/${quiz.id}`)}
+                          >
+                            Normal
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500">
+                      <CheckCircle2 className="w-12 h-12 mb-2 opacity-20 text-green-500" />
+                      <p className="text-sm">¡Todo al día! No tienes actividades pendientes.</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+
+            {/* 4. Materias Disponibles (White) */}
+            <div id="tour-quiz-list" className="rounded-3xl bg-slate-900/50 border border-white/10 backdrop-blur-sm shadow-xl p-5 h-[320px] flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-lg text-slate-200 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-blue-500" /> Materias Disponibles
+                </h3>
+              </div>
+
+              <ScrollArea className="flex-1 -mr-3 pr-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {categories?.map((category) => (
+                    <div
+                      key={category.id}
+                      className="group bg-white/5 rounded-xl p-3 hover:bg-white/10 transition-all border border-transparent hover:border-blue-500/30 flex flex-col justify-between h-full min-h-[100px] cursor-pointer"
+                      onClick={() => handleCategoryClick(category)}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 shadow-sm">
+                          <BookOpen className="w-4 h-4" />
+                        </div>
+                        {category.youtubeLink && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playVideo(category.youtubeLink!);
+                            }}
+                            className="text-xs text-red-400 hover:bg-red-500/10 px-2 py-1 rounded-full flex items-center gap-1 transition-colors"
+                          >
+                            <Youtube className="w-3 h-3" /> Video
+                          </button>
+                        )}
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-sm text-slate-200 group-hover:text-blue-400 transition-colors mb-2">{category.name}</h4>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <Link href={`/training/${category.id}`} className="w-full">
+                            <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs">
+                              Entrenamiento
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+
+          {/* Right Column: Sidebar */}
+          <div className="space-y-4">
+            {/* Progress Card */}
+            <div id="tour-stats" className="h-auto min-h-[220px]">
+              <StatCard
+                title="Progreso General"
+                value={`${progressPercentage.toFixed(0)}%`}
+                subtitle="Completado"
+                icon={Trophy}
+                colorClass="bg-gradient-to-br from-indigo-600 to-purple-700 text-white shadow-lg shadow-purple-900/40"
+                progress={progressPercentage}
+                total={quizzes?.length || 0}
+                completed={completedQuizzes.length}
+                breakdown={categoryBreakdown}
+              />
+            </div>
+
+            {/* Promo Banners */}
+            <PromoBanner
+              title="Síguenos"
+              subtitle="@alanmath.ias"
+              icon={Instagram}
+              colorClass="bg-gradient-to-br from-purple-600 to-pink-500 text-white"
+              href="https://www.instagram.com/alanmath.ias/"
+              buttonText="Ver perfil"
+              compact={true}
+            />
+
+            <PromoBanner
+              title="eBook Exclusivo"
+              subtitle="Movimiento Parabólico"
+              icon={ShoppingBag}
+              colorClass="bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-orange-900/40"
+              bgImage="https://imagenes.alanmath.com/ebook-cover-placeholder.jpg"
+              href="https://alanmatiasvilla1000.hotmart.host/el-fascinante-movimiento-parabolico-guia-practica-de-alanmath-f1416e10-f1d2-49ac-aa29-2e8318b2fea4"
+              buttonText="Ver eBook"
+              compact={true}
+            />
+
+            <PromoBanner
+              title="Sitio Web"
+              subtitle="alanmath.com"
+              icon={Globe}
+              colorClass="bg-gradient-to-br from-blue-600 to-cyan-600 text-white"
+              href="https://alanmath.com/"
+              buttonText="Visitar"
+              compact={true}
+            />
+
+            {/* Rest Zone Card */}
+            <div className="rounded-3xl bg-gradient-to-br from-teal-500 to-emerald-600 p-6 text-white shadow-lg shadow-teal-900/40 cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => setShowRestZone(true)}>
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
+                  <Gamepad2 className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <h3 className="text-xl font-bold mb-2">Zona de Descanso</h3>
+              <p className="text-teal-100 text-sm mb-6">
+                ¿Necesitas un respiro? Relájate con nuestra selección de juegos y puzzles.
+              </p>
+              <button
+                className="flex items-center text-sm font-semibold hover:text-teal-100 transition-colors group"
+              >
+                Entrar
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
           </div>
         </div>
 
+        {/* Quiz Details Dialog */}
+        <QuizDetailsDialog
+          open={!!selectedQuiz}
+          onOpenChange={(open) => !open && setSelectedQuiz(null)}
+          quiz={selectedQuiz}
+        />
 
-
-        {/* Alert Section */}
-        {pendingQuizzes.length > 0 && (
-          <div
-            onClick={() => setShowPendingDialog(true)}
-            className="animate-pulse flex items-center gap-2 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full border border-yellow-200 shadow-sm cursor-pointer hover:bg-yellow-200 transition-colors"
-          >
-            <AlertTriangle className="w-4 h-4" />
-            <span className="text-sm font-bold">Tienes {pendingQuizzes.length} actividades pendientes</span>
-          </div>
-        )}
-      </div>
-
-      {/* Main Layout: 2 Columns (Content | Sidebar) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* 1. Recent Activity */}
-          <div className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 h-[300px] flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
-                <ListChecks className="w-5 h-5 text-indigo-500" /> Actividad Reciente
-              </h3>
-              <Link href="/history">
-                <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
-                  Ver todo
-                </Button>
-              </Link>
-            </div>
-
-            <ScrollArea className="flex-1 -mr-3 pr-3">
-              <div className="space-y-2">
-                {uniqueCompletedQuizzes.length > 0 ? (
-                  uniqueCompletedQuizzes.slice(0, 5).map((quiz) => (
-                    <ActivityItem key={quiz.id} quiz={quiz} onClick={setSelectedQuiz} />
-                  ))
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-4 text-gray-400">
-                    <ClipboardList className="w-12 h-12 mb-2 opacity-20" />
-                    <p className="text-sm">Aún no has completado cuestionarios</p>
-                    <Link href="/training">
-                      <Button variant="link" className="text-indigo-600 mt-2">Comenzar ahora</Button>
-                    </Link>
-                  </div>
-                )}
+        {/* Credits Info Dialog */}
+        <Dialog open={showCreditsInfo} onOpenChange={setShowCreditsInfo}>
+          <DialogContent className="sm:max-w-md bg-slate-900 border-white/10 text-slate-200">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-yellow-400">
+                <Lightbulb className="w-5 h-5" />
+                Créditos de Pistas
+              </DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Usa tus créditos para obtener ayuda durante los cuestionarios.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                <h4 className="font-semibold text-slate-200 mb-2 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-400" /> ¿Cómo obtener más?
+                </h4>
+                <ul className="space-y-2 text-sm text-slate-400 ml-6 list-disc">
+                  <li>Completa un cuestionario: <span className="text-yellow-400 font-bold">+1 crédito</span></li>
+                  <li>Mira un video explicativo: <span className="text-yellow-400 font-bold">+2 créditos</span></li>
+                </ul>
               </div>
-            </ScrollArea>
-          </div>
-
-          {/* 2. Video Section */}
-          {selectedVideo && (
-            <div ref={videoSectionRef} className="w-full bg-black rounded-3xl overflow-hidden shadow-lg relative animate-in fade-in slide-in-from-top-4 duration-500">
-              <div className="absolute top-2 right-2 z-10">
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  className="h-6 w-6 rounded-full bg-black/50 hover:bg-black/70 text-white border-none"
-                  onClick={() => setSelectedVideo(null)}
-                >
-                  <X className="w-3 h-3" />
-                </Button>
+              <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                <h4 className="font-semibold text-slate-200 mb-2 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-400" /> Costo de pistas
+                </h4>
+                <p className="text-sm text-slate-400">
+                  Cada pista que solicites durante un cuestionario consumirá <span className="text-yellow-400 font-bold">1 crédito</span>.
+                </p>
               </div>
-              <VideoEmbed youtubeLink={selectedVideo} />
             </div>
-          )}
-
-          {/* 3. Pending Activities (Yellow, Play Icon) */}
-          <div id="tour-pending" className="rounded-3xl bg-gradient-to-br from-yellow-50 to-orange-50 p-5 h-[300px] flex flex-col border border-yellow-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-yellow-900 flex items-center gap-2">
-                <PlayCircle className="w-5 h-5 text-orange-600" /> Actividades Pendientes ({pendingQuizzes.length})
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100"
-                onClick={() => setShowPendingDialog(true)}
-              >
-                Ver todo
+            <DialogFooter>
+              <Button onClick={() => setShowCreditsInfo(false)} className="bg-slate-800 hover:bg-slate-700 text-white">
+                Entendido
               </Button>
-            </div>
-            <ScrollArea className="flex-1 -mr-3 pr-3">
-              <div className="space-y-2">
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Pending Activities Dialog */}
+        <Dialog open={showPendingDialog} onOpenChange={setShowPendingDialog}>
+          <DialogContent className="sm:max-w-lg bg-slate-900 border-white/10 text-slate-200">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-yellow-500">
+                <PlayCircle className="w-6 h-6" />
+                Actividades Pendientes ({pendingQuizzes.length})
+              </DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Aquí tienes la lista completa de cuestionarios que aún no has completado.
+              </DialogDescription>
+            </DialogHeader>
+
+            <ScrollArea className="max-h-[60vh] pr-4">
+              <div className="space-y-3 py-2">
                 {pendingQuizzes.length > 0 ? (
                   pendingQuizzes.map((quiz) => (
-                    <div key={quiz.id} className="group flex items-center gap-3 p-3 rounded-xl bg-white/60 border border-yellow-100/50 hover:border-yellow-200 transition-all">
-                      <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
-                        <PlayCircle className="h-5 w-5 text-yellow-700" />
+                    <div key={quiz.id} className="group flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-yellow-500/30 hover:shadow-[0_0_15px_-3px_rgba(234,179,8,0.15)]">
+                      <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0 shadow-sm">
+                        <PlayCircle className="h-5 w-5 text-yellow-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm text-gray-900">{quiz.title}</h4>
-                        <p className="text-xs text-gray-500 truncate">{quiz.difficulty}</p>
+                        <h4 className="font-semibold text-sm text-slate-200">{quiz.title}</h4>
+                        <p className="text-xs text-slate-500">{quiz.difficulty}</p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
+                      <div className="flex items-center gap-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 px-2 text-xs bg-white border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                          className="h-7 px-2 text-xs bg-transparent border-slate-700 text-slate-400 hover:text-white hover:bg-white/10"
                           onClick={(e) => handleMiniStart(e, quiz.id)}
                         >
                           Mini
                         </Button>
                         <Button
                           size="sm"
-                          className="h-7 px-3 text-xs bg-orange-500 hover:bg-orange-600 text-white border-none shadow-sm"
+                          className="h-7 px-3 text-xs bg-yellow-600 hover:bg-yellow-700 text-white border-none shadow-sm"
                           onClick={() => setLocation(`/quiz/${quiz.id}`)}
                         >
                           Normal
@@ -596,415 +829,180 @@ export default function UserDashboard() {
                     </div>
                   ))
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-4 text-gray-400">
-                    <CheckCircle2 className="w-12 h-12 mb-2 opacity-20 text-green-500" />
-                    <p className="text-sm">¡Todo al día! No tienes actividades pendientes.</p>
+                  <div className="flex flex-col items-center justify-center text-center p-8 text-slate-500">
+                    <CheckCircle2 className="w-16 h-16 mb-4 opacity-20 text-green-500" />
+                    <p className="text-lg font-medium text-slate-400">¡Todo al día!</p>
+                    <p className="text-sm">No tienes actividades pendientes por ahora.</p>
                   </div>
                 )}
               </div>
             </ScrollArea>
-          </div>
 
-          {/* 4. Materias Disponibles (White) */}
-          <div id="tour-quiz-list" className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 h-[320px] flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-indigo-500" /> Materias Disponibles
-              </h3>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setShowPendingDialog(false)} className="border-slate-700 text-slate-300 hover:bg-white/10">Cerrar</Button>
             </div>
+          </DialogContent>
+        </Dialog>
 
-            <ScrollArea className="flex-1 -mr-3 pr-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {categories?.map((category) => (
-                  <div
-                    key={category.id}
-                    className="group bg-gray-50 rounded-xl p-3 hover:bg-gray-100 transition-all border border-transparent hover:border-gray-200 flex flex-col justify-between h-full min-h-[100px] cursor-pointer"
-                    onClick={() => handleCategoryClick(category)}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center text-indigo-600 shadow-sm">
-                        <BookOpen className="w-4 h-4" />
-                      </div>
-                      {category.youtubeLink && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            playVideo(category.youtubeLink!);
-                          }}
-                          className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded-full flex items-center gap-1 transition-colors"
-                        >
-                          <Youtube className="w-3 h-3" /> Video
-                        </button>
-                      )}
-                    </div>
-
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-900 group-hover:text-indigo-700 transition-colors mb-2">{category.name}</h4>
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <Link href={`/training/${category.id}`} className="w-full">
-                          <Button size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-8 text-xs">
-                            Entrenamiento
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-        </div>
-
-        {/* Right Column: Sidebar */}
-        <div className="space-y-4">
-          {/* Progress Card */}
-          <div id="tour-stats" className="h-auto min-h-[220px]">
-            <StatCard
-              title="Progreso General"
-              value={`${progressPercentage.toFixed(0)}%`}
-              subtitle="Completado"
-              icon={Trophy}
-              colorClass="bg-indigo-600 text-white shadow-lg shadow-indigo-200"
-              progress={progressPercentage}
-              total={quizzes?.length || 0}
-              completed={completedQuizzes.length}
-              breakdown={categoryBreakdown}
-            />
-          </div>
-
-          {/* Promo Banners */}
-          <PromoBanner
-            title="Síguenos"
-            subtitle="@alanmath.ias"
-            icon={Instagram}
-            colorClass="bg-gradient-to-br from-purple-600 to-pink-500 text-white"
-            href="https://www.instagram.com/alanmath.ias/"
-            buttonText="Ver perfil"
-            compact={true}
-          />
-
-          <PromoBanner
-            title="eBook Exclusivo"
-            subtitle="Movimiento Parabólico"
-            icon={ShoppingBag}
-            colorClass="bg-orange-500 text-white"
-            bgImage="https://imagenes.alanmath.com/ebook-cover-placeholder.jpg"
-            href="https://alanmatiasvilla1000.hotmart.host/el-fascinante-movimiento-parabolico-guia-practica-de-alanmath-f1416e10-f1d2-49ac-aa29-2e8318b2fea4"
-            buttonText="Ver eBook"
-            compact={true}
-          />
-
-          <PromoBanner
-            title="Sitio Web"
-            subtitle="alanmath.com"
-            icon={Globe}
-            colorClass="bg-blue-600 text-white"
-            href="https://alanmath.com/"
-            buttonText="Visitar"
-            compact={true}
-          />
-
-          {/* Rest Zone Card */}
-          <div className="rounded-3xl bg-gradient-to-br from-teal-500 to-emerald-600 p-6 text-white shadow-lg shadow-teal-200 cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => setShowRestZone(true)}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
-                <Gamepad2 className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <h3 className="text-xl font-bold mb-2">Zona de Descanso</h3>
-            <p className="text-teal-100 text-sm mb-6">
-              ¿Necesitas un respiro? Relájate con nuestra selección de juegos y puzzles.
-            </p>
-            <button
-              className="flex items-center text-sm font-semibold hover:text-teal-100 transition-colors group"
-            >
-              Entrar
-              <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Quiz Details Dialog */}
-      <QuizDetailsDialog
-        open={!!selectedQuiz}
-        onOpenChange={(open) => !open && setSelectedQuiz(null)}
-        quiz={selectedQuiz}
-      />
-
-      {/* Pending Activities Dialog */}
-      <Dialog open={showPendingDialog} onOpenChange={setShowPendingDialog}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-yellow-800">
-              <PlayCircle className="w-6 h-6 text-orange-600" />
-              Actividades Pendientes ({pendingQuizzes.length})
-            </DialogTitle>
-            <DialogDescription>
-              Aquí tienes la lista completa de cuestionarios que aún no has completado.
-            </DialogDescription>
-          </DialogHeader>
-
-          <ScrollArea className="max-h-[60vh] pr-4">
-            <div className="space-y-3 py-2">
-              {pendingQuizzes.length > 0 ? (
-                pendingQuizzes.map((quiz) => (
-                  <div key={quiz.id} className="group flex items-center gap-3 p-3 rounded-xl bg-yellow-50 border border-yellow-100 hover:border-yellow-200 transition-all">
-                    <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
-                      <PlayCircle className="h-5 w-5 text-orange-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-sm text-gray-900">{quiz.title}</h4>
-                      <p className="text-xs text-gray-600">{quiz.difficulty}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2 text-xs bg-white border-indigo-200 text-indigo-600 hover:bg-indigo-50"
-                        onClick={(e) => handleMiniStart(e, quiz.id)}
-                      >
-                        Mini
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="h-7 px-3 text-xs bg-orange-500 hover:bg-orange-600 text-white border-none shadow-sm"
-                        onClick={() => setLocation(`/quiz/${quiz.id}`)}
-                      >
-                        Normal
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center text-center p-8 text-gray-400">
-                  <CheckCircle2 className="w-16 h-16 mb-4 opacity-20 text-green-500" />
-                  <p className="text-lg font-medium text-gray-600">¡Todo al día!</p>
-                  <p className="text-sm">No tienes actividades pendientes por ahora.</p>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={() => setShowPendingDialog(false)}>Cerrar</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Mini Quiz Confirmation Dialog */}
-      <Dialog open={!!miniQuizId} onOpenChange={(open) => !open && setMiniQuizId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-600">
-              <AlertTriangle className="h-5 w-5" />
-              Versión Mini del Cuestionario
-            </DialogTitle>
-            <DialogDescription className="space-y-3 pt-2">
-              <p>
-                Estás a punto de iniciar una <strong>versión reducida (50%)</strong> de este cuestionario con preguntas al azar.
-              </p>
-              <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 text-amber-800 text-sm">
-                <p className="font-semibold mb-1">⚠️ Importante:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Esta versión es ideal para repasos rápidos.</li>
-                  <li>Ganarás <strong>menos créditos</strong> que en la versión completa.</li>
-                  <li>Si tienes tiempo, te recomendamos hacer la versión completa.</li>
-                </ul>
-              </div>
-              <p>¿Deseas continuar con la versión mini?</p>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setMiniQuizId(null)}>
-              Cancelar, haré la completa
-            </Button>
-            <Button className="bg-amber-600 hover:bg-amber-700 text-white" onClick={confirmMiniStart}>
-              Sí, iniciar versión Mini
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Credits Info Dialog */}
-      <Dialog open={showCreditsInfo} onOpenChange={setShowCreditsInfo}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-indigo-600">
-              <Lightbulb className="w-6 h-6" />
-              Créditos de Pistas
-            </DialogTitle>
-            <DialogDescription>
-              Descubre cómo funcionan los créditos en AlanMath.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-              <h4 className="font-semibold text-indigo-900 mb-2 flex items-center gap-2">
-                <HelpCircle className="w-4 h-4" /> ¿Para qué sirven?
-              </h4>
-              <p className="text-sm text-indigo-800">
-                Los créditos te permiten solicitar pistas cuando estés atascado en una pregunta difícil.
-                <br />
-                <span className="font-medium mt-1 block">
-                  *Hay dos tipos de pistas, la Pista Regular te cuesta 1 Crédito, la Súper Pista te cuesta 2 Créditos.
-                </span>
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="font-semibold text-gray-800">¿Cómo conseguir Créditos?</h4>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                  <span><strong>Cuestionarios Largos:</strong> ¡Tu esfuerzo tiene recompensa! Obtén 1 crédito si sacas entre 7 y 8, 2 créditos entre 8 y 9, ¡y 3 créditos si logras más de 9!</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                  <span><strong>Mini Cuestionarios:</strong> Si obtienes más de 8 puntos, te llevas 2 créditos.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                  <span><strong>Tareas Completas:</strong> Terminar todas tus actividades pendientes te da 5 créditos.</span>
-                </li>
-              </ul>
-              <p className="text-sm text-indigo-800 mt-4 pt-3 border-t border-indigo-100 font-medium">
-                Contacta al equipo AlanMath para que además puedas intercambiar Créditos por clases en vivo.
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button onClick={() => setShowCreditsInfo(false)} className="w-full bg-indigo-600 hover:bg-indigo-700">
-              ¡Entendido!
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Category Details Dialog (All Quizzes) */}
-      <Dialog open={!!selectedCategoryForDetails} onOpenChange={(open) => !open && setSelectedCategoryForDetails(null)}>
-        <DialogContent className="sm:max-w-2xl h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
-          <div className="p-6 pb-2 border-b">
+        {/* Mini Quiz Confirmation Dialog */}
+        <Dialog open={!!miniQuizId} onOpenChange={(open) => !open && setMiniQuizId(null)}>
+          <DialogContent className="bg-slate-900 border-white/10 text-slate-200">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-2xl">
-                <BookOpen className="w-6 h-6 text-indigo-600" />
-                {selectedCategoryForDetails?.name}
+              <DialogTitle className="flex items-center gap-2 text-yellow-500">
+                <AlertTriangle className="h-5 w-5" />
+                Confirmar Modo Mini
               </DialogTitle>
-              <DialogDescription>
-                Explora todos los cuestionarios disponibles en esta materia.
+              <DialogDescription className="text-slate-400">
+                El modo mini es una versión rápida del cuestionario con menos preguntas.
+                ¿Deseas continuar?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setMiniQuizId(null)} className="border-slate-700 text-slate-300 hover:bg-white/10">Cancelar</Button>
+              <Button onClick={confirmMiniStart} className="bg-yellow-600 hover:bg-yellow-700 text-white">Comenzar Mini Quiz</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+
+
+
+        {/* Credits Info Dialog */}
+        <Dialog open={showCreditsInfo} onOpenChange={setShowCreditsInfo}>
+          <DialogContent className="sm:max-w-lg bg-slate-900 border-white/10 text-slate-200">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-blue-400 text-xl">
+                <Lightbulb className="h-6 w-6" />
+                Créditos de Pistas
+              </DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Descubre cómo funcionan los créditos en AlanMath.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-4 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="space-y-6 py-2">
+              {/* Section 1: Utility */}
+              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                <h4 className="font-bold text-blue-300 mb-2 flex items-center gap-2">
+                  <HelpCircle className="w-4 h-4" /> ¿Para qué sirven?
+                </h4>
+                <p className="text-sm text-slate-300 mb-2">
+                  Los créditos te permiten solicitar pistas cuando estés atascado en una pregunta difícil.
+                </p>
+                <p className="text-xs text-blue-200/80 italic">
+                  *Hay dos tipos de pistas, la Pista Regular te cuesta 1 Crédito, la Súper Pista te cuesta 2 Créditos.
+                </p>
+              </div>
+
+              {/* Section 2: How to earn */}
+              <div>
+                <h4 className="font-bold text-slate-200 mb-3">¿Cómo conseguir Créditos?</h4>
+                <ul className="space-y-3 text-sm text-slate-300">
+                  <li className="flex gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
+                    <span>
+                      <strong className="text-white">Cuestionarios Largos:</strong> ¡Tu esfuerzo tiene recompensa! Obtén 1 crédito si sacas entre 7 y 8, 2 créditos entre 8 y 9, ¡y 3 créditos si logras más de 9!
+                    </span>
+                  </li>
+                  <li className="flex gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
+                    <span>
+                      <strong className="text-white">Mini Cuestionarios:</strong> Si obtienes más de 8 puntos, te llevas 2 créditos.
+                    </span>
+                  </li>
+                  <li className="flex gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
+                    <span>
+                      <strong className="text-white">Tareas Completas:</strong> Terminar todas tus actividades pendientes te da 5 créditos.
+                    </span>
+                  </li>
+                  <li className="flex gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
+                    <span>
+                      <strong className="text-white">Ver Videos:</strong> ¡Aprende y gana! Obtén 3 créditos por ver un video explicativo completo.
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Footer Note */}
+              <div className="pt-4 border-t border-white/10">
+                <p className="text-xs text-slate-400 text-center">
+                  Contacta al equipo AlanMath para que además puedas intercambiar Créditos por clases en vivo.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button onClick={() => setShowCreditsInfo(false)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                ¡Entendido!
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Category Details Dialog */}
+        <Dialog open={!!selectedCategoryForDetails} onOpenChange={(open) => !open && setSelectedCategoryForDetails(null)}>
+          <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col bg-slate-900 border-white/10 text-slate-200">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl text-blue-400">
+                <BookOpen className="h-6 w-6" />
+                {selectedCategoryForDetails?.name}
+              </DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Explora los cuestionarios disponibles en esta materia.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="relative my-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <Input
                 placeholder="Buscar cuestionario..."
-                className="pl-9 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
                 value={categorySearchQuery}
                 onChange={(e) => setCategorySearchQuery(e.target.value)}
+                className="pl-9 bg-slate-950/50 border-slate-800 text-slate-200 placeholder:text-slate-600 focus:ring-blue-500/50"
               />
             </div>
-          </div>
 
-          <ScrollArea className="flex-1 p-6 pt-2">
-            {loadingCategoryQuizzes ? (
-              <div className="flex justify-center items-center h-40">
-                <Spinner className="h-8 w-8 text-indigo-600" />
-              </div>
-            ) : filteredCategoryQuizzes.length > 0 ? (
-              <div className="grid grid-cols-1 gap-3">
-                {filteredCategoryQuizzes.map((quiz: any) => {
-                  let StatusIcon = Target;
-                  let statusColor = "text-indigo-600 bg-indigo-100";
-
-                  if (quiz.userStatus === 'completed') {
-                    StatusIcon = CheckCircle2;
-                    statusColor = "text-green-600 bg-green-100";
-                  } else if (quiz.userStatus === 'pending') {
-                    StatusIcon = AlertTriangle;
-                    statusColor = "text-yellow-600 bg-yellow-100";
-                  } else if (quiz.userStatus === 'optional') {
-                    StatusIcon = Ban;
-                    statusColor = "text-gray-400 bg-gray-100 opacity-50";
-                  }
-
-                  return (
-                    <div
-                      key={quiz.id}
-                      className="group flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all"
-                    >
-                      <div className={cn("h-10 w-10 rounded-full flex items-center justify-center shrink-0 mr-4", statusColor)}>
-                        <StatusIcon className="h-5 w-5" />
+            <ScrollArea className="flex-1 pr-4 -mr-4">
+              {loadingCategoryQuizzes ? (
+                <div className="flex justify-center py-8">
+                  <Spinner className="h-8 w-8 text-blue-500" />
+                </div>
+              ) : filteredCategoryQuizzes.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4">
+                  {filteredCategoryQuizzes.map((quiz) => (
+                    <div key={quiz.id} className="bg-white/5 border border-white/5 rounded-xl p-4 hover:border-blue-500/30 transition-all flex flex-col justify-between gap-3">
+                      <div>
+                        <h4 className="font-semibold text-slate-200">{quiz.title}</h4>
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{quiz.description}</p>
                       </div>
-
-                      <div className="flex-1 min-w-0 mr-4">
-                        <h4 className="font-semibold text-gray-900 truncate">{quiz.title}</h4>
-                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{quiz.description}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wide border ${quiz.difficulty === 'basic' ? 'bg-green-50 text-green-700 border-green-100' :
-                            quiz.difficulty === 'intermediate' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
-                              'bg-red-50 text-red-700 border-red-100'
-                            }`}>
-                            {quiz.difficulty === 'basic' ? 'Básico' : quiz.difficulty === 'intermediate' ? 'Intermedio' : 'Avanzado'}
-                          </span>
-                          <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                            <Target className="w-3 h-3" /> {quiz.totalQuestions} preguntas
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-2 shrink-0">
-                        <Button
-                          size="sm"
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-                          onClick={() => {
-                            if (quiz.userStatus === 'completed') {
-                              setSelectedQuiz(quiz);
-                            } else {
-                              setLocation(`/quiz/${quiz.id}`);
-                              setSelectedCategoryForDetails(null);
-                            }
-                          }}
-                        >
-                          {quiz.userStatus === 'completed' ? 'Ver Detalles' : 'Iniciar'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                          onClick={(e) => handleMiniStart(e, quiz.id)}
-                        >
-                          Mini
+                      <div className="flex items-center justify-between mt-auto pt-2">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${quiz.difficulty === 'Fácil' ? 'bg-green-500/20 text-green-400' :
+                          quiz.difficulty === 'Medio' ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-red-500/20 text-red-400'
+                          }`}>
+                          {quiz.difficulty}
+                        </span>
+                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setLocation(`/quiz/${quiz.id}`)}>
+                          Iniciar
                         </Button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-64 text-center text-gray-400">
-                <Search className="w-12 h-12 mb-3 opacity-20" />
-                <p className="font-medium">No se encontraron cuestionarios</p>
-                <p className="text-sm">Intenta con otra búsqueda o selecciona otra materia.</p>
-              </div>
-            )}
-          </ScrollArea>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-slate-500">
+                  <Ban className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                  <p>No se encontraron cuestionarios.</p>
+                </div>
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
 
-          <div className="p-4 border-t bg-gray-50 flex justify-end">
-            <Button variant="outline" onClick={() => setSelectedCategoryForDetails(null)}>
-              Cerrar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <RestZoneDialog
-        open={showRestZone}
-        onOpenChange={setShowRestZone}
-      />
-      <FloatingWhatsApp />
+        <RestZoneDialog open={showRestZone} onOpenChange={setShowRestZone} />
+      </div>
     </div>
   );
 }

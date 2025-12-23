@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { QuizCard } from '@/components/dashboard/quiz-card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube } from 'lucide-react';
+import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle } from 'lucide-react';
 import { useParams, useLocation } from 'wouter';
 import { calculatePercentage } from '@/lib/mathUtils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,7 +11,6 @@ import { Progress } from '@/components/ui/progress';
 import VideoEmbed from './VideoEmbed';
 import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { AlertTriangle } from "lucide-react";
 
 interface Category {
   id: number;
@@ -65,14 +64,12 @@ function QuizList() {
     },
   });
 
-  // Inicializa selectedVideo con el de la categoría (si existe)
   useEffect(() => {
     if (category?.youtubeLink) {
       setSelectedVideo(prev => prev ?? category.youtubeLink ?? null);
     }
   }, [category]);
 
-  // Reproduce video/playlist en el contenedor superior y hace scroll hacia él
   const playVideo = (youtubeLink: string) => {
     if (!youtubeLink) return;
     setSelectedVideo(youtubeLink);
@@ -80,43 +77,6 @@ function QuizList() {
       videoSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
   };
-
-  // Función para convertir un enlace normal a uno embed
-  const getEmbedUrl = (url: string) => {
-    if (!url) return "";
-
-    // URL limpia sin espacios
-    url = url.trim();
-
-    // Intenta extraer video ID de url 'youtube.com/watch?v=...'
-    let videoIdMatch = url.match(/[?&]v=([^&]+)/);
-
-    // Intenta extraer playlist ID de url 'list=...'
-    let listIdMatch = url.match(/[?&]list=([^&]+)/);
-
-    // Intenta extraer video ID de url corta 'youtu.be/VIDEO_ID'
-    let shortUrlMatch = url.match(/youtu\.be\/([^?&]+)/);
-
-    if (listIdMatch) {
-      return `https://www.youtube.com/embed/videoseries?list=${listIdMatch[1]}`;
-    }
-    if (videoIdMatch) {
-      return `https://www.youtube.com/embed/${videoIdMatch[1]}`;
-    }
-    if (shortUrlMatch) {
-      return `https://www.youtube.com/embed/${shortUrlMatch[1]}`;
-    }
-
-    // Si ya es URL embed, la dejamos tal cual (pero con seguridad)
-    if (url.includes("youtube.com/embed/")) {
-      return url;
-    }
-
-    // Si nada coincide, devuelve el url original (puede que falle)
-    return url;
-  };
-
-
 
   const { data: subcategories, isLoading: loadingSubcategories } = useQuery<Subcategory[]>({
     queryKey: [`/api/categories/${categoryId}/subcategories`],
@@ -147,8 +107,6 @@ function QuizList() {
       quizzes: quizzes?.filter(quiz => quiz.subcategoryId === subcategory.id) || [],
     }))
     : [];
-
-  const quizzesWithoutSubcategory = quizzes?.filter(quiz => !quiz.subcategoryId) || [];
 
   const getQuizProgress = (quizId: number) => {
     if (!progress) return null;
@@ -188,247 +146,227 @@ function QuizList() {
   const isLoading = loadingCategory || loadingSubcategories || loadingQuizzes || loadingProgress;
 
   return (
-    <div className="container mx-auto px-4 pt-4 max-w-6xl">
-      {/* Botón atrás */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="rounded-full"
-        onClick={() => setLocation('/')}
-      >
-        <ArrowLeft className="h-5 w-5" />
-      </Button>
+    <div className="min-h-screen bg-slate-950 text-slate-50 relative overflow-hidden">
+      {/* Ambient Background */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[100px]" />
+      </div>
 
-      {/* Título de la categoría */}
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mt-4 mb-4">
-        {loadingCategory ? 'Cargando...' : category?.name}
-      </h1>
-
-      {/* Video embebido (dinámico según selección) */}
-      {selectedVideo && (
-        <div ref={videoSectionRef} className="w-full max-w-3xl mx-auto mb-8">
-          <VideoEmbed youtubeLink={selectedVideo} />
+      <div className="container mx-auto px-4 py-8 max-w-6xl relative z-10">
+        <div className="flex items-center gap-4 mb-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full text-slate-400 hover:text-white hover:bg-white/10"
+            onClick={() => setLocation('/')}
+          >
+            <ArrowLeft className="h-6 w-6" />
+          </Button>
+          <h1 className="text-3xl font-bold text-white">
+            {loadingCategory ? 'Cargando...' : category?.name}
+          </h1>
         </div>
-      )}
 
-      {isLoading ? (
-        <div className="space-y-8">
-          {[1, 2, 3].map((_, index) => (
-            <div key={index} className="space-y-4">
-              <Skeleton className="h-8 w-1/3 rounded-lg" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[1, 2].map(i => (
-                  <Skeleton key={i} className="h-40 rounded-lg" />
-                ))}
+        {selectedVideo && (
+          <div ref={videoSectionRef} className="w-full max-w-4xl mx-auto mb-10 rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black">
+            <VideoEmbed youtubeLink={selectedVideo} />
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="space-y-8">
+            {[1, 2, 3].map((_, index) => (
+              <div key={index} className="space-y-4">
+                <Skeleton className="h-8 w-1/3 rounded-lg bg-slate-800" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[1, 2].map(i => (
+                    <Skeleton key={i} className="h-40 rounded-lg bg-slate-800" />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {/* Sección de Subcategorías */}
-          {quizzesBySubcategory.length > 0 && (
-            <section className="space-y-6">
-              <h2 className="text-2xl font-semibold text-gray-800 dark:text-white flex items-center gap-2">
-                <BookOpen className="h-6 w-6 text-blue-600" />
-                Temas
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {quizzesBySubcategory.map(subcategory => {
-                  const progressPercentage = calculateSubcategoryProgress(subcategory.id);
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-10">
+            {quizzesBySubcategory.length > 0 && (
+              <section className="space-y-8">
+                <h2 className="text-2xl font-semibold text-white flex items-center gap-3">
+                  <BookOpen className="h-6 w-6 text-blue-400" />
+                  Temas de Estudio
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {quizzesBySubcategory.map(subcategory => {
+                    const progressPercentage = calculateSubcategoryProgress(subcategory.id);
 
-                  return (
-                    <Card
-                      key={subcategory.id}
-                      className="rounded-xl bg-gradient-to-br from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 border border-blue-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-start gap-2">
-                          <div>
-                            <CardTitle className="text-lg font-semibold text-blue-800 dark:text-blue-200">
-                              {subcategory.name}
-                            </CardTitle>
-                            <CardDescription className="text-sm text-blue-600 dark:text-blue-400">
-                              {subcategory.quizzes.length} cuestionario(s)
-                            </CardDescription>
+                    return (
+                      <Card
+                        key={subcategory.id}
+                        className="bg-slate-900/50 border-white/10 backdrop-blur-sm hover:border-blue-500/30 transition-all group"
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex justify-between items-start gap-2">
+                            <div>
+                              <CardTitle className="text-lg font-semibold text-slate-200 group-hover:text-blue-400 transition-colors">
+                                {subcategory.name}
+                              </CardTitle>
+                              <CardDescription className="text-sm text-slate-500">
+                                {subcategory.quizzes.length} cuestionario(s)
+                              </CardDescription>
+                            </div>
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+                              {progressPercentage.toFixed(0)}%
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                            {progressPercentage.toFixed(0)}% completado
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <Progress
-                          value={progressPercentage}
-                          className="h-2 bg-blue-100 dark:bg-blue-900"
-                        />
-                        <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-                          {subcategory.description || 'Sin descripción'}
-                        </p>
-                        <div className="flex flex-col gap-2">
-                          <div className="flex flex-col sm:flex-row gap-2">
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center justify-center gap-2"
-                              onClick={() => handleTraining(subcategory.id)}
-                            >
-                              <Dumbbell className="h-4 w-4" />
-                              Entrenar
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900 font-semibold flex items-center justify-center gap-2"
-                              onClick={() => {
-                                document.getElementById(`subcategory-${subcategory.id}`)?.scrollIntoView({
-                                  behavior: 'smooth'
-                                });
-                              }}
-                            >
-                              <ListChecks className="h-4 w-4" />
-                              Ver cuestionarios
-                            </Button>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <Progress
+                            value={progressPercentage}
+                            className="h-1.5 bg-slate-800"
+                            indicatorClassName="bg-blue-500"
+                          />
+                          <p className="text-sm text-slate-400 line-clamp-2 min-h-[2.5em]">
+                            {subcategory.description || 'Sin descripción disponible.'}
+                          </p>
+                          <div className="flex flex-col gap-2 pt-2">
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                                onClick={() => handleTraining(subcategory.id)}
+                              >
+                                <Dumbbell className="h-4 w-4 mr-2" />
+                                Entrenar
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 border-white/10 text-slate-300 hover:text-white hover:bg-white/5"
+                                onClick={() => {
+                                  document.getElementById(`subcategory-${subcategory.id}`)?.scrollIntoView({
+                                    behavior: 'smooth'
+                                  });
+                                }}
+                              >
+                                <ListChecks className="h-4 w-4 mr-2" />
+                                Ver Tests
+                              </Button>
+                            </div>
+
+                            {subcategory.youtube_sublink && (
+                              <Button
+                                size="sm"
+                                className="w-full bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/20"
+                                onClick={() => playVideo(subcategory.youtube_sublink!)}
+                              >
+                                <Youtube className="h-4 w-4 mr-2" />
+                                Ver Videos
+                              </Button>
+                            )}
                           </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
-                          {/* Aquí: botón que reproduce en la sección superior SIN <a href> */}
-                          {subcategory.youtube_sublink && (
-                            <Button
-                              size="sm"
-                              className="w-full font-semibold flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-800 dark:hover:bg-gray-700"
-                              onClick={() => playVideo(subcategory.youtube_sublink!)}
-                            >
-                              <Youtube className="h-4 w-4 text-red-600" />
-                              YouTube Videos
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {/* Listado de Cuestionarios por Subcategoría */}
-          {quizzesBySubcategory.map(subcategory => (
-            <section
-              key={`quizzes-${subcategory.id}`}
-              id={`subcategory-${subcategory.id}`}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 dark:border-gray-700"
-            >
-              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                    <ListChecks className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+            {quizzesBySubcategory.map(subcategory => (
+              <section
+                key={`quizzes-${subcategory.id}`}
+                id={`subcategory-${subcategory.id}`}
+                className="bg-slate-900/30 rounded-2xl border border-white/5 overflow-hidden"
+              >
+                <div className="px-6 py-5 border-b border-white/5 bg-slate-900/50 flex items-center gap-4">
+                  <div className="p-2.5 bg-blue-500/10 rounded-xl">
+                    <ListChecks className="h-6 w-6 text-blue-400" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
+                    <h3 className="text-xl font-bold text-white">
                       {subcategory.name}
                     </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-sm text-slate-400 mt-0.5">
                       {subcategory.description}
                     </p>
                   </div>
-                  <Badge variant="outline" className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
-                    {subcategory.quizzes.length} cuestionario(s)
-                  </Badge>
                 </div>
-              </div>
 
-              <div className="p-6">
-                {subcategory.quizzes.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {subcategory.quizzes.map(quiz => {
-                      const quizProgress = getQuizProgress(quiz.id);
-                      const status = quizProgress?.status || 'not_started';
-                      const progressPercentage = quizProgress ?
-                        calculatePercentage(quizProgress.completedQuestions, quiz.totalQuestions) : 0;
+                <div className="p-6">
+                  {subcategory.quizzes.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {subcategory.quizzes.map(quiz => {
+                        const quizProgress = getQuizProgress(quiz.id);
+                        const status = quizProgress?.status || 'not_started';
+                        const progressPercentage = quizProgress ?
+                          calculatePercentage(quizProgress.completedQuestions, quiz.totalQuestions) : 0;
 
-                      return (
-                        <QuizCard
-                          key={quiz.id}
-                          id={quiz.id}
-                          title={quiz.title}
-                          description={quiz.description}
-                          questionCount={quiz.totalQuestions}
-                          timeLimit={quiz.timeLimit}
-                          difficulty={quiz.difficulty}
-                          status={status}
-                          progress={progressPercentage}
-                          score={quizProgress?.score}
-                          onStart={() => handleQuizAction(quiz.id)}
-                          onContinue={() => handleQuizAction(quiz.id)}
-                          onRetry={() => handleQuizAction(quiz.id)}
-                          onMiniStart={() => handleMiniStart(quiz.id)}
-                          className="bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"
-                        />
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <p className="text-gray-500 dark:text-gray-400">No hay cuestionarios en este tema</p>
-                  </div>
-                )}
-              </div>
-
-
-
-              {/* Si quieres seguir mostrando el botón general de la subcategoría al final */}
-              {subcategory.youtube_sublink && (
-                <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 rounded-b-xl">
-                  <Button
-                    size="sm"
-                    className="w-full font-semibold flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-800 dark:hover:bg-gray-700"
-                    onClick={() => playVideo(subcategory.youtube_sublink!)}
-                  >
-                    <Youtube className="h-4 w-4 text-red-600" />
-                    YouTube Videos
-                  </Button>
+                        return (
+                          <QuizCard
+                            key={quiz.id}
+                            id={quiz.id}
+                            title={quiz.title}
+                            description={quiz.description}
+                            questionCount={quiz.totalQuestions}
+                            timeLimit={quiz.timeLimit}
+                            difficulty={quiz.difficulty}
+                            status={status}
+                            progress={progressPercentage}
+                            score={quizProgress?.score}
+                            onStart={() => handleQuizAction(quiz.id)}
+                            onContinue={() => handleQuizAction(quiz.id)}
+                            onRetry={() => handleQuizAction(quiz.id)}
+                            onMiniStart={() => handleMiniStart(quiz.id)}
+                            className="bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-blue-500/20 transition-all"
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-500 italic">
+                      No hay cuestionarios disponibles en este tema.
+                    </div>
+                  )}
                 </div>
-              )}
-            </section>
-          ))}
+              </section>
+            ))}
+          </div>
+        )}
 
-          {/* ... resto inalterado ... */}
-          {/* Cuestionarios Generales, Sin Contenido, etc. (dejé tal cual) */}
-        </div>
-      )}
-
-      <Dialog open={!!miniQuizId} onOpenChange={(open) => !open && setMiniQuizId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-600">
-              <AlertTriangle className="h-5 w-5" />
-              Versión Mini del Cuestionario
-            </DialogTitle>
-            <DialogDescription className="space-y-3 pt-2">
-              <p>
-                Estás a punto de iniciar una <strong>versión reducida (50%)</strong> de este cuestionario con preguntas al azar.
-              </p>
-              <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 text-amber-800 text-sm">
-                <p className="font-semibold mb-1">⚠️ Importante:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Esta versión es ideal para repasos rápidos.</li>
-                  <li>Ganarás <strong>menos créditos</strong> que en la versión completa.</li>
-                  <li>Si tienes tiempo, te recomendamos hacer la versión completa.</li>
-                </ul>
-              </div>
-              <p>¿Deseas continuar con la versión mini?</p>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setMiniQuizId(null)}>
-              Cancelar, haré la completa
-            </Button>
-            <Button className="bg-amber-600 hover:bg-amber-700 text-white" onClick={confirmMiniStart}>
-              Sí, iniciar versión Mini
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <Dialog open={!!miniQuizId} onOpenChange={(open) => !open && setMiniQuizId(null)}>
+          <DialogContent className="bg-slate-900 border-white/10 text-slate-200">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-yellow-500">
+                <AlertTriangle className="h-5 w-5" />
+                Versión Mini del Cuestionario
+              </DialogTitle>
+              <DialogDescription className="space-y-4 pt-4 text-slate-300">
+                <p>
+                  Estás a punto de iniciar una <strong className="text-white">versión reducida (50%)</strong> de este cuestionario con preguntas al azar.
+                </p>
+                <div className="bg-yellow-500/10 p-4 rounded-xl border border-yellow-500/20 text-yellow-200 text-sm">
+                  <p className="font-semibold mb-2">⚠️ Importante:</p>
+                  <ul className="list-disc list-inside space-y-1 text-yellow-200/80">
+                    <li>Esta versión es ideal para repasos rápidos.</li>
+                    <li>Ganarás <strong>menos créditos</strong> que en la versión completa.</li>
+                    <li>Si tienes tiempo, te recomendamos hacer la versión completa.</li>
+                  </ul>
+                </div>
+                <p>¿Deseas continuar con la versión mini?</p>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-3 sm:gap-0 mt-4">
+              <Button variant="ghost" onClick={() => setMiniQuizId(null)} className="text-slate-400 hover:text-white hover:bg-white/10">
+                Cancelar
+              </Button>
+              <Button className="bg-yellow-600 hover:bg-yellow-700 text-white" onClick={confirmMiniStart}>
+                Sí, iniciar versión Mini
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

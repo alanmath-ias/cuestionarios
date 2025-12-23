@@ -97,7 +97,7 @@ export function UserMenu({ user }: UserMenuProps) {
             <ChevronDown size={16} />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent align="end" className="w-48 bg-slate-950 border-white/10 text-slate-200">
           <DropdownMenuItem onClick={() => setLocation('/profile')}>
             Mi Perfil
           </DropdownMenuItem>

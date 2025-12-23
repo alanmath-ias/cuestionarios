@@ -13,6 +13,7 @@ const driverConfig: Config = {
     nextBtnText: 'Siguiente',
     prevBtnText: 'Anterior',
     keyboardControl: true,
+    popoverClass: 'driverjs-theme',
 };
 
 export const startDashboardTour = () => {

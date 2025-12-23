@@ -45,6 +45,7 @@ import PublicQuizResults from '@/pages/PublicQuizResults';
 import ForgotPasswordPage from '@/pages/forgot-password';
 import ResetPasswordPage from '@/pages/reset-password';
 
+import LandingPage from "@/pages/landing-page";
 
 //Protectroute que permite el ingreso a cuestionarios publicos:
 const PUBLIC_QUIZZES = [1, 2, 3, 4]; // IDs de los cuestionarios públicos
@@ -74,10 +75,10 @@ function ProtectedRoute({ component: Component, ...rest }: { component: any, pat
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-slate-950">
         <div className="text-center">
-          <h2 className="text-2xl font-semibold mb-4">Cargando...</h2>
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+          <h2 className="text-2xl font-semibold mb-4 text-white">Cargando...</h2>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
         </div>
       </div>
     );
@@ -111,10 +112,10 @@ function AdminProtectedRoute({ component: Component, ...rest }: { component: any
   }, [user, isLoading, navigate]);
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">
+    return <div className="flex items-center justify-center min-h-screen bg-slate-950">
       <div className="text-center">
-        <h2 className="text-2xl font-semibold mb-4">Cargando...</h2>
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+        <h2 className="text-2xl font-semibold mb-4 text-white">Cargando...</h2>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
       </div>
     </div>;
   }
@@ -124,6 +125,36 @@ function AdminProtectedRoute({ component: Component, ...rest }: { component: any
   }
 
   return <PageLayout><Component {...rest} /></PageLayout>;
+}
+
+function RootRoute() {
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ['/api/user'],
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const [_, navigate] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      navigate('/dashboard');
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-950">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold mb-4 text-white">Cargando...</h2>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (user) return null;
+
+  return <LandingPage />;
 }
 
 function Router() {
@@ -157,7 +188,10 @@ function Router() {
 
       {/* Rutas de estudiante */}
       <Route path="/">
-        {() => <ProtectedRoute component={Dashboard} path="/" />}
+        {() => <RootRoute />}
+      </Route>
+      <Route path="/dashboard">
+        {() => <ProtectedRoute component={Dashboard} path="/dashboard" />}
       </Route>
       <Route path="/category/:categoryId">
         {(params) => <ProtectedRoute component={QuizList} path={`/category/${params.categoryId}`} />}

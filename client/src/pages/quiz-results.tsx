@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MathDisplay } from '@/components/ui/math-display';
-import { ArrowLeft, Download, Clock, CheckCircle, XCircle, BookOpen } from 'lucide-react';
+import { ArrowLeft, Download, Clock, CheckCircle, XCircle, BookOpen, Trophy, Timer, Target } from 'lucide-react';
 import { startQuizResultsTour } from "@/lib/tour";
 import type { QuizResult } from '@shared/quiz-types.js';
 import { ExplanationModal } from './explicacion';
@@ -161,121 +161,148 @@ function QuizResults() {
   };
 
   return (
-    <div id="quizResults" className="max-w-4xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="mr-3"
-            onClick={handleGoBack}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h2 className="text-2xl font-semibold">Resultados del Cuestionario</h2>
-        </div>
+    <div className="min-h-screen bg-slate-950 relative overflow-hidden">
+      {/* Ambient Background */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[100px]" />
       </div>
 
-      {isLoading ? (
-        <div className="animate-pulse">
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="h-64 bg-gray-200 rounded"></div>
-            </CardContent>
-          </Card>
+      <div id="quizResults" className="container mx-auto px-4 py-8 max-w-4xl relative z-10">
+        <div className="mb-8 flex items-center justify-between">
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="mr-4 text-slate-400 hover:text-white hover:bg-white/10 rounded-full"
+              onClick={handleGoBack}
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </Button>
+            <h2 className="text-3xl font-bold text-white">Resultados</h2>
+          </div>
         </div>
-      ) : results ? (
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="text-center mb-8">
-              <h3 className="text-xl font-bold mb-2">{results.quiz.title}</h3>
-              <div className="inline-flex items-center bg-blue-100 text-primary px-3 py-1.5 rounded-full text-sm">
-                <Clock className="text-primary mr-1 h-4 w-4" />
-                Completado en {formatTimeSpent(results.progress.timeSpent)} minutos
-              </div>
-            </div>
 
-            <div id="tour-score-summary" className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-blue-50 rounded-lg p-4 text-center border border-blue-100">
-                <div className="text-sm font-medium text-blue-600 mb-1">Puntuación</div>
-                <div className="text-3xl font-bold text-blue-700">
-                  {preciseScore}<span className="text-lg text-blue-400">/10</span>
+        {isLoading ? (
+          <div className="animate-pulse">
+            <Card className="mb-6 bg-slate-900/50 border-white/10">
+              <CardContent className="p-6">
+                <div className="h-64 bg-slate-800/50 rounded-xl"></div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : results ? (
+          <div className="space-y-8">
+            {/* Header Card */}
+            <Card className="bg-slate-900/50 border-white/10 backdrop-blur-xl shadow-2xl">
+              <CardContent className="p-8">
+                <div className="text-center mb-8">
+                  <h3 className="text-2xl font-bold mb-3 text-white">{results.quiz.title}</h3>
+                  <div className="inline-flex items-center bg-blue-500/10 text-blue-300 px-4 py-1.5 rounded-full text-sm border border-blue-500/20">
+                    <Clock className="mr-2 h-4 w-4" />
+                    Completado en {formatTimeSpent(results.progress.timeSpent)} minutos
+                  </div>
                 </div>
-              </div>
 
-              <div className="bg-green-50 rounded-lg p-4 text-center border border-green-100">
-                <div className="text-sm font-medium text-green-600 mb-1">Preguntas Correctas</div>
-                <div className="text-3xl font-bold text-green-700">
-                  {correctAnswers}<span className="text-lg text-green-400">/{totalQuestions}</span>
+                <div id="tour-score-summary" className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-slate-800/50 rounded-2xl p-6 text-center border border-white/5 hover:border-blue-500/30 transition-colors group">
+                    <div className="flex justify-center mb-3">
+                      <div className="p-3 bg-blue-500/10 rounded-full group-hover:bg-blue-500/20 transition-colors">
+                        <Trophy className="h-6 w-6 text-blue-400" />
+                      </div>
+                    </div>
+                    <div className="text-sm font-medium text-slate-400 mb-1">Puntuación</div>
+                    <div className="text-4xl font-bold text-white">
+                      {preciseScore}<span className="text-xl text-slate-500">/10</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800/50 rounded-2xl p-6 text-center border border-white/5 hover:border-green-500/30 transition-colors group">
+                    <div className="flex justify-center mb-3">
+                      <div className="p-3 bg-green-500/10 rounded-full group-hover:bg-green-500/20 transition-colors">
+                        <Target className="h-6 w-6 text-green-400" />
+                      </div>
+                    </div>
+                    <div className="text-sm font-medium text-slate-400 mb-1">Aciertos</div>
+                    <div className="text-4xl font-bold text-white">
+                      {correctAnswers}<span className="text-xl text-slate-500">/{totalQuestions}</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800/50 rounded-2xl p-6 text-center border border-white/5 hover:border-purple-500/30 transition-colors group">
+                    <div className="flex justify-center mb-3">
+                      <div className="p-3 bg-purple-500/10 rounded-full group-hover:bg-purple-500/20 transition-colors">
+                        <Timer className="h-6 w-6 text-purple-400" />
+                      </div>
+                    </div>
+                    <div className="text-sm font-medium text-slate-400 mb-1">Tiempo/Pregunta</div>
+                    <div className="text-4xl font-bold text-white">
+                      {Math.floor((results.progress.timeSpent || 0) / totalQuestions / 60)}
+                      <span className="text-xl text-slate-500">
+                        :{Math.floor((results.progress.timeSpent || 0) / totalQuestions % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="bg-teal-50 rounded-lg p-4 text-center border border-teal-100">
-                <div className="text-sm font-medium text-teal-600 mb-1">Tiempo promedio</div>
-                <div className="text-3xl font-bold text-teal-700">
-                  {Math.floor((results.progress.timeSpent || 0) / totalQuestions / 60)}
-                  <span className="text-lg text-teal-400">
-                    :{Math.floor((results.progress.timeSpent || 0) / totalQuestions % 60).toString().padStart(2, '0')}
-                  </span>
-                </div>
-                <div className="text-xs text-teal-500">minutos por pregunta</div>
-              </div>
-            </div>
+            <h4 className="font-bold text-xl text-white px-2">Revisión de Preguntas</h4>
 
-            <h4 className="font-semibold text-lg mb-4">Resumen de preguntas</h4>
-
-            <div className="space-y-4 mb-6">
+            <div className="space-y-6">
               {results.answers.map((answer, index) => {
                 const correctContent = getCorrectAnswerContent(answer);
 
                 return (
-                  <div key={answer.id} className="border rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 p-3 flex justify-between items-center">
-                      <div className="font-medium">Pregunta {index + 1}</div>
+                  <div key={answer.id} className="bg-slate-900/30 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm">
+                    <div className="bg-slate-900/80 p-4 flex justify-between items-center border-b border-white/5">
+                      <div className="font-medium text-slate-300">Pregunta {index + 1}</div>
                       {answer.isCorrect ? (
-                        <div className="text-green-600 font-medium flex items-center">
-                          <CheckCircle className="h-4 w-4 mr-1" />
+                        <div className="text-green-400 font-medium flex items-center bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
+                          <CheckCircle className="h-4 w-4 mr-2" />
                           Correcta
                         </div>
                       ) : (
-                        <div className="text-red-600 font-medium flex items-center">
-                          <XCircle className="h-4 w-4 mr-1" />
+                        <div className="text-red-400 font-medium flex items-center bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
+                          <XCircle className="h-4 w-4 mr-2" />
                           Incorrecta
                         </div>
                       )}
                     </div>
 
-                    <div className="p-4">
-                      <div className="mb-3">
+                    <div className="p-6">
+                      <div className="mb-6 text-lg text-slate-200">
                         {renderContent(answer.question.content)}
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className={`border rounded p-3 ${answer.isCorrect
-                          ? 'bg-green-50 border-green-200'
-                          : 'bg-red-50 border-red-200'
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className={`border rounded-xl p-4 ${answer.isCorrect
+                          ? 'bg-green-500/10 border-green-500/30'
+                          : 'bg-red-500/10 border-red-500/30'
                           }`}>
-                          <div className="text-sm font-medium mb-1">Tu respuesta:</div>
+                          <div className={`text-sm font-medium mb-2 ${answer.isCorrect ? 'text-green-400' : 'text-red-400'}`}>
+                            Tu respuesta:
+                          </div>
                           {answer.answerDetails ? (
-                            <div className="text-gray-700">
+                            <div className="text-slate-200">
                               {renderContent(answer.answerDetails.content)}
                             </div>
                           ) : (
-                            <span className="text-gray-500">No respondida</span>
+                            <span className="text-slate-500 italic">No respondida</span>
                           )}
                         </div>
 
                         {!answer.isCorrect && (
-                          <div className="border rounded p-3 bg-green-50 border-green-200">
+                          <div className="border rounded-xl p-4 bg-green-500/10 border-green-500/30">
                             <div className="flex justify-between items-start">
                               <div>
-                                <div className="text-sm font-medium mb-1">Respuesta correcta:</div>
+                                <div className="text-sm font-medium mb-2 text-green-400">Respuesta correcta:</div>
                                 {correctContent ? (
-                                  <div className="text-gray-700">
+                                  <div className="text-slate-200">
                                     {renderContent(correctContent)}
                                   </div>
                                 ) : (
-                                  <span className="text-gray-500">
+                                  <span className="text-slate-500">
                                     {loadingQuestions ? 'Cargando...' : 'No disponible'}
                                   </span>
                                 )}
@@ -289,10 +316,10 @@ function QuizResults() {
                                   answer.question.content,
                                   correctContent || ''
                                 )}
-                                className="ml-2"
+                                className="ml-2 border-white/10 text-slate-300 hover:text-white hover:bg-white/10"
                               >
                                 <BookOpen className="h-4 w-4 mr-2" />
-                                Ver Explicación
+                                Explicación
                               </Button>
                             </div>
                           </div>
@@ -300,9 +327,9 @@ function QuizResults() {
                       </div>
 
                       {(answer.answerDetails?.explanation || answer.correctAnswer?.explanation) && (
-                        <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-100 text-sm">
-                          <strong className="text-blue-700">Explicación:</strong>
-                          <span className="text-gray-700 ml-1">
+                        <div className="mt-4 p-4 bg-blue-500/10 rounded-xl border border-blue-500/20 text-sm">
+                          <strong className="text-blue-400 block mb-1">Explicación:</strong>
+                          <span className="text-slate-300">
                             {answer.answerDetails?.explanation || answer.correctAnswer?.explanation}
                           </span>
                         </div>
@@ -314,47 +341,47 @@ function QuizResults() {
             </div>
 
             {!loadingFeedback && (
-              <Card className="mt-6 border border-purple-100">
+              <Card className="mt-8 border border-purple-500/30 bg-purple-500/5 backdrop-blur-sm">
                 <CardContent className="p-6">
-                  <h4 className="text-lg font-semibold mb-2 text-purple-700">Retroalimentación del profesor</h4>
+                  <h4 className="text-lg font-semibold mb-3 text-purple-400">Retroalimentación del profesor</h4>
                   {feedback?.feedback ? (
-                    <div className="text-gray-700 whitespace-pre-wrap bg-purple-50 p-3 rounded">
+                    <div className="text-slate-300 whitespace-pre-wrap bg-purple-500/10 p-4 rounded-xl border border-purple-500/20">
                       {feedback.feedback}
                     </div>
                   ) : (
-                    <p className="text-gray-500 italic">Tu profesor aún no ha enviado comentarios.</p>
+                    <p className="text-slate-500 italic">Tu profesor aún no ha enviado comentarios.</p>
                   )}
                 </CardContent>
               </Card>
             )}
 
-            <div className="flex justify-center mt-6">
+            <div className="flex justify-center mt-8 pb-8">
               <Button
                 variant="outline"
-                className="flex items-center bg-white hover:bg-gray-50 border-gray-300"
+                className="flex items-center border-white/10 text-slate-300 hover:text-white hover:bg-white/10 px-6 py-6 text-lg h-auto rounded-xl"
                 onClick={handleDownloadResults}
               >
-                <Download className="mr-2 h-4 w-4" />
+                <Download className="mr-3 h-5 w-5" />
                 Descargar resultados
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="text-center py-8 text-gray-500">
-          No se encontraron resultados.
-        </div>
-      )}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-slate-500">
+            No se encontraron resultados.
+          </div>
+        )}
 
-      {showExplanation && currentExplanation && (
-        <ExplanationModal
-          questionId={currentExplanation.questionId}
-          question={currentExplanation.question}
-          correctAnswer={currentExplanation.correctAnswer}
-          quizTitle={results?.quiz.title || 'Matemáticas'}
-          onClose={() => setShowExplanation(false)}
-        />
-      )}
+        {showExplanation && currentExplanation && (
+          <ExplanationModal
+            questionId={currentExplanation.questionId}
+            question={currentExplanation.question}
+            correctAnswer={currentExplanation.correctAnswer}
+            quizTitle={results?.quiz.title || 'Matemáticas'}
+            onClose={() => setShowExplanation(false)}
+          />
+        )}
+      </div>
     </div>
   );
 }
