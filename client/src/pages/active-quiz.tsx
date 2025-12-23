@@ -176,7 +176,7 @@ const ActiveQuiz = () => {
   const { formattedTime, elapsedTime, start } = useTimer({
     initialTime: quiz?.timeLimit || 0,
     initialElapsedTime: progress?.timeSpent || 0,
-    autoStart: true,
+    autoStart: session?.userId !== 1,
     onTimeUp: () => handleFinishQuiz()
   });
 
@@ -230,7 +230,7 @@ const ActiveQuiz = () => {
   }, [questions, currentQuestionIndex]);
 
   useEffect(() => {
-    if (quiz && session?.userId && !progress) {
+    if (quiz && session?.userId && !progress && session.userId !== 1) {
       createProgressMutation.mutate({
         userId: session.userId,
         quizId: parseInt(quizId!),
@@ -481,7 +481,14 @@ const ActiveQuiz = () => {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">{quiz?.title}</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            {quiz?.title}
+            {session?.userId === 1 && (
+              <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                Modo Admin - Sin Guardar
+              </Badge>
+            )}
+          </h1>
           <div className="flex items-center gap-2">
             <div id="tour-timer" className="flex items-center text-gray-500 mt-1">
               <Timer className="h-4 w-4 mr-1" />
@@ -545,6 +552,29 @@ const ActiveQuiz = () => {
                   alt="Imagen de la pregunta"
                   className="max-h-60 object-contain rounded"
                 />
+              </div>
+            )}
+
+            {/* Admin: Show Correct Answer */}
+            {session?.userId === 1 && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-800 text-sm flex items-start gap-2">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
+                <div>
+                  <span className="font-bold block mb-1">Respuesta Correcta (Solo Admin):</span>
+                  {currentQuestion.type === 'text' ? (
+                    <span className="font-mono bg-white px-1 rounded border border-green-100">
+                      {currentQuestion.answers?.map(a => a.content).join(' O ')}
+                    </span>
+                  ) : (
+                    <div className="font-medium">
+                      {currentQuestion.answers?.filter((a: any) => a.isCorrect).map((a: any) => (
+                        <div key={a.id} className="flex items-center gap-2">
+                          <span>•</span> <ContentRenderer content={a.content} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -794,7 +824,7 @@ const ActiveQuiz = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </div >
   );
 };
 

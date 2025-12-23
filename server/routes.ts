@@ -953,7 +953,24 @@ Formato: Solo el texto del tip con el ejemplo.`;
 
       // If mini mode, shuffle and take 50%
       let selectedQuestions = questions;
-      if (mode === 'mini') {
+
+      // Special handling for Placement Tests (Category 21)
+      if (quiz.categoryId === 21) {
+        // Group by difficulty
+        const diff1 = questions.filter(q => q.difficulty === 1);
+        const diff2 = questions.filter(q => q.difficulty === 2);
+        const diff3 = questions.filter(q => q.difficulty === 3);
+
+        // Select random subset from each difficulty
+        // Target: 3 Easy, 4 Medium, 3 Hard = 10 questions
+        const selectedDiff1 = diff1.sort(() => 0.5 - Math.random()).slice(0, 3);
+        const selectedDiff2 = diff2.sort(() => 0.5 - Math.random()).slice(0, 4);
+        const selectedDiff3 = diff3.sort(() => 0.5 - Math.random()).slice(0, 3);
+
+        // Combine and sort by difficulty ascending
+        selectedQuestions = [...selectedDiff1, ...selectedDiff2, ...selectedDiff3]
+          .sort((a, b) => a.difficulty - b.difficulty);
+      } else if (mode === 'mini') {
         const count = Math.ceil(questions.length * 0.5);
         selectedQuestions = questions
           .sort(() => 0.5 - Math.random())
@@ -1081,6 +1098,7 @@ Formato: Solo el texto del tip con el ejemplo.`;
   apiRouter.get("/progress", async (req: Request, res: Response) => {
     const userId = req.session.userId;
 
+
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
     }
@@ -1141,6 +1159,18 @@ Formato: Solo el texto del tip con el ejemplo.`;
 
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Admin Mode: Ignore progress saving
+    if (userId === 1) {
+      return res.json({
+        id: -1,
+        userId: 1,
+        quizId: req.body.quizId,
+        status: 'in_progress',
+        completedQuestions: 0,
+        timeSpent: 0
+      });
     }
 
     try {
@@ -1560,6 +1590,11 @@ Ejemplo de formato:
 
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Admin Mode: Ignore answer saving
+    if (userId === 1) {
+      return res.json({ message: "Admin answer ignored" });
     }
 
     try {
@@ -2444,6 +2479,11 @@ Ejemplo de formato:
 
     if (!userId || !quizId || typeof score !== "number" || !progressId) {
       return res.status(400).json({ error: "Datos incompletos o inválidos" });
+    }
+
+    // Admin Mode: Ignore submission
+    if (userId === 1) {
+      return res.status(200).json({ success: true, message: "Admin submission ignored" });
     }
 
     try {
