@@ -5,7 +5,10 @@ import dotenv from 'dotenv';
 // Load env vars
 dotenv.config({ path: '.envproduction' });
 
-const connectionString = "postgres://postgres:CuestionariosAlan67@178.156.147.25:5433/postgres";
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+    throw new Error("DATABASE_URL not found in environment variables");
+}
 
 if (!connectionString) {
     console.error('DATABASE_URL not found in .envproduction');

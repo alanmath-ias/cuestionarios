@@ -1,8 +1,13 @@
 
+import 'dotenv/config';
 import pg from 'pg';
 const { Pool } = pg;
 
-const connectionString = "postgres://postgres:LbG7KjvVYb2WcCERh9lTWq4dSx1HKjKJZkiyehLcJ8Iu3MaRjLVEnzlCAzs5QFMq@178.156.147.25:5432/postgres";
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+    console.error("DATABASE_URL not found in environment variables");
+    process.exit(1);
+}
 
 const pool = new Pool({
     connectionString,
