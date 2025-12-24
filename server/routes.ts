@@ -1907,20 +1907,6 @@ Ejemplo de formato:
     const subcategoryId = parseInt(req.params.subcategoryId);
     const quizzes = await storage.getQuizzesBySubcategory(subcategoryId);
     res.json(quizzes);
-  });
-  //chat gpt asignar cuestionarios a usuarios
-  // Obtener los quizzes asignados a un usuario
-  apiRouter.get("/admin/users", requireAdmin, async (req, res) => {
-    try {
-      const users = await storage.getAllUsers();
-      res.json(users);
-    } catch (err) {
-      res.status(500).json({ message: "Error fetching users" });
-    }
-  });
-
-  // Quitar un quiz de un usuario
-  apiRouter.delete("/admin/users/quizzes", requireAdmin, async (req, res) => {
     let { userId, quizId } = req.body;
 
     // Fallback to query parameters if body is empty (common in some clients for DELETE)
@@ -2048,6 +2034,27 @@ Ejemplo de formato:
     } catch (err) {
       console.error("Error fetching user dashboard data:", err);
       res.status(500).json({ message: "Error fetching user dashboard data" });
+    }
+  });
+
+  apiRouter.patch("/users/:id/credits", requireAdmin, async (req, res) => {
+    const userId = parseInt(req.params.id);
+    const { credits } = req.body;
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    if (typeof credits !== 'number') {
+      return res.status(400).json({ message: "Credits must be a number" });
+    }
+
+    try {
+      const updatedUser = await storage.updateUserCredits(userId, credits);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user credits:", error);
+      res.status(500).json({ message: "Error updating user credits" });
     }
   });
 

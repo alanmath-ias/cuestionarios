@@ -8,6 +8,20 @@ import { drizzle } from "drizzle-orm/postgres-js";
 
 //schema nuevo
 
+export const users = pgTable("users", {
+	id: serial("id").primaryKey().notNull(),
+	username: text("username").notNull(),
+	password: text("password").notNull(),
+	name: text("name").notNull(),
+	email: text("email"),
+	role: text("role").default('student').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	hintCredits: integer("hint_credits").default(50).notNull(),
+	tourStatus: jsonb("tour_status").default({}),
+}, (table) => [
+	unique("users_username_unique").on(table.username),
+]);
+
 export const categories = pgTable("categories", {
 	id: serial().primaryKey().notNull(),
 	name: text().notNull(),
@@ -93,20 +107,6 @@ export const questions = pgTable("questions", {
 	hint3: text("hint3"),
 	explanation: text("explanation"),
 });
-
-export const users = pgTable("users", {
-	id: serial().primaryKey().notNull(),
-	username: text().notNull(),
-	password: text().notNull(),
-	name: text().notNull(),
-	email: text(),
-	role: text().default('student').notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	hintCredits: integer("hint_credits").default(50).notNull(),
-	tourStatus: jsonb("tour_status").default({}),
-}, (table) => [
-	unique("users_username_unique").on(table.username),
-]);
 
 export const studentProgress = pgTable("student_progress", {
 	id: serial().primaryKey().notNull(),

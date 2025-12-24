@@ -19,6 +19,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, userData: Partial<User>): Promise<User>;
+  updateUserCredits(id: number, credits: number): Promise<User>;
   deleteUser(id: number): Promise<void>;
 
   // Category methods
@@ -434,6 +435,16 @@ export class MemStorage implements IStorage {
       throw new Error(`User with id ${id} not found`);
     }
     const updatedUser: User = { ...existingUser, ...userData };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async updateUserCredits(id: number, credits: number): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    const updatedUser = { ...user, hintCredits: credits };
     this.users.set(id, updatedUser);
     return updatedUser;
   }

@@ -269,428 +269,443 @@ export default function QuestionsAdmin() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Gestión de Preguntas</h1>
-          <p className="text-muted-foreground">
-            {quiz ? `Editando: ${quiz.title}` : "Cargando información..."}
-          </p>
+    <div className="min-h-screen bg-slate-950 text-slate-200 p-8">
+      <div className="container mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-100">Gestión de Preguntas</h1>
+            <p className="text-slate-400">
+              {quiz ? `Editando: ${quiz.title}` : "Cargando información..."}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => window.location.href = "/admin/quizzes"} className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver a cuestionarios
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => window.location.href = "/admin/quizzes"}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver a cuestionarios
-          </Button>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1">
-          <Card className="sticky top-4">
-            <CardHeader className="bg-muted/50">
-              <CardTitle>{editingId ? "Editar Pregunta" : "Nueva Pregunta"}</CardTitle>
-              <CardDescription>
-                {editingId
-                  ? "Actualiza los detalles de la pregunta"
-                  : "Añade una nueva pregunta al cuestionario"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <Tabs value={currentTab} onValueChange={setCurrentTab}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="question">Pregunta</TabsTrigger>
-                  <TabsTrigger value="answers" disabled={form.watch("type") !== "multiple_choice"}>
-                    Respuestas
-                    {form.watch("type") === "multiple_choice" && (
-                      <Badge variant="outline" className="ml-2">{answers.length}</Badge>
-                    )}
-                  </TabsTrigger>
-                </TabsList>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-1">
+            <Card className="sticky top-4 bg-slate-900 border-white/10 shadow-xl">
+              <CardHeader className="bg-slate-950/50 border-b border-white/5">
+                <CardTitle className="text-slate-100">{editingId ? "Editar Pregunta" : "Nueva Pregunta"}</CardTitle>
+                <CardDescription className="text-slate-400">
+                  {editingId
+                    ? "Actualiza los detalles de la pregunta"
+                    : "Añade una nueva pregunta al cuestionario"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 bg-slate-950 border border-slate-800">
+                    <TabsTrigger value="question" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400">Pregunta</TabsTrigger>
+                    <TabsTrigger value="answers" disabled={form.watch("type") !== "multiple_choice"} className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400">
+                      Respuestas
+                      {form.watch("type") === "multiple_choice" && (
+                        <Badge variant="outline" className="ml-2 border-slate-600 text-slate-400">{answers.length}</Badge>
+                      )}
+                    </TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="question" className="pt-4">
-                  <Form {...form}>
-                    <form className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="content"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Enunciado de la pregunta</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="Escribe aquí el enunciado de la pregunta..."
-                                rows={3}
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="imageUrl"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>URL de la imagen (opcional)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="text"
-                                placeholder="https://ejemplo.com/imagen.png"
-                                {...field}
-                                value={field.value || ""}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="type"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tipo de pregunta</FormLabel>
-                            <Select
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                if (value !== "multiple_choice") {
-                                  setAnswers([]);
-                                }
-                              }}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecciona un tipo" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {questionTypeOptions.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            {field.value === "formula" && (
-                              <FormDescription>
-                                Las preguntas de fórmula permiten generar variables aleatorias
-                              </FormDescription>
-                            )}
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-2 gap-4">
+                  <TabsContent value="question" className="pt-4 mt-0">
+                    <Form {...form}>
+                      <form className="space-y-4">
                         <FormField
                           control={form.control}
-                          name="difficulty"
+                          name="content"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Dificultad</FormLabel>
+                              <FormLabel className="text-slate-300">Enunciado de la pregunta</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Escribe aquí el enunciado de la pregunta..."
+                                  rows={3}
+                                  {...field}
+                                  className="bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="imageUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-slate-300">URL de la imagen (opcional)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="text"
+                                  placeholder="https://ejemplo.com/imagen.png"
+                                  {...field}
+                                  value={field.value || ""}
+                                  className="bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="type"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-slate-300">Tipo de pregunta</FormLabel>
                               <Select
-                                onValueChange={field.onChange}
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                  if (value !== "multiple_choice") {
+                                    setAnswers([]);
+                                  }
+                                }}
                                 value={field.value}
                               >
                                 <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Nivel" />
+                                  <SelectTrigger className="bg-slate-950 border-slate-700 text-slate-200">
+                                    <SelectValue placeholder="Selecciona un tipo" />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
-                                  {difficultyOptions.map((option) => (
-                                    <SelectItem key={option.value} value={option.value}>
+                                <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                  {questionTypeOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value} className="focus:bg-slate-800 focus:text-white">
                                       {option.label}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
+                              {field.value === "formula" && (
+                                <FormDescription className="text-slate-500">
+                                  Las preguntas de fórmula permiten generar variables aleatorias
+                                </FormDescription>
+                              )}
                             </FormItem>
                           )}
                         />
 
-                        <FormField
-                          control={form.control}
-                          name="points"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Puntos</FormLabel>
-                              <FormControl>
-                                <Input type="number" min="1" max="100" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="difficulty"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-slate-300">Dificultad</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className="bg-slate-950 border-slate-700 text-slate-200">
+                                      <SelectValue placeholder="Nivel" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                    {difficultyOptions.map((option) => (
+                                      <SelectItem key={option.value} value={option.value} className="focus:bg-slate-800 focus:text-white">
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                      {form.watch("type") === "formula" && (
-                        <FormField
-                          control={form.control}
-                          name="variables"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Variables (JSON)</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  placeholder='{"a": {"min": 1, "max": 10}, "b": {"min": 1, "max": 5}}'
-                                  rows={3}
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Define las variables y sus rangos en formato JSON
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
+                          <FormField
+                            control={form.control}
+                            name="points"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-slate-300">Puntos</FormLabel>
+                                <FormControl>
+                                  <Input type="number" min="1" max="100" {...field} className="bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
 
-                      {form.watch("type") === "multiple_choice" && (
-                        <div className="pt-2">
+                        {form.watch("type") === "formula" && (
+                          <FormField
+                            control={form.control}
+                            name="variables"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-slate-300">Variables (JSON)</FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder='{"a": {"min": 1, "max": 10}, "b": {"min": 1, "max": 5}}'
+                                    rows={3}
+                                    {...field}
+                                    className="bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50 font-mono text-sm"
+                                  />
+                                </FormControl>
+                                <FormDescription className="text-slate-500">
+                                  Define las variables y sus rangos en formato JSON
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+
+                        {form.watch("type") === "multiple_choice" && (
+                          <div className="pt-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setCurrentTab("answers")}
+                              className="w-full bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white"
+                            >
+                              Configurar respuestas
+                            </Button>
+                          </div>
+                        )}
+                      </form>
+                    </Form>
+                  </TabsContent>
+
+                  <TabsContent value="answers" className="pt-4 mt-0">
+                    <div className="space-y-4">
+                      <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                        <h3 className="font-medium mb-3 text-slate-200">Añadir respuesta</h3>
+
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-sm font-medium text-slate-300">Contenido</label>
+                            <Input
+                              value={newAnswer.content}
+                              onChange={(e) => setNewAnswer({ ...newAnswer, content: e.target.value })}
+                              placeholder="Escribe aquí la respuesta..."
+                              className="bg-slate-900 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50 mt-1"
+                            />
+                          </div>
+
+                          <div className="flex items-center space-x-2 py-2">
+                            <Checkbox
+                              id="is-correct"
+                              checked={newAnswer.isCorrect}
+                              onCheckedChange={(checked) => setNewAnswer({ ...newAnswer, isCorrect: !!checked })}
+                              className="border-slate-600 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                            />
+                            <label
+                              htmlFor="is-correct"
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-300 cursor-pointer"
+                            >
+                              Respuesta correcta
+                            </label>
+                          </div>
+
+                          <div>
+                            <label className="text-sm font-medium text-slate-300">Explicación (opcional)</label>
+                            <Textarea
+                              value={newAnswer.explanation || ""}
+                              onChange={(e) => setNewAnswer({ ...newAnswer, explanation: e.target.value })}
+                              placeholder="Explica por qué esta respuesta es correcta o incorrecta..."
+                              rows={2}
+                              className="bg-slate-900 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50 mt-1"
+                            />
+                          </div>
+
                           <Button
                             type="button"
-                            variant="outline"
-                            onClick={() => setCurrentTab("answers")}
+                            onClick={handleAddAnswer}
+                            className="w-full bg-slate-800 hover:bg-slate-700 text-white border border-slate-700"
                           >
-                            Configurar respuestas
+                            <Plus className="h-4 w-4 mr-2" />
+                            Añadir respuesta
                           </Button>
                         </div>
+                      </div>
+
+                      {answers.length > 0 ? (
+                        <div>
+                          <h3 className="font-medium mb-2 text-slate-300">Respuestas configuradas</h3>
+                          <div className="space-y-2">
+                            {answers.map((answer, index) => (
+                              <div key={index} className="flex items-start justify-between bg-slate-950 border border-slate-800 rounded-md p-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center">
+                                    {answer.isCorrect ? (
+                                      <Badge variant="outline" className="mr-2 bg-green-500/10 text-green-400 border-green-500/20">
+                                        <Check className="h-3 w-3 mr-1" />
+                                        Correcta
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="mr-2 bg-red-500/10 text-red-400 border-red-500/20">
+                                        <X className="h-3 w-3 mr-1" />
+                                        Incorrecta
+                                      </Badge>
+                                    )}
+                                    <span className="font-medium text-slate-200">{answer.content}</span>
+                                  </div>
+                                  {answer.explanation && (
+                                    <p className="text-sm text-slate-400 mt-1 ml-1">
+                                      <span className="text-slate-500">Explicación:</span> {answer.explanation}
+                                    </p>
+                                  )}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRemoveAnswer(index)}
+                                  className="text-slate-500 hover:text-red-400 hover:bg-red-500/10"
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 border border-dashed border-slate-800 rounded-lg bg-slate-950/30">
+                          <p className="text-slate-500">No hay respuestas configuradas</p>
+                        </div>
                       )}
-                    </form>
-                  </Form>
-                </TabsContent>
 
-                <TabsContent value="answers" className="pt-4">
-                  <div className="space-y-4">
-                    <div className="bg-muted rounded-lg p-4">
-                      <h3 className="font-medium mb-3">Añadir respuesta</h3>
-
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-sm font-medium">Contenido</label>
-                          <Input
-                            value={newAnswer.content}
-                            onChange={(e) => setNewAnswer({ ...newAnswer, content: e.target.value })}
-                            placeholder="Escribe aquí la respuesta..."
-                          />
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="is-correct"
-                            checked={newAnswer.isCorrect}
-                            onCheckedChange={(checked) => setNewAnswer({ ...newAnswer, isCorrect: !!checked })}
-                          />
-                          <label
-                            htmlFor="is-correct"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            Respuesta correcta
-                          </label>
-                        </div>
-
-                        <div>
-                          <label className="text-sm font-medium">Explicación (opcional)</label>
-                          <Textarea
-                            value={newAnswer.explanation || ""}
-                            onChange={(e) => setNewAnswer({ ...newAnswer, explanation: e.target.value })}
-                            placeholder="Explica por qué esta respuesta es correcta o incorrecta..."
-                            rows={2}
-                          />
-                        </div>
-
+                      <div className="flex justify-between pt-2">
                         <Button
                           type="button"
-                          onClick={handleAddAnswer}
-                          className="w-full"
+                          variant="outline"
+                          onClick={() => setCurrentTab("question")}
+                          className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white"
                         >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Añadir respuesta
+                          Volver a la pregunta
                         </Button>
-                      </div>
-                    </div>
-
-                    {answers.length > 0 ? (
-                      <div>
-                        <h3 className="font-medium mb-2">Respuestas configuradas</h3>
-                        <div className="space-y-2">
-                          {answers.map((answer, index) => (
-                            <div key={index} className="flex items-start justify-between bg-background border rounded-md p-3">
-                              <div className="flex-1">
-                                <div className="flex items-center">
-                                  {answer.isCorrect ? (
-                                    <Badge variant="success" className="mr-2">
-                                      <Check className="h-3 w-3 mr-1" />
-                                      Correcta
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="mr-2">
-                                      <X className="h-3 w-3 mr-1" />
-                                      Incorrecta
-                                    </Badge>
-                                  )}
-                                  <span className="font-medium">{answer.content}</span>
-                                </div>
-                                {answer.explanation && (
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    Explicación: {answer.explanation}
-                                  </p>
-                                )}
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveAnswer(index)}
-                              >
-                                <Trash className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          ))}
+                        <div>
+                          {answers.length > 0 && !answers.some(a => a.isCorrect) && (
+                            <p className="text-xs text-red-400 mb-2 text-right">
+                              Debe haber al menos una respuesta correcta
+                            </p>
+                          )}
+                          <Button
+                            type="button"
+                            disabled={createMutation.isPending || answers.length === 0}
+                            onClick={() => form.handleSubmit(onSubmit)()}
+                            className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
+                          >
+                            {createMutation.isPending && <Spinner className="mr-2 h-4 w-4" />}
+                            Guardar pregunta
+                          </Button>
                         </div>
                       </div>
-                    ) : (
-                      <div className="text-center py-6 border border-dashed rounded-lg">
-                        <p className="text-muted-foreground">No hay respuestas configuradas</p>
-                      </div>
-                    )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
 
-                    <div className="flex justify-between pt-2">
+                {currentTab === "question" && (
+                  <div className="flex justify-end gap-2 pt-4">
+                    {editingId && (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setCurrentTab("question")}
+                        onClick={resetFormAndState}
+                        className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white"
                       >
-                        Volver a la pregunta
+                        Cancelar
                       </Button>
-                      <div>
-                        {answers.length > 0 && !answers.some(a => a.isCorrect) && (
-                          <p className="text-xs text-destructive mb-2">
-                            Debe haber al menos una respuesta correcta
-                          </p>
-                        )}
-                        <Button
-                          type="button"
-                          disabled={createMutation.isPending || answers.length === 0}
-                          onClick={() => form.handleSubmit(onSubmit)()}
-                        >
-                          {createMutation.isPending && <Spinner className="mr-2 h-4 w-4" />}
-                          Guardar pregunta
-                        </Button>
-                      </div>
-                    </div>
+                    )}
+                    {form.watch("type") !== "multiple_choice" && (
+                      <Button
+                        type="button"
+                        disabled={createMutation.isPending}
+                        onClick={() => form.handleSubmit(onSubmit)()}
+                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
+                      >
+                        {createMutation.isPending && <Spinner className="mr-2 h-4 w-4" />}
+                        {editingId ? "Actualizar" : "Guardar pregunta"}
+                      </Button>
+                    )}
                   </div>
-                </TabsContent>
-              </Tabs>
-
-              {currentTab === "question" && (
-                <div className="flex justify-end gap-2 pt-4">
-                  {editingId && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={resetFormAndState}
-                    >
-                      Cancelar
-                    </Button>
-                  )}
-                  {form.watch("type") !== "multiple_choice" && (
-                    <Button
-                      type="button"
-                      disabled={createMutation.isPending}
-                      onClick={() => form.handleSubmit(onSubmit)()}
-                    >
-                      {createMutation.isPending && <Spinner className="mr-2 h-4 w-4" />}
-                      {editingId ? "Actualizar" : "Guardar pregunta"}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="md:col-span-2">
-          <Card>
-            <CardHeader className="bg-muted/50">
-              <CardTitle>Preguntas Existentes</CardTitle>
-              <CardDescription>
-                Lista de todas las preguntas en este cuestionario
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              {isLoading ? (
-                <div className="flex justify-center p-8">
-                  <Spinner className="h-8 w-8" />
-                </div>
-              ) : questions && questions.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4">
-                  {questions.map((question: Question) => (
-                    <Card key={question.id} className="overflow-hidden border border-muted">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="outline">{getQuestionTypeName(question.type)}</Badge>
-                              <Badge variant="secondary">{getDifficultyName(question.difficulty)}</Badge>
-                              <Badge variant="default">{question.points} puntos</Badge>
-                            </div>
-                            <ContentRenderer content={question.content} className="font-medium" />
-                            {question.imageUrl && (
-                              <div className="mt-2">
-                                <p className="text-sm text-muted-foreground">
-                                  <strong>Imagen:</strong> {question.imageUrl}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex space-x-2 ml-4">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDelete(question.id)}
-                              title="Eliminar pregunta"
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 px-4">
-                  <div className="mb-4 rounded-full bg-muted h-12 w-12 flex items-center justify-center mx-auto">
-                    <Trash className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-medium">No hay preguntas disponibles</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Añade tu primera pregunta para completar el cuestionario.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="border-t bg-muted/30 px-6 py-3">
-              <div className="flex justify-between items-center w-full">
-                <p className="text-sm text-muted-foreground">
-                  Total: <strong>{questions?.length || 0}</strong> preguntas
-                </p>
-                {(questions?.length || 0) > 0 && (
-                  <Button size="sm" variant="outline" onClick={() => window.location.href = `/quiz/${quizId}`}>
-                    Ver cuestionario
-                  </Button>
                 )}
-              </div>
-            </CardFooter>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="md:col-span-2">
+            <Card className="bg-slate-900 border-white/10 shadow-xl">
+              <CardHeader className="bg-slate-950/50 border-b border-white/5">
+                <CardTitle className="text-slate-100">Preguntas Existentes</CardTitle>
+                <CardDescription className="text-slate-400">
+                  Lista de todas las preguntas en este cuestionario
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {isLoading ? (
+                  <div className="flex justify-center p-8">
+                    <Spinner className="h-8 w-8 text-blue-500" />
+                  </div>
+                ) : questions && questions.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-4">
+                    {questions.map((question: Question) => (
+                      <Card key={question.id} className="overflow-hidden border border-white/5 bg-slate-950 hover:bg-slate-900/80 transition-all">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="outline" className="bg-slate-900 text-slate-400 border-slate-700">{getQuestionTypeName(question.type)}</Badge>
+                                <Badge variant="secondary" className="bg-slate-800 text-slate-300">{getDifficultyName(question.difficulty)}</Badge>
+                                <Badge variant="default" className="bg-blue-600/20 text-blue-400 hover:bg-blue-600/30">{question.points} puntos</Badge>
+                              </div>
+                              <ContentRenderer content={question.content} className="font-medium text-slate-200" />
+                              {question.imageUrl && (
+                                <div className="mt-2">
+                                  <p className="text-sm text-slate-400">
+                                    <strong className="text-slate-500">Imagen:</strong> {question.imageUrl}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex space-x-2 ml-4">
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDelete(question.id)}
+                                title="Eliminar pregunta"
+                                className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 px-4">
+                    <div className="mb-4 rounded-full bg-slate-800 h-12 w-12 flex items-center justify-center mx-auto">
+                      <Trash className="h-6 w-6 text-slate-500" />
+                    </div>
+                    <h3 className="text-lg font-medium text-slate-300">No hay preguntas disponibles</h3>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Añade tu primera pregunta para completar el cuestionario.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter className="border-t border-white/5 bg-slate-950/30 px-6 py-3">
+                <div className="flex justify-between items-center w-full">
+                  <p className="text-sm text-slate-500">
+                    Total: <strong className="text-slate-300">{questions?.length || 0}</strong> preguntas
+                  </p>
+                  {(questions?.length || 0) > 0 && (
+                    <Button size="sm" variant="outline" onClick={() => window.location.href = `/quiz/${quizId}`} className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white">
+                      Ver cuestionario
+                    </Button>
+                  )}
+                </div>
+              </CardFooter>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

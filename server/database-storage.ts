@@ -288,6 +288,20 @@ export class DatabaseStorage implements IStorage {
     return this.getUser(id);
   }
 
+  async updateUserCredits(id: number, credits: number): Promise<User> {
+    const [updatedUser] = await this.db
+      .update(users)
+      .set({ hintCredits: credits })
+      .where(eq(users.id, id))
+      .returning();
+
+    if (!updatedUser) {
+      throw new Error(`User with id ${id} not found`);
+    }
+
+    return updatedUser;
+  }
+
   async getUserQuizzes(userId: number): Promise<Quiz[]> {
     const result = await this.db
       .select()

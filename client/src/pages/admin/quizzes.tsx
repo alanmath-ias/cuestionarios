@@ -392,150 +392,44 @@ export default function QuizzesAdmin() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Administración de Cuestionarios</h1>
-          <p className="text-muted-foreground">Gestiona los cuestionarios y sus preguntas</p>
+    <div className="min-h-screen bg-slate-950 text-slate-200 p-8">
+      <div className="container mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-100">Administración de Cuestionarios</h1>
+            <p className="text-slate-400">Gestiona los cuestionarios y sus preguntas</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => window.history.back()} className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => window.history.back()} className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Volver
-          </Button>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1">
-          <Card className="sticky top-4">
-            <CardHeader className="bg-muted/50">
-              <CardTitle>{editingId ? "Editar Cuestionario" : "Nuevo Cuestionario"}</CardTitle>
-              <CardDescription>
-                {editingId
-                  ? "Actualiza los detalles del cuestionario"
-                  : "Añade un nuevo cuestionario al sistema"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Título</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ej: Álgebra Básica" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Descripción</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Describe brevemente de qué trata este cuestionario"
-                            rows={3}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="categoryId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Materia</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={loadingCategories}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona una materia" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {categories?.map((category) => (
-                              <SelectItem key={category.id} value={String(category.id)}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="subcategoryId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tema</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={!categoryId || loadingSubcategories}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              {loadingSubcategories ? (
-                                <div className="flex items-center gap-2">
-                                  <Spinner className="h-4 w-4" />
-                                  <span>Cargando...</span>
-                                </div>
-                              ) : (
-                                <SelectValue placeholder={
-                                  !categoryId
-                                    ? "Primero selecciona una materia"
-                                    : "Selecciona un tema"
-                                } />
-                              )}
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {subcategoriesResponse
-                              ?.filter((sub: any) => sub.categoryId === Number(categoryId))
-                              .map((sub: any) => (
-                                <SelectItem key={sub.id} value={String(sub.id)}>
-                                  {sub.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-1">
+            <Card className="sticky top-4 bg-slate-900 border-white/10 shadow-xl">
+              <CardHeader className="bg-slate-950/50 border-b border-white/5">
+                <CardTitle className="text-slate-100">{editingId ? "Editar Cuestionario" : "Nuevo Cuestionario"}</CardTitle>
+                <CardDescription className="text-slate-400">
+                  {editingId
+                    ? "Actualiza los detalles del cuestionario"
+                    : "Añade un nuevo cuestionario al sistema"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
                       control={form.control}
-                      name="timeLimit"
+                      name="title"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Tiempo límite (segundos)</FormLabel>
+                          <FormLabel className="text-slate-300">Título</FormLabel>
                           <FormControl>
-                            <Input type="number" min="30" {...field} />
+                            <Input placeholder="Ej: Álgebra Básica" {...field} className="bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50" />
                           </FormControl>
-                          <FormDescription className="text-xs">
-                            {parseInt(field.value) > 0 ? `${Math.floor(parseInt(field.value) / 60)} min ${parseInt(field.value) % 60} seg` : ""}
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -543,23 +437,43 @@ export default function QuizzesAdmin() {
 
                     <FormField
                       control={form.control}
-                      name="difficulty"
+                      name="description"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Dificultad</FormLabel>
+                          <FormLabel className="text-slate-300">Descripción</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Describe brevemente de qué trata este cuestionario"
+                              rows={3}
+                              {...field}
+                              className="bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="categoryId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-slate-300">Materia</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value}
+                            disabled={loadingCategories}
                           >
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecciona dificultad" />
+                              <SelectTrigger className="bg-slate-950 border-slate-700 text-slate-200">
+                                <SelectValue placeholder="Selecciona una materia" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
-                              {difficultyOptions.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
+                            <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                              {categories?.map((category) => (
+                                <SelectItem key={category.id} value={String(category.id)} className="focus:bg-slate-800 focus:text-white">
+                                  {category.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -568,356 +482,458 @@ export default function QuizzesAdmin() {
                         </FormItem>
                       )}
                     />
-                  </div>
 
-                  <FormField
-                    control={form.control}
-                    name="isPublic"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Disponible públicamente</FormLabel>
-                          <FormDescription>
-                            Estará visible sin necesidad de registro
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="flex justify-end gap-2 pt-4">
-                    {editingId && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleCancelEdit}
-                      >
-                        Cancelar
-                      </Button>
-                    )}
-                    <Button
-                      type="submit"
-                      disabled={createMutation.isPending || updateMutation.isPending}
-                    >
-                      {(createMutation.isPending || updateMutation.isPending) && <Spinner className="mr-2 h-4 w-4" />}
-                      {editingId ? "Actualizar" : "Crear cuestionario"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="md:col-span-2">
-          <Card>
-            <CardHeader className="bg-muted/50">
-              <CardTitle>Cuestionarios Existentes</CardTitle>
-              <CardDescription>
-                Lista de todos los cuestionarios disponibles en el sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              {isLoading ? (
-                <div className="flex justify-center p-8">
-                  <Spinner className="h-8 w-8" />
-                </div>
-              ) : quizzes && quizzes.length > 0 ? (
-                <Accordion type="multiple" className="space-y-4">
-                  {/* 1. Categorías con subcategorías */}
-                  {hierarchicalData.map((category) => (
-                    <AccordionItem key={category.id} value={`cat-${category.id}`} className="border rounded-md">
-                      <AccordionTrigger className="hover:no-underline px-4 py-3 bg-muted/50">
-                        <div className="flex-1 text-left">
-                          <h3 className="text-lg font-medium">{category.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {category.subcategories.reduce((acc: number, sub: any) => acc + sub.quizzes.length, 0)} cuestionario(s)
-                          </p>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-0 pt-2">
-                        <Accordion type="multiple" className="space-y-2">
-                          {category.subcategories.map((subcategory: any) => (
-                            subcategory.quizzes.length > 0 && (
-                              <AccordionItem
-                                key={subcategory.id}
-                                value={`subcat-${subcategory.id}`}
-                                className="border rounded-md"
-                              >
-                                <AccordionTrigger className="hover:no-underline px-4 py-2">
-                                  <div className="flex-1 text-left">
-                                    <h4 className="text-md font-medium">{subcategory.name}</h4>
-                                    <p className="text-xs text-muted-foreground">
-                                      {subcategory.quizzes.length} cuestionario(s)
-                                    </p>
+                    <FormField
+                      control={form.control}
+                      name="subcategoryId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-slate-300">Tema</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            disabled={!categoryId || loadingSubcategories}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-slate-950 border-slate-700 text-slate-200">
+                                {loadingSubcategories ? (
+                                  <div className="flex items-center gap-2">
+                                    <Spinner className="h-4 w-4" />
+                                    <span>Cargando...</span>
                                   </div>
-                                </AccordionTrigger>
-                                <AccordionContent className="px-4 pb-0 pt-2">
-                                  <div className="grid grid-cols-1 gap-3">
-                                    {subcategory.quizzes.map((quiz: Quiz) => (
-                                      <Card key={quiz.id} className="overflow-hidden border border-muted">
-                                        <CardContent className="p-6">
-                                          <div className="flex flex-col space-y-4">
-                                            <div className="flex justify-between items-start">
-                                              <div>
-                                                <div className="flex items-center gap-2">
-                                                  <h3 className="text-lg font-semibold">{quiz.title}</h3>
-                                                  {quiz.isPublic && (
-                                                    <Badge variant="outline" className="ml-2">
-                                                      <LinkIcon className="h-3 w-3 mr-1" /> Público
-                                                    </Badge>
-                                                  )}
+                                ) : (
+                                  <SelectValue placeholder={
+                                    !categoryId
+                                      ? "Primero selecciona una materia"
+                                      : "Selecciona un tema"
+                                  } />
+                                )}
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                              {subcategoriesResponse
+                                ?.filter((sub: any) => sub.categoryId === Number(categoryId))
+                                .map((sub: any) => (
+                                  <SelectItem key={sub.id} value={String(sub.id)} className="focus:bg-slate-800 focus:text-white">
+                                    {sub.name}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="timeLimit"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-slate-300">Tiempo límite (seg)</FormLabel>
+                            <FormControl>
+                              <Input type="number" min="30" {...field} className="bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50" />
+                            </FormControl>
+                            <FormDescription className="text-xs text-slate-500">
+                              {parseInt(field.value) > 0 ? `${Math.floor(parseInt(field.value) / 60)} min ${parseInt(field.value) % 60} seg` : ""}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="difficulty"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-slate-300">Dificultad</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="bg-slate-950 border-slate-700 text-slate-200">
+                                  <SelectValue placeholder="Nivel" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                                {difficultyOptions.map((option) => (
+                                  <SelectItem key={option.value} value={option.value} className="focus:bg-slate-800 focus:text-white">
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="isPublic"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border border-slate-700 p-4 bg-slate-950/50">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base text-slate-300">Público</FormLabel>
+                            <FormDescription className="text-xs text-slate-500">
+                              Visible sin registro
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              className="data-[state=checked]:bg-blue-600"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex justify-end gap-2 pt-4">
+                      {editingId && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleCancelEdit}
+                          className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white"
+                        >
+                          Cancelar
+                        </Button>
+                      )}
+                      <Button
+                        type="submit"
+                        disabled={createMutation.isPending || updateMutation.isPending}
+                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
+                      >
+                        {(createMutation.isPending || updateMutation.isPending) && <Spinner className="mr-2 h-4 w-4" />}
+                        {editingId ? "Actualizar" : "Crear cuestionario"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="md:col-span-2">
+            <Card className="bg-slate-900 border-white/10 shadow-xl">
+              <CardHeader className="bg-slate-950/50 border-b border-white/5">
+                <CardTitle className="text-slate-100">Cuestionarios Existentes</CardTitle>
+                <CardDescription className="text-slate-400">
+                  Lista de todos los cuestionarios disponibles en el sistema
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {isLoading ? (
+                  <div className="flex justify-center p-8">
+                    <Spinner className="h-8 w-8 text-blue-500" />
+                  </div>
+                ) : quizzes && quizzes.length > 0 ? (
+                  <Accordion type="multiple" className="space-y-4">
+                    {/* 1. Categorías con subcategorías */}
+                    {hierarchicalData.map((category) => (
+                      <AccordionItem key={category.id} value={`cat-${category.id}`} className="border border-white/10 rounded-md bg-slate-800/30 overflow-hidden">
+                        <AccordionTrigger className="hover:no-underline px-4 py-3 bg-slate-800/50 hover:bg-slate-800 text-slate-200">
+                          <div className="flex-1 text-left">
+                            <h3 className="text-lg font-medium">{category.name}</h3>
+                            <p className="text-sm text-slate-400">
+                              {category.subcategories.reduce((acc: number, sub: any) => acc + sub.quizzes.length, 0)} cuestionario(s)
+                            </p>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-0 pt-2 bg-slate-900/50 border-t border-white/5">
+                          <Accordion type="multiple" className="space-y-2 py-2">
+                            {category.subcategories.map((subcategory: any) => (
+                              subcategory.quizzes.length > 0 && (
+                                <AccordionItem
+                                  key={subcategory.id}
+                                  value={`subcat-${subcategory.id}`}
+                                  className="border border-white/5 rounded-md bg-slate-950/30"
+                                >
+                                  <AccordionTrigger className="hover:no-underline px-4 py-2 text-slate-300 hover:text-white">
+                                    <div className="flex-1 text-left">
+                                      <h4 className="text-md font-medium">{subcategory.name}</h4>
+                                      <p className="text-xs text-slate-500">
+                                        {subcategory.quizzes.length} cuestionario(s)
+                                      </p>
+                                    </div>
+                                  </AccordionTrigger>
+                                  <AccordionContent className="px-4 pb-0 pt-2">
+                                    <div className="grid grid-cols-1 gap-3 pb-3">
+                                      {subcategory.quizzes.map((quiz: Quiz) => (
+                                        <Card key={quiz.id} className="overflow-hidden border border-white/5 bg-slate-900 hover:bg-slate-800 transition-all">
+                                          <CardContent className="p-6">
+                                            <div className="flex flex-col space-y-4">
+                                              <div className="flex justify-between items-start">
+                                                <div>
+                                                  <div className="flex items-center gap-2">
+                                                    <h3 className="text-lg font-semibold text-slate-200">{quiz.title}</h3>
+                                                    {quiz.isPublic && (
+                                                      <Badge variant="outline" className="ml-2 border-blue-500/30 text-blue-400 bg-blue-500/10">
+                                                        <LinkIcon className="h-3 w-3 mr-1" /> Público
+                                                      </Badge>
+                                                    )}
+                                                  </div>
+                                                  <p className="text-sm text-slate-400 mt-1">{quiz.description}</p>
                                                 </div>
-                                                <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
+                                                <div className="flex space-x-2">
+                                                  <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleEdit(quiz)}
+                                                    className="bg-slate-950 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                                                  >
+                                                    Editar
+                                                  </Button>
+                                                  <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    onClick={() => handleDelete(quiz.id)}
+                                                    title="Eliminar cuestionario"
+                                                    className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                                                  >
+                                                    <Trash className="h-4 w-4" />
+                                                  </Button>
+                                                </div>
                                               </div>
-                                              <div className="flex space-x-2">
-                                                <Button
-                                                  variant="outline"
-                                                  size="sm"
-                                                  onClick={() => handleEdit(quiz)}
-                                                >
-                                                  Editar
-                                                </Button>
-                                                <Button
-                                                  variant="destructive"
-                                                  size="sm"
-                                                  onClick={() => handleDelete(quiz.id)}
-                                                  title="Eliminar cuestionario"
-                                                >
-                                                  <Trash className="h-4 w-4" />
-                                                </Button>
-                                              </div>
-                                            </div>
 
-                                            <Button
-                                              size="sm"
-                                              variant="secondary"
-                                              onClick={() => {
-                                                setVisibleQuizId(quiz.id);
-                                                fetchAssignedUsers(quiz.id);
-                                              }}
-                                            >
-                                              Asignar usuarios
-                                            </Button>
-
-                                            {visibleQuizId === quiz.id && (
-                                              <div className="mt-4">
-                                                <p className="font-semibold">Usuarios asignados:</p>
-                                                <ul className="list-disc ml-6">
-                                                  {allUsers.map((user) => (
-                                                    <li key={user.id}>
-                                                      <label className="flex items-center gap-2">
-                                                        <input
-                                                          type="checkbox"
-                                                          checked={assignedUsers.includes(user.id)}
-                                                          onChange={() =>
-                                                            toggleQuizAssignment(
-                                                              quiz.id,
-                                                              user.id,
-                                                              assignedUsers.includes(user.id)
-                                                            )
-                                                          }
-                                                        />
-                                                        {user.name} ({user.email})
-                                                      </label>
-                                                    </li>
-                                                  ))}
-                                                </ul>
-                                              </div>
-                                            )}
-
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
-                                              <div className="flex items-center">
-                                                <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                                                <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
-                                              </div>
-                                              <div>
-                                                <Badge variant={
-                                                  quiz.difficulty === "básico" ? "default" :
-                                                    quiz.difficulty === "intermedio" ? "secondary" : "destructive"
-                                                }>
-                                                  {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
-                                                </Badge>
-                                              </div>
-                                              <div>
-                                                <Badge variant="outline" className="bg-primary/10">
-                                                  {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
-                                                </Badge>
-                                              </div>
-                                            </div>
-
-                                            <Separator />
-
-                                            <div className="flex justify-end">
                                               <Button
                                                 size="sm"
-                                                onClick={() => handleManageQuestions(quiz.id)}
+                                                variant="secondary"
+                                                onClick={() => {
+                                                  setVisibleQuizId(quiz.id);
+                                                  fetchAssignedUsers(quiz.id);
+                                                }}
+                                                className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
                                               >
-                                                Gestionar preguntas
+                                                Asignar usuarios
                                               </Button>
+
+                                              {visibleQuizId === quiz.id && (
+                                                <div className="mt-4 bg-slate-950 p-4 rounded-lg border border-white/5">
+                                                  <p className="font-semibold text-slate-300 mb-2">Usuarios asignados:</p>
+                                                  <ul className="space-y-1 max-h-40 overflow-y-auto pr-2">
+                                                    {allUsers.map((user) => (
+                                                      <li key={user.id}>
+                                                        <label className="flex items-center gap-2 p-1 hover:bg-white/5 rounded cursor-pointer">
+                                                          <input
+                                                            type="checkbox"
+                                                            checked={assignedUsers.includes(user.id)}
+                                                            onChange={() =>
+                                                              toggleQuizAssignment(
+                                                                quiz.id,
+                                                                user.id,
+                                                                assignedUsers.includes(user.id)
+                                                              )
+                                                            }
+                                                            className="rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-blue-500"
+                                                          />
+                                                          <span className="text-sm text-slate-300">{user.name} <span className="text-slate-500">({user.email})</span></span>
+                                                        </label>
+                                                      </li>
+                                                    ))}
+                                                  </ul>
+                                                </div>
+                                              )}
+
+                                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
+                                                <div className="flex items-center text-slate-400">
+                                                  <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                                                  <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
+                                                </div>
+                                                <div>
+                                                  <Badge variant={
+                                                    quiz.difficulty === "básico" ? "default" :
+                                                      quiz.difficulty === "intermedio" ? "secondary" : "destructive"
+                                                  } className="bg-slate-800 text-slate-300 border-slate-700">
+                                                    {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
+                                                  </Badge>
+                                                </div>
+                                                <div>
+                                                  <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+                                                    {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
+                                                  </Badge>
+                                                </div>
+                                              </div>
+
+                                              <Separator className="bg-white/10" />
+
+                                              <div className="flex justify-end">
+                                                <Button
+                                                  size="sm"
+                                                  onClick={() => handleManageQuestions(quiz.id)}
+                                                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                >
+                                                  Gestionar preguntas
+                                                </Button>
+                                              </div>
                                             </div>
-                                          </div>
-                                        </CardContent>
-                                      </Card>
-                                    ))}
-                                  </div>
-                                </AccordionContent>
-                              </AccordionItem>
-                            )
-                          ))}
-                        </Accordion>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
+                                          </CardContent>
+                                        </Card>
+                                      ))}
+                                    </div>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              )
+                            ))}
+                          </Accordion>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
 
-                  {/* 2. Quizzes sin categoría/subcategoría */}
-                  {quizzesWithoutClassification.length > 0 && (
-                    <AccordionItem value="uncategorized" className="border rounded-md">
-                      <AccordionTrigger className="hover:no-underline px-4 py-3 bg-muted/50">
-                        <div className="flex-1 text-left">
-                          <h3 className="text-lg font-medium">Sin materia/tema</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {quizzesWithoutClassification.length} cuestionario(s) no clasificado(s)
-                          </p>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-0 pt-2">
-                        <div className="grid grid-cols-1 gap-3">
-                          {quizzesWithoutClassification.map((quiz) => (
-                            <Card key={quiz.id} className="overflow-hidden border border-muted">
-                              <CardContent className="p-6">
-                                <div className="flex flex-col space-y-4">
-                                  <div className="flex justify-between items-start">
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <h3 className="text-lg font-semibold">{quiz.title}</h3>
-                                        {quiz.isPublic && (
-                                          <Badge variant="outline" className="ml-2">
-                                            <LinkIcon className="h-3 w-3 mr-1" /> Público
-                                          </Badge>
-                                        )}
+                    {/* 2. Quizzes sin categoría/subcategoría */}
+                    {quizzesWithoutClassification.length > 0 && (
+                      <AccordionItem value="uncategorized" className="border border-white/10 rounded-md bg-slate-800/30 overflow-hidden">
+                        <AccordionTrigger className="hover:no-underline px-4 py-3 bg-slate-800/50 hover:bg-slate-800 text-slate-200">
+                          <div className="flex-1 text-left">
+                            <h3 className="text-lg font-medium">Sin materia/tema</h3>
+                            <p className="text-sm text-slate-400">
+                              {quizzesWithoutClassification.length} cuestionario(s) no clasificado(s)
+                            </p>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-0 pt-2 bg-slate-900/50 border-t border-white/5">
+                          <div className="grid grid-cols-1 gap-3 py-3">
+                            {quizzesWithoutClassification.map((quiz) => (
+                              <Card key={quiz.id} className="overflow-hidden border border-white/5 bg-slate-900 hover:bg-slate-800 transition-all">
+                                <CardContent className="p-6">
+                                  <div className="flex flex-col space-y-4">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <h3 className="text-lg font-semibold text-slate-200">{quiz.title}</h3>
+                                          {quiz.isPublic && (
+                                            <Badge variant="outline" className="ml-2 border-blue-500/30 text-blue-400 bg-blue-500/10">
+                                              <LinkIcon className="h-3 w-3 mr-1" /> Público
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <p className="text-sm text-slate-400 mt-1">{quiz.description}</p>
                                       </div>
-                                      <p className="text-sm text-muted-foreground mt-1">{quiz.description}</p>
+                                      <div className="flex space-x-2">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleEdit(quiz)}
+                                          className="bg-slate-950 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                                        >
+                                          Editar
+                                        </Button>
+                                        <Button
+                                          variant="destructive"
+                                          size="sm"
+                                          onClick={() => handleDelete(quiz.id)}
+                                          title="Eliminar cuestionario"
+                                          className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                                        >
+                                          <Trash className="h-4 w-4" />
+                                        </Button>
+                                      </div>
                                     </div>
-                                    <div className="flex space-x-2">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleEdit(quiz)}
-                                      >
-                                        Editar
-                                      </Button>
-                                      <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() => handleDelete(quiz.id)}
-                                        title="Eliminar cuestionario"
-                                      >
-                                        <Trash className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </div>
 
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => {
-                                      setVisibleQuizId(quiz.id);
-                                      fetchAssignedUsers(quiz.id);
-                                    }}
-                                  >
-                                    Asignar usuarios
-                                  </Button>
-
-                                  {visibleQuizId === quiz.id && (
-                                    <div className="mt-4">
-                                      <p className="font-semibold">Usuarios asignados:</p>
-                                      <ul className="list-disc ml-6">
-                                        {allUsers.map((user) => (
-                                          <li key={user.id}>
-                                            <label className="flex items-center gap-2">
-                                              <input
-                                                type="checkbox"
-                                                checked={assignedUsers.includes(user.id)}
-                                                onChange={() =>
-                                                  toggleQuizAssignment(
-                                                    quiz.id,
-                                                    user.id,
-                                                    assignedUsers.includes(user.id)
-                                                  )
-                                                }
-                                              />
-                                              {user.name} ({user.email})
-                                            </label>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-
-                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
-                                    <div className="flex items-center">
-                                      <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                                      <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
-                                    </div>
-                                    <div>
-                                      <Badge variant={
-                                        quiz.difficulty === "básico" ? "default" :
-                                          quiz.difficulty === "intermedio" ? "secondary" : "destructive"
-                                      }>
-                                        {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
-                                      </Badge>
-                                    </div>
-                                    <div>
-                                      <Badge variant="outline" className="bg-primary/10">
-                                        {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
-                                      </Badge>
-                                    </div>
-                                  </div>
-
-                                  <Separator />
-
-                                  <div className="flex justify-end">
                                     <Button
                                       size="sm"
-                                      onClick={() => handleManageQuestions(quiz.id)}
+                                      variant="secondary"
+                                      onClick={() => {
+                                        setVisibleQuizId(quiz.id);
+                                        fetchAssignedUsers(quiz.id);
+                                      }}
+                                      className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
                                     >
-                                      Gestionar preguntas
+                                      Asignar usuarios
                                     </Button>
+
+                                    {visibleQuizId === quiz.id && (
+                                      <div className="mt-4 bg-slate-950 p-4 rounded-lg border border-white/5">
+                                        <p className="font-semibold text-slate-300 mb-2">Usuarios asignados:</p>
+                                        <ul className="space-y-1 max-h-40 overflow-y-auto pr-2">
+                                          {allUsers.map((user) => (
+                                            <li key={user.id}>
+                                              <label className="flex items-center gap-2 p-1 hover:bg-white/5 rounded cursor-pointer">
+                                                <input
+                                                  type="checkbox"
+                                                  checked={assignedUsers.includes(user.id)}
+                                                  onChange={() =>
+                                                    toggleQuizAssignment(
+                                                      quiz.id,
+                                                      user.id,
+                                                      assignedUsers.includes(user.id)
+                                                    )
+                                                  }
+                                                  className="rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-blue-500"
+                                                />
+                                                <span className="text-sm text-slate-300">{user.name} <span className="text-slate-500">({user.email})</span></span>
+                                              </label>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
+                                      <div className="flex items-center text-slate-400">
+                                        <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                                        <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
+                                      </div>
+                                      <div>
+                                        <Badge variant={
+                                          quiz.difficulty === "básico" ? "default" :
+                                            quiz.difficulty === "intermedio" ? "secondary" : "destructive"
+                                        } className="bg-slate-800 text-slate-300 border-slate-700">
+                                          {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
+                                        </Badge>
+                                      </div>
+                                      <div>
+                                        <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+                                          {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
+                                        </Badge>
+                                      </div>
+                                    </div>
+
+                                    <Separator className="bg-white/10" />
+
+                                    <div className="flex justify-end">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleManageQuestions(quiz.id)}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                                      >
+                                        Gestionar preguntas
+                                      </Button>
+                                    </div>
                                   </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
-                </Accordion>
-              ) : (
-                <div className="text-center py-12 px-4">
-                  <div className="mb-4 rounded-full bg-muted h-12 w-12 flex items-center justify-center mx-auto">
-                    <BookOpen className="h-6 w-6 text-muted-foreground" />
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+                  </Accordion>
+                ) : (
+                  <div className="text-center py-12 px-4">
+                    <div className="mb-4 rounded-full bg-slate-800 h-12 w-12 flex items-center justify-center mx-auto">
+                      <BookOpen className="h-6 w-6 text-slate-500" />
+                    </div>
+                    <h3 className="text-lg font-medium text-slate-300">No hay cuestionarios disponibles</h3>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Crea tu primer cuestionario para empezar.
+                    </p>
                   </div>
-                  <h3 className="text-lg font-medium">No hay cuestionarios disponibles</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Crea tu primer cuestionario para empezar a configurar preguntas.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="border-t bg-muted/30 px-6 py-3">
-              <p className="text-sm text-muted-foreground">
-                Total: <strong>{quizzes?.length || 0}</strong> cuestionarios
-              </p>
-            </CardFooter>
-          </Card>
+                )}
+              </CardContent>
+              <CardFooter className="border-t border-white/5 bg-slate-950/30 px-6 py-3">
+                <p className="text-sm text-slate-500">
+                  Total: <strong className="text-slate-300">{quizzes?.length || 0}</strong> cuestionarios
+                </p>
+              </CardFooter>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

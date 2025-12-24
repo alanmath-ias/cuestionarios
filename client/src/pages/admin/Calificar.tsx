@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Eye, Trash2, ArrowLeft, CheckCircle, Clock } from "lucide-react";
 import {
   AlertDialog,
@@ -141,192 +141,206 @@ const Calificar = () => {
   const reviewedSubmissions = selectedUserSubmissions.filter(s => s.reviewed);
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">
-          {selectedUserId ? `Calificando a: ${selectedUserSubmissions[0]?.user?.name}` : "Presentaciones de Cuestionarios"}
-        </h1>
-        {selectedUserId && (
-          <Button variant="outline" onClick={() => setSelectedUserId(null)}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Volver a la lista
-          </Button>
-        )}
-      </div>
-
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-
-      {!selectedUserId ? (
-        // LIST VIEW
-        <div className="grid gap-4">
-          {userGroups.length === 0 ? (
-            <p>No hay presentaciones de cuestionarios disponibles.</p>
+    <div className="min-h-screen bg-slate-950 p-8 text-slate-200">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          {!selectedUserId ? (
+            <Link href="/admin">
+              <Button variant="ghost" className="mb-4 text-slate-400 hover:text-white hover:bg-white/5">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver al Panel
+              </Button>
+            </Link>
           ) : (
-            userGroups.map(group => (
-              <Card key={group.userId} className="flex flex-row items-center justify-between p-4">
-                <div className="flex items-center gap-4">
-                  <div className="font-semibold text-lg">{group.userName}</div>
-                  <div className="flex gap-2 text-sm">
-                    {group.pendingCount > 0 && (
-                      <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full flex items-center">
-                        <Clock className="w-3 h-3 mr-1" /> {group.pendingCount} Pendientes
-                      </span>
-                    )}
+            <Button variant="ghost" onClick={() => setSelectedUserId(null)} className="mb-4 text-slate-400 hover:text-white hover:bg-white/5">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver a la lista
+            </Button>
+          )}
+          <h1 className="text-3xl font-bold text-slate-100">
+            {selectedUserId ? `Calificando a: ${selectedUserSubmissions[0]?.user?.name}` : "Presentaciones de Cuestionarios"}
+          </h1>
+        </div>
+
+        {error && <p className="text-red-400 mb-4 bg-red-500/10 p-4 rounded border border-red-500/20">{error}</p>}
+
+        {!selectedUserId ? (
+          // LIST VIEW
+          <div className="grid gap-4">
+            {userGroups.length === 0 ? (
+              <div className="text-center py-12 border border-dashed border-slate-800 rounded-lg bg-slate-900/50">
+                <p className="text-slate-500">No hay presentaciones de cuestionarios disponibles.</p>
+              </div>
+            ) : (
+              userGroups.map(group => (
+                <Card key={group.userId} className="flex flex-col md:flex-row items-center justify-between p-4 bg-slate-900 border-white/10 hover:border-white/20 transition-all shadow-lg">
+                  <div className="flex items-center gap-4 mb-4 md:mb-0">
+                    <div className="font-semibold text-lg text-slate-200">{group.userName}</div>
+                    <div className="flex gap-2 text-sm">
+                      {group.pendingCount > 0 && (
+                        <span className="px-3 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-full flex items-center">
+                          <Clock className="w-3 h-3 mr-1" /> {group.pendingCount} Pendientes
+                        </span>
+                      )}
+                      {group.reviewedCount > 0 && (
+                        <span className="px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded-full flex items-center">
+                          <CheckCircle className="w-3 h-3 mr-1" /> {group.reviewedCount} Revisadas
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                    <Button variant="ghost" size="icon" onClick={() => setSelectedUserId(group.userId)} title="Ver detalles" className="text-slate-400 hover:text-white hover:bg-white/10">
+                      <Eye className="h-5 w-5" />
+                    </Button>
+
                     {group.reviewedCount > 0 && (
-                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full flex items-center">
-                        <CheckCircle className="w-3 h-3 mr-1" /> {group.reviewedCount} Revisadas
-                      </span>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="text-red-400 border-red-500/20 bg-red-500/5 hover:bg-red-500/10 hover:text-red-300">
+                            <Trash2 className="h-4 w-4 mr-2" /> Borrar Revisadas
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-slate-900 border border-white/10 text-slate-200">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-slate-100">¿Borrar todas las revisadas?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-slate-400">
+                              Estás a punto de eliminar {group.reviewedCount} tareas revisadas de {group.userName}. Esta acción no se puede deshacer.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white">Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleBulkDiscard(group.userId, 'reviewed')} className="bg-red-600 hover:bg-red-700 text-white">
+                              Eliminar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+
+                    {group.pendingCount > 0 && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="text-red-400 border-red-500/20 bg-red-500/5 hover:bg-red-500/10 hover:text-red-300">
+                            <Trash2 className="h-4 w-4 mr-2" /> Borrar Pendientes
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-slate-900 border border-white/10 text-slate-200">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-slate-100">¿Borrar todas las pendientes?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-slate-400">
+                              Estás a punto de eliminar {group.pendingCount} tareas PENDIENTES de {group.userName}. Esta acción no se puede deshacer.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white">Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleBulkDiscard(group.userId, 'pending')} className="bg-red-600 hover:bg-red-700 text-white">
+                              Eliminar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     )}
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => setSelectedUserId(group.userId)} title="Ver detalles">
-                    <Eye className="h-5 w-5" />
-                  </Button>
-
-                  {group.reviewedCount > 0 && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50">
-                          <Trash2 className="h-4 w-4 mr-2" /> Borrar Revisadas
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>¿Borrar todas las revisadas?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Estás a punto de eliminar {group.reviewedCount} tareas revisadas de {group.userName}. Esta acción no se puede deshacer.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleBulkDiscard(group.userId, 'reviewed')} className="bg-red-600 hover:bg-red-700">
-                            Eliminar
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-
-                  {group.pendingCount > 0 && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50">
-                          <Trash2 className="h-4 w-4 mr-2" /> Borrar Pendientes
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>¿Borrar todas las pendientes?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Estás a punto de eliminar {group.pendingCount} tareas PENDIENTES de {group.userName}. Esta acción no se puede deshacer.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleBulkDiscard(group.userId, 'pending')} className="bg-red-600 hover:bg-red-700">
-                            Eliminar
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                </div>
-              </Card>
-            ))
-          )}
-        </div>
-      ) : (
-        // DETAIL VIEW
-        <div className="space-y-6">
-          {/* Sección de pendientes */}
-          {pendingSubmissions.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-3 flex items-center">
-                <Clock className="mr-2 text-yellow-600" /> Pendientes de revisión
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {pendingSubmissions.map((submission, index) => (
-                  <Card key={`pending-${index}`} className="shadow-md rounded-xl p-4 border-2 border-yellow-200 bg-yellow-50">
-                    <CardContent className="p-0">
-                      <div className="space-y-2">
-                        <p><strong>Quiz:</strong> {submission.quiz?.title || "Quiz desconocido"}</p>
-                        <p><strong>Puntaje:</strong> {submission.progress ? submission.progress.score : "No disponible"}</p>
-                        <p><strong>Fecha:</strong> {new Date(submission.completedAt).toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">ID: {submission.progress ? submission.progress.id : "N/A"}</p>
-                      </div>
-                      {submission.progress && (
-                        <div className="mt-4 flex gap-2">
-                          <Button
-                            className="flex-1"
-                            onClick={async () => {
-                              await markAsReviewed(submission.progress.id);
-                              setLocation(`/admin/review/${submission.progress.id}`);
-                            }}
-                          >
-                            Ver detalles
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={() => handleDiscard(submission.progress.id)}
-                            className="px-3"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                </Card>
+              ))
+            )}
+          </div>
+        ) : (
+          // DETAIL VIEW
+          <div className="space-y-8">
+            {/* Sección de pendientes */}
+            {pendingSubmissions.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4 flex items-center text-slate-200">
+                  <Clock className="mr-2 text-yellow-400" /> Pendientes de revisión
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {pendingSubmissions.map((submission, index) => (
+                    <Card key={`pending-${index}`} className="shadow-lg rounded-xl p-4 border border-yellow-500/30 bg-yellow-500/5">
+                      <CardContent className="p-0">
+                        <div className="space-y-2 text-slate-300">
+                          <p><strong className="text-slate-200">Quiz:</strong> {submission.quiz?.title || "Quiz desconocido"}</p>
+                          <p><strong className="text-slate-200">Puntaje:</strong> {submission.progress ? submission.progress.score : "No disponible"}</p>
+                          <p><strong className="text-slate-200">Fecha:</strong> {new Date(submission.completedAt).toLocaleString()}</p>
+                          <p className="text-xs text-slate-500">ID: {submission.progress ? submission.progress.id : "N/A"}</p>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                        {submission.progress && (
+                          <div className="mt-4 flex gap-2">
+                            <Button
+                              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                              onClick={async () => {
+                                await markAsReviewed(submission.progress.id);
+                                setLocation(`/admin/review/${submission.progress.id}`);
+                              }}
+                            >
+                              Ver detalles
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              onClick={() => handleDiscard(submission.progress.id)}
+                              className="px-3 bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Sección de revisadas */}
-          {reviewedSubmissions.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-3 flex items-center">
-                <CheckCircle className="mr-2 text-green-600" /> Revisadas
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {reviewedSubmissions.map((submission, index) => (
-                  <Card key={`reviewed-${index}`} className="shadow-md rounded-xl p-4 border-2 border-green-200 bg-green-50">
-                    <CardContent className="p-0">
-                      <div className="space-y-2">
-                        <p><strong>Quiz:</strong> {submission.quiz?.title || "Quiz desconocido"}</p>
-                        <p><strong>Puntaje:</strong> {submission.progress ? submission.progress.score : "No disponible"}</p>
-                        <p><strong>Fecha:</strong> {new Date(submission.completedAt).toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">ID: {submission.progress ? submission.progress.id : "N/A"}</p>
-                      </div>
-                      {submission.progress && (
-                        <div className="mt-4 flex gap-2">
-                          <Button
-                            className="flex-1"
-                            onClick={() => setLocation(`/admin/review/${submission.progress.id}`)}
-                          >
-                            Ver detalles
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={() => handleDiscard(submission.progress.id)}
-                            className="px-3"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+            {/* Sección de revisadas */}
+            {reviewedSubmissions.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4 flex items-center text-slate-200">
+                  <CheckCircle className="mr-2 text-green-400" /> Revisadas
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {reviewedSubmissions.map((submission, index) => (
+                    <Card key={`reviewed-${index}`} className="shadow-lg rounded-xl p-4 border border-green-500/30 bg-green-500/5">
+                      <CardContent className="p-0">
+                        <div className="space-y-2 text-slate-300">
+                          <p><strong className="text-slate-200">Quiz:</strong> {submission.quiz?.title || "Quiz desconocido"}</p>
+                          <p><strong className="text-slate-200">Puntaje:</strong> {submission.progress ? submission.progress.score : "No disponible"}</p>
+                          <p><strong className="text-slate-200">Fecha:</strong> {new Date(submission.completedAt).toLocaleString()}</p>
+                          <p className="text-xs text-slate-500">ID: {submission.progress ? submission.progress.id : "N/A"}</p>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                        {submission.progress && (
+                          <div className="mt-4 flex gap-2">
+                            <Button
+                              className="flex-1 bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700"
+                              onClick={() => setLocation(`/admin/review/${submission.progress.id}`)}
+                            >
+                              Ver detalles
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              onClick={() => handleDiscard(submission.progress.id)}
+                              className="px-3 bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {pendingSubmissions.length === 0 && reviewedSubmissions.length === 0 && (
-            <p className="text-center text-gray-500 py-8">Este usuario no tiene presentaciones.</p>
-          )}
-        </div>
-      )}
+            {pendingSubmissions.length === 0 && reviewedSubmissions.length === 0 && (
+              <div className="text-center py-12 border border-dashed border-slate-800 rounded-lg bg-slate-900/50">
+                <p className="text-slate-500">Este usuario no tiene presentaciones.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

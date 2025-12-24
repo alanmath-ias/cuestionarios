@@ -12,7 +12,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash } from "lucide-react";
+import { Trash, ArrowLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Category } from "@/types/types";
 
@@ -59,11 +59,11 @@ export default function CategoriesAdmin() {
         },
         body: JSON.stringify(values),
       });
-      
+
       if (!response.ok) {
         throw new Error("Error al crear la materia");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -97,11 +97,11 @@ export default function CategoriesAdmin() {
         },
         body: JSON.stringify(values),
       });
-      
+
       if (!response.ok) {
         throw new Error("Error al actualizar la materia");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -132,11 +132,11 @@ export default function CategoriesAdmin() {
       const response = await fetch(`/api/admin/categories/${id}`, {
         method: "DELETE"
       });
-      
+
       if (!response.ok) {
         throw new Error("Error al eliminar la materia");
       }
-      
+
       return response;
     },
     onSuccess: () => {
@@ -190,198 +190,206 @@ export default function CategoriesAdmin() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Administración de Materias</h1>
-          <p className="text-muted-foreground">Gestiona las áreas temáticas de matemáticas</p>
+    <div className="min-h-screen bg-slate-950 text-slate-200 p-8">
+      <div className="container mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-100">Administración de Materias</h1>
+            <p className="text-slate-400">Gestiona las áreas temáticas de matemáticas</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => window.history.back()} className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => window.history.back()}>
-            Volver
-          </Button>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1">
-          <Card className="sticky top-4">
-            <CardHeader className="bg-muted/50">
-              <CardTitle>{editingId ? "Editar Materia" : "Nueva Materia"}</CardTitle>
-              <CardDescription>
-                {editingId 
-                  ? "Actualiza los detalles de la materia" 
-                  : "Añade una nueva área temática para los cuestionarios"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-            <Form {...form}>
-  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-    <FormField
-      control={form.control}
-      name="name"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>Nombre</FormLabel>
-          <FormControl>
-            <Input placeholder="Ej: Estadística" {...field} />
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
-    
-    <FormField
-      control={form.control}
-      name="description"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>Descripción</FormLabel>
-          <FormControl>
-            <Textarea 
-              placeholder="Describe brevemente los temas que incluye esta área" 
-              rows={3}
-              {...field} 
-            />
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
-    
-    <FormField
-      control={form.control}
-      name="youtubeLink"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>Enlace de YouTube (opcional)</FormLabel>
-          <FormControl>
-            <Input placeholder="https://www.youtube.com/watch?v=..." {...field} />
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
-    
-    <FormField
-      control={form.control}
-      name="colorClass"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>Color</FormLabel>
-          <Select
-            onValueChange={field.onChange}
-            value={field.value}
-          >
-            <FormControl>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona un color" />
-              </SelectTrigger>
-            </FormControl>
-            <SelectContent>
-              {colorOptions.map((color) => (
-                <SelectItem key={color.value} value={color.value}>
-                  <div className="flex items-center gap-2">
-                    <div className={`h-4 w-4 rounded-full bg-${color.value}`}></div>
-                    <span>{color.label}</span>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-1">
+            <Card className="sticky top-4 bg-slate-900 border-white/10 shadow-xl">
+              <CardHeader className="bg-slate-950/50 border-b border-white/5">
+                <CardTitle className="text-slate-100">{editingId ? "Editar Materia" : "Nueva Materia"}</CardTitle>
+                <CardDescription className="text-slate-400">
+                  {editingId
+                    ? "Actualiza los detalles de la materia"
+                    : "Añade una nueva área temática para los cuestionarios"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-slate-300">Nombre</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ej: Estadística" {...field} className="bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-slate-300">Descripción</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Describe brevemente los temas que incluye esta área"
+                              rows={3}
+                              {...field}
+                              className="bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="youtubeLink"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-slate-300">Enlace de YouTube (opcional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://www.youtube.com/watch?v=..." {...field} className="bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="colorClass"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-slate-300">Color</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-slate-950 border-slate-700 text-slate-200">
+                                <SelectValue placeholder="Selecciona un color" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                              {colorOptions.map((color) => (
+                                <SelectItem key={color.value} value={color.value} className="focus:bg-slate-800 focus:text-white">
+                                  <div className="flex items-center gap-2">
+                                    <div className={`h-4 w-4 rounded-full bg-${color.value}`}></div>
+                                    <span>{color.label}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex justify-end gap-2 pt-4">
+                      {editingId && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleCancelEdit}
+                          className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white"
+                        >
+                          Cancelar
+                        </Button>
+                      )}
+                      <Button
+                        type="submit"
+                        disabled={createMutation.isPending || updateMutation.isPending}
+                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
+                      >
+                        {(createMutation.isPending || updateMutation.isPending) && <Spinner className="mr-2 h-4 w-4" />}
+                        {editingId ? "Actualizar" : "Crear categoría"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="md:col-span-2">
+            <Card className="bg-slate-900 border-white/10 shadow-xl">
+              <CardHeader className="bg-slate-950/50 border-b border-white/5">
+                <CardTitle className="text-slate-100">Materias Existentes</CardTitle>
+                <CardDescription className="text-slate-400">
+                  Lista de todas las Materias disponibles en el sistema
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {isLoading ? (
+                  <div className="flex justify-center p-8">
+                    <Spinner className="h-8 w-8 text-blue-500" />
                   </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
-    
-    <div className="flex justify-end gap-2 pt-4">
-      {editingId && (
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={handleCancelEdit}
-        >
-          Cancelar
-        </Button>
-      )}
-      <Button 
-        type="submit" 
-        disabled={createMutation.isPending || updateMutation.isPending}
-      >
-        {(createMutation.isPending || updateMutation.isPending) && <Spinner className="mr-2 h-4 w-4" />}
-        {editingId ? "Actualizar" : "Crear categoría"}
-      </Button>
-    </div>
-  </form>
-</Form>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <div className="md:col-span-2">
-          <Card>
-            <CardHeader className="bg-muted/50">
-              <CardTitle>Materias Existentes</CardTitle>
-              <CardDescription>
-                Lista de todas las Materias disponibles en el sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              {isLoading ? (
-                <div className="flex justify-center p-8">
-                  <Spinner className="h-8 w-8" />
-                </div>
-              ) : categories && categories.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4">
-                  {categories.map((category: Category) => (
-                    <Card key={category.id} className="overflow-hidden border border-muted">
-                      <div className={`bg-${category.colorClass} h-2 w-full`}></div>
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="text-lg font-semibold">{category.name}</h3>
-                            <p className="text-sm text-muted-foreground mt-1">{category.description}</p>
+                ) : categories && categories.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-4">
+                    {categories.map((category: Category) => (
+                      <Card key={category.id} className="overflow-hidden border border-white/10 bg-slate-800/50 hover:bg-slate-800 transition-all">
+                        <div className={`bg-${category.colorClass} h-2 w-full`}></div>
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="text-lg font-semibold text-slate-200">{category.name}</h3>
+                              <p className="text-sm text-slate-400 mt-1">{category.description}</p>
+                            </div>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEdit(category)}
+                                className="bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white"
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDelete(category.id)}
+                                title="Eliminar materia"
+                                className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex space-x-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => handleEdit(category)}
-                            >
-                              Editar
-                            </Button>
-                            <Button 
-                              variant="destructive" 
-                              size="sm"
-                              onClick={() => handleDelete(category.id)}
-                              title="Eliminar materia"
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 px-4">
-                  <div className="mb-4 rounded-full bg-muted h-12 w-12 flex items-center justify-center mx-auto">
-                    <Trash className="h-6 w-6 text-muted-foreground" />
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                  <h3 className="text-lg font-medium">No hay materias disponibles</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Crea tu primera materia para empezar a organizar los cuestionarios.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="border-t bg-muted/30 px-6 py-3">
-              <p className="text-sm text-muted-foreground">
-                Total: <strong>{categories?.length || 0}</strong> materias
-              </p>
-            </CardFooter>
-          </Card>
+                ) : (
+                  <div className="text-center py-12 px-4">
+                    <div className="mb-4 rounded-full bg-slate-800 h-12 w-12 flex items-center justify-center mx-auto">
+                      <Trash className="h-6 w-6 text-slate-500" />
+                    </div>
+                    <h3 className="text-lg font-medium text-slate-300">No hay materias disponibles</h3>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Crea tu primera materia para empezar a organizar los cuestionarios.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter className="border-t border-white/5 bg-slate-950/30 px-6 py-3">
+                <p className="text-sm text-slate-500">
+                  Total: <strong className="text-slate-300">{categories?.length || 0}</strong> materias
+                </p>
+              </CardFooter>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

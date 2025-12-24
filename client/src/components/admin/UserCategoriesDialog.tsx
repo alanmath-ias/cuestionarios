@@ -91,13 +91,13 @@ export function UserCategoriesDialog({ userId, username, isOpen, onClose }: User
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[700px]">
+            <DialogContent className="sm:max-w-[700px] bg-slate-900 border-white/10 text-slate-200 shadow-2xl">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-xl">
-                        <BookOpen className="h-5 w-5 text-primary" />
+                    <DialogTitle className="flex items-center gap-2 text-xl text-slate-100">
+                        <BookOpen className="h-5 w-5 text-blue-400" />
                         Gestionar Materias - {username}
                     </DialogTitle>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-slate-400">
                         Selecciona las materias que deseas asignar a este usuario.
                     </div>
                 </DialogHeader>
@@ -105,12 +105,12 @@ export function UserCategoriesDialog({ userId, username, isOpen, onClose }: User
                 <div className="py-6">
                     {isLoading ? (
                         <div className="flex justify-center p-8">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2">
                             {allCategories?.length === 0 ? (
-                                <p className="col-span-full text-center text-muted-foreground">No hay materias disponibles.</p>
+                                <p className="col-span-full text-center text-slate-500">No hay materias disponibles.</p>
                             ) : (
                                 allCategories?.map((category) => {
                                     const isSelected = selectedCategories.includes(category.id);
@@ -118,24 +118,24 @@ export function UserCategoriesDialog({ userId, username, isOpen, onClose }: User
                                         <div
                                             key={category.id}
                                             className={`
-                                                cursor-pointer relative flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-200
+                                                cursor-pointer relative flex items-center justify-between p-4 rounded-xl border transition-all duration-200
                                                 ${isSelected
-                                                    ? "border-primary bg-primary/5 shadow-sm"
-                                                    : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"
+                                                    ? "border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/10"
+                                                    : "border-white/5 bg-slate-800/30 hover:border-white/10 hover:bg-slate-800/50"
                                                 }
                                             `}
                                             onClick={() => handleToggle(category.id)}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-3 h-3 rounded-full ${category.colorClass} shadow-sm`} />
-                                                <span className={`font-medium ${isSelected ? "text-primary" : "text-gray-700"}`}>
+                                                <div className={`w-3 h-3 rounded-full ${category.colorClass} shadow-sm ring-2 ring-white/5`} />
+                                                <span className={`font-medium ${isSelected ? "text-blue-400" : "text-slate-300"}`}>
                                                     {category.name}
                                                 </span>
                                             </div>
 
                                             <div className={`
                                                 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200
-                                                ${isSelected ? "bg-primary text-white scale-100" : "bg-gray-100 text-transparent scale-90"}
+                                                ${isSelected ? "bg-blue-500 text-white scale-100 shadow-md shadow-blue-500/20" : "bg-slate-700/50 text-transparent scale-90"}
                                             `}>
                                                 <CheckCircle2 className="h-4 w-4" />
                                             </div>
@@ -147,9 +147,9 @@ export function UserCategoriesDialog({ userId, username, isOpen, onClose }: User
                     )}
                 </div>
 
-                <DialogFooter className="gap-2 sm:gap-0">
-                    <Button variant="outline" onClick={onClose}>Cancelar</Button>
-                    <Button onClick={handleSave} disabled={updateCategoriesMutation.status === 'pending'}>
+                <DialogFooter className="gap-2 sm:gap-0 border-t border-white/5 pt-4">
+                    <Button variant="outline" onClick={onClose} className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white">Cancelar</Button>
+                    <Button onClick={handleSave} disabled={updateCategoriesMutation.status === 'pending'} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20">
                         {updateCategoriesMutation.status === 'pending' ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

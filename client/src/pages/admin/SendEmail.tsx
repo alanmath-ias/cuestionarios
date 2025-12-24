@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Send } from 'lucide-react';
+import { Mail, Send, ArrowLeft, Loader2 } from 'lucide-react';
+import { Link } from 'wouter';
 
 const SendEmail: React.FC = () => {
     const { toast } = useToast();
@@ -59,81 +60,94 @@ const SendEmail: React.FC = () => {
     };
 
     return (
-        <div className="p-6 max-w-4xl mx-auto">
-            <Card className="shadow-md">
-                <CardHeader className="bg-primary/5 border-b pb-4">
-                    <CardTitle className="text-2xl font-bold flex items-center gap-2 text-primary">
-                        <Mail className="w-6 h-6" />
-                        Enviar Correo
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="space-y-2">
-                            <label htmlFor="to" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                Para:
-                            </label>
-                            <Input
-                                id="to"
-                                name="to"
-                                type="email"
-                                placeholder="correo@ejemplo.com"
-                                value={formData.to}
-                                onChange={handleChange}
-                                required
-                                className="bg-white"
-                            />
-                        </div>
+        <div className="min-h-screen bg-slate-950 p-8 text-slate-200">
+            <div className="max-w-4xl mx-auto">
+                <div className="mb-8">
+                    <Link href="/admin">
+                        <Button variant="ghost" className="mb-4 text-slate-400 hover:text-white hover:bg-white/5">
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Volver al Panel
+                        </Button>
+                    </Link>
+                    <h1 className="text-3xl font-bold text-slate-100">Enviar Correo</h1>
+                    <p className="text-slate-400">Envía notificaciones o mensajes directos a los usuarios.</p>
+                </div>
 
-                        <div className="space-y-2">
-                            <label htmlFor="subject" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                Asunto:
-                            </label>
-                            <Input
-                                id="subject"
-                                name="subject"
-                                type="text"
-                                placeholder="Asunto del correo"
-                                value={formData.subject}
-                                onChange={handleChange}
-                                required
-                                className="bg-white"
-                            />
-                        </div>
+                <Card className="shadow-2xl border border-white/10 bg-slate-900">
+                    <CardHeader className="bg-slate-900/50 border-b border-white/5 pb-4">
+                        <CardTitle className="text-xl font-bold flex items-center gap-2 text-blue-400">
+                            <Mail className="w-5 h-5" />
+                            Redactar Mensaje
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="space-y-2">
+                                <label htmlFor="to" className="text-sm font-medium leading-none text-slate-400">
+                                    Para:
+                                </label>
+                                <Input
+                                    id="to"
+                                    name="to"
+                                    type="email"
+                                    placeholder="correo@ejemplo.com"
+                                    value={formData.to}
+                                    onChange={handleChange}
+                                    required
+                                    className="bg-slate-950/50 border-slate-800 text-slate-200 focus:ring-blue-500/50 placeholder:text-slate-600 focus:border-blue-500/50"
+                                />
+                            </div>
 
-                        <div className="space-y-2">
-                            <label htmlFor="message" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                Mensaje:
-                            </label>
-                            <Textarea
-                                id="message"
-                                name="message"
-                                placeholder="Escribe tu mensaje aquí..."
-                                value={formData.message}
-                                onChange={handleChange}
-                                required
-                                className="min-h-[200px] bg-white resize-y"
-                            />
-                        </div>
+                            <div className="space-y-2">
+                                <label htmlFor="subject" className="text-sm font-medium leading-none text-slate-400">
+                                    Asunto:
+                                </label>
+                                <Input
+                                    id="subject"
+                                    name="subject"
+                                    type="text"
+                                    placeholder="Asunto del correo"
+                                    value={formData.subject}
+                                    onChange={handleChange}
+                                    required
+                                    className="bg-slate-950/50 border-slate-800 text-slate-200 focus:ring-blue-500/50 placeholder:text-slate-600 focus:border-blue-500/50"
+                                />
+                            </div>
 
-                        <div className="flex justify-end pt-4">
-                            <Button type="submit" disabled={loading} className="w-full md:w-auto min-w-[150px]">
-                                {loading ? (
-                                    <span className="flex items-center gap-2">
-                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                        Enviando...
-                                    </span>
-                                ) : (
-                                    <span className="flex items-center gap-2">
-                                        <Send className="w-4 h-4" />
-                                        Enviar Correo
-                                    </span>
-                                )}
-                            </Button>
-                        </div>
-                    </form>
-                </CardContent>
-            </Card>
+                            <div className="space-y-2">
+                                <label htmlFor="message" className="text-sm font-medium leading-none text-slate-400">
+                                    Mensaje:
+                                </label>
+                                <Textarea
+                                    id="message"
+                                    name="message"
+                                    placeholder="Escribe tu mensaje aquí..."
+                                    value={formData.message}
+                                    onChange={handleChange}
+                                    required
+                                    className="min-h-[200px] bg-slate-950/50 border-slate-800 text-slate-200 focus:ring-blue-500/50 placeholder:text-slate-600 resize-y focus:border-blue-500/50"
+                                />
+                            </div>
+
+                            <div className="flex justify-end pt-4 border-t border-white/5">
+                                <Button type="submit" disabled={loading} className="w-full md:w-auto min-w-[150px] bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20">
+                                    {loading ? (
+                                        <span className="flex items-center gap-2">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Enviando...
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center gap-2">
+                                            <Send className="w-4 h-4" />
+                                            Enviar Correo
+                                        </span>
+                                    )}
+                                </Button>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 };

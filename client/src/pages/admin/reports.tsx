@@ -124,197 +124,206 @@ export default function AdminReports() {
 
     if (isLoading) {
         return (
-            <div className="flex justify-center items-center min-h-screen">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex justify-center items-center min-h-screen bg-slate-950">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
             </div>
         );
     }
 
     return (
-        <div className="container mx-auto py-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-2xl font-bold flex items-center gap-2">
+        <div className="min-h-screen bg-slate-950 text-slate-200 p-8">
+            <div className="max-w-7xl mx-auto">
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-slate-100 flex items-center gap-2">
                         Reportes de Errores
-                        <Badge variant="secondary" className="ml-2">
+                        <Badge variant="secondary" className="ml-2 bg-slate-800 text-slate-300 hover:bg-slate-700">
                             {reports?.filter((r) => r.status === "pending").length} Pendientes
                         </Badge>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="overflow-x-auto pb-4 [&::-webkit-scrollbar]:h-4 [&::-webkit-scrollbar-track]:bg-gray-200 [&::-webkit-scrollbar-thumb]:bg-gray-400 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-500 cursor-pointer">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Fecha</TableHead>
-                                    <TableHead>Quiz ID</TableHead>
-                                    <TableHead>Pregunta ID</TableHead>
-                                    <TableHead>Descripción</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                    <TableHead>Acciones</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {reports?.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                            No hay reportes de errores.
-                                        </TableCell>
+                    </h1>
+                    <p className="text-slate-400">Gestiona los reportes de errores enviados por los usuarios.</p>
+                </div>
+
+                <Card className="bg-slate-900 border border-white/10 shadow-xl">
+                    <CardHeader className="border-b border-white/5 bg-slate-900/50">
+                        <CardTitle className="text-slate-200">Listado de Reportes</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader className="bg-slate-950/50">
+                                    <TableRow className="border-white/5 hover:bg-transparent">
+                                        <TableHead className="text-slate-400">Fecha</TableHead>
+                                        <TableHead className="text-slate-400">Quiz ID</TableHead>
+                                        <TableHead className="text-slate-400">Pregunta ID</TableHead>
+                                        <TableHead className="text-slate-400">Descripción</TableHead>
+                                        <TableHead className="text-slate-400">Estado</TableHead>
+                                        <TableHead className="text-slate-400">Acciones</TableHead>
                                     </TableRow>
-                                ) : (
-                                    reports?.map((report) => (
-                                        <TableRow key={report.id}>
-                                            <TableCell>
-                                                {format(new Date(report.createdAt), "dd MMM yyyy HH:mm", { locale: es })}
-                                            </TableCell>
-                                            <TableCell>{report.quizId}</TableCell>
-                                            <TableCell>{report.questionId}</TableCell>
-                                            <TableCell className="max-w-md truncate" title={report.description}>
-                                                {report.description}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge
-                                                    variant={report.status === "resolved" ? "default" : "destructive"}
-                                                    className={report.status === "resolved" ? "bg-green-600" : ""}
-                                                >
-                                                    {report.status === "resolved" ? "Resuelto" : "Pendiente"}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex gap-2">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="secondary"
-                                                        onClick={() => setSelectedReportId(report.id)}
-                                                    >
-                                                        <Eye className="h-4 w-4 mr-1" />
-                                                        Ver Detalles
-                                                    </Button>
-                                                    {report.status === "pending" && (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => updateStatusMutation.mutate({ id: report.id, status: "resolved" })}
-                                                            disabled={updateStatusMutation.isPending}
-                                                        >
-                                                            <CheckCircle className="h-4 w-4 mr-1" />
-                                                            Marcar Resuelto
-                                                        </Button>
-                                                    )}
-                                                </div>
+                                </TableHeader>
+                                <TableBody>
+                                    {reports?.length === 0 ? (
+                                        <TableRow className="border-white/5 hover:bg-transparent">
+                                            <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                                                No hay reportes de errores.
                                             </TableCell>
                                         </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Dialog open={!!selectedReportId} onOpenChange={(open) => !open && handleCloseDialog()}>
-                <DialogContent className="max-w-3xl max-h-[90vh]">
-                    <DialogHeader>
-                        <DialogTitle>Detalles del Reporte #{selectedReportId}</DialogTitle>
-                        <DialogDescription>
-                            Información completa sobre el error reportado.
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    {isLoadingDetails ? (
-                        <div className="flex justify-center p-8">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        </div>
-                    ) : reportDetails ? (
-                        <ScrollArea className="h-[60vh] pr-4">
-                            <div className="space-y-6">
-                                {/* Información del Usuario */}
-                                <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-                                    <div>
-                                        <h4 className="font-semibold text-sm text-muted-foreground">Reportado por</h4>
-                                        <p>{reportDetails.user?.name} ({reportDetails.user?.email})</p>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-semibold text-sm text-muted-foreground">Cuestionario</h4>
-                                        <p>{reportDetails.quiz?.title} (ID: {reportDetails.quiz?.id})</p>
-                                    </div>
-                                </div>
-
-                                {/* Descripción del Reporte */}
-                                <div>
-                                    <h3 className="font-semibold mb-2">Descripción del Error</h3>
-                                    <div className="p-3 bg-red-50 text-red-900 rounded-md border border-red-100">
-                                        {reportDetails.description}
-                                    </div>
-                                </div>
-
-                                {/* Pregunta y Opciones */}
-                                <div>
-                                    <h3 className="font-semibold mb-2">Pregunta (ID: {reportDetails.question?.id})</h3>
-                                    <div className="p-4 border rounded-lg space-y-4">
-                                        <div className="text-lg font-medium">
-                                            <MathText>{reportDetails.question?.content}</MathText>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            {reportDetails.question?.answers?.map((answer) => (
-                                                <div
-                                                    key={answer.id}
-                                                    className={`p-3 rounded-md border flex justify-between items-center ${answer.isCorrect
-                                                        ? "bg-green-50 border-green-200"
-                                                        : "bg-white"
-                                                        }`}
-                                                >
-                                                    <div className="flex-1">
-                                                        <MathText>{answer.content}</MathText>
+                                    ) : (
+                                        reports?.map((report) => (
+                                            <TableRow key={report.id} className="border-white/5 hover:bg-white/5 transition-colors">
+                                                <TableCell className="text-slate-400">
+                                                    {format(new Date(report.createdAt), "dd MMM yyyy HH:mm", { locale: es })}
+                                                </TableCell>
+                                                <TableCell className="text-slate-300">{report.quizId}</TableCell>
+                                                <TableCell className="text-slate-300">{report.questionId}</TableCell>
+                                                <TableCell className="max-w-md truncate text-slate-300" title={report.description}>
+                                                    {report.description}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge
+                                                        variant={report.status === "resolved" ? "default" : "destructive"}
+                                                        className={report.status === "resolved" ? "bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/20" : "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/20"}
+                                                    >
+                                                        {report.status === "resolved" ? "Resuelto" : "Pendiente"}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="secondary"
+                                                            onClick={() => setSelectedReportId(report.id)}
+                                                            className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700"
+                                                        >
+                                                            <Eye className="h-4 w-4 mr-1" />
+                                                            Ver Detalles
+                                                        </Button>
+                                                        {report.status === "pending" && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => updateStatusMutation.mutate({ id: report.id, status: "resolved" })}
+                                                                disabled={updateStatusMutation.isPending}
+                                                                className="bg-green-500/10 text-green-400 hover:bg-green-500/20 border-green-500/20 hover:text-green-300"
+                                                            >
+                                                                <CheckCircle className="h-4 w-4 mr-1" />
+                                                                Marcar Resuelto
+                                                            </Button>
+                                                        )}
                                                     </div>
-                                                    {answer.isCorrect && (
-                                                        <Badge className="bg-green-600 ml-2">Correcta</Badge>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Sección de IA */}
-                                <div className="border-t pt-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="font-semibold flex items-center gap-2">
-                                            <Bot className="h-5 w-5 text-purple-600" />
-                                            Opinión de la IA
-                                        </h3>
-                                        <Button
-                                            onClick={() => selectedReportId && solveAiMutation.mutate(selectedReportId)}
-                                            disabled={solveAiMutation.isPending}
-                                            className="bg-purple-600 hover:bg-purple-700"
-                                        >
-                                            {solveAiMutation.isPending ? (
-                                                <>
-                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                    Analizando...
-                                                </>
-                                            ) : (
-                                                "Consultar a la IA"
-                                            )}
-                                        </Button>
-                                    </div>
-
-                                    {aiResponse && (
-                                        <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 text-sm">
-                                            <AIMarkdown content={aiResponse} />
-                                        </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
                                     )}
-                                </div>
-                            </div>
-                        </ScrollArea>
-                    ) : (
-                        <div className="text-center p-8 text-muted-foreground">
-                            No se encontraron detalles para este reporte.
+                                </TableBody>
+                            </Table>
                         </div>
-                    )}
-                </DialogContent>
-            </Dialog>
+                    </CardContent>
+                </Card>
+
+                <Dialog open={!!selectedReportId} onOpenChange={(open) => !open && handleCloseDialog()}>
+                    <DialogContent className="max-w-3xl max-h-[90vh] bg-slate-900 border border-white/10 text-slate-200">
+                        <DialogHeader>
+                            <DialogTitle className="text-slate-100">Detalles del Reporte #{selectedReportId}</DialogTitle>
+                            <DialogDescription className="text-slate-400">
+                                Información completa sobre el error reportado.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        {isLoadingDetails ? (
+                            <div className="flex justify-center p-8">
+                                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                            </div>
+                        ) : reportDetails ? (
+                            <ScrollArea className="h-[60vh] pr-4">
+                                <div className="space-y-6">
+                                    {/* Información del Usuario */}
+                                    <div className="grid grid-cols-2 gap-4 p-4 bg-slate-950/50 rounded-lg border border-white/5">
+                                        <div>
+                                            <h4 className="font-semibold text-sm text-slate-400">Reportado por</h4>
+                                            <p className="text-slate-200">{reportDetails.user?.name} ({reportDetails.user?.email})</p>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-sm text-slate-400">Cuestionario</h4>
+                                            <p className="text-slate-200">{reportDetails.quiz?.title} (ID: {reportDetails.quiz?.id})</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Descripción del Reporte */}
+                                    <div>
+                                        <h3 className="font-semibold mb-2 text-slate-200">Descripción del Error</h3>
+                                        <div className="p-3 bg-red-500/10 text-red-200 rounded-md border border-red-500/20">
+                                            {reportDetails.description}
+                                        </div>
+                                    </div>
+
+                                    {/* Pregunta y Opciones */}
+                                    <div>
+                                        <h3 className="font-semibold mb-2 text-slate-200">Pregunta (ID: {reportDetails.question?.id})</h3>
+                                        <div className="p-4 border border-white/10 rounded-lg space-y-4 bg-slate-950/30">
+                                            <div className="text-lg font-medium text-slate-200">
+                                                <MathText>{reportDetails.question?.content}</MathText>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                {reportDetails.question?.answers?.map((answer) => (
+                                                    <div
+                                                        key={answer.id}
+                                                        className={`p-3 rounded-md border flex justify-between items-center ${answer.isCorrect
+                                                            ? "bg-green-500/10 border-green-500/20 text-slate-200"
+                                                            : "bg-slate-900 border-white/5 text-slate-400"
+                                                            }`}
+                                                    >
+                                                        <div className="flex-1">
+                                                            <MathText>{answer.content}</MathText>
+                                                        </div>
+                                                        {answer.isCorrect && (
+                                                            <Badge className="bg-green-500/20 text-green-400 border-green-500/20 ml-2">Correcta</Badge>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Sección de IA */}
+                                    <div className="border-t border-white/10 pt-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="font-semibold flex items-center gap-2 text-slate-200">
+                                                <Bot className="h-5 w-5 text-purple-400" />
+                                                Opinión de la IA
+                                            </h3>
+                                            <Button
+                                                onClick={() => selectedReportId && solveAiMutation.mutate(selectedReportId)}
+                                                disabled={solveAiMutation.isPending}
+                                                className="bg-purple-600 hover:bg-purple-700 text-white"
+                                            >
+                                                {solveAiMutation.isPending ? (
+                                                    <>
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        Analizando...
+                                                    </>
+                                                ) : (
+                                                    "Consultar a la IA"
+                                                )}
+                                            </Button>
+                                        </div>
+
+                                        {aiResponse && (
+                                            <div className="bg-purple-500/10 p-4 rounded-lg border border-purple-500/20 text-sm text-slate-200">
+                                                <AIMarkdown content={aiResponse} />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </ScrollArea>
+                        ) : (
+                            <div className="text-center p-8 text-slate-500">
+                                No se encontraron detalles para este reporte.
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
+            </div>
         </div>
     );
 }
