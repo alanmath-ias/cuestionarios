@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, PlayCircle, GraduationCap, BrainCircuit, ArrowRight, Star, Calculator, BookOpen, Sigma, Atom } from "lucide-react";
+import { CheckCircle2, PlayCircle, GraduationCap, BrainCircuit, ArrowRight, Star, Calculator, BookOpen, Sigma, Atom, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function LandingPage() {
@@ -65,7 +65,7 @@ export default function LandingPage() {
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/20">
                         <span className="text-xl font-bold text-white">A</span>
                     </div>
-                    <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                    <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-200 to-slate-400">
                         AlanMath
                     </span>
                 </div>
@@ -97,9 +97,9 @@ export default function LandingPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8 }}
                     >
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-sm">
-                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                            <span className="text-sm text-slate-300">La nueva forma de aprender matemáticas</span>
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-sm shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 animate-pulse" />
+                            <span className="text-sm text-slate-200 font-medium">La nueva forma de aprender matemáticas</span>
                         </div>
 
                         <h1 className="text-5xl md:text-7xl font-bold mb-8 tracking-tight">
@@ -127,7 +127,7 @@ export default function LandingPage() {
                                 <Button
                                     size="lg"
                                     variant="outline"
-                                    className="h-14 px-8 text-lg border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                                    className="h-14 px-8 text-lg border-slate-700 text-slate-100 bg-slate-800/50 hover:bg-slate-700 hover:text-white transition-all"
                                 >
                                     Ver Demo
                                 </Button>
@@ -135,6 +135,26 @@ export default function LandingPage() {
                         </div>
                     </motion.div>
                 </div>
+
+                {/* Scroll Indicator */}
+                <motion.div
+                    className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 cursor-pointer"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1, y: [0, 10, 0] }}
+                    transition={{
+                        opacity: { delay: 1, duration: 1 },
+                        y: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                    }}
+                    onClick={() => {
+                        window.scrollTo({
+                            top: window.innerHeight * 0.8,
+                            behavior: 'smooth'
+                        });
+                    }}
+                >
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-widest">Desliza</span>
+                    <ChevronDown className="w-6 h-6 text-slate-400" />
+                </motion.div>
             </section>
 
             {/* Subject Selector */}
@@ -154,24 +174,24 @@ export default function LandingPage() {
                                 transition={{ delay: index * 0.1 }}
                                 viewport={{ once: true }}
                             >
-                                <Card className={`h-full bg-slate-800/50 border-slate-700 hover:border-purple-500/50 transition-all cursor-pointer group ${!subject.active && 'opacity-75'}`}>
+                                <Card className={`h-full bg-slate-800/50 border-slate-700 hover:border-purple-500/50 transition-all cursor-pointer group ${!subject.active ? 'opacity-75' : 'shadow-[0_0_20px_rgba(168,85,247,0.1)] hover:shadow-[0_0_30px_rgba(168,85,247,0.2)]'}`}>
                                     <CardContent className="p-6 flex flex-col items-center text-center h-full">
-                                        <div className="mb-6 p-4 rounded-2xl bg-slate-900 group-hover:scale-110 transition-transform duration-300">
+                                        <div className="mb-6 p-4 rounded-2xl bg-slate-900 group-hover:scale-110 transition-transform duration-300 shadow-inner">
                                             {subject.icon}
                                         </div>
-                                        <h3 className="text-xl font-bold mb-3">{subject.title}</h3>
+                                        <h3 className="text-xl font-bold mb-3 group-hover:text-purple-400 transition-colors">{subject.title}</h3>
                                         <p className="text-slate-400 text-sm mb-6 flex-grow">
                                             {subject.description}
                                         </p>
                                         {subject.active ? (
                                             <Button
-                                                className="w-full bg-slate-700 hover:bg-purple-600 transition-colors"
-                                                onClick={() => setLocation(`/quiz/${subject.quizId}`)}
+                                                className="w-full bg-blue-600 hover:bg-purple-600 text-white font-semibold transition-all shadow-lg shadow-blue-500/20"
+                                                onClick={() => setLocation(`/public-quiz/${subject.quizId}`)}
                                             >
                                                 Empezar Test
                                             </Button>
                                         ) : (
-                                            <Button variant="ghost" disabled className="w-full text-slate-500">
+                                            <Button variant="ghost" disabled className="w-full text-slate-500 bg-slate-900/50">
                                                 Próximamente
                                             </Button>
                                         )}

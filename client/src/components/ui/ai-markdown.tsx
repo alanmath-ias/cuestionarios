@@ -15,8 +15,10 @@ export function AIMarkdown({ content, className }: AIMarkdownProps) {
     // 3. Convert \(...\) to $...$ (inline)
     // 4. Convert ¡¡...¡¡ to $$...$$ (block - just in case)
     const processedContent = content
-        .replace(/¡¡([\s\S]*?)¡¡/g, '$$$$$1$$$$') // Block math with double ¡
-        .replace(/¡([\s\S]*?)¡/g, '$$$1$$')       // Inline math with single ¡
+        .replace(/¡¡([\s\S]*?)¡¡/g, '$$$$$1$$$$') // Block math with ¡¡...¡¡
+        .replace(/¡¡([\s\S]*?)!!/g, '$$$$$1$$$$') // Block math with ¡¡...!! (legacy)
+        .replace(/¡([\s\S]*?)¡/g, '$$$1$$')       // Inline math with ¡...¡
+        .replace(/¡([\s\S]*?)!/g, '$$$1$$')       // Inline math with ¡...! (legacy)
         .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$') // Block math with \[ \]
         .replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$$');    // Inline math with \( \)
 

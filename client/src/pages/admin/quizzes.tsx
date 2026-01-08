@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -23,6 +23,15 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "@/components/ui/accordion";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Search } from "lucide-react";
 
 const difficultyOptions = [
   { value: "básico", label: "Básico" },
@@ -43,6 +52,7 @@ const formSchema = z.object({
 export default function QuizzesAdmin() {
   const [assignedUsers, setAssignedUsers] = useState<number[]>([]);
   const [visibleQuizId, setVisibleQuizId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loadingSubcategories, setLoadingSubcategories] = useState(false);
 
@@ -129,7 +139,7 @@ export default function QuizzesAdmin() {
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        const res = await fetch("/api/admin/users");
+        const res = await fetch("/api/users");
         const data = await res.json();
         setAllUsers(data);
       } catch (error) {
@@ -196,7 +206,7 @@ export default function QuizzesAdmin() {
     isAssigned: boolean
   ) => {
     try {
-      let url = "/api/admin/users/quizzes";
+      let url = "/api/admin/assignments";
       let method = "DELETE";
       let body: any = { userId, quizId };
 
@@ -434,7 +444,6 @@ export default function QuizzesAdmin() {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="description"
@@ -702,44 +711,81 @@ export default function QuizzesAdmin() {
                                                 </div>
                                               </div>
 
-                                              <Button
-                                                size="sm"
-                                                variant="secondary"
-                                                onClick={() => {
-                                                  setVisibleQuizId(quiz.id);
-                                                  fetchAssignedUsers(quiz.id);
-                                                }}
-                                                className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
-                                              >
-                                                Asignar usuarios
-                                              </Button>
+                                              <Dialog>
+                                                <DialogTrigger asChild>
+                                                  <Button
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    onClick={() => {
+                                                      setVisibleQuizId(quiz.id);
+                                                      fetchAssignedUsers(quiz.id);
+                                                      setSearchQuery(""); // Reset search on open
+                                                    }}
+                                                    className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+                                                  >
+                                                    Asignar usuarios
+                                                  </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="bg-slate-950 border-slate-800 text-slate-200 max-h-[80vh] flex flex-col">
+                                                  <DialogHeader>
+                                                    <DialogTitle>Asignar Usuarios</DialogTitle>
+                                                    <DialogDescription className="text-slate-400">
+                                                      Selecciona los usuarios que tendrán acceso a: <span className="font-semibold text-slate-200">{quiz.title}</span>
+                                                    </DialogDescription>
+                                                  </DialogHeader>
 
-                                              {visibleQuizId === quiz.id && (
-                                                <div className="mt-4 bg-slate-950 p-4 rounded-lg border border-white/5">
-                                                  <p className="font-semibold text-slate-300 mb-2">Usuarios asignados:</p>
-                                                  <ul className="space-y-1 max-h-40 overflow-y-auto pr-2">
-                                                    {allUsers.map((user) => (
-                                                      <li key={user.id}>
-                                                        <label className="flex items-center gap-2 p-1 hover:bg-white/5 rounded cursor-pointer">
-                                                          <input
-                                                            type="checkbox"
-                                                            checked={assignedUsers.includes(user.id)}
-                                                            onChange={() =>
-                                                              toggleQuizAssignment(
-                                                                quiz.id,
-                                                                user.id,
-                                                                assignedUsers.includes(user.id)
-                                                              )
-                                                            }
-                                                            className="rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-blue-500"
-                                                          />
-                                                          <span className="text-sm text-slate-300">{user.name} <span className="text-slate-500">({user.email})</span></span>
+                                                  <div className="relative mb-4">
+                                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-500" />
+                                                    <Input
+                                                      placeholder="Buscar usuario por nombre o correo..."
+                                                      value={searchQuery}
+                                                      onChange={(e) => setSearchQuery(e.target.value)}
+                                                      className="pl-9 bg-slate-900 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50"
+                                                    />
+                                                  </div>
+
+                                                  <div className="flex-1 overflow-y-auto pr-2 space-y-1">
+                                                    {allUsers
+                                                      .filter(user =>
+                                                        user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                                        user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                                        user.username?.toLowerCase().includes(searchQuery.toLowerCase())
+                                                      )
+                                                      .sort((a, b) => (a.name || a.username).localeCompare(b.name || b.username))
+                                                      .map((user) => (
+                                                        <label key={user.id} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded cursor-pointer transition-colors">
+                                                          <div className="flex items-center h-5">
+                                                            <input
+                                                              type="checkbox"
+                                                              checked={assignedUsers.includes(user.id)}
+                                                              onChange={() =>
+                                                                toggleQuizAssignment(
+                                                                  quiz.id,
+                                                                  user.id,
+                                                                  assignedUsers.includes(user.id)
+                                                                )
+                                                              }
+                                                              className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-slate-950"
+                                                            />
+                                                          </div>
+                                                          <div className="flex flex-col">
+                                                            <span className="text-sm font-medium text-slate-200">{user.name || user.username}</span>
+                                                            <span className="text-xs text-slate-500">{user.email}</span>
+                                                          </div>
                                                         </label>
-                                                      </li>
-                                                    ))}
-                                                  </ul>
-                                                </div>
-                                              )}
+                                                      ))}
+                                                    {allUsers.filter(user =>
+                                                      user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                                      user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                                                    ).length === 0 && (
+                                                        <div className="text-center py-8 text-slate-500">
+                                                          No se encontraron usuarios
+                                                        </div>
+                                                      )}
+                                                  </div>
+                                                </DialogContent>
+                                              </Dialog>
+
 
                                               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
                                                 <div className="flex items-center text-slate-400">
@@ -836,44 +882,84 @@ export default function QuizzesAdmin() {
                                       </div>
                                     </div>
 
-                                    <Button
-                                      size="sm"
-                                      variant="secondary"
-                                      onClick={() => {
-                                        setVisibleQuizId(quiz.id);
-                                        fetchAssignedUsers(quiz.id);
-                                      }}
-                                      className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
-                                    >
-                                      Asignar usuarios
-                                    </Button>
+                                    <Dialog>
+                                      <DialogTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          variant="secondary"
+                                          onClick={() => {
+                                            setVisibleQuizId(quiz.id);
+                                            fetchAssignedUsers(quiz.id);
+                                            setSearchQuery(""); // Reset search on open
+                                          }}
+                                          className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+                                        >
+                                          Asignar usuarios
+                                        </Button>
+                                      </DialogTrigger>
+                                      <DialogContent className="bg-slate-950 border-slate-800 text-slate-200 max-h-[80vh] flex flex-col">
+                                        <DialogHeader>
+                                          <DialogTitle>Asignar Usuarios</DialogTitle>
+                                          <DialogDescription className="text-slate-400">
+                                            Selecciona los usuarios que tendrán acceso a: <span className="font-semibold text-slate-200">{quiz.title}</span>
+                                          </DialogDescription>
+                                        </DialogHeader>
 
-                                    {visibleQuizId === quiz.id && (
-                                      <div className="mt-4 bg-slate-950 p-4 rounded-lg border border-white/5">
-                                        <p className="font-semibold text-slate-300 mb-2">Usuarios asignados:</p>
-                                        <ul className="space-y-1 max-h-40 overflow-y-auto pr-2">
-                                          {allUsers.map((user) => (
-                                            <li key={user.id}>
-                                              <label className="flex items-center gap-2 p-1 hover:bg-white/5 rounded cursor-pointer">
-                                                <input
-                                                  type="checkbox"
-                                                  checked={assignedUsers.includes(user.id)}
-                                                  onChange={() =>
-                                                    toggleQuizAssignment(
-                                                      quiz.id,
-                                                      user.id,
-                                                      assignedUsers.includes(user.id)
-                                                    )
-                                                  }
-                                                  className="rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-blue-500"
-                                                />
-                                                <span className="text-sm text-slate-300">{user.name} <span className="text-slate-500">({user.email})</span></span>
+                                        <div className="relative mb-4">
+                                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-500" />
+                                          <Input
+                                            placeholder="Buscar usuario por nombre o correo..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="pl-9 bg-slate-900 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50"
+                                          />
+                                        </div>
+
+                                        <div className="flex-1 overflow-y-auto pr-2 space-y-1">
+                                          {allUsers
+                                            .filter(user =>
+                                              user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                              user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                              user.username?.toLowerCase().includes(searchQuery.toLowerCase())
+                                            )
+                                            .sort((a, b) => (a.name || a.username).localeCompare(b.name || b.username))
+                                            .map((user) => (
+                                              <label key={user.id} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded cursor-pointer transition-colors">
+                                                <div className="flex items-center h-5">
+                                                  <input
+                                                    type="checkbox"
+                                                    checked={assignedUsers.includes(user.id)}
+                                                    onChange={() =>
+                                                      toggleQuizAssignment(
+                                                        quiz.id,
+                                                        user.id,
+                                                        assignedUsers.includes(user.id)
+                                                      )
+                                                    }
+                                                    className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-slate-950"
+                                                  />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                  <span className="text-sm font-medium text-slate-200">{user.name || user.username}</span>
+                                                  <span className="text-xs text-slate-500">{user.email}</span>
+                                                </div>
                                               </label>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
+                                            ))}
+                                          {allUsers.filter(user =>
+                                            user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                            user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                                          ).length === 0 && (
+                                              <div className="text-center py-8 text-slate-500">
+                                                No se encontraron usuarios
+                                              </div>
+                                            )}
+                                        </div>
+                                      </DialogContent>
+                                    </Dialog>
+
+
+
+
 
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
                                       <div className="flex items-center text-slate-400">

@@ -42,6 +42,12 @@ async function generateHint(questionContent: string, answers: any) {
     1. "hint1": A subtle hint that guides the student without giving away the answer.
     2. "explanation": A more detailed explanation or a strong hint that clarifies the concept.
 
+    IMPORTANT: For mathematical expressions, use the following delimiters:
+    - Inline math: ¡expression¡ (inverted exclamation mark at BOTH ends)
+    - Block math: ¡¡expression¡¡ (double inverted exclamation mark at BOTH ends)
+    - DO NOT use standard LaTeX delimiters like $ or $$.
+    - DO NOT use asymmetric delimiters like ¡expression!.
+
     Question: "${questionContent}"
     Answers: ${JSON.stringify(answers)}
 

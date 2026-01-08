@@ -48,7 +48,7 @@ import ResetPasswordPage from '@/pages/reset-password';
 import LandingPage from "@/pages/landing-page";
 
 //Protectroute que permite el ingreso a cuestionarios publicos:
-const PUBLIC_QUIZZES = [1, 2, 3, 4]; // IDs de los cuestionarios públicos
+const PUBLIC_QUIZZES = [1, 2, 3, 4, 278]; // IDs de los cuestionarios públicos
 
 function ProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
   const { data: user, isLoading } = useQuery<User>({

@@ -1392,7 +1392,7 @@ Formato: Solo el texto del tip con el ejemplo.`;
 Instrucciones:
 1. Usa métodos específicos de ${quizTitle}
 2. Muestra máximo 6 pasos numerados
-3. Usa notación LaTeX (¡!) para matemáticas
+3. Usa notación LaTeX (¡...¡) para matemáticas inline y (¡¡...¡¡) para bloque. NO uses $ o $$.
 4. Comienza directamente con la solución, no escribas "Solución", simplemente inicia con los pasos correspondientes
 5. Cuando escribas algo como:  a = x y b = y No olvides usar Latex dos veces, una para a = x y otra para b = y, de modo que la "y" de la conjunción queda por fuera del Latex
 6. No uses ninguna palabra en inglés nunca, asegúrate de escribir las palabras correspondientes y adecuadas en español
@@ -1435,7 +1435,15 @@ Ejemplo de formato:
         throw new Error('La API no devolvió contenido');
       }
 
-      const generatedExplanation = data.choices[0].message.content;
+      let generatedExplanation = data.choices[0].message.content;
+
+      // Post-process to enforce symmetric delimiters ¡...¡
+      // Fix block math: ¡¡...!! -> ¡¡...¡¡
+      generatedExplanation = generatedExplanation.replace(/¡¡([\s\S]*?)!!/g, '¡¡$1¡¡');
+      // Fix inline math: ¡...! -> ¡...¡
+      generatedExplanation = generatedExplanation.replace(/¡([^¡]+?)!/g, '¡$1¡');
+      // Fix mixed or dollar signs if any: $...$ -> ¡...¡ (basic fallback)
+      generatedExplanation = generatedExplanation.replace(/\$([^$]+?)\$/g, '¡$1¡');
 
       // 2. Save explanation to DB (if questionId provided)
       if (questionId) {

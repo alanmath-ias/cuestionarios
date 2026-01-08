@@ -25,10 +25,10 @@ function QuizResults() {
   const { session } = useSession();
 
   const handleGoBack = () => {
-    if (window.history.state && window.history.state.idx > 0) {
+    if (window.history.length > 1) {
       window.history.back();
     } else {
-      window.location.href = '/';
+      window.location.href = '/dashboard';
     }
   };
 
@@ -102,11 +102,15 @@ function QuizResults() {
 
   const renderContent = (content: string) => {
     if (!content) return null;
-    return content.split('¡').map((part, i) => {
-      if (i % 2 === 0) {
-        return <span key={i}>{part}</span>;
+    // Split by both symmetric ¡...¡ and asymmetric ¡...! delimiters
+    const parts = content.split(/(¡.*?¡|¡.*?!)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('¡') && (part.endsWith('¡') || part.endsWith('!'))) {
+        // Extract content inside delimiters
+        const mathContent = part.slice(1, -1);
+        return <MathDisplay key={i} math={mathContent.trim()} inline />;
       } else {
-        return <MathDisplay key={i} math={part.trim()} inline />;
+        return <span key={i}>{part}</span>;
       }
     });
   };
@@ -357,8 +361,7 @@ function QuizResults() {
 
             <div className="flex justify-center mt-8 pb-8">
               <Button
-                variant="outline"
-                className="flex items-center border-white/10 text-slate-300 hover:text-white hover:bg-white/10 px-6 py-6 text-lg h-auto rounded-xl"
+                className="flex items-center bg-white text-slate-900 hover:bg-slate-200 px-6 py-6 text-lg h-auto rounded-xl shadow-lg transition-all transform hover:scale-105"
                 onClick={handleDownloadResults}
               >
                 <Download className="mr-3 h-5 w-5" />

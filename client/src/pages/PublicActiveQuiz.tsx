@@ -14,7 +14,7 @@ import { QuestionContent } from '@/components/QuestionContent';
 import { Textarea } from '@/components/ui/textarea';
 
 // IDs de quizzes públicos
-const PUBLIC_QUIZ_IDS = [68, 69, 73, 72];
+const PUBLIC_QUIZ_IDS = [68, 69, 73, 72, 278];
 
 /* Lista de cuestionarios públicos, ojo se debe cambiar abajo tambien 
   const isLanguageTest = [64, 52],
@@ -73,7 +73,7 @@ function PublicActiveQuiz() {
   const searchParams = new URLSearchParams(window.location.search);
   const ageGroup = searchParams.get('ageGroup') as 'child' | 'teen' | null;
 
-  
+
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
   const numericQuizId = parseInt(quizId || '0');
@@ -89,7 +89,7 @@ function PublicActiveQuiz() {
   const [isNavigating, setIsNavigating] = useState(false);
 
 
-  
+
   // Fetch quiz data
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${quizId}`],
@@ -108,14 +108,14 @@ function PublicActiveQuiz() {
         // Intento normal
         const res = await fetch(`/api/quizzes/${quizId}/questions`);
 
-const data = await res.json();
-      
-      // Filtrar preguntas inapropiadas para menores
-      return ageGroup === 'child' 
-        ? data.filter((q: Question) => !q.content.includes('alcohol'))
-        : data;
+        const data = await res.json();
 
-        
+        // Filtrar preguntas inapropiadas para menores
+        return ageGroup === 'child'
+          ? data.filter((q: Question) => !q.content.includes('alcohol'))
+          : data;
+
+
         // Si es quiz público y falla por autenticación, reintentar sin credenciales
         if (res.status === 401 && PUBLIC_QUIZ_IDS.includes(numericQuizId)) {
           const publicRes = await fetch(`/api/quizzes/${quizId}/questions`, {
@@ -124,7 +124,7 @@ const data = await res.json();
           if (!publicRes.ok) throw new Error('Error fetching public quiz questions');
           return await publicRes.json();
         }
-        
+
         if (!res.ok) throw new Error('Error fetching questions');
         return await res.json();
       } catch (error) {
@@ -138,7 +138,7 @@ const data = await res.json();
     }
   });
 
-  
+
   // Timer
   const {
     timeRemaining,
@@ -179,7 +179,7 @@ const data = await res.json();
       if (currentQuestion.type === 'multiple_choice') {
         setShuffledAnswers(shuffleArray(currentQuestion.answers));
       }
-      
+
       const currentAnswer = studentAnswers.find(a => a.questionId === currentQuestion.id);
       setSelectedAnswerId(currentAnswer?.answerId || null);
     }
@@ -206,8 +206,8 @@ const data = await res.json();
     };
 
     setStudentAnswers([...studentAnswers, studentAnswer]);
-    setAnsweredQuestions({...answeredQuestions, [currentQuestionIndex]: true});
-    setCorrectAnswers({...correctAnswers, [currentQuestionIndex]: isCorrect});
+    setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
+    setCorrectAnswers({ ...correctAnswers, [currentQuestionIndex]: isCorrect });
   };
 
   // Navigation
@@ -261,18 +261,18 @@ const data = await res.json();
     };
 
     setStudentAnswers([...studentAnswers, studentAnswer]);
-    setAnsweredQuestions({...answeredQuestions, [currentQuestionIndex]: true});
+    setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
   };
 
   // Finish quiz
   const handleFinishQuiz = async () => {
     if (!questions || !quiz) return;
-  
+
     const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
     const earnedPoints = studentAnswers
       .filter(a => a.isCorrect)
       .reduce((sum, a) => sum + (questions.find(q => q.id === a.questionId)?.points || 0), 0);
-  
+
     const resultsParams = new URLSearchParams({
       score: earnedPoints.toString(),
       total: totalPoints.toString(),
@@ -284,7 +284,7 @@ const data = await res.json();
       ageGroup: ageGroup || '', // Agregar ageGroup
     });
     console.log('[DEBUG] Redirigiendo a PublicQuizResults con params:', resultsParams.toString());
-  
+
     setLocation(`/public-quiz-results?${resultsParams.toString()}`);
   };
 
@@ -295,17 +295,17 @@ const data = await res.json();
     <div className="container mx-auto p-4">
       <div className="mb-6 flex justify-between items-center">
         <div className="flex items-center">
-        <Button
-  variant="ghost"
-  size="icon"
-  className="mr-3"
-  onClick={() => {
-    pauseTimer();
-    setLocation(`/encuestapage?ageGroup=${ageGroup || ''}`); // Redirigir explícitamente sin reset=true
-  }}
->
-  <ArrowLeft className="h-5 w-5" />
-</Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="mr-3"
+            onClick={() => {
+              pauseTimer();
+              setLocation(`/encuestapage?ageGroup=${ageGroup || ''}`); // Redirigir explícitamente sin reset=true
+            }}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <h2 className="text-2xl font-semibold">
             {quiz?.title || 'Cuestionario Público'}
             <Badge className="ml-2" variant="secondary">Público</Badge>
@@ -340,24 +340,24 @@ const data = await res.json();
                 {currentQuestion.points} puntos
               </div>
             </div>
-            
+
             <div className="mb-6">
               <h3 className="text-lg font-medium mb-2">
                 {currentQuestion.type === 'text'
                   ? 'Responde la siguiente pregunta:'
                   : 'Selecciona la respuesta correcta:'}
               </h3>
-              
+
               {currentQuestion.imageUrl && (
                 <div className="mb-4 max-w-2xl mx-auto">
-                  <img 
-                    src={currentQuestion.imageUrl} 
-                    alt="Imagen de la pregunta" 
+                  <img
+                    src={currentQuestion.imageUrl}
+                    alt="Imagen de la pregunta"
                     className="max-h-60 object-contain rounded"
                   />
                 </div>
               )}
-              
+
               <QuestionContent content={currentQuestion.content} />
             </div>
 
@@ -397,11 +397,11 @@ const data = await res.json();
                           ? isCorrect
                             ? 'correct'
                             : isSelected
-                            ? 'incorrect'
-                            : 'default'
+                              ? 'incorrect'
+                              : 'default'
                           : isSelected
-                          ? 'selected'
-                          : 'default'
+                            ? 'selected'
+                            : 'default'
                       }
                       disabled={isAnswered}
                       onClick={() => !isAnswered && handleSelectAnswer(answer.id)}
@@ -420,14 +420,14 @@ const data = await res.json();
                 <ArrowLeft className="mr-1 h-4 w-4" />
                 Anterior
               </Button>
-              
-              <Button 
+
+              <Button
                 onClick={handleNextQuestion}
                 disabled={
-                  isNavigating || 
-                  (currentQuestion.type === 'multiple_choice' && 
-                   !selectedAnswerId && 
-                   !answeredQuestions[currentQuestionIndex])
+                  isNavigating ||
+                  (currentQuestion.type === 'multiple_choice' &&
+                    !selectedAnswerId &&
+                    !answeredQuestions[currentQuestionIndex])
                 }
               >
                 {isNavigating ? (
@@ -436,8 +436,8 @@ const data = await res.json();
                     Procesando...
                   </span>
                 ) : (
-                  currentQuestionIndex >= (questions?.length || 0) - 1 
-                    ? 'Ver resultados' 
+                  currentQuestionIndex >= (questions?.length || 0) - 1
+                    ? 'Ver resultados'
                     : 'Siguiente'
                 )}
                 {!isNavigating && currentQuestionIndex < (questions?.length || 0) - 1 && (
@@ -451,8 +451,8 @@ const data = await res.json();
         <Card className="mb-6">
           <CardContent className="p-6 text-center">
             <p>No hay preguntas disponibles en este cuestionario.</p>
-            <Button 
-              variant="link" 
+            <Button
+              variant="link"
               className="mt-4"
               onClick={() => window.history.back()}
             >
@@ -461,7 +461,7 @@ const data = await res.json();
           </CardContent>
         </Card>
       )}
-      
+
       <Card>
         <CardContent className="p-4">
           <h3 className="font-semibold text-lg mb-4">Progreso</h3>
