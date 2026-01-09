@@ -11,7 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash, Plus, Check, X, ArrowLeft } from "lucide-react";
+import { Trash, Plus, Check, X, ArrowLeft, Pencil } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Question, Answer, Quiz } from "@/types/types";
@@ -52,6 +52,7 @@ export default function QuestionsAdmin() {
   const quizId = params?.quizId;
 
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingAnswerIndex, setEditingAnswerIndex] = useState<number | null>(null);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [newAnswer, setNewAnswer] = useState({ content: "", isCorrect: false, explanation: "" });
   const [currentTab, setCurrentTab] = useState("question");
@@ -183,8 +184,54 @@ export default function QuestionsAdmin() {
     },
   });
 
+  const editMutation = useMutation({
+    mutationFn: async (values: z.infer<typeof formSchema>) => {
+      const payload = {
+        quizId: quizId,
+        content: values.content,
+        type: values.type,
+        difficulty: parseInt(values.difficulty),
+        points: parseInt(values.points),
+        variables: values.variables ? JSON.parse(values.variables) : null,
+        answers: values.type === 'multiple_choice' ? answers : [],
+        imageUrl: values.imageUrl || null,
+      };
+
+      const response = await fetch(`/api/admin/questions/${editingId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Error al actualizar la pregunta");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/quizzes/${quizId}/questions`] });
+      resetFormAndState();
+      toast({
+        title: "Pregunta actualizada",
+        description: "La pregunta ha sido actualizada exitosamente",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo actualizar la pregunta",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetFormAndState = () => {
     setEditingId(null);
+    setEditingAnswerIndex(null);
     setAnswers([]);
     setNewAnswer({ content: "", isCorrect: false, explanation: "" });
     setCurrentTab("question");
@@ -220,14 +267,28 @@ export default function QuestionsAdmin() {
     }
 
     if (editingId) {
-      toast({
-        title: "Funcionalidad no disponible",
-        description: "La edición de preguntas estará disponible próximamente",
-        variant: "destructive",
-      });
+      editMutation.mutate(values);
     } else {
       createMutation.mutate(values);
     }
+  }
+
+  function handleEdit(question: Question) {
+    setEditingId(question.id);
+    // @ts-ignore
+    setAnswers(question.answers || []);
+
+    form.reset({
+      content: question.content,
+      type: question.type,
+      difficulty: String(question.difficulty),
+      points: String(question.points),
+      variables: question.variables ? JSON.stringify(question.variables) : "",
+      imageUrl: question.imageUrl || "",
+    });
+
+    setCurrentTab("question");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function handleAddAnswer() {
@@ -240,16 +301,45 @@ export default function QuestionsAdmin() {
       return;
     }
 
-    setAnswers([...answers, {
-      ...newAnswer,
-      id: Math.floor(Math.random() * -1000),
-      questionId: editingId || 0
-    }]);
+    if (editingAnswerIndex !== null) {
+      // Update existing answer
+      const updatedAnswers = [...answers];
+      updatedAnswers[editingAnswerIndex] = {
+        ...updatedAnswers[editingAnswerIndex],
+        ...newAnswer
+      };
+      setAnswers(updatedAnswers);
+      setEditingAnswerIndex(null);
+    } else {
+      // Add new answer
+      setAnswers([...answers, {
+        ...newAnswer,
+        id: Math.floor(Math.random() * -1000),
+        questionId: editingId || 0
+      }]);
+    }
+    setNewAnswer({ content: "", isCorrect: false, explanation: "" });
+  }
+
+  function handleEditAnswer(index: number) {
+    setEditingAnswerIndex(index);
+    setNewAnswer({
+      content: answers[index].content,
+      isCorrect: answers[index].isCorrect,
+      explanation: answers[index].explanation || ""
+    });
+  }
+
+  function handleCancelEditAnswer() {
+    setEditingAnswerIndex(null);
     setNewAnswer({ content: "", isCorrect: false, explanation: "" });
   }
 
   function handleRemoveAnswer(index: number) {
     setAnswers(answers.filter((_, i) => i !== index));
+    if (editingAnswerIndex === index) {
+      handleCancelEditAnswer();
+    }
   }
 
   function handleDelete(id: number) {
@@ -476,7 +566,9 @@ export default function QuestionsAdmin() {
                   <TabsContent value="answers" className="pt-4 mt-0">
                     <div className="space-y-4">
                       <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
-                        <h3 className="font-medium mb-3 text-slate-200">Añadir respuesta</h3>
+                        <h3 className="font-medium mb-3 text-slate-200">
+                          {editingAnswerIndex !== null ? "Editar respuesta" : "Añadir respuesta"}
+                        </h3>
 
                         <div className="space-y-3">
                           <div>
@@ -515,14 +607,35 @@ export default function QuestionsAdmin() {
                             />
                           </div>
 
-                          <Button
-                            type="button"
-                            onClick={handleAddAnswer}
-                            className="w-full bg-slate-800 hover:bg-slate-700 text-white border border-slate-700"
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Añadir respuesta
-                          </Button>
+                          <div className="flex gap-2">
+                            {editingAnswerIndex !== null && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleCancelEditAnswer}
+                                className="w-full bg-slate-800 hover:bg-slate-700 text-white border border-slate-700"
+                              >
+                                Cancelar
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              onClick={handleAddAnswer}
+                              className="w-full bg-slate-800 hover:bg-slate-700 text-white border border-slate-700"
+                            >
+                              {editingAnswerIndex !== null ? (
+                                <>
+                                  <Check className="h-4 w-4 mr-2" />
+                                  Actualizar respuesta
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Añadir respuesta
+                                </>
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       </div>
 
@@ -553,14 +666,24 @@ export default function QuestionsAdmin() {
                                     </p>
                                   )}
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRemoveAnswer(index)}
-                                  className="text-slate-500 hover:text-red-400 hover:bg-red-500/10"
-                                >
-                                  <Trash className="h-4 w-4" />
-                                </Button>
+                                <div className="flex space-x-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditAnswer(index)}
+                                    className="text-slate-500 hover:text-blue-400 hover:bg-blue-500/10"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRemoveAnswer(index)}
+                                    className="text-slate-500 hover:text-red-400 hover:bg-red-500/10"
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -588,12 +711,12 @@ export default function QuestionsAdmin() {
                           )}
                           <Button
                             type="button"
-                            disabled={createMutation.isPending || answers.length === 0}
+                            disabled={createMutation.isPending || editMutation.isPending || answers.length === 0}
                             onClick={() => form.handleSubmit(onSubmit)()}
                             className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
                           >
-                            {createMutation.isPending && <Spinner className="mr-2 h-4 w-4" />}
-                            Guardar pregunta
+                            {(createMutation.isPending || editMutation.isPending) && <Spinner className="mr-2 h-4 w-4" />}
+                            {editingId ? "Actualizar" : "Guardar pregunta"}
                           </Button>
                         </div>
                       </div>
@@ -616,11 +739,11 @@ export default function QuestionsAdmin() {
                     {form.watch("type") !== "multiple_choice" && (
                       <Button
                         type="button"
-                        disabled={createMutation.isPending}
+                        disabled={createMutation.isPending || editMutation.isPending}
                         onClick={() => form.handleSubmit(onSubmit)()}
                         className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
                       >
-                        {createMutation.isPending && <Spinner className="mr-2 h-4 w-4" />}
+                        {(createMutation.isPending || editMutation.isPending) && <Spinner className="mr-2 h-4 w-4" />}
                         {editingId ? "Actualizar" : "Guardar pregunta"}
                       </Button>
                     )}
@@ -665,6 +788,15 @@ export default function QuestionsAdmin() {
                               )}
                             </div>
                             <div className="flex space-x-2 ml-4">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEdit(question)}
+                                title="Editar pregunta"
+                                className="bg-slate-800 text-blue-400 hover:bg-blue-500/10 border-blue-500/20"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="destructive"
                                 size="sm"

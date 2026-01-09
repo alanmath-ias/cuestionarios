@@ -2456,6 +2456,68 @@ Ejemplo de formato:
   });
   //fin deep seek me ayuda error crear preguntas
 
+  apiRouter.put("/admin/questions/:id", requireAdmin, async (req: Request, res: Response) => {
+    const questionId = parseInt(req.params.id);
+    const { answers: submittedAnswers = [], ...questionData } = req.body;
+
+    if (isNaN(questionId)) {
+      return res.status(400).json({ message: "Invalid question ID" });
+    }
+
+    try {
+      // 1. Update Question Details
+      const updatedQuestion = await storage.updateQuestion(questionId, {
+        ...questionData,
+        quizId: parseInt(questionData.quizId)
+      });
+
+      // 2. Synchronize Answers
+      // Fetch existing answers from DB
+      const existingAnswers = await storage.getAnswersByQuestion(questionId);
+      const existingAnswerIds = new Set(existingAnswers.map(a => a.id));
+
+      const submittedAnswerIds = new Set(
+        submittedAnswers
+          .filter((a: any) => a.id)
+          .map((a: any) => a.id)
+      );
+
+      // A. Delete answers that are in DB but not in submission
+      const answersToDelete = existingAnswers.filter(a => !submittedAnswerIds.has(a.id));
+      await Promise.all(answersToDelete.map(a => storage.deleteAnswer(a.id)));
+
+      // B. Update existing answers and Create new ones
+      const processedAnswers = await Promise.all(submittedAnswers.map(async (answer: any) => {
+        if (answer.id && existingAnswerIds.has(answer.id)) {
+          // Update existing
+          return await storage.updateAnswer(answer.id, {
+            content: answer.content,
+            isCorrect: answer.isCorrect,
+            explanation: answer.explanation,
+            questionId: questionId // Ensure it stays linked
+          });
+        } else {
+          // Create new
+          return await storage.createAnswer({
+            content: answer.content,
+            isCorrect: answer.isCorrect,
+            explanation: answer.explanation,
+            questionId: questionId
+          });
+        }
+      }));
+
+      res.json({
+        ...updatedQuestion,
+        answers: processedAnswers
+      });
+
+    } catch (error) {
+      console.error("Question update error:", error);
+      res.status(500).json({ message: "Error updating question" });
+    }
+  });
+
   apiRouter.delete("/admin/questions/:id", requireAdmin, async (req: Request, res: Response) => {
     const questionId = parseInt(req.params.id);
 

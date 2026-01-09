@@ -110,6 +110,9 @@ export interface IStorage {
   getQuestionReportDetails(id: number): Promise<any>;
   updateQuestionReportStatus(id: number, status: string): Promise<QuestionReport>;
 
+  // Question methods
+  updateQuestion(id: number, question: Partial<Question>): Promise<Question>;
+
   // Password Reset
   createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
   getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
@@ -542,6 +545,16 @@ export class MemStorage implements IStorage {
     return newQuestion;
   }
 
+  async updateQuestion(id: number, question: Partial<Question>): Promise<Question> {
+    const existingQuestion = this.questions.get(id);
+    if (!existingQuestion) {
+      throw new Error(`Question with id ${id} not found`);
+    }
+    const updatedQuestion: Question = { ...existingQuestion, ...question };
+    this.questions.set(id, updatedQuestion);
+    return updatedQuestion;
+  }
+
   // Answer methods
   async getAnswersByQuestion(questionId: number): Promise<Answer[]> {
     return Array.from(this.answers.values()).filter(
@@ -644,7 +657,7 @@ export class MemStorage implements IStorage {
   async getUserQuizzes(userId: number): Promise<Quiz[]> { throw new Error("Method not implemented."); }
   async assignQuizToUser(userId: number, quizId: number): Promise<void> { throw new Error("Method not implemented."); }
   async removeQuizFromUser(userId: number, quizId: number): Promise<void> { throw new Error("Method not implemented."); }
-  async updateQuestion(id: number, question: Partial<Question>): Promise<Question> { throw new Error("Method not implemented."); }
+
   async deleteQuestion(id: number): Promise<void> { throw new Error("Method not implemented."); }
   async updateAnswer(id: number, answer: Partial<Answer>): Promise<Answer> { throw new Error("Method not implemented."); }
   async deleteAnswer(id: number): Promise<void> { throw new Error("Method not implemented."); }
