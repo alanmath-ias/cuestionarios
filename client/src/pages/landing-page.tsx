@@ -103,22 +103,26 @@ export default function LandingPage() {
                         </div>
 
                         <h1 className="text-5xl md:text-7xl font-bold mb-8 tracking-tight">
-                            Domina las Matemáticas <br />
+                            Domina las Matemáticas: <br />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
-                                con el Poder de la IA
+                                Tecnología que te evalúa, Expertos que te enseñan
                             </span>
                         </h1>
 
-                        <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-12 leading-relaxed">
-                            Diagnósticos precisos, rutas de aprendizaje personalizadas y soporte 24/7.
-                            Tu tutor personal inteligente que se adapta a tu ritmo.
+                        <p className="text-xl text-slate-300 max-w-3xl mx-auto mb-12 leading-relaxed">
+                            No estudies a ciegas. Realiza simulacros tipo examen, detecta tus errores con IA y soluciónalos al instante con nuestra videoteca o clases particulares personalizadas.
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                             <Button
                                 size="lg"
                                 className="h-14 px-8 text-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-purple-500/25 transition-all hover:scale-105"
-                                onClick={() => setLocation('/quiz/278')}
+                                onClick={() => {
+                                    const element = document.getElementById('subjects-section');
+                                    if (element) {
+                                        element.scrollIntoView({ behavior: 'smooth' });
+                                    }
+                                }}
                             >
                                 Realizar Diagnóstico Gratis
                                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -158,7 +162,7 @@ export default function LandingPage() {
             </section>
 
             {/* Subject Selector */}
-            <section className="py-24 bg-slate-900/50 border-y border-white/5">
+            <section id="subjects-section" className="py-24 bg-slate-900/50 border-y border-white/5">
                 <div className="container mx-auto px-6">
                     <div className="text-center mb-16">
                         <h2 className="text-3xl md:text-4xl font-bold mb-4">Elige tu Desafío</h2>
@@ -174,13 +178,13 @@ export default function LandingPage() {
                                 transition={{ delay: index * 0.1 }}
                                 viewport={{ once: true }}
                             >
-                                <Card className={`h-full bg-slate-800/50 border-slate-700 hover:border-purple-500/50 transition-all cursor-pointer group ${!subject.active ? 'opacity-75' : 'shadow-[0_0_20px_rgba(168,85,247,0.1)] hover:shadow-[0_0_30px_rgba(168,85,247,0.2)]'}`}>
+                                <Card className={`h-full bg-slate-900 border-slate-700 hover:border-purple-500/50 transition-all cursor-pointer group ${!subject.active ? 'opacity-75' : 'shadow-[0_0_20px_rgba(168,85,247,0.1)] hover:shadow-[0_0_30px_rgba(168,85,247,0.2)]'}`}>
                                     <CardContent className="p-6 flex flex-col items-center text-center h-full">
-                                        <div className="mb-6 p-4 rounded-2xl bg-slate-900 group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                                        <div className="mb-6 p-4 rounded-2xl bg-slate-950 group-hover:scale-110 transition-transform duration-300 shadow-inner border border-slate-800">
                                             {subject.icon}
                                         </div>
-                                        <h3 className="text-xl font-bold mb-3 group-hover:text-purple-400 transition-colors">{subject.title}</h3>
-                                        <p className="text-slate-400 text-sm mb-6 flex-grow">
+                                        <h3 className="text-xl font-bold mb-3 text-slate-100 group-hover:text-purple-400 transition-colors">{subject.title}</h3>
+                                        <p className="text-slate-300 text-sm mb-6 flex-grow font-medium">
                                             {subject.description}
                                         </p>
                                         {subject.active ? (

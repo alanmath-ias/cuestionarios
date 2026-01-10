@@ -929,7 +929,7 @@ Formato: Solo el texto del tip con el ejemplo.`;
   // Quiz questions endpoint
   apiRouter.get("/quizzes/:quizId/questions", async (req: Request, res: Response) => {
     const quizId = parseInt(req.params.quizId);
-    const publicQuizIds = [68, 69, 70, 71, 72, 73]; // IDs de cuestionarios públicos - cuestionarios para encuesta modelo tests
+    const publicQuizIds = [68, 69, 70, 71, 72, 73, 278]; // IDs de cuestionarios públicos - cuestionarios para encuesta modelo tests
 
 
     if (isNaN(quizId)) {
@@ -954,8 +954,8 @@ Formato: Solo el texto del tip con el ejemplo.`;
       // If mini mode, shuffle and take 50%
       let selectedQuestions = questions;
 
-      // Special handling for Placement Tests (Category 21)
-      if (quiz.categoryId === 21) {
+      // Special handling for Placement Tests (Category 21) or Public Quizzes
+      if (quiz.categoryId === 21 || publicQuizIds.includes(quizId)) {
         // Group by difficulty
         const diff1 = questions.filter(q => q.difficulty === 1);
         const diff2 = questions.filter(q => q.difficulty === 2);
@@ -963,9 +963,14 @@ Formato: Solo el texto del tip con el ejemplo.`;
 
         // Select random subset from each difficulty
         // Target: 3 Easy, 4 Medium, 3 Hard = 10 questions
-        const selectedDiff1 = diff1.sort(() => 0.5 - Math.random()).slice(0, 3);
-        const selectedDiff2 = diff2.sort(() => 0.5 - Math.random()).slice(0, 4);
-        const selectedDiff3 = diff3.sort(() => 0.5 - Math.random()).slice(0, 3);
+        // If not enough questions in a category, take what's available
+        const selectedDiff1 = diff1.sort(() => 0.5 - Math.random()).slice(0, Math.min(3, diff1.length));
+        const selectedDiff2 = diff2.sort(() => 0.5 - Math.random()).slice(0, Math.min(4, diff2.length));
+        const selectedDiff3 = diff3.sort(() => 0.5 - Math.random()).slice(0, Math.min(3, diff3.length));
+
+        // If we don't have enough questions to reach 10, fill up from remaining pool if needed
+        // But for now, let's stick to the structured approach. 
+        // If the bank is small, this might return fewer than 10, which is safer than crashing.
 
         // Combine and sort by difficulty ascending
         selectedQuestions = [...selectedDiff1, ...selectedDiff2, ...selectedDiff3]
@@ -1465,43 +1470,86 @@ Ejemplo de formato:
 
   // Hint System Endpoint
   apiRouter.post("/hints/request", async (req: Request, res: Response) => {
-    console.error("DEBUG: Received hint request:", JSON.stringify(req.body));
+    // console.error("DEBUG: Received hint request:", JSON.stringify(req.body));
     const userId = req.session.userId;
     const { questionId, hintType, hintIndex, progressId } = req.body;
 
-    if (!userId) return res.status(401).json({ message: "Authentication required" });
-    if (!questionId || !hintType || !hintIndex || !progressId) return res.status(400).json({ message: "Missing required fields" });
+    // if (!userId) return res.status(401).json({ message: "Authentication required" });
+    if (!questionId || !hintType || !hintIndex) return res.status(400).json({ message: "Missing required fields" });
 
     try {
-      const user = await storage.getUser(userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
+      // 1. Check if question belongs to a public quiz
+      const question = await storage.getQuestion(questionId);
+      if (!question) return res.status(404).json({ message: "Question not found" });
 
-      // Check if hint already unlocked
-      let studentAnswer = (await storage.getStudentAnswersByProgress(progressId)).find(a => a.questionId === questionId);
+      const publicQuizIds = [278]; // Add other public quiz IDs if needed
+      const isPublicQuiz = publicQuizIds.includes(question.quizId);
 
-      if (!studentAnswer) {
-        console.log("Creating new student answer for hint request...");
-        studentAnswer = await storage.createStudentAnswer({
-          progressId,
-          questionId,
-          answerId: null,
-          isCorrect: null,
-          hintsUsed: 0,
-          variables: {} // Explicitly pass empty variables
-        });
+      if (!userId && !isPublicQuiz) {
+        return res.status(401).json({ message: "Authentication required" });
       }
 
-      const isAlreadyUnlocked = studentAnswer.hintsUsed >= hintIndex;
+      // If public quiz and no user, skip credit check and tracking
+      if (isPublicQuiz && !userId) {
+        let hintContent = '';
+        let hintField: 'hint1' | 'hint2' | 'hint3' | null = null;
 
-      // 1. Check Credits (only if not unlocked)
+        if (hintIndex === 1) hintField = 'hint1';
+        else if (hintIndex === 2) hintField = 'hint2';
+        else if (hintIndex === 3) hintField = 'hint3';
+
+        if (!hintField) return res.status(400).json({ message: "Invalid hint index" });
+
+        const isGenericHint = question[hintField] && (question[hintField] as string).includes("Lee atentamente el enunciado");
+
+        if (question[hintField] && !isGenericHint) {
+          hintContent = question[hintField] as string;
+        } else {
+          // Generate with DeepSeek (Copying logic from below)
+          // Note: We might want to refactor this into a helper function to avoid duplication
+          // For now, I'll just duplicate the generation logic or rely on the existing flow if I can structure it right.
+          // Let's restructure to reuse the generation logic below.
+        }
+
+        // Actually, let's just let it fall through to the generation logic
+        // We just need to bypass the user/credit checks.
+      }
+
+      let user: any = null;
+      if (userId) {
+        user = await storage.getUser(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if hint already unlocked (only for logged in users)
+      let isAlreadyUnlocked = false;
+      let studentAnswer: any = null;
+
+      if (userId && progressId) {
+        studentAnswer = (await storage.getStudentAnswersByProgress(progressId)).find(a => a.questionId === questionId);
+
+        if (!studentAnswer) {
+          // console.log("Creating new student answer for hint request...");
+          studentAnswer = await storage.createStudentAnswer({
+            progressId,
+            questionId,
+            answerId: null,
+            isCorrect: null,
+            hintsUsed: 0,
+            variables: {}
+          });
+        }
+        isAlreadyUnlocked = studentAnswer.hintsUsed >= hintIndex;
+      }
+
+      // 1. Check Credits (only if not unlocked and not public/guest)
       const cost = hintType === 'super' ? 2 : 1;
-      if (!isAlreadyUnlocked && user.hintCredits < cost) {
+      if (userId && !isAlreadyUnlocked && user.hintCredits < cost) {
         return res.status(403).json({ message: "Insufficient credits", currentCredits: user.hintCredits });
       }
 
       // 2. Check Cache
-      const question = await storage.getQuestion(questionId);
-      if (!question) return res.status(404).json({ message: "Question not found" });
+      // Question already fetched above
 
       let hintContent = '';
       let hintField: 'hint1' | 'hint2' | 'hint3' | null = null;
@@ -1568,8 +1616,8 @@ Ejemplo de formato:
         await storage.updateQuestionHints(questionId, { [hintField]: hintContent });
       }
 
-      // 5. Deduct Credits & Update Usage (only if not unlocked)
-      if (!isAlreadyUnlocked) {
+      // 5. Deduct Credits & Update Usage (only if not unlocked AND user exists)
+      if (userId && user && !isAlreadyUnlocked && studentAnswer) {
         console.log("Updating user hint credits...");
         console.log(`userId: ${userId}, newCredits: ${user.hintCredits - cost}`);
         await storage.updateUserHintCredits(userId, user.hintCredits - cost);
@@ -1583,7 +1631,10 @@ Ejemplo de formato:
       }
 
       console.log("Sending response...");
-      res.json({ content: hintContent, remainingCredits: !isAlreadyUnlocked ? user.hintCredits - cost : user.hintCredits });
+      res.json({
+        content: hintContent,
+        remainingCredits: (userId && user && !isAlreadyUnlocked) ? user.hintCredits - cost : (user ? user.hintCredits : null)
+      });
 
     } catch (error) {
       console.error("Hint request error:", error);

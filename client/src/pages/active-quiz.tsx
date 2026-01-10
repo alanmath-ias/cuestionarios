@@ -283,7 +283,12 @@ const ActiveQuiz = () => {
 
     setIsNavigating(true);
     try {
-      if (currentQuestionIndex < questions.length - 1) {
+      // Check if we are finishing the quiz (either last question OR all questions answered)
+      const isFinishing = (currentQuestionIndex >= questions.length - 1) ||
+        (Object.keys(answeredQuestions).length >= questions.length) ||
+        (Object.keys(answeredQuestions).length === questions.length - 1 && !answeredQuestions[currentQuestionIndex]);
+
+      if (!isFinishing) {
         if (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex]) {
           await submitCurrentAnswer();
         }
@@ -733,7 +738,8 @@ const ActiveQuiz = () => {
               'Procesando...'
             ) : (
               <>
-                {currentQuestionIndex >= (questions?.length || 0) - 1 ? 'Finalizar' : 'Siguiente'}
+                {/* Show Finalize if we are on the last question OR if all questions have been answered */}
+                {(currentQuestionIndex >= (questions?.length || 0) - 1) || (Object.keys(answeredQuestions).length === (questions?.length || 0)) || (Object.keys(answeredQuestions).length === (questions?.length || 0) - 1 && !answeredQuestions[currentQuestionIndex]) ? 'Finalizar' : 'Siguiente'}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </>
             )}
@@ -799,41 +805,11 @@ const ActiveQuiz = () => {
                       <div className="font-semibold text-yellow-400 group-hover:text-yellow-300">Súper Pista</div>
                       <div className="text-sm text-yellow-500/70 group-hover:text-yellow-500/90">Muy reveladora (casi la respuesta)</div>
                     </div>
-                    <Badge className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold">2 Créditos</Badge>
+                    <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-300 border-yellow-500/50">2 Créditos</Badge>
                   </Button>
                 </>
               )}
             </div>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setIsHintDialogOpen(false)} className="text-slate-400 hover:text-white hover:bg-white/5">
-                Cancelar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
-          <DialogContent className="bg-slate-900 border-white/10 text-slate-200">
-            <DialogHeader>
-              <DialogTitle className="text-white">Reportar Error en la Pregunta</DialogTitle>
-              <DialogDescription className="text-slate-400">
-                Describe el error que encontraste.
-              </DialogDescription>
-            </DialogHeader>
-            <Textarea
-              value={reportDescription}
-              onChange={(e) => setReportDescription(e.target.value)}
-              placeholder="Describe el error..."
-              className="bg-slate-950/50 border-white/10 text-slate-200"
-            />
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setIsReportDialogOpen(false)} className="text-slate-400 hover:text-white hover:bg-white/5">
-                Cancelar
-              </Button>
-              <Button onClick={handleReportSubmit} className="bg-red-600 hover:bg-red-700 text-white">
-                Enviar Reporte
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
 
@@ -847,22 +823,40 @@ const ActiveQuiz = () => {
               <DialogDescription className="text-slate-400">
                 Aún tienes {questions ? questions.length - Object.keys(answeredQuestions).length : 0} preguntas sin contestar.
                 <br />
-                Si finalizas ahora, las preguntas no contestadas se marcarán como incorrectas (o no sumarán puntos).
+                Debes contestar todas las preguntas para poder finalizar el cuestionario.
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setIsIncompleteDialogOpen(false)} className="text-slate-400 hover:text-white hover:bg-white/5">
+            <div className="flex justify-end pt-4">
+              <Button
+                onClick={() => setIsIncompleteDialogOpen(false)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
                 Volver al cuestionario
               </Button>
-              <Button
-                onClick={() => {
-                  setIsIncompleteDialogOpen(false);
-                  handleFinishQuiz();
-                }}
-                className="bg-yellow-600 hover:bg-yellow-700 text-white"
-              >
-                Finalizar de todos modos
-              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+          <DialogContent className="bg-slate-900 border-white/10 text-slate-200">
+            <DialogHeader>
+              <DialogTitle className="text-white">Reportar un error</DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Describe el problema que encontraste en esta pregunta.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Textarea
+                value={reportDescription}
+                onChange={(e) => setReportDescription(e.target.value)}
+                placeholder="Describe el error..."
+                className="bg-slate-800 border-white/10 text-slate-200"
+                rows={4}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setIsReportDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleReportSubmit} disabled={!reportDescription.trim()}>Enviar Reporte</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
