@@ -84,6 +84,7 @@ function PublicActiveQuiz() {
   const [isHintDialogOpen, setIsHintDialogOpen] = useState(false);
   const [hintsRevealed, setHintsRevealed] = useState<Record<number, string[]>>({});
   const [requestingHint, setRequestingHint] = useState(false);
+  const [hintsUsedCount, setHintsUsedCount] = useState(0);
 
   // Fetch quiz data
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
@@ -167,8 +168,11 @@ function PublicActiveQuiz() {
     setSelectedAnswerId(answerId);
   };
 
-  const submitCurrentAnswer = () => {
-    if (!questions || !selectedAnswerId || answeredQuestions[currentQuestionIndex]) return;
+  const submitCurrentAnswer = (): StudentAnswer | null => {
+    if (!questions || !selectedAnswerId || answeredQuestions[currentQuestionIndex]) {
+      console.log('submitCurrentAnswer: returning null', { questions: !!questions, selectedAnswerId, answered: answeredQuestions[currentQuestionIndex] });
+      return null;
+    }
 
     const currentQuestion = questions[currentQuestionIndex];
     const selectedAnswer = currentQuestion.answers.find(a => a.id === selectedAnswerId);
@@ -181,12 +185,15 @@ function PublicActiveQuiz() {
       timeSpent: elapsedTime,
     };
 
+    console.log('submitCurrentAnswer: generated answer', studentAnswer);
+
     setStudentAnswers([...studentAnswers, studentAnswer]);
     setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
+    return studentAnswer;
   };
 
-  const handleTextAnswerSubmit = () => {
-    if (!questions || !textAnswers[questions[currentQuestionIndex].id]) return;
+  const handleTextAnswerSubmit = (): StudentAnswer | null => {
+    if (!questions || !textAnswers[questions[currentQuestionIndex].id]) return null;
 
     const currentQuestion = questions[currentQuestionIndex];
     const answerText = textAnswers[currentQuestion.id];
@@ -201,16 +208,22 @@ function PublicActiveQuiz() {
 
     setStudentAnswers([...studentAnswers, studentAnswer]);
     setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
+    return studentAnswer;
   };
 
   const handleFinishQuiz = async (finalAnswer?: StudentAnswer) => {
     if (!questions) return;
+
+    console.log('handleFinishQuiz called', { finalAnswer, currentStudentAnswersLength: studentAnswers.length });
 
     // Save final state
     const answersToSave = [...studentAnswers];
     if (finalAnswer) {
       answersToSave.push(finalAnswer);
     }
+
+    console.log('answersToSave length', answersToSave.length);
+    // alert(`Saving ${answersToSave.length} answers. Final answer present: ${!!finalAnswer}`);
 
     // Calculate score
     const correctCount = answersToSave.filter(a => a.isCorrect).length;
@@ -228,15 +241,17 @@ function PublicActiveQuiz() {
     setLocation(`/public-quiz-results?score=${score}&total=10&correct=${correctCount}&totalQuestions=${questions.length}&quizTitle=${encodeURIComponent(quiz?.title || '')}&quizId=${quiz?.id}`);
   };
 
-  const checkCompletionAndFinish = async (extraCount = 0) => {
+  const checkCompletionAndFinish = async (extraCount = 0, latestAnswer?: StudentAnswer) => {
     if (!questions) return;
     const answeredCount = Object.keys(answeredQuestions).length + extraCount;
+    console.log('checkCompletionAndFinish', { answeredCount, totalQuestions: questions.length, latestAnswer });
+
     if (answeredCount < questions.length) {
       setIsIncompleteDialogOpen(true);
       setIsNavigating(false); // Reset navigation state if blocked
       return;
     }
-    await handleFinishQuiz();
+    await handleFinishQuiz(latestAnswer);
   };
 
   const handleNextQuestion = async () => {
@@ -245,15 +260,19 @@ function PublicActiveQuiz() {
     // If not answered yet, submit the current selection and SHOW FEEDBACK
     if (!answeredQuestions[currentQuestionIndex]) {
       let isSubmitting = false;
+      let currentAnswer: StudentAnswer | null = null;
+
       if (questions[currentQuestionIndex].type === 'text') {
         if (textAnswers[questions[currentQuestionIndex].id]) {
-          handleTextAnswerSubmit();
+          currentAnswer = handleTextAnswerSubmit();
           isSubmitting = true;
         }
       } else if (selectedAnswerId) {
-        submitCurrentAnswer();
+        currentAnswer = submitCurrentAnswer();
         isSubmitting = true;
       }
+
+      console.log('handleNextQuestion: submitting', { isSubmitting, currentAnswer });
 
       // Auto-advance after 1.5 seconds
       setIsNavigating(true); // Show processing state
@@ -261,8 +280,10 @@ function PublicActiveQuiz() {
         // If this was the last unanswered question, finish the quiz
         // Or if we are on the last question index
         const totalAnswered = Object.keys(answeredQuestions).length + (isSubmitting ? 1 : 0);
+        console.log('setTimeout callback', { totalAnswered, totalQuestions: questions.length, currentQuestionIndex, currentAnswer });
+
         if (totalAnswered >= questions.length || currentQuestionIndex >= questions.length - 1) {
-          checkCompletionAndFinish(isSubmitting ? 1 : 0);
+          checkCompletionAndFinish(isSubmitting ? 1 : 0, currentAnswer || undefined);
         } else {
           setCurrentQuestionIndex(prev => prev + 1);
           setSelectedAnswerId(null);
@@ -295,6 +316,11 @@ function PublicActiveQuiz() {
   const handleRequestHint = async (type: 'regular' | 'super') => {
     if (!questions) return;
 
+    if (hintsUsedCount >= 2) {
+      // This case should be handled by UI, but as a fallback
+      return;
+    }
+
     const currentQuestion = questions[currentQuestionIndex];
 
     setRequestingHint(true);
@@ -319,9 +345,11 @@ function PublicActiveQuiz() {
         [currentQuestion.id]: [...(prev[currentQuestion.id] || []), data.content]
       }));
 
+      setHintsUsedCount(prev => prev + 1);
+
       toast({
         title: 'Pista revelada',
-        description: '¡Aquí tienes una ayuda!',
+        description: `¡Aquí tienes una ayuda! (${hintsUsedCount + 1}/2 pistas usadas)`,
       });
       setIsHintDialogOpen(false);
     } catch (error) {
@@ -593,11 +621,18 @@ function PublicActiveQuiz() {
             <DialogHeader>
               <DialogTitle className="text-white">Solicitar Pista</DialogTitle>
               <DialogDescription className="text-slate-400">
-                ¿Qué tipo de pista necesitas?
-                <br />
-                <span className="text-sm text-blue-400 font-medium mt-2 block">
-                  ¡Gratis para este diagnóstico!
-                </span>
+                {hintsUsedCount >= 2
+                  ? "Has alcanzado el límite de pistas gratuitas."
+                  : (
+                    <>
+                      ¿Qué tipo de pista necesitas?
+                      <br />
+                      <span className="text-sm text-blue-400 font-medium mt-2 block">
+                        Pistas disponibles: {2 - hintsUsedCount}/2
+                      </span>
+                    </>
+                  )
+                }
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -608,13 +643,61 @@ function PublicActiveQuiz() {
                     Consultando a los sabios matemáticos...
                   </p>
                 </div>
+              ) : hintsUsedCount >= 2 ? (
+                <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-yellow-500/30 rounded-xl p-6 text-center space-y-4 relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500 via-orange-500 to-yellow-500" />
+
+                  <div className="bg-yellow-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform duration-500">
+                    <div className="bg-yellow-500/20 w-12 h-12 rounded-full flex items-center justify-center">
+                      <Lightbulb className="h-6 w-6 text-yellow-400" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-2">¡Has usado todas tus pistas gratuitas!</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed">
+                      Pero tu aprendizaje no tiene por qué detenerse. Los usuarios registrados tienen acceso a herramientas avanzadas.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-950/50 rounded-lg p-4 text-left space-y-2 border border-white/5">
+                    <div className="flex items-center gap-2 text-sm text-slate-300">
+                      <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+                      <span>Muchas pistas para tus quices</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-300">
+                      <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+                      <span>Explicaciones detalladas paso a paso</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-300">
+                      <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+                      <span>Guarda tu progreso y estadísticas</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 space-y-3">
+                    <Button
+                      className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold shadow-lg shadow-orange-500/20"
+                      onClick={() => window.open('/auth?mode=register', '_blank')}
+                    >
+                      Crear Cuenta Gratis
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full text-slate-500 hover:text-slate-300 hover:bg-transparent text-xs"
+                      onClick={() => setIsHintDialogOpen(false)}
+                    >
+                      Seguir intentando por mi cuenta
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <>
                   <Button
                     variant="outline"
-                    className="justify-between h-auto py-4 border-white/10 bg-slate-800/50 hover:bg-slate-800 hover:text-white group"
+                    className="justify-between h-auto py-4 border-white/10 bg-slate-800/50 hover:bg-slate-800 hover:text-white group disabled:opacity-50"
                     onClick={() => handleRequestHint('regular')}
-                    disabled={requestingHint}
+                    disabled={requestingHint || hintsUsedCount >= 2}
                   >
                     <div className="text-left">
                       <div className="font-semibold text-slate-200 group-hover:text-white">Pista Regular</div>
@@ -625,9 +708,9 @@ function PublicActiveQuiz() {
 
                   <Button
                     variant="outline"
-                    className="justify-between h-auto py-4 border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 group"
+                    className="justify-between h-auto py-4 border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 group disabled:opacity-50"
                     onClick={() => handleRequestHint('super')}
-                    disabled={requestingHint}
+                    disabled={requestingHint || hintsUsedCount >= 2}
                   >
                     <div className="text-left">
                       <div className="font-semibold text-yellow-400 group-hover:text-yellow-300">Súper Pista</div>

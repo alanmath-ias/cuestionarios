@@ -17,9 +17,13 @@ interface User {
 
 export default function AuthPage() {
   const { toast } = useToast();
-  const [_, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
 
-  const [showLoginForm, setShowLoginForm] = useState(true);
+  // Check for mode=register in URL
+  const searchParams = new URLSearchParams(window.location.search);
+  const initialMode = searchParams.get('mode');
+
+  const [showLoginForm, setShowLoginForm] = useState(initialMode !== 'register');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -141,8 +145,8 @@ export default function AuthPage() {
           <div className="flex justify-center mb-8 bg-slate-950/50 p-1 rounded-lg">
             <button
               className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${showLoginForm
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                ? 'bg-slate-800 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
                 }`}
               onClick={() => setShowLoginForm(true)}
             >
@@ -150,8 +154,8 @@ export default function AuthPage() {
             </button>
             <button
               className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${!showLoginForm
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                ? 'bg-slate-800 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
                 }`}
               onClick={() => setShowLoginForm(false)}
             >

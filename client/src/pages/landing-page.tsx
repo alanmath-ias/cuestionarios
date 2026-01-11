@@ -1,11 +1,22 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, PlayCircle, GraduationCap, BrainCircuit, ArrowRight, Star, Calculator, BookOpen, Sigma, Atom, ChevronDown } from "lucide-react";
+import { CheckCircle2, PlayCircle, GraduationCap, BrainCircuit, ArrowRight, Star, Calculator, BookOpen, Sigma, Atom, ChevronDown, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function LandingPage() {
     const [_, setLocation] = useLocation();
+    const [showIntroDialog, setShowIntroDialog] = useState(false);
+    const [selectedQuizId, setSelectedQuizId] = useState<number | null>(null);
 
     const subjects = [
         {
@@ -56,6 +67,17 @@ export default function LandingPage() {
             icon: <BrainCircuit className="w-10 h-10 text-green-500" />
         }
     ];
+
+    const handleStartQuiz = (quizId: number) => {
+        setSelectedQuizId(quizId);
+        setShowIntroDialog(true);
+    };
+
+    const handleConfirmStart = () => {
+        if (selectedQuizId) {
+            setLocation(`/public-quiz/${selectedQuizId}`);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-purple-500/30">
@@ -190,7 +212,7 @@ export default function LandingPage() {
                                         {subject.active ? (
                                             <Button
                                                 className="w-full bg-blue-600 hover:bg-purple-600 text-white font-semibold transition-all shadow-lg shadow-blue-500/20"
-                                                onClick={() => setLocation(`/public-quiz/${subject.quizId}`)}
+                                                onClick={() => handleStartQuiz(subject.quizId || 0)}
                                             >
                                                 Empezar Test
                                             </Button>
@@ -262,6 +284,66 @@ export default function LandingPage() {
                     <p>© {new Date().getFullYear()} AlanMath. Todos los derechos reservados.</p>
                 </div>
             </footer>
+
+            {/* Intro Dialog */}
+            <Dialog open={showIntroDialog} onOpenChange={setShowIntroDialog}>
+                <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold text-white flex items-center gap-2">
+                            <Sparkles className="w-6 h-6 text-yellow-400" />
+                            ¡Descubre tu Potencial!
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-400 pt-2 text-base">
+                            Estás a punto de iniciar un diagnóstico rápido de <strong>10 preguntas</strong>.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                            <h4 className="font-semibold text-blue-300 mb-2 flex items-center gap-2">
+                                <BrainCircuit className="w-4 h-4" />
+                                ¿Por qué hacer este test?
+                            </h4>
+                            <ul className="space-y-2 text-sm text-slate-300">
+                                <li className="flex items-start gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                                    <span>Identifica tus fortalezas y áreas de mejora.</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                                    <span>Obtén una ubicación precisa en tu ruta de aprendizaje.</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                                    <span>Sin presiones: el objetivo es personalizar tu estudio.</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <p className="text-sm text-slate-400 italic text-center">
+                            "Lo que no se mide, no se puede mejorar."
+                        </p>
+                    </div>
+
+                    <DialogFooter className="flex-col sm:flex-col gap-2">
+                        <Button
+                            size="lg"
+                            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold shadow-lg shadow-blue-500/20"
+                            onClick={handleConfirmStart}
+                        >
+                            Comenzar Diagnóstico
+                            <ArrowRight className="ml-2 w-5 h-5" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            className="w-full text-slate-500 hover:text-slate-300"
+                            onClick={() => setShowIntroDialog(false)}
+                        >
+                            Cancelar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
