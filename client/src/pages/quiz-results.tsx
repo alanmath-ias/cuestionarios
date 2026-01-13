@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'wouter';
+import { useParams, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,18 +23,24 @@ interface Question {
 
 function QuizResults() {
   const { progressId } = useParams<{ progressId: string }>();
+  const [_, setLocation] = useLocation();
   const { session } = useSession();
-
-  const handleGoBack = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      window.location.href = '/dashboard';
-    }
-  };
 
   const searchParams = new URLSearchParams(window.location.search);
   const userId = searchParams.get('user_id');
+
+  const handleGoBack = () => {
+    // Si hay un userId en los params, es un admin viendo resultados de otro usuario.
+    // En este caso, el historial suele ser seguro (vino de una lista).
+    if (userId) {
+      window.history.back();
+      return;
+    }
+
+    // Para el estudiante que acaba de terminar, history.back() lo lleva al Quiz,
+    // el cual lo redirige de nuevo aquí (bucle). Por eso forzamos ir al dashboard.
+    setLocation('/dashboard');
+  };
 
   const { data: results, isLoading: loadingResults } = useQuery<QuizResult>({
     queryKey: [`/api/results/${progressId}`, userId],
