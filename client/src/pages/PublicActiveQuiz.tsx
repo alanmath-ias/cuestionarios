@@ -85,6 +85,8 @@ function PublicActiveQuiz() {
   const [hintsRevealed, setHintsRevealed] = useState<Record<number, string[]>>({});
   const [requestingHint, setRequestingHint] = useState(false);
   const [hintsUsedCount, setHintsUsedCount] = useState(0);
+  // Track used hint types per question
+  const [usedHintTypes, setUsedHintTypes] = useState<Record<number, ('regular' | 'super')[]>>({});
 
   // Fetch quiz data
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
@@ -323,6 +325,16 @@ function PublicActiveQuiz() {
 
     const currentQuestion = questions[currentQuestionIndex];
 
+    // Prevent duplicate hint type for the same question
+    if (usedHintTypes[currentQuestion.id]?.includes(type)) {
+      toast({
+        title: 'Pista ya utilizada',
+        description: `Ya has utilizado una pista de tipo "${type === 'regular' ? 'Regular' : 'Súper'}" para esta pregunta.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setRequestingHint(true);
     try {
       const res = await fetch('/api/hints/request', {
@@ -345,6 +357,11 @@ function PublicActiveQuiz() {
         [currentQuestion.id]: [...(prev[currentQuestion.id] || []), data.content]
       }));
 
+      setUsedHintTypes(prev => ({
+        ...prev,
+        [currentQuestion.id]: [...(prev[currentQuestion.id] || []), type]
+      }));
+
       setHintsUsedCount(prev => prev + 1);
 
       toast({
@@ -363,6 +380,16 @@ function PublicActiveQuiz() {
       setRequestingHint(false);
     }
   };
+
+  if (loadingQuestions) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center bg-slate-950 text-slate-200">
+        <Loader2 className="h-12 w-12 text-blue-500 animate-spin mb-4" />
+        <h2 className="text-xl font-medium mb-2">Cargando cuestionario...</h2>
+        <p className="text-slate-400">Preparando las preguntas para ti.</p>
+      </div>
+    );
+  }
 
   if (questionsError || !questions || questions.length === 0) {
     return (
@@ -697,7 +724,7 @@ function PublicActiveQuiz() {
                     variant="outline"
                     className="justify-between h-auto py-4 border-white/10 bg-slate-800/50 hover:bg-slate-800 hover:text-white group disabled:opacity-50"
                     onClick={() => handleRequestHint('regular')}
-                    disabled={requestingHint || hintsUsedCount >= 2}
+                    disabled={requestingHint || hintsUsedCount >= 2 || usedHintTypes[currentQuestion.id]?.includes('regular')}
                   >
                     <div className="text-left">
                       <div className="font-semibold text-slate-200 group-hover:text-white">Pista Regular</div>
@@ -710,7 +737,7 @@ function PublicActiveQuiz() {
                     variant="outline"
                     className="justify-between h-auto py-4 border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 group disabled:opacity-50"
                     onClick={() => handleRequestHint('super')}
-                    disabled={requestingHint || hintsUsedCount >= 2}
+                    disabled={requestingHint || hintsUsedCount >= 2 || usedHintTypes[currentQuestion.id]?.includes('super')}
                   >
                     <div className="text-left">
                       <div className="font-semibold text-yellow-400 group-hover:text-yellow-300">Súper Pista</div>

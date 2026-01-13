@@ -9,6 +9,7 @@ import { startQuizResultsTour } from "@/lib/tour";
 import type { QuizResult } from '@shared/quiz-types.js';
 import { ExplanationModal } from './explicacion';
 import { useSession } from "@/hooks/useSession";
+import { FloatingWhatsApp } from "@/components/ui/FloatingWhatsApp";
 
 interface Question {
   id: number;
@@ -385,6 +386,10 @@ function QuizResults() {
           />
         )}
       </div>
+      <FloatingWhatsApp
+        message="Hola, acabo de terminar un cuestionario y me gustaría cotizar clases de refuerzo."
+        tooltip="Cotizar Clases de Refuerzo"
+      />
     </div>
   );
 }

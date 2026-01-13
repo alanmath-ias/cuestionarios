@@ -90,6 +90,9 @@ const ActiveQuiz = () => {
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [reportDescription, setReportDescription] = useState("");
 
+  // Track used hint types per question
+  const [usedHintTypes, setUsedHintTypes] = useState<Record<number, ('regular' | 'super')[]>>({});
+
   // Queries
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${quizId}`],
@@ -366,6 +369,16 @@ const ActiveQuiz = () => {
     const currentQuestion = questions[currentQuestionIndex];
     const cost = type === 'regular' ? 1 : 2;
 
+    // Prevent duplicate hint type for the same question
+    if (usedHintTypes[currentQuestion.id]?.includes(type)) {
+      toast({
+        title: 'Pista ya utilizada',
+        description: `Ya has utilizado una pista de tipo "${type === 'regular' ? 'Regular' : 'Súper'}" para esta pregunta.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if ((session?.hintCredits || 0) < cost) {
       toast({
         title: 'Créditos insuficientes',
@@ -389,6 +402,11 @@ const ActiveQuiz = () => {
       setHintsRevealed(prev => ({
         ...prev,
         [currentQuestion.id]: [...(prev[currentQuestion.id] || []), data.content]
+      }));
+
+      setUsedHintTypes(prev => ({
+        ...prev,
+        [currentQuestion.id]: [...(prev[currentQuestion.id] || []), type]
       }));
 
       toast({
@@ -507,7 +525,7 @@ const ActiveQuiz = () => {
             <div className="flex items-center gap-2 mt-2">
               <div id="tour-timer" className="flex items-center text-slate-400 bg-slate-900/50 px-3 py-1 rounded-full border border-white/5">
                 <Timer className="h-4 w-4 mr-2 text-blue-400" />
-                <span className={`font-mono font-medium ${elapsedTime > (quiz?.timeLimit || 0) * 0.9 ? 'text-red-400 animate-pulse' : 'text-slate-200'}`}>
+                <span className={`font- mono font - medium ${elapsedTime > (quiz?.timeLimit || 0) * 0.9 ? 'text-red-400 animate-pulse' : 'text-slate-200'} `}>
                   {formattedTime()}
                 </span>
               </div>
@@ -546,7 +564,7 @@ const ActiveQuiz = () => {
                 className={`${currentQuestion.difficulty === 'hard' ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' :
                   currentQuestion.difficulty === 'medium' ? 'bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30' :
                     'bg-green-500/20 text-green-300 hover:bg-green-500/30'
-                  } border-none transition-colors`}
+                  } border - none transition - colors`}
               >
                 {currentQuestion.difficulty === 'hard' ? 'Difícil' :
                   currentQuestion.difficulty === 'medium' ? 'Medio' : 'Fácil'}
@@ -677,7 +695,8 @@ const ActiveQuiz = () => {
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors
                         ${isSelected || (isAnswered && answer.isCorrect)
                           ? 'bg-white/10 border-white/20 text-white'
-                          : 'bg-slate-900/50 border-white/10 text-slate-500 group-hover:text-slate-300 group-hover:border-white/20'}
+                          : 'bg-slate-900/50 border-white/10 text-slate-500 group-hover:text-slate-300 group-hover:border-white/20'
+                        }
                       `}>
                         {String.fromCharCode(65 + index)}
                       </div>

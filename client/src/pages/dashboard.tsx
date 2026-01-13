@@ -1018,6 +1018,10 @@ export default function UserDashboard() {
 
         <RestZoneDialog open={showRestZone} onOpenChange={setShowRestZone} />
       </div>
+      <FloatingWhatsApp
+        message="Hola, me gustaría cotizar clases de refuerzo para mejorar mi rendimiento en matemáticas."
+        tooltip="Cotizar Clases de Refuerzo"
+      />
     </div>
   );
 }

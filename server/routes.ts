@@ -539,6 +539,107 @@ Formato: Solo el texto del tip con el ejemplo.`;
     }
   });
 
+  // AI Diagnosis Endpoint
+  apiRouter.post("/generate-diagnosis", async (req: Request, res: Response) => {
+    try {
+      const { quizTitle, score, totalQuestions, wrongAnswers } = req.body;
+
+      // Basic validation
+      if (typeof score !== 'number' || !Array.isArray(wrongAnswers)) {
+        return res.status(400).json({ message: "Invalid data format" });
+      }
+
+      // If no errors or high score, return generic positive message
+      if (wrongAnswers.length === 0 || score >= 8) {
+        return res.json({
+          diagnosis: "¡Excelente trabajo! Demuestras un dominio sólido de los temas evaluados. Estás listo para avanzar a conceptos más complejos."
+        });
+      }
+
+      const apiKey = process.env.VITE_DEEPSEEK_API_KEY;
+      if (!apiKey) {
+        return res.json({
+          diagnosis: "Detectamos algunos errores. Te recomendamos revisar los temas donde fallaste y practicar más."
+        });
+      }
+
+      // Construct prompt for DeepSeek
+      const context = `
+        Cuestionario: "${quizTitle}"
+        Nota: ${score}/${totalQuestions}
+        Preguntas falladas y sus temas/contenido:
+        ${wrongAnswers.map((a: any) => `- ${a.question}`).join('\n')}
+      `;
+
+      const prompt = `
+        Actúa como un profesor de matemáticas experto.
+        Analiza los errores del estudiante en el cuestionario "${quizTitle}".
+        
+        Contexto:
+        ${context}
+
+        Tu tarea:
+        1. Identifica los 2 o 3 temas PRINCIPALES donde falló.
+        2. Para cada tema, da un consejo muy breve (máx 10 palabras).
+        3. Devuelve SOLO un JSON válido con este formato (sin markdown):
+        [
+          { "topic": "Nombre del Tema", "status": "danger", "message": "Consejo breve" },
+          { "topic": "Nombre del Tema 2", "status": "danger", "message": "Consejo breve" }
+        ]
+      `;
+
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.5,
+          max_tokens: 300,
+          response_format: { type: 'json_object' }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("DeepSeek API error");
+      }
+
+      const data = await response.json();
+      let diagnosisContent = data.choices?.[0]?.message?.content?.trim();
+
+      // Clean up markdown code blocks if present
+      if (diagnosisContent.startsWith('```json')) {
+        diagnosisContent = diagnosisContent.replace(/^```json\n/, '').replace(/\n```$/, '');
+      } else if (diagnosisContent.startsWith('```')) {
+        diagnosisContent = diagnosisContent.replace(/^```\n/, '').replace(/\n```$/, '');
+      }
+
+      let diagnosis;
+      try {
+        diagnosis = JSON.parse(diagnosisContent);
+        // Ensure it's an array (DeepSeek might wrap it in an object sometimes)
+        if (!Array.isArray(diagnosis) && diagnosis.diagnosis) {
+          diagnosis = diagnosis.diagnosis;
+        }
+      } catch (e) {
+        console.error("Error parsing AI JSON:", e);
+        // Fallback text if JSON fails
+        diagnosis = "Revisa los temas marcados en rojo en el detalle de abajo.";
+      }
+
+      res.json({ diagnosis });
+
+    } catch (error) {
+      console.error("[Diagnosis] Error generating diagnosis:", error);
+      res.json({
+        diagnosis: "Detectamos algunos conceptos que necesitan refuerzo. Con práctica constante y explicaciones claras, subirás de nivel rápidamente."
+      });
+    }
+  });
+
   // Get all users (Admin only)
   apiRouter.get("/users", requireAdmin, async (req: Request, res: Response) => {
     try {
