@@ -176,7 +176,7 @@ const ActiveQuiz = () => {
   useEffect(() => {
     if (!isInitialized && progress && questions) {
       if (progress.status === 'completed') {
-        setLocation(`/results/${progress.id}`);
+        setLocation(`/results/${progress.id}`, { replace: true });
         return;
       }
 
@@ -452,7 +452,7 @@ const ActiveQuiz = () => {
         }),
       });
 
-      setLocation(`/results/${progress.id}`);
+      setLocation(`/results/${progress.id}`, { replace: true });
     } catch (error) {
       toast({
         title: 'Error',

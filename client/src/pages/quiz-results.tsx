@@ -30,16 +30,7 @@ function QuizResults() {
   const userId = searchParams.get('user_id');
 
   const handleGoBack = () => {
-    // Si hay un userId en los params, es un admin viendo resultados de otro usuario.
-    // En este caso, el historial suele ser seguro (vino de una lista).
-    if (userId) {
-      window.history.back();
-      return;
-    }
-
-    // Para el estudiante que acaba de terminar, history.back() lo lleva al Quiz,
-    // el cual lo redirige de nuevo aquí (bucle). Por eso forzamos ir al dashboard.
-    setLocation('/dashboard');
+    window.history.back();
   };
 
   const { data: results, isLoading: loadingResults } = useQuery<QuizResult>({
@@ -76,6 +67,10 @@ function QuizResults() {
   });
 
   const isLoading = loadingResults || loadingQuestions;
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   useEffect(() => {
     if (!isLoading && session?.userId && !session.tourStatus?.quizResults) {

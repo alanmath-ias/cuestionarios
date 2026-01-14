@@ -119,7 +119,7 @@ export function QuizCard({
         )}
         {status === 'completed' && (
           <Button size="sm" onClick={onRetry}>
-            Intentar de nuevo
+            Ver Resultados
           </Button>
         )}
       </CardFooter>

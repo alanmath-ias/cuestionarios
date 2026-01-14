@@ -33,7 +33,9 @@ import {
   HelpCircle,
   Search, Ban,
   Gamepad2,
-  ArrowRight
+  ArrowRight,
+  Map as MapIcon,
+  ArrowLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { startDashboardTour } from "@/lib/tour";
@@ -311,6 +313,102 @@ export default function UserDashboard() {
     queryFn: () => selectedCategoryForDetails ? fetchCategoryQuizzes(selectedCategoryForDetails.id) : Promise.resolve([]),
     enabled: !!selectedCategoryForDetails,
   });
+
+  // Fetch Subcategories for selected category
+  const { data: categorySubcategories, isLoading: loadingSubcategories } = useQuery<any[]>({
+    queryKey: ["category-subcategories", selectedCategoryForDetails?.id],
+    queryFn: async () => {
+      if (!selectedCategoryForDetails) return [];
+      const res = await fetch(`/api/admin/subcategories/by-category/${selectedCategoryForDetails.id}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!selectedCategoryForDetails,
+  });
+
+  const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
+  const [quizSearchQuery, setQuizSearchQuery] = useState("");
+
+  // Reset subcategory selection and search queries when category changes
+  useEffect(() => {
+    setSelectedSubcategory(null);
+    setCategorySearchQuery("");
+    setQuizSearchQuery("");
+  }, [selectedCategoryForDetails]);
+
+  // Reset quiz search when subcategory changes
+  useEffect(() => {
+    setQuizSearchQuery("");
+  }, [selectedSubcategory]);
+
+  // URL Synchronization for Dialog State
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const dialog = params.get('dialog');
+    const catId = params.get('categoryId');
+    const subId = params.get('subcategoryId');
+
+    if (dialog === 'topics' && catId && categories) {
+      const category = categories.find(c => c.id === parseInt(catId));
+      if (category) {
+        setSelectedCategoryForDetails(category);
+
+        // If subcategory is present in URL, we need to wait for subcategories to load
+        // But we can set a flag or just rely on the user clicking again if it fails initially.
+        // Better: We can't easily sync subcategory here without fetching them first.
+        // However, `categorySubcategories` query depends on `selectedCategoryForDetails`.
+        // So once `selectedCategoryForDetails` is set, the query runs.
+        // We need another effect to set subcategory once data is available.
+      }
+    }
+  }, [categories, window.location.search]);
+
+  // Effect to set selected subcategory from URL once data is loaded
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const subId = params.get('subcategoryId');
+
+    if (subId && categorySubcategories && selectedCategoryForDetails) {
+      const sub = categorySubcategories.find(s => s.id === parseInt(subId));
+      if (sub) {
+        setSelectedSubcategory(sub);
+      }
+    }
+  }, [categorySubcategories, selectedCategoryForDetails, window.location.search]);
+
+  // Update URL when state changes
+  const updateUrlState = (category: Category | null, subcategory: any | null) => {
+    const params = new URLSearchParams(window.location.search);
+
+    if (category) {
+      params.set('dialog', 'topics');
+      params.set('categoryId', category.id.toString());
+      if (subcategory) {
+        params.set('subcategoryId', subcategory.id.toString());
+      } else {
+        params.delete('subcategoryId');
+      }
+    } else {
+      params.delete('dialog');
+      params.delete('categoryId');
+      params.delete('subcategoryId');
+    }
+
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.pushState({}, '', newUrl);
+  };
+
+  // Wrap state setters to sync URL
+  const handleCategorySelect = (category: Category | null) => {
+    setSelectedCategoryForDetails(category);
+    updateUrlState(category, null);
+  };
+
+  const handleSubcategorySelect = (subcategory: any | null) => {
+    setSelectedSubcategory(subcategory);
+    updateUrlState(selectedCategoryForDetails, subcategory);
+  };
 
   const { data: alerts } = useQuery({
     queryKey: ["user-alerts"],
@@ -621,8 +719,8 @@ export default function UserDashboard() {
             {/* 4. Materias Disponibles (White) */}
             <div id="tour-quiz-list" className="rounded-3xl bg-slate-900/50 border border-white/10 backdrop-blur-sm shadow-xl p-5 h-[320px] flex flex-col">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg text-slate-200 flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-blue-500" /> Materias Disponibles
+                <h3 className="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-blue-400" /> Tus Materias
                 </h3>
               </div>
 
@@ -631,32 +729,62 @@ export default function UserDashboard() {
                   {categories?.map((category) => (
                     <div
                       key={category.id}
-                      className="group bg-white/5 rounded-xl p-3 hover:bg-white/10 transition-all border border-transparent hover:border-blue-500/30 flex flex-col justify-between h-full min-h-[100px] cursor-pointer"
+                      className="group bg-slate-900/80 rounded-xl p-3 border border-slate-800 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 flex flex-col justify-between h-full min-h-[140px] cursor-pointer"
                       onClick={() => handleCategoryClick(category)}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 shadow-sm">
                           <BookOpen className="w-4 h-4" />
                         </div>
-                        {category.youtubeLink && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              playVideo(category.youtubeLink!);
-                            }}
-                            className="text-xs text-red-400 hover:bg-red-500/10 px-2 py-1 rounded-full flex items-center gap-1 transition-colors"
-                          >
-                            <Youtube className="w-3 h-3" /> Video
-                          </button>
-                        )}
                       </div>
 
                       <div>
-                        <h4 className="font-bold text-sm text-slate-200 group-hover:text-blue-400 transition-colors mb-2">{category.name}</h4>
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <Link href={`/training/${category.id}`} className="w-full">
-                            <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs">
+                        <h4 className="font-bold text-sm text-slate-200 group-hover:text-blue-400 transition-colors mb-3">{category.name}</h4>
+
+                        <div className="grid grid-cols-2 gap-2" onClick={(e) => e.stopPropagation()}>
+                          {/* Botón Video */}
+                          {category.youtubeLink ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playVideo(category.youtubeLink!);
+                              }}
+                              className="flex items-center justify-center gap-1.5 h-7 text-[10px] font-medium rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
+                            >
+                              <Youtube className="w-3 h-3" /> Videos
+                            </button>
+                          ) : (
+                            <div className="h-7" /> /* Spacer if no video */
+                          )}
+
+                          {/* Botón Entrenamiento */}
+                          <Link href={`/category/${category.id}?view=grid`} className="w-full">
+                            <Button size="sm" className="w-full h-7 text-[10px] bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all duration-300">
                               Entrenamiento
+                            </Button>
+                          </Link>
+
+                          {/* Botón Temas */}
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="w-full h-7 text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCategorySelect(category);
+                            }}
+                          >
+                            <ListChecks className="w-3 h-3 mr-1.5" /> Temas
+                          </Button>
+
+                          {/* Botón Mapa */}
+                          <Link href={`/category/${category.id}?view=roadmap`} className="w-full">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="w-full h-7 text-[10px] bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20"
+                            >
+                              <MapIcon className="w-3 h-3 mr-1.5" /> Mapa
                             </Button>
                           </Link>
                         </div>
@@ -953,66 +1081,192 @@ export default function UserDashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* Category Details Dialog */}
-        <Dialog open={!!selectedCategoryForDetails} onOpenChange={(open) => !open && setSelectedCategoryForDetails(null)}>
-          <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col bg-slate-900 border-white/10 text-slate-200">
+        {/* Category Details Dialog (TEMAS) */}
+        <Dialog open={!!selectedCategoryForDetails} onOpenChange={(open) => {
+          if (!open) {
+            handleCategorySelect(null);
+            handleSubcategorySelect(null);
+          }
+        }}>
+          <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col bg-slate-900 border-white/10 text-slate-200 overflow-hidden">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl text-blue-400">
-                <BookOpen className="h-6 w-6" />
-                {selectedCategoryForDetails?.name}
+                {selectedSubcategory ? (
+                  <Button variant="ghost" size="sm" className="p-0 h-auto hover:bg-transparent text-blue-400 hover:text-blue-300 mr-2" onClick={() => handleSubcategorySelect(null)}>
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                ) : (
+                  <ListChecks className="h-6 w-6" />
+                )}
+                {selectedSubcategory ? selectedSubcategory.name : `Temas de ${selectedCategoryForDetails?.name}`}
               </DialogTitle>
               <DialogDescription className="text-slate-400">
-                Explora los cuestionarios disponibles en esta materia.
+                {selectedSubcategory
+                  ? "Selecciona un cuestionario para comenzar."
+                  : "Selecciona un tema para ver los cuestionarios disponibles."}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="relative my-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-              <Input
-                placeholder="Buscar cuestionario..."
-                value={categorySearchQuery}
-                onChange={(e) => setCategorySearchQuery(e.target.value)}
-                className="pl-9 bg-slate-950/50 border-slate-800 text-slate-200 placeholder:text-slate-600 focus:ring-blue-500/50"
-              />
-            </div>
+            {!selectedSubcategory && (
+              <div className="relative my-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <Input
+                  placeholder="Buscar tema o cuestionario..."
+                  value={categorySearchQuery}
+                  onChange={(e) => setCategorySearchQuery(e.target.value)}
+                  className="pl-9 bg-slate-950/50 border-slate-800 text-slate-200 placeholder:text-slate-600 focus:ring-blue-500/50"
+                />
+              </div>
+            )}
 
-            <ScrollArea className="flex-1 pr-4 -mr-4">
-              {loadingCategoryQuizzes ? (
+            <div className="flex-1 overflow-y-auto min-h-0 pr-2 -mr-2">
+              {loadingCategoryQuizzes || loadingSubcategories ? (
                 <div className="flex justify-center py-8">
                   <Spinner className="h-8 w-8 text-blue-500" />
                 </div>
-              ) : filteredCategoryQuizzes.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4">
-                  {filteredCategoryQuizzes.map((quiz) => (
-                    <div key={quiz.id} className="group flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-blue-500/30 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.15)]">
-                      <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                        <BookOpen className="h-5 w-5 text-blue-400" />
+              ) : selectedSubcategory ? (
+                // VIEW: Quizzes for selected subcategory
+                <div className="space-y-4 pb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                    <Input
+                      placeholder={`Buscar en ${selectedSubcategory.name}...`}
+                      value={quizSearchQuery}
+                      onChange={(e) => setQuizSearchQuery(e.target.value)}
+                      className="pl-9 bg-slate-950/50 border-slate-800 text-slate-200 placeholder:text-slate-600 focus:ring-blue-500/50 h-9 text-sm"
+                    />
+                  </div>
+
+                  {(() => {
+                    const quizzesForSub = categoryQuizzes?.filter(q =>
+                      Number(q.subcategoryId) === Number(selectedSubcategory.id) &&
+                      q.title.toLowerCase().includes(quizSearchQuery.toLowerCase())
+                    ) || [];
+                    if (quizzesForSub.length === 0) {
+                      return (
+                        <div className="text-center py-12 text-slate-500">
+                          <Ban className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                          <p>No hay cuestionarios en este tema.</p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {quizzesForSub.map((quiz) => {
+                          const isCompleted = completedQuizzes.some(q => q.id === quiz.id);
+                          return (
+                            <div key={quiz.id} className="group flex flex-col gap-3 p-4 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-blue-500/30 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.15)]">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                  <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${isCompleted ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                    {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-sm text-slate-200 line-clamp-2">{quiz.title}</h4>
+                                    <p className="text-xs text-slate-500 line-clamp-1">{quiz.description}</p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${quiz.difficulty === 'Fácil' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                                  quiz.difficulty === 'Medio' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                                    'bg-red-500/10 text-red-400 border border-red-500/20'
+                                  }`}>
+                                  {quiz.difficulty}
+                                </span>
+
+                                <div className="flex gap-2">
+                                  {!isCompleted && (
+                                    <Button
+                                      size="sm"
+                                      className="h-7 px-2 text-xs bg-slate-700 hover:bg-slate-600 text-white border border-slate-600"
+                                      onClick={(e) => handleMiniStart(e, quiz.id)}
+                                    >
+                                      Mini
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    className={`h-7 px-3 text-xs font-medium ${isCompleted ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (isCompleted) {
+                                        // Navigate to results
+                                        setLocation(`/quiz-results/${quiz.id}`);
+                                      } else {
+                                        // Start quiz
+                                        handleQuizStart(quiz.id);
+                                      }
+                                    }}
+                                  >
+                                    {isCompleted ? 'Ver Resultados' : 'Comenzar'}
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm text-slate-200 truncate">{quiz.title}</h4>
-                        <p className="text-xs text-slate-500 truncate">{quiz.description}</p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${quiz.difficulty === 'Fácil' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                          quiz.difficulty === 'Medio' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
-                            'bg-red-500/10 text-red-400 border border-red-500/20'
-                          }`}>
-                          {quiz.difficulty}
-                        </span>
-                        <Button size="sm" className="h-8 w-8 p-0 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20" onClick={() => setLocation(`/quiz/${quiz.id}`)}>
-                          <PlayCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })()}
                 </div>
               ) : (
-                <div className="text-center py-12 text-slate-500">
-                  <Ban className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                  <p>No se encontraron cuestionarios.</p>
+                // VIEW: List of Subcategories
+                <div className="space-y-3 pb-4">
+                  {(() => {
+                    const filteredSubs = categorySubcategories?.filter(sub => {
+                      const matchesSub = sub.name.toLowerCase().includes(categorySearchQuery.toLowerCase());
+                      const subQuizzes = categoryQuizzes?.filter(q => q.subcategoryId === sub.id) || [];
+                      const matchesQuiz = subQuizzes.some(q => q.title.toLowerCase().includes(categorySearchQuery.toLowerCase()));
+                      return matchesSub || matchesQuiz;
+                    }) || [];
+
+                    if (filteredSubs.length === 0) {
+                      return (
+                        <div className="text-center py-12 text-slate-500">
+                          <Ban className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                          <p>No se encontraron temas ni cuestionarios.</p>
+                        </div>
+                      );
+                    }
+
+                    return filteredSubs.map((sub) => {
+                      const subQuizzes = categoryQuizzes?.filter(q => q.subcategoryId === sub.id) || [];
+                      const completedCount = subQuizzes.filter(q => completedQuizzes.some(cq => cq.id === q.id)).length;
+                      const progress = subQuizzes.length > 0 ? (completedCount / subQuizzes.length) * 100 : 0;
+
+                      return (
+                        <div
+                          key={sub.id}
+                          onClick={() => handleSubcategorySelect(sub)}
+                          className="group flex items-center justify-between p-4 rounded-xl bg-slate-800/40 border border-white/5 cursor-pointer transition-all hover:bg-slate-800/60 hover:border-blue-500/30 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.15)]"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+                              <ListChecks className="h-6 w-6" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-slate-200 group-hover:text-blue-400 transition-colors">{sub.name}</h4>
+                              <p className="text-sm text-slate-500">{subQuizzes.length} cuestionarios</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right hidden sm:block">
+                              <span className="text-xs font-medium text-slate-400 block mb-1">Progreso</span>
+                              <div className="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                <div className="h-full bg-blue-500" style={{ width: `${progress}%` }} />
+                              </div>
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-slate-600 group-hover:text-slate-400" />
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </DialogContent>
         </Dialog>
 
