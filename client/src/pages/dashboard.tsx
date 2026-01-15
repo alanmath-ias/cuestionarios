@@ -758,7 +758,7 @@ export default function UserDashboard() {
                           )}
 
                           {/* Botón Entrenamiento */}
-                          <Link href={`/category/${category.id}?view=grid`} className="w-full">
+                          <Link href={`/training/${category.id}`} className="w-full">
                             <Button size="sm" className="w-full h-7 text-[10px] bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all duration-300">
                               Entrenamiento
                             </Button>
@@ -1193,10 +1193,13 @@ export default function UserDashboard() {
                                       e.stopPropagation();
                                       if (isCompleted) {
                                         // Navigate to results
-                                        setLocation(`/quiz-results/${quiz.id}`);
+                                        const completedQuiz = completedQuizzes.find(q => q.id === quiz.id);
+                                        if (completedQuiz?.progressId) {
+                                          setLocation(`/results/${completedQuiz.progressId}`);
+                                        }
                                       } else {
                                         // Start quiz
-                                        handleQuizStart(quiz.id);
+                                        setLocation(`/quiz/${quiz.id}`);
                                       }
                                     }}
                                   >

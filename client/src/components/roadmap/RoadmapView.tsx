@@ -38,7 +38,7 @@ export function RoadmapView({ nodes, title, description }: RoadmapViewProps) {
             </div>
 
             {/* Path Container */}
-            <div className="relative w-full max-w-3xl flex flex-col items-center space-y-24">
+            <div className="relative w-full max-w-3xl mx-auto" style={{ height: pathHeight }}>
 
                 {/* Animated SVG Path */}
                 <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-0 overflow-visible">
@@ -150,8 +150,9 @@ export function RoadmapView({ nodes, title, description }: RoadmapViewProps) {
                             whileInView={{ opacity: 1, scale: 1, x: 0 }}
                             viewport={{ once: true, margin: "-100px" }}
                             transition={{ duration: 0.6, delay: index * 0.1 }}
+                            style={{ position: 'absolute', top: index * 160, width: '100%', height: '160px' }}
                             className={cn(
-                                "relative w-full flex items-center z-20",
+                                "flex items-center z-20",
                                 isLeft ? "justify-start md:justify-end md:pr-[50%] md:-mr-[40px]" : "justify-start md:justify-start md:pl-[50%] md:-ml-[40px]"
                             )}
                         >
@@ -235,7 +236,8 @@ export function RoadmapView({ nodes, title, description }: RoadmapViewProps) {
                     whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
                     viewport={{ once: true }}
                     transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                    className="relative z-20 pt-12 pb-20"
+                    style={{ position: 'absolute', top: nodes.length * 160 }}
+                    className="left-1/2 -translate-x-1/2 z-20 pt-12 pb-20"
                 >
                     <div className="w-32 h-32 bg-gradient-to-br from-yellow-300/30 to-orange-600/30 rounded-full flex items-center justify-center border-4 border-yellow-500 shadow-[0_0_60px_rgba(234,179,8,0.5)] animate-pulse-slow">
                         <Star className="w-16 h-16 text-yellow-400 fill-yellow-400" />
