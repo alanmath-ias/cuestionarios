@@ -121,19 +121,45 @@ export default function LandingPage() {
                     >
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-sm shadow-[0_0_15px_rgba(59,130,246,0.1)]">
                             <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 animate-pulse" />
-                            <span className="text-sm text-slate-200 font-medium">La nueva forma de aprender matemáticas</span>
+                            <span className="text-sm text-slate-200 font-medium">Una nueva forma inteligente de aprender matemáticas</span>
                         </div>
 
-                        <h1 className="text-5xl md:text-7xl font-bold mb-8 tracking-tight">
-                            Domina las Matemáticas: <br />
+                        <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
+                            Domina las Matemáticas <br />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
-                                Tecnología que te evalúa, Expertos que te enseñan
+                                con claridad, enfoque y resultados reales
                             </span>
                         </h1>
 
-                        <p className="text-xl text-slate-300 max-w-3xl mx-auto mb-12 leading-relaxed">
-                            No estudies a ciegas. Realiza simulacros tipo examen, detecta tus errores con IA y soluciónalos al instante con nuestra videoteca o clases particulares personalizadas.
+                        <p className="text-xl md:text-2xl font-medium text-slate-200 max-w-4xl mx-auto mb-6 leading-relaxed">
+                            Tecnología que detecta exactamente dónde fallas,
+                            <br className="hidden md:block" /> expertos que te enseñan solo lo que necesitas aprender.
                         </p>
+
+                        <p className="text-lg text-slate-400 max-w-3xl mx-auto mb-8 leading-relaxed">
+                            Deja de estudiar horas sin saber por qué no mejoras.
+                            Realiza diagnósticos tipo examen, identifica tus errores reales con ayuda de IA
+                            y corrígelos al instante con clases personalizadas y videoteca guiada por profesores.
+                        </p>
+
+                        {/* Segmentation */}
+                        <div className="flex flex-col items-center mb-12">
+                            <span className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Ideal para:</span>
+                            <div className="flex flex-col md:flex-row gap-3 md:gap-6 text-left">
+                                <div className="flex items-center gap-2 text-slate-300 bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-800">
+                                    <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
+                                    <span>Estudiantes de colegio</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-300 bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-800">
+                                    <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
+                                    <span>Universitarios</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-300 bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-800">
+                                    <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
+                                    <span>Recuperaciones, parciales y exámenes importantes</span>
+                                </div>
+                            </div>
+                        </div>
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                             <Button
@@ -146,18 +172,10 @@ export default function LandingPage() {
                                     }
                                 }}
                             >
-                                Realizar Diagnóstico Gratis
+                                Ver mi nivel de matemáticas ahora
                                 <ArrowRight className="ml-2 w-5 h-5" />
                             </Button>
-                            <Link href="/auth">
-                                <Button
-                                    size="lg"
-                                    variant="outline"
-                                    className="h-14 px-8 text-lg border-slate-700 text-slate-100 bg-slate-800/50 hover:bg-slate-700 hover:text-white transition-all"
-                                >
-                                    Ver Demo
-                                </Button>
-                            </Link>
+
                         </div>
                     </motion.div>
                 </div>

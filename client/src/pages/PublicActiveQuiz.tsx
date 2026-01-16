@@ -132,6 +132,49 @@ function PublicActiveQuiz() {
     }
   });
 
+  // Onboarding Tooltip State
+  const [showHintTooltip, setShowHintTooltip] = useState(false);
+  const [showNavTooltip, setShowNavTooltip] = useState(false);
+
+  useEffect(() => {
+    const hasSeenHint = localStorage.getItem('hasSeenHintTooltip_v3');
+    const hasSeenNav = localStorage.getItem('hasSeenNavTooltip_v3');
+
+    if (!loadingQuestions && questions && questions.length > 0) {
+      if (!hasSeenHint) {
+        // Step 1: Show Hint Tooltip
+        const timer = setTimeout(() => setShowHintTooltip(true), 1500);
+        return () => clearTimeout(timer);
+      } else if (!hasSeenNav) {
+        // Step 2: Show Nav Tooltip (if hint already seen)
+        const timer = setTimeout(() => setShowNavTooltip(true), 1000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [loadingQuestions, questions]);
+
+  const dismissTooltip = () => {
+    setShowHintTooltip(false);
+    localStorage.setItem('hasSeenHintTooltip_v3', 'true');
+
+    // Trigger next step
+    setTimeout(() => {
+      if (!localStorage.getItem('hasSeenNavTooltip_v3')) {
+        setShowNavTooltip(true);
+      }
+    }, 500);
+  };
+
+  const dismissNavTooltip = () => {
+    setShowNavTooltip(false);
+    localStorage.setItem('hasSeenNavTooltip_v3', 'true');
+  };
+
+  const handleHintClick = () => {
+    dismissTooltip();
+    setIsHintDialogOpen(true);
+  };
+
   // Timer
   const {
     formattedTime,
@@ -602,16 +645,33 @@ function PublicActiveQuiz() {
             Anterior
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 bg-yellow-500/5 backdrop-blur-sm"
-            onClick={() => setIsHintDialogOpen(true)}
-            disabled={answeredQuestions[currentQuestionIndex]}
-          >
-            <Lightbulb className="mr-2 h-4 w-4" />
-            ¿Una Pista?
-          </Button>
+          <div className="relative">
+            {showHintTooltip && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 z-50 animate-in fade-in slide-in-from-bottom-2">
+                <div className="bg-blue-600 text-white text-xs p-3 rounded-xl shadow-xl border border-blue-400/50 relative">
+                  <p className="font-bold mb-1">¿Necesitas ayuda?</p>
+                  <p>Tienes 2 pistas en total. Si te atascas, úsalas sabiamente.</p>
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-blue-600 rotate-45 border-r border-b border-blue-400/50"></div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); dismissTooltip(); }}
+                    className="absolute -top-2 -right-2 bg-blue-700 rounded-full p-0.5 border border-blue-400 hover:bg-blue-800"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 bg-yellow-500/5 backdrop-blur-sm relative z-10"
+              onClick={handleHintClick}
+              disabled={answeredQuestions[currentQuestionIndex]}
+            >
+              <Lightbulb className="mr-2 h-4 w-4" />
+              ¿Una Pista?
+            </Button>
+          </div>
 
           <Button
             onClick={handleNextQuestion}
@@ -631,12 +691,47 @@ function PublicActiveQuiz() {
         </div>
 
         {/* Progress Bar */}
-        <div className="mt-8 bg-slate-900/30 p-4 rounded-xl border border-white/5 backdrop-blur-sm">
+        <div className="mt-8 bg-slate-900/30 p-4 rounded-xl border border-white/5 backdrop-blur-sm relative">
+          {showNavTooltip && (
+            <div className="absolute top-1/2 right-4 -translate-y-1/2 w-64 z-50 animate-in fade-in slide-in-from-right-2 hidden md:block">
+              <div className="bg-blue-600 text-white text-xs p-3 rounded-xl shadow-xl border border-blue-400/50 relative">
+                <p className="font-bold mb-1">Navegación Libre</p>
+                <p>Puedes saltar preguntas y volver luego haciendo clic en los círculos.</p>
+                {/* Arrow pointing left */}
+                <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-600 rotate-45 border-l border-b border-blue-400/50"></div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); dismissNavTooltip(); }}
+                  className="absolute -top-2 -right-2 bg-blue-700 rounded-full p-0.5 border border-blue-400 hover:bg-blue-800"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+          {/* Mobile Tooltip (Bottom) - Fallback for small screens */}
+          {showNavTooltip && (
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 z-50 animate-in fade-in slide-in-from-bottom-2 md:hidden">
+              <div className="bg-blue-600 text-white text-xs p-3 rounded-xl shadow-xl border border-blue-400/50 relative">
+                <p className="font-bold mb-1">Navegación Libre</p>
+                <p>Puedes saltar preguntas y volver luego haciendo clic en los círculos.</p>
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-blue-600 rotate-45 border-r border-b border-blue-400/50"></div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); dismissNavTooltip(); }}
+                  className="absolute -top-2 -right-2 bg-blue-700 rounded-full p-0.5 border border-blue-400 hover:bg-blue-800"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
           <QuestionProgress
             totalQuestions={questions?.length || 0}
             completedQuestions={Object.keys(answeredQuestions).length}
             currentQuestionIndex={currentQuestionIndex}
-            onQuestionClick={(index) => setCurrentQuestionIndex(index)}
+            onQuestionClick={(index) => {
+              setCurrentQuestionIndex(index);
+              if (showNavTooltip) dismissNavTooltip();
+            }}
             disabled={false}
             correctAnswers={correctAnswersMap}
           />
