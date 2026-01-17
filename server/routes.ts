@@ -549,8 +549,8 @@ Formato: Solo el texto del tip con el ejemplo.`;
         return res.status(400).json({ message: "Invalid data format" });
       }
 
-      // If no errors or high score, return generic positive message
-      if (wrongAnswers.length === 0 || score >= 8) {
+      // If no errors, return generic positive message
+      if (wrongAnswers.length === 0) {
         return res.json({
           diagnosis: "¡Excelente trabajo! Demuestras un dominio sólido de los temas evaluados. Estás listo para avanzar a conceptos más complejos."
         });

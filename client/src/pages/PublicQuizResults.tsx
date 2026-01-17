@@ -160,12 +160,12 @@ function PublicQuizResults() {
 
       setLoadingDiagnosis(true);
       try {
-        const wrongAnswers = sessionResults.studentAnswers
-          .filter(a => !a.isCorrect)
-          .map(a => {
-            const q = questions.find(q => q.id === a.questionId);
-            return { question: q?.content || 'Pregunta desconocida' };
-          });
+        const wrongAnswers = questions
+          .filter(q => {
+            const answer = sessionResults.studentAnswers.find(a => a.questionId === q.id);
+            return !answer || !answer.isCorrect;
+          })
+          .map(q => ({ question: q.content }));
 
         const res = await fetch('/api/generate-diagnosis', {
           method: 'POST',
