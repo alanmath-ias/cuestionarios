@@ -488,7 +488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const questions = await Promise.all(questionIds.map(id => storage.getQuestion(id)));
 
         context += " Tuvo errores en preguntas sobre: ";
-        context += questions.map(q => q?.content.substring(0, 50) + "...").join(" y ");
+        context += questions.map(q => q?.content.replace(/¡/g, '').substring(0, 50) + "...").join(" y ");
       } else {
         context += " Respondió todo correctamente.";
       }
@@ -568,7 +568,7 @@ Formato: Solo el texto del tip con el ejemplo.`;
         Cuestionario: "${quizTitle}"
         Nota: ${score}/${totalQuestions}
         Preguntas falladas y sus temas/contenido:
-        ${wrongAnswers.map((a: any) => `- ${a.question}`).join('\n')}
+        ${wrongAnswers.map((a: any) => `- ${a.question.replace(/¡/g, '')}`).join('\n')}
       `;
 
       const prompt = `
@@ -1492,8 +1492,8 @@ Formato: Solo el texto del tip con el ejemplo.`;
       const prompt = `Eres un tutor experto en ${quizTitle}. Resuelve este problema paso a paso:
 
 **Contexto del Cuestionario:** ${quizTitle}
-**Problema:** ${question}
-**Respuesta Correcta:** ${correctAnswer}
+**Problema:** ${question.replace(/¡/g, '')}
+**Respuesta Correcta:** ${correctAnswer.replace(/¡/g, '')}
 
 Instrucciones:
 1. Usa métodos específicos de ${quizTitle}
@@ -1675,8 +1675,8 @@ Ejemplo de formato:
 
         const prompt = `Eres un tutor experto. El estudiante necesita una pista para esta pregunta de ${quiz?.title || 'Matemáticas'}:
         
-        Pregunta: ${question.content}
-        Respuesta Correcta: ${correctAnswer}
+        Pregunta: ${question.content.replace(/¡/g, '')}
+        Respuesta Correcta: ${correctAnswer.replace(/¡/g, '')}
         
         Genera una ${hintType === 'super' ? 'SÚPER PISTA (muy reveladora pero sin dar la respuesta directa)' : 'PISTA (una ayuda sutil para guiar al estudiante)'}.
         La pista debe ser breve (máximo 2 frases) y en Español.

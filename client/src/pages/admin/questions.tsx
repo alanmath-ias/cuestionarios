@@ -12,6 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
 import { Trash, Plus, Check, X, ArrowLeft, Pencil } from "lucide-react";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Question, Answer, Quiz } from "@/types/types";
@@ -768,7 +773,7 @@ export default function QuestionsAdmin() {
                   </div>
                 ) : questions && questions.length > 0 ? (
                   <div className="grid grid-cols-1 gap-4">
-                    {questions.map((question: Question) => (
+                    {questions.map((question: Question, index: number) => (
                       <Card key={question.id} className="overflow-hidden border border-white/5 bg-slate-950 hover:bg-slate-900/80 transition-all">
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start">
@@ -778,7 +783,37 @@ export default function QuestionsAdmin() {
                                 <Badge variant="secondary" className="bg-slate-800 text-slate-300">{getDifficultyName(question.difficulty)}</Badge>
                                 <Badge variant="default" className="bg-blue-600/20 text-blue-400 hover:bg-blue-600/30">{question.points} puntos</Badge>
                               </div>
-                              <ContentRenderer content={question.content} className="font-medium text-slate-200" />
+                              <div className="flex gap-2">
+                                <span className="font-medium text-slate-200">{index + 1}.</span>
+                                <HoverCard>
+                                  <HoverCardTrigger asChild>
+                                    <div className="cursor-help">
+                                      <ContentRenderer content={question.content} className="font-medium text-slate-200" />
+                                    </div>
+                                  </HoverCardTrigger>
+                                  <HoverCardContent className="w-80 bg-slate-900 border-slate-700">
+                                    <div className="space-y-2">
+                                      <h4 className="text-sm font-semibold text-slate-200">Respuestas:</h4>
+                                      {question.answers && question.answers.length > 0 ? (
+                                        <ul className="text-sm space-y-1">
+                                          {question.answers.map((answer, i) => (
+                                            <li key={i} className={`flex items-start gap-2 ${answer.isCorrect ? 'text-green-400 font-medium' : 'text-slate-400'}`}>
+                                              {answer.isCorrect ? (
+                                                <Check className="h-4 w-4 mt-0.5 shrink-0 text-green-500" />
+                                              ) : (
+                                                <span className="w-4 h-4 block shrink-0" />
+                                              )}
+                                              <ContentRenderer content={answer.content} />
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      ) : (
+                                        <p className="text-sm text-slate-500 italic">No hay respuestas configuradas</p>
+                                      )}
+                                    </div>
+                                  </HoverCardContent>
+                                </HoverCard>
+                              </div>
                               {question.imageUrl && (
                                 <div className="mt-2">
                                   <p className="text-sm text-slate-400">
@@ -838,8 +873,8 @@ export default function QuestionsAdmin() {
               </CardFooter>
             </Card>
           </div>
-        </div>
-      </div>
-    </div>
+        </div >
+      </div >
+    </div >
   );
 }

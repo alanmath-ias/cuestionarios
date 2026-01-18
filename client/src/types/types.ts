@@ -40,6 +40,7 @@ export interface Question {
   points: number;
   variables?: Record<string, number>;
   imageUrl?: string; // 👈 nueva propiedad opcional
+  answers?: Answer[];
 }
 
 
