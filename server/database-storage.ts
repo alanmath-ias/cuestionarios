@@ -383,8 +383,9 @@ export class DatabaseStorage implements IStorage {
         status: studentProgress.status,
         reviewed: quizSubmissions.reviewed,
         progressId: studentProgress.id,
+        completedQuestions: sql<number>`(SELECT COUNT(DISTINCT question_id) FROM student_answers WHERE student_answers.progress_id = ${studentProgress.id})`.mapWith(Number),
         score: studentProgress.score,
-        timeSpent: studentProgress.timeSpent, // <- AquÃ­ estÃ¡ el cambio clave
+        timeSpent: studentProgress.timeSpent, // <- Aquí está el cambio clave
         completedAt: studentProgress.completedAt, // <- AÃ±ade esta lÃ­nea
         url: quizzes.url, // â† AÃ±ade esta lÃ­nea
       })
@@ -406,8 +407,61 @@ export class DatabaseStorage implements IStorage {
         isNotNull(studentProgress.id)
       ));
 
-    // Deduplicate by quiz id to handle multiple submissions/progress records
-    const uniqueResult = Array.from(new Map(result.map(item => [item.id, item])).values());
+    // Deduplicate by quiz id, prioritizing completed status
+    const uniqueResult = Array.from(
+      result.reduce((map, item) => {
+        const existing = map.get(item.id);
+        if (!existing) {
+          map.set(item.id, item);
+        } else {
+          // Priority: Completed > In Progress > Not Started
+          const getPriority = (status: string | null) => {
+            if (status === 'completed') return 3;
+            if (status === 'in_progress') return 2;
+            return 1;
+          };
+
+          const existingPriority = getPriority(existing.status);
+          const currentPriority = getPriority(item.status);
+
+          if (currentPriority > existingPriority) {
+            // If upgrading status (e.g. In Progress -> Completed), preserve the highest completedQuestions count
+            // This handles cases where the completed record might have 0 questions (due to a bug) but an in_progress record has valid count
+            const merged = { ...item };
+            if ((merged.completedQuestions || 0) < (existing.completedQuestions || 0)) {
+              merged.completedQuestions = existing.completedQuestions;
+            }
+            map.set(item.id, merged);
+          } else if (currentPriority === existingPriority) {
+            // Tie-breaking:
+            // If completed, pick latest completedAt
+            if (item.status === 'completed') {
+              const existingDate = existing.completedAt ? new Date(existing.completedAt).getTime() : 0;
+              const currentDate = item.completedAt ? new Date(item.completedAt).getTime() : 0;
+              if (currentDate > existingDate) {
+                map.set(item.id, item);
+              }
+            }
+            // If in_progress or null
+            else {
+              // Prioritize higher completedQuestions
+              const currentQuestions = item.completedQuestions || 0;
+              const existingQuestions = existing.completedQuestions || 0;
+
+              if (currentQuestions > existingQuestions) {
+                map.set(item.id, item);
+              } else if (currentQuestions === existingQuestions) {
+                // Fallback to latest progressId (latest attempt)
+                if ((item.progressId || 0) > (existing.progressId || 0)) {
+                  map.set(item.id, item);
+                }
+              }
+            }
+          }
+        }
+        return map;
+      }, new Map<number, typeof result[0]>()).values()
+    );
 
     return uniqueResult;
   }
@@ -498,6 +552,11 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0 ? result[0] : undefined;
   }
 
+  async getStudentProgressById(id: number): Promise<StudentProgress | undefined> {
+    const result = await this.db.select().from(studentProgress).where(eq(studentProgress.id, id));
+    return result[0];
+  }
+
   async createStudentProgress(progress: InsertStudentProgress): Promise<StudentProgress> {
     const insertData = {
       ...progress,
@@ -514,12 +573,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateStudentProgress(id: number, progress: Partial<StudentProgress>): Promise<StudentProgress> {
-    const updateData = {
-      ...progress,
-      completedAt: progress.completedAt
+    // 1. Prepare update data
+    const updateData: any = { ...progress };
+
+    // Handle completedAt conversion only if it's defined
+    if (progress.completedAt !== undefined) {
+      updateData.completedAt = progress.completedAt
         ? new Date(progress.completedAt).toISOString()
-        : null
-    };
+        : null;
+    }
+
+    // 2. Fetch current progress to prevent regression
+    const [currentProgress] = await this.db
+      .select()
+      .from(studentProgress)
+      .where(eq(studentProgress.id, id));
+
+    if (currentProgress) {
+      // Prevent reverting from 'completed' to 'in_progress'
+      if (currentProgress.status === 'completed' && progress.status === 'in_progress') {
+        delete updateData.status;
+        delete updateData.completedAt; // Don't touch completion date either
+        delete updateData.score; // Don't overwrite score with partial update
+      }
+
+      // If we are completing, ensure we don't lose the date
+      if (updateData.status === 'completed' && !updateData.completedAt && !currentProgress.completedAt) {
+        updateData.completedAt = new Date().toISOString();
+      }
+    }
 
     const result = await this.db.update(studentProgress)
       .set(updateData)
@@ -686,13 +768,20 @@ export class DatabaseStorage implements IStorage {
 
   async saveQuizFeedback({ progressId, text }: { progressId: string; text: string }) {
     try {
+      // First delete any existing feedback for this progressId to avoid duplicates
+      // and ensure we only have the latest one
+      await this.db
+        .delete(quizFeedback)
+        .where(eq(quizFeedback.progressId, Number(progressId)));
+
+      // Then insert the new feedback
       await this.db.insert(quizFeedback).values({
         progressId: Number(progressId),
         feedback: text,
         createdAt: new Date().toISOString(),
       });
     } catch (err) {
-      console.error("âŒ Error al insertar feedback:", err);
+      console.error("❌ Error al insertar feedback:", err);
       throw err;
     }
   }
@@ -772,11 +861,21 @@ export class DatabaseStorage implements IStorage {
     return Number(result[0].count);
   }
 
+  async countPendingReports() {
+    const result = await this.db.select({ count: sql`count(*)` })
+      .from(questionReports)
+      .where(eq(questionReports.status, 'pending'));
+    return Number(result[0].count);
+  }
+
   async getRecentPendingSubmissions() {
-    const result = await this.db
+    // Fetch more results to allow for deduplication
+    const rawResults = await this.db
       .select({
         id: quizSubmissions.id,
+        userId: users.id, // Need userId for deduplication
         userName: users.name,
+        quizId: quizzes.id, // Need quizId for deduplication
         quizTitle: quizzes.title,
         submittedAt: quizSubmissions.completedAt,
         progressId: studentProgress.id,
@@ -787,9 +886,20 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(quizzes, eq(quizSubmissions.quizId, quizzes.id))
       .where(eq(quizSubmissions.reviewed, false))
       .orderBy(desc(quizSubmissions.completedAt))
-      .limit(5);
+      .limit(50); // Fetch more to filter duplicates
 
-    return result;
+    // Deduplicate: keep only the latest submission per user per quiz
+    const uniqueSubmissions = new Map();
+
+    for (const sub of rawResults) {
+      const key = `${sub.userId}-${sub.quizId}`;
+      if (!uniqueSubmissions.has(key)) {
+        uniqueSubmissions.set(key, sub);
+      }
+    }
+
+    // Convert back to array and take top 5
+    return Array.from(uniqueSubmissions.values()).slice(0, 5);
   }
   async getUserProgressSummary() {
     const allUsers = await this.db.select().from(users);
@@ -826,10 +936,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getStudentsAtRisk(limit: number = 5) {
-    // Definición de "En Riesgo": Promedio de notas < 60 en los últimos intentos
-    // O estudiantes que han fallado sus últimos quizzes
+    // Definición de "En Riesgo": Nota <= 7.0
 
-    // Obtenemos los últimos progresos completados con nota baja
     const lowScores = await this.db
       .select({
         userId: studentProgress.userId,
@@ -837,18 +945,38 @@ export class DatabaseStorage implements IStorage {
         quizTitle: quizzes.title,
         score: studentProgress.score,
         completedAt: studentProgress.completedAt,
+        subcategoryId: quizzes.subcategoryId, // Added subcategoryId
       })
       .from(studentProgress)
       .innerJoin(users, eq(studentProgress.userId, users.id))
       .innerJoin(quizzes, eq(studentProgress.quizId, quizzes.id))
       .where(and(
         eq(studentProgress.status, 'completed'),
-        sql`${studentProgress.score} < 60`
+        sql`${studentProgress.score} <= 7.0`
       ))
       .orderBy(desc(studentProgress.completedAt))
       .limit(limit);
 
     return lowScores;
+  }
+
+  async getStudentHistoryBySubcategory(userId: number, subcategoryId: number) {
+    return await this.db
+      .select({
+        quizId: quizzes.id,
+        quizTitle: quizzes.title,
+        score: studentProgress.score,
+        completedAt: studentProgress.completedAt,
+        progressId: studentProgress.id,
+      })
+      .from(studentProgress)
+      .innerJoin(quizzes, eq(studentProgress.quizId, quizzes.id))
+      .where(and(
+        eq(studentProgress.userId, userId),
+        eq(quizzes.subcategoryId, subcategoryId),
+        eq(studentProgress.status, 'completed')
+      ))
+      .orderBy(desc(studentProgress.completedAt));
   }
 
   async getRecentActivity(limit: number = 10) {
@@ -1138,6 +1266,8 @@ export class DatabaseStorage implements IStorage {
       reviewed: row.reviewed,
     }));
   }
+
+
 
   async backfillQuizSubmissions(): Promise<void> {
     const completedProgress = await this.db.select()

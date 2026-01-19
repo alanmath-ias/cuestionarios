@@ -81,6 +81,7 @@ export type UserQuiz = {
   difficulty: string;
   status?: "not_started" | "in_progress" | "completed"; // Puede ser opcional
   reviewed?: boolean;
+  completedQuestions?: number;
 };
 
 // Tipo para la subcategoría (basado en tu schema de Drizzle)

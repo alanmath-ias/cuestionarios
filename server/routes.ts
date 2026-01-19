@@ -1781,7 +1781,6 @@ Ejemplo de formato:
 
   apiRouter.get("/results/:progressId", async (req: Request, res: Response) => {
     const userId = req.session.userId;
-    const role = req.session.role; // Asegúrate de que esto está disponible en tu sesión
     const progressId = parseInt(req.params.progressId);
     const childId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
 
@@ -1793,16 +1792,21 @@ Ejemplo de formato:
       return res.status(400).json({ message: "Invalid progress ID" });
     }
 
+    // Fetch user to confirm role
+    const user = await storage.getUser(userId);
+    const userRole = user?.role;
+
     try {
       let progress;
 
-      console.log("Role:", role, "UserId:", userId, "ChildId:", childId);
+      console.log(`[DEBUG] /results/${progressId} - User: ${userId}, Role: ${userRole}`);
 
-      if (role === "admin") {
+      if (userRole === "admin") {
         // Admin puede ver cualquier progreso
-        const allProgresses = await storage.getAllProgresses();
-        progress = allProgresses.find((p) => p.id === progressId);
-      } else if (role === "parent" && childId) {
+        console.log(`[DEBUG] Fetching progress ${progressId} for admin`);
+        progress = await storage.getStudentProgressById(progressId);
+        console.log(`[DEBUG] Progress found:`, progress ? "Yes" : "No");
+      } else if (userRole === "parent" && childId) {
         // Verificar que el childId pertenece al padre autenticado
         const parentChild = await storage.getChildByParentId(userId);
         if (!parentChild || parentChild.id !== childId) {
@@ -1812,7 +1816,7 @@ Ejemplo de formato:
         // Obtener el progreso del hijo
         const childProgresses = await storage.getStudentProgress(childId);
         progress = childProgresses.find((p) => p.id === progressId);
-      } else if (role === "student" || role === "user") {
+      } else if (userRole === "student" || userRole === "user") {
         // Usuario normal solo puede ver sus propios progresos
         const userProgresses = await storage.getStudentProgress(userId);
         progress = userProgresses.find((p) => p.id === progressId);
@@ -2743,9 +2747,14 @@ Ejemplo de formato:
 
   apiRouter.get("/admin/reports", requireAuth, async (req: Request, res: Response) => {
     try {
-      if (!req.user || req.user.role !== "admin") return res.status(403).send("No autorizado");
+      console.log("GET /admin/reports - User:", req.user?.id, "Role:", req.user?.role);
+      if (!req.user || req.user.role !== "admin") {
+        console.log("Access denied for user:", req.user?.id);
+        return res.status(403).send("No autorizado");
+      }
 
       const reports = await storage.getQuestionReports();
+      console.log("Reports found:", reports.length);
       res.json(reports);
     } catch (error) {
       console.error("Error fetching reports:", error);
@@ -3003,8 +3012,9 @@ Ejemplo de formato:
       const totalAssigned = await storage.countAssignedQuizzes();
       const completed = await storage.countCompletedQuizzes();
       const pendingReview = await storage.countPendingReview();
+      const pendingReports = await storage.countPendingReports();
 
-      res.json({ totalAssigned, completed, pendingReview });
+      res.json({ totalAssigned, completed, pendingReview, pendingReports });
     } catch (error) {
       console.error('Error al obtener KPIs:', error);
       res.status(500).json({ error: 'Error al obtener KPIs' });
@@ -3031,6 +3041,48 @@ Ejemplo de formato:
     } catch (err) {
       console.error('Error al obtener resumen de progreso:', err);
       res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
+  app.get('/api/admin/students-at-risk', async (req, res) => {
+    try {
+      const storage = new DatabaseStorage(db);
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+      const students = await storage.getStudentsAtRisk(limit);
+      res.json(students);
+    } catch (error) {
+      console.error('Error al obtener estudiantes en riesgo:', error);
+      res.status(500).json({ error: 'Error interno' });
+    }
+  });
+
+  app.get('/api/admin/student-history/:userId/:subcategoryId', async (req, res) => {
+    try {
+      const storage = new DatabaseStorage(db);
+      const userId = parseInt(req.params.userId);
+      const subcategoryId = parseInt(req.params.subcategoryId);
+
+      if (isNaN(userId) || isNaN(subcategoryId)) {
+        return res.status(400).json({ error: "IDs inválidos" });
+      }
+
+      const history = await storage.getStudentHistoryBySubcategory(userId, subcategoryId);
+      res.json(history);
+    } catch (error) {
+      console.error('Error al obtener historial del estudiante:', error);
+      res.status(500).json({ error: 'Error interno' });
+    }
+  });
+
+  app.get('/api/admin/recent-activity', async (req, res) => {
+    try {
+      const storage = new DatabaseStorage(db);
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const activity = await storage.getRecentActivity(limit);
+      res.json(activity);
+    } catch (error) {
+      console.error('Error al obtener actividad reciente:', error);
+      res.status(500).json({ error: 'Error interno' });
     }
   });
 

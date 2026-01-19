@@ -65,7 +65,7 @@ export default function AdminReports() {
     const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
     const [aiResponse, setAiResponse] = useState<string | null>(null);
 
-    const { data: reports, isLoading } = useQuery<QuestionReport[]>({
+    const { data: reports, isLoading, error, isError } = useQuery<QuestionReport[]>({
         queryKey: ["/api/admin/reports"],
     });
 
@@ -161,7 +161,13 @@ export default function AdminReports() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {reports?.length === 0 ? (
+                                    {isError ? (
+                                        <TableRow className="border-white/5 hover:bg-transparent">
+                                            <TableCell colSpan={6} className="text-center py-8 text-red-500">
+                                                Error al cargar reportes: {(error as Error).message}
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : reports?.length === 0 ? (
                                         <TableRow className="border-white/5 hover:bg-transparent">
                                             <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                                                 No hay reportes de errores.

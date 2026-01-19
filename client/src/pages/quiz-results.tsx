@@ -33,13 +33,13 @@ function QuizResults() {
     window.history.back();
   };
 
-  const { data: results, isLoading: loadingResults } = useQuery<QuizResult>({
+  const { data: results, isLoading: loadingResults, error } = useQuery<QuizResult>({
     queryKey: [`/api/results/${progressId}`, userId],
     queryFn: async () => {
       const url = userId
         ? `/api/results/${progressId}?user_id=${userId}`
         : `/api/results/${progressId}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { credentials: 'include' });
       if (!res.ok) throw new Error('Error fetching results');
       return res.json();
     },

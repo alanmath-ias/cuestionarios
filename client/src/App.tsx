@@ -246,7 +246,9 @@ function Router() {
       </Route>
 
       {/*chat gpt calificar ruta para el boton que lleva a quiz-results*/}
-      <AdminProtectedRoute path="/admin/quiz-results/:progressId" component={QuizResults} />
+      <Route path="/admin/quiz-results/:progressId">
+        {() => <AdminProtectedRoute component={QuizResults} path="/admin/quiz-results/:progressId" />}
+      </Route>
       {/*chat gpt*/}
 
 

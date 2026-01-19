@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'wouter';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MathDisplay } from '@/components/ui/math-display';
@@ -8,11 +8,32 @@ import { ArrowLeft, Clock, CheckCircle, XCircle } from 'lucide-react';
 import type { QuizResult } from '@shared/quiz-types';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 function AdminQuizReview() {
   const { progressId } = useParams<{ progressId: string }>();
   const [_, setLocation] = useLocation();
   const [feedbackText, setFeedbackText] = useState('');
+  const [isReviewed, setIsReviewed] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleMarkReviewed = async (checked: boolean) => {
+    if (checked) {
+      try {
+        const res = await fetch(`/api/quiz-submissions/${progressId}/reviewed`, {
+          method: 'PATCH'
+        });
+        if (!res.ok) throw new Error('Error al marcar como revisado');
+
+        setIsReviewed(true);
+        toast.success('Marcado como revisado');
+      } catch (error) {
+        console.error(error);
+        toast.error('Error al actualizar estado');
+      }
+    }
+  };
 
   const { data: results, isLoading: loadingResults } = useQuery<QuizResult>({
     queryKey: [`/api/results/${progressId}`],
@@ -33,7 +54,6 @@ function AdminQuizReview() {
     enabled: !!progressId,
   });
 
-
   const mutation = useMutation({
     mutationFn: async () => {
       const res = await fetch('/api/quiz-feedback', {
@@ -51,31 +71,35 @@ function AdminQuizReview() {
         throw new Error(errorData.error || 'Error al guardar feedback');
       }
 
-      const submissionRes = await fetch('/api/update-quiz-submission', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          progressId,
-          feedback: feedbackText
-        }),
+      // Mark as reviewed
+      const reviewedRes = await fetch(`/api/quiz-submissions/${progressId}/reviewed`, {
+        method: 'PATCH'
       });
 
-      if (!submissionRes.ok) {
-        throw new Error('Error al actualizar la submission');
+      if (!reviewedRes.ok) {
+        console.error('Error marking as reviewed');
       }
 
       return res.json();
     },
     onSuccess: () => {
       toast.success('Feedback enviado correctamente');
-      setFeedbackText('');
+      setIsReviewed(true);
+      // Manually update the cache to show the feedback immediately
+      queryClient.setQueryData(['quiz-feedback', progressId], {
+        progressId: Number(progressId),
+        feedback: feedbackText,
+        createdAt: new Date().toISOString()
+      });
       refetchFeedback();
     },
     onError: (error) => {
       toast.error('Error al enviar el feedback: ' + error.message);
     },
   });
+
   const isLoading = mutation.status === "pending";
+
   const handleSendFeedback = () => {
     if (!feedbackText.trim()) {
       toast.warning('Escribe algo de feedback antes de enviarlo');
@@ -87,8 +111,10 @@ function AdminQuizReview() {
   useEffect(() => {
     if (existingFeedback?.feedback) {
       setFeedbackText(existingFeedback.feedback);
+      setIsReviewed(true);
     }
   }, [existingFeedback]);
+
 
   const correctAnswers = results?.answers.filter(a => a.isCorrect).length || 0;
   const totalQuestions = results?.answers.length || 0;
@@ -261,6 +287,17 @@ function AdminQuizReview() {
                 placeholder="Escribe aquí tu retroalimentación general para el estudiante..."
                 className="mb-4 min-h-[120px] bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50"
               />
+
+              <div className="flex items-center space-x-2 mb-4">
+                <Checkbox
+                  id="reviewed"
+                  checked={isReviewed}
+                  onCheckedChange={handleMarkReviewed}
+                />
+                <Label htmlFor="reviewed" className="text-slate-300 cursor-pointer">
+                  Marcar como revisado (desaparecerá de pendientes)
+                </Label>
+              </div>
 
               <Button
                 onClick={handleSendFeedback}

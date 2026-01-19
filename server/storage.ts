@@ -47,6 +47,7 @@ export interface IStorage {
   createStudentProgress(progress: InsertStudentProgress): Promise<StudentProgress>;
   updateStudentProgress(id: number, progress: Partial<StudentProgress>): Promise<StudentProgress>;
   deleteStudentProgress(id: number): Promise<void>;
+  getStudentProgressById(id: number): Promise<StudentProgress | undefined>;
 
   // Student Answer methods
   getStudentAnswersByProgress(progressId: number): Promise<StudentAnswer[]>;
@@ -77,7 +78,9 @@ export interface IStorage {
   countAssignedQuizzes(): Promise<number>;
   countCompletedQuizzes(): Promise<number>;
   countPendingReview(): Promise<number>;
+  countPendingReports(): Promise<number>;
   getRecentPendingSubmissions(): Promise<any[]>;
+  getStudentHistoryBySubcategory(userId: number, subcategoryId: number): Promise<any[]>;
 
   // Quiz Submission/Feedback methods
   saveQuizSubmission(submission: any): Promise<void>;
@@ -611,6 +614,10 @@ export class MemStorage implements IStorage {
     return newProgress;
   }
 
+  async getStudentProgressById(id: number): Promise<StudentProgress | undefined> {
+    return this.studentProgress.get(id);
+  }
+
   async updateStudentProgress(id: number, progress: Partial<StudentProgress>): Promise<StudentProgress> {
     const existingProgress = this.studentProgress.get(id);
     if (!existingProgress) {
@@ -682,6 +689,9 @@ export class MemStorage implements IStorage {
   async createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken> { throw new Error("Method not implemented."); }
   async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> { return undefined; }
   async deletePasswordResetToken(token: string): Promise<void> { }
+
+  async countPendingReports(): Promise<number> { return 0; }
+  async getStudentHistoryBySubcategory(userId: number, subcategoryId: number): Promise<any[]> { return []; }
 }
 
 import { DatabaseStorage } from "./database-storage.js";

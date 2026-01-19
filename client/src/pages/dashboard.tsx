@@ -265,6 +265,7 @@ export default function UserDashboard() {
   const [showPendingDialog, setShowPendingDialog] = useState(false);
   const [showRestZone, setShowRestZone] = useState(false);
   const [miniQuizId, setMiniQuizId] = useState<number | null>(null);
+  const [pendingSearchQuery, setPendingSearchQuery] = useState("");
 
   // New states for enhancements
   const [showCreditsInfo, setShowCreditsInfo] = useState(false);
@@ -540,6 +541,10 @@ export default function UserDashboard() {
     return acc;
   }, [] as QuizWithFeedback[]);
 
+  const filteredPendingQuizzes = pendingQuizzes.filter(q =>
+    q.title.toLowerCase().includes(pendingSearchQuery.toLowerCase())
+  );
+
   const progressPercentage = quizzes && quizzes.length > 0 ? (completedQuizzes.length / quizzes.length) * 100 : 0;
   const sortedCompletedQuizzes = [...completedQuizzes].sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
 
@@ -688,6 +693,11 @@ export default function UserDashboard() {
                           <p className="text-xs text-slate-500 truncate">{quiz.difficulty}</p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
+                          {(quiz.completedQuestions || 0) > 0 && (
+                            <span className="text-xs font-medium text-yellow-500/80 mr-2">
+                              Progreso: {quiz.completedQuestions}
+                            </span>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
@@ -925,10 +935,20 @@ export default function UserDashboard() {
               </DialogDescription>
             </DialogHeader>
 
+            <div className="relative px-4 pb-2">
+              <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <Input
+                placeholder="Buscar cuestionario..."
+                value={pendingSearchQuery}
+                onChange={(e) => setPendingSearchQuery(e.target.value)}
+                className="pl-9 bg-slate-950/50 border-slate-800 text-slate-200 placeholder:text-slate-600 focus:ring-yellow-500/50"
+              />
+            </div>
+
             <ScrollArea className="max-h-[60vh] pr-4">
               <div className="space-y-3 py-2">
-                {pendingQuizzes.length > 0 ? (
-                  pendingQuizzes.map((quiz) => (
+                {filteredPendingQuizzes.length > 0 ? (
+                  filteredPendingQuizzes.map((quiz) => (
                     <div key={quiz.id} className="group flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-yellow-500/30 hover:shadow-[0_0_15px_-3px_rgba(234,179,8,0.15)]">
                       <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0 shadow-sm">
                         <PlayCircle className="h-5 w-5 text-yellow-500" />
@@ -967,7 +987,7 @@ export default function UserDashboard() {
             </ScrollArea>
 
             <div className="flex justify-end">
-              <Button variant="outline" onClick={() => setShowPendingDialog(false)} className="border-slate-700 text-slate-300 hover:bg-white/10">Cerrar</Button>
+              <Button variant="outline" onClick={() => setShowPendingDialog(false)} className="bg-slate-800 hover:bg-slate-700 text-white border-slate-600 hover:border-slate-500">Cerrar</Button>
             </div>
           </DialogContent>
         </Dialog>

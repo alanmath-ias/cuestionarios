@@ -1,25 +1,38 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  BadgeCheck,
+  Activity,
+  Users,
+  BookOpen,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  TrendingUp,
+  Youtube,
   ClipboardList,
   ListChecks,
-  Users,
-  FileClock,
-  AlertTriangle,
-  Activity,
-  TrendingUp,
-  Youtube
-} from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
+  BadgeCheck,
+  AlertOctagon,
+  FileClock
+} from "lucide-react";
+import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 type KPIStats = {
   totalAssigned: number;
   completed: number;
   pendingReview: number;
+  pendingReports: number;
 };
 
 type Submission = {
@@ -36,6 +49,7 @@ type AtRiskStudent = {
   quizTitle: string;
   score: number;
   completedAt: string;
+  subcategoryId: number;
 };
 
 type RecentActivity = {
@@ -48,16 +62,29 @@ type RecentActivity = {
   completedAt: string;
 };
 
+type StudentHistory = {
+  quizId: number;
+  quizTitle: string;
+  score: number;
+  completedAt: string;
+  progressId: number;
+};
+
 const AdminDashboard: React.FC = () => {
   const [kpis, setKpis] = useState<KPIStats>({
     totalAssigned: 0,
     completed: 0,
     pendingReview: 0,
+    pendingReports: 0,
   });
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
   const [categories, setCategories] = useState<{ id: number; name: string; youtubeLink?: string | null }[]>([]);
   const [atRiskStudents, setAtRiskStudents] = useState<AtRiskStudent[]>([]);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+
+  // State for history dialog
+  const [selectedStudentHistory, setSelectedStudentHistory] = useState<StudentHistory[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   useEffect(() => {
     fetch('/api/admin/dashboard-kpis')
@@ -72,7 +99,6 @@ const AdminDashboard: React.FC = () => {
       .then(res => res.json())
       .then(setCategories);
 
-    // Nuevos endpoints
     fetch('/api/admin/students-at-risk?limit=5')
       .then(res => res.json())
       .then(setAtRiskStudents);
@@ -82,11 +108,24 @@ const AdminDashboard: React.FC = () => {
       .then(setRecentActivity);
   }, []);
 
+  const fetchStudentHistory = async (userId: number, subcategoryId: number) => {
+    setIsLoadingHistory(true);
+    try {
+      const res = await fetch(`/api/admin/student-history/${userId}/${subcategoryId}`);
+      const data = await res.json();
+      setSelectedStudentHistory(data);
+    } catch (error) {
+      console.error("Error fetching history:", error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="shadow-xl border border-white/10 bg-slate-900/50 backdrop-blur">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -124,6 +163,25 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/20">
                   <BadgeCheck className="w-6 h-6 text-yellow-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Reportes Pendientes con Alarma */}
+          <Card className={`shadow-xl border border-white/10 bg-slate-900/50 backdrop-blur ${kpis.pendingReports >= 10 ? 'animate-pulse border-red-500/50' : ''}`}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-sm font-medium ${kpis.pendingReports >= 10 ? 'text-red-400' : 'text-slate-400'}`}>
+                    Reportes Pendientes
+                  </p>
+                  <h3 className={`text-3xl font-bold mt-2 ${kpis.pendingReports >= 10 ? 'text-red-500' : 'text-slate-200'}`}>
+                    {kpis.pendingReports}
+                  </h3>
+                </div>
+                <div className={`p-3 rounded-full border ${kpis.pendingReports >= 10 ? 'bg-red-500/20 border-red-500/40' : 'bg-slate-500/10 border-slate-500/20'}`}>
+                  <AlertOctagon className={`w-6 h-6 ${kpis.pendingReports >= 10 ? 'text-red-500' : 'text-slate-400'}`} />
                 </div>
               </div>
             </CardContent>
@@ -201,9 +259,61 @@ const AdminDashboard: React.FC = () => {
                             </p>
                           </div>
                         </div>
-                        <Button asChild variant="ghost" size="sm" className="text-slate-400 hover:text-white hover:bg-white/5">
-                          <Link to="/admin/users">Ver Perfil</Link>
-                        </Button>
+
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-slate-400 hover:text-white hover:bg-white/5"
+                              onClick={() => fetchStudentHistory(student.userId, student.subcategoryId)}
+                            >
+                              Ver Historial
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Historial de {student.userName}</DialogTitle>
+                              <DialogDescription className="text-slate-400">
+                                Detalles de los intentos del estudiante en esta evaluación.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="mt-4">
+                              <h4 className="text-sm font-medium text-slate-400 mb-3">
+                                Intentos en esta subcategoría:
+                              </h4>
+                              {isLoadingHistory ? (
+                                <div className="text-center py-8 text-slate-500">Cargando historial...</div>
+                              ) : selectedStudentHistory.length === 0 ? (
+                                <div className="text-center py-8 text-slate-500">No hay historial disponible.</div>
+                              ) : (
+                                <div className="space-y-3">
+                                  {selectedStudentHistory.map((history) => (
+                                    <div key={history.progressId} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
+                                      <div>
+                                        <p className="font-medium text-slate-200">{history.quizTitle}</p>
+                                        <p className="text-xs text-slate-500">
+                                          {formatDistanceToNow(new Date(history.completedAt), { addSuffix: true, locale: es })}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-4">
+                                        <span className={`text-sm font-bold px-2 py-1 rounded ${history.score <= 7.0 ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
+                                          }`}>
+                                          Nota: {history.score}
+                                        </span>
+                                        <Button asChild size="sm" className="bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20">
+                                          <Link to={`/admin/quiz-results/${history.progressId}`}>
+                                            Ver Detalles
+                                          </Link>
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     ))}
                   </div>
