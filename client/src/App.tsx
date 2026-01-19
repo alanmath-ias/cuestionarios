@@ -26,6 +26,7 @@ import AllUsersCategoriesAdmin from './pages/admin/AllUsersCategoriesAdmin';
 import AdminQuizReview from './pages/admin/AdminQuizReview';
 import AdminReports from './pages/admin/reports';
 import SendEmail from './pages/admin/SendEmail';
+import { AdminBreadcrumbs } from "@/components/admin/AdminBreadcrumbs";
 
 {/*chat gpt entrenamiento*/ }
 import TrainingPage from "@/pages/training/[categoryId]";
@@ -124,7 +125,12 @@ function AdminProtectedRoute({ component: Component, ...rest }: { component: any
     return null;
   }
 
-  return <PageLayout><Component {...rest} /></PageLayout>;
+  return (
+    <PageLayout>
+      <AdminBreadcrumbs />
+      <Component {...rest} />
+    </PageLayout>
+  );
 }
 
 function RootRoute() {

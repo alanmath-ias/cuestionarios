@@ -56,6 +56,11 @@ export default function QuizzesAdmin() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loadingSubcategories, setLoadingSubcategories] = useState(false);
 
+  // Search and Accordion State
+  const [quizSearchQuery, setQuizSearchQuery] = useState("");
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [expandedSubcategories, setExpandedSubcategories] = useState<string[]>([]);
+
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -184,6 +189,70 @@ export default function QuizzesAdmin() {
 
   const hierarchicalData = organizeQuizzesHierarchically();
   const quizzesWithoutClassification = quizzes?.filter(q => !q.categoryId || !q.subcategoryId) || [];
+
+  // Filtered Data and Auto-Expansion
+  // Filtered Data and Auto-Expansion
+  const { filteredHierarchicalData, filteredUnclassifiedQuizzes } = React.useMemo(() => {
+    if (!quizSearchQuery) {
+      return {
+        filteredHierarchicalData: hierarchicalData,
+        filteredUnclassifiedQuizzes: quizzesWithoutClassification
+      };
+    }
+
+    const lowerQuery = quizSearchQuery.toLowerCase();
+
+    const filteredData = hierarchicalData.map(category => {
+      const filteredSubcats = category.subcategories.map((sub: any) => {
+        const filteredQuizzes = sub.quizzes.filter((q: Quiz) =>
+          q.title.toLowerCase().includes(lowerQuery)
+        );
+
+        if (filteredQuizzes.length > 0 || sub.name.toLowerCase().includes(lowerQuery)) {
+          if (sub.name.toLowerCase().includes(lowerQuery) && filteredQuizzes.length === 0) {
+            return sub;
+          }
+          return { ...sub, quizzes: filteredQuizzes };
+        }
+        return null;
+      }).filter(Boolean);
+
+      if (filteredSubcats.length > 0 || category.name.toLowerCase().includes(lowerQuery)) {
+        return { ...category, subcategories: filteredSubcats };
+      }
+      return null;
+    }).filter(Boolean);
+
+    const filteredUnclassified = quizzesWithoutClassification.filter(q =>
+      q.title.toLowerCase().includes(lowerQuery)
+    );
+
+    return {
+      filteredHierarchicalData: filteredData,
+      filteredUnclassifiedQuizzes: filteredUnclassified
+    };
+  }, [hierarchicalData, quizzesWithoutClassification, quizSearchQuery]);
+
+  useEffect(() => {
+    if (quizSearchQuery) {
+      const newExpandedCategories: string[] = [];
+      const newExpandedSubcategories: string[] = [];
+
+      filteredHierarchicalData.forEach((cat: any) => {
+        newExpandedCategories.push(`cat-${cat.id}`);
+        cat.subcategories.forEach((sub: any) => {
+          newExpandedSubcategories.push(`subcat-${sub.id}`);
+        });
+      });
+
+      if (filteredUnclassifiedQuizzes.length > 0) {
+        newExpandedCategories.push("uncategorized");
+      }
+
+      setExpandedCategories(newExpandedCategories);
+      setExpandedSubcategories(newExpandedSubcategories);
+    }
+  }, [quizSearchQuery, filteredHierarchicalData, filteredUnclassifiedQuizzes]);
 
   // Async functions
   const fetchAssignedUsers = async (quizId: number) => {
@@ -631,11 +700,22 @@ export default function QuizzesAdmin() {
 
           <div className="md:col-span-2">
             <Card className="bg-slate-900 border-white/10 shadow-xl">
-              <CardHeader className="bg-slate-950/50 border-b border-white/5">
-                <CardTitle className="text-slate-100">Cuestionarios Existentes</CardTitle>
-                <CardDescription className="text-slate-400">
-                  Lista de todos los cuestionarios disponibles en el sistema
-                </CardDescription>
+              <CardHeader className="bg-slate-950/50 border-b border-white/5 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-slate-100">Cuestionarios Existentes</CardTitle>
+                  <CardDescription className="text-slate-400">
+                    Lista de todos los cuestionarios disponibles en el sistema
+                  </CardDescription>
+                </div>
+                <div className="relative w-64">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder="Buscar cuestionario..."
+                    value={quizSearchQuery}
+                    onChange={(e) => setQuizSearchQuery(e.target.value)}
+                    className="pl-8 bg-slate-950 border-slate-800 text-slate-200 focus:ring-blue-500/50"
+                  />
+                </div>
               </CardHeader>
               <CardContent className="pt-6">
                 {isLoading ? (
@@ -643,9 +723,14 @@ export default function QuizzesAdmin() {
                     <Spinner className="h-8 w-8 text-blue-500" />
                   </div>
                 ) : quizzes && quizzes.length > 0 ? (
-                  <Accordion type="multiple" className="space-y-4">
+                  <Accordion
+                    type="multiple"
+                    className="space-y-4"
+                    value={expandedCategories}
+                    onValueChange={setExpandedCategories}
+                  >
                     {/* 1. Categorías con subcategorías */}
-                    {hierarchicalData.map((category) => (
+                    {filteredHierarchicalData.map((category: any) => (
                       <AccordionItem key={category.id} value={`cat-${category.id}`} className="border border-white/10 rounded-md bg-slate-800/30 overflow-hidden">
                         <AccordionTrigger className="hover:no-underline px-4 py-3 bg-slate-800/50 hover:bg-slate-800 text-slate-200">
                           <div className="flex-1 text-left">
@@ -656,7 +741,12 @@ export default function QuizzesAdmin() {
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="px-4 pb-0 pt-2 bg-slate-900/50 border-t border-white/5">
-                          <Accordion type="multiple" className="space-y-2 py-2">
+                          <Accordion
+                            type="multiple"
+                            className="space-y-2 py-2"
+                            value={expandedSubcategories}
+                            onValueChange={setExpandedSubcategories}
+                          >
                             {category.subcategories.map((subcategory: any) => (
                               subcategory.quizzes.length > 0 && (
                                 <AccordionItem
@@ -833,19 +923,19 @@ export default function QuizzesAdmin() {
                     ))}
 
                     {/* 2. Quizzes sin categoría/subcategoría */}
-                    {quizzesWithoutClassification.length > 0 && (
+                    {filteredUnclassifiedQuizzes.length > 0 && (
                       <AccordionItem value="uncategorized" className="border border-white/10 rounded-md bg-slate-800/30 overflow-hidden">
                         <AccordionTrigger className="hover:no-underline px-4 py-3 bg-slate-800/50 hover:bg-slate-800 text-slate-200">
                           <div className="flex-1 text-left">
                             <h3 className="text-lg font-medium">Sin materia/tema</h3>
                             <p className="text-sm text-slate-400">
-                              {quizzesWithoutClassification.length} cuestionario(s) no clasificado(s)
+                              {filteredUnclassifiedQuizzes.length} cuestionario(s) no clasificado(s)
                             </p>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="px-4 pb-0 pt-2 bg-slate-900/50 border-t border-white/5">
                           <div className="grid grid-cols-1 gap-3 py-3">
-                            {quizzesWithoutClassification.map((quiz) => (
+                            {filteredUnclassifiedQuizzes.map((quiz) => (
                               <Card key={quiz.id} className="overflow-hidden border border-white/5 bg-slate-900 hover:bg-slate-800 transition-all">
                                 <CardContent className="p-6">
                                   <div className="flex flex-col space-y-4">

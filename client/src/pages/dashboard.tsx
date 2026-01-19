@@ -584,7 +584,7 @@ export default function UserDashboard() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold text-white tracking-tight">
-                Hola, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">{currentUser?.username || 'Estudiante'}</span> 👋
+                Hola <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">{(currentUser?.username || 'Estudiante').charAt(0).toUpperCase() + (currentUser?.username || 'Estudiante').slice(1)}</span> 👋
               </h1>
             </div>
             <p className="text-slate-400 mt-1">Aquí tienes el resumen de tu progreso hoy.</p>
