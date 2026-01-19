@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 
 // IDs de quizzes públicos
-const PUBLIC_QUIZ_IDS = [68, 69, 73, 72, 278];
+const PUBLIC_QUIZ_IDS = [68, 69, 73, 72, 278, 279];
 
 interface Quiz {
   id: number;

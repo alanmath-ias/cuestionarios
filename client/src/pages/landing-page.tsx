@@ -32,7 +32,8 @@ export default function LandingPage() {
             title: "Álgebra",
             icon: <Sigma className="w-8 h-8 text-purple-500" />,
             description: "Ecuaciones, funciones y polinomios simplificados.",
-            active: false
+            active: true,
+            quizId: 279 // ID del test de nivelación de álgebra
         },
         {
             id: "calculus",

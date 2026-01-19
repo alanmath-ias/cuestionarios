@@ -73,8 +73,8 @@ export function ExplanationModal({ questionId, question, correctAnswer, quizTitl
 
     return (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-            <Card className="w-full max-w-3xl mx-auto bg-slate-900 border-white/10 shadow-2xl max-h-[90vh] flex flex-col">
-                <CardHeader className="relative border-b border-white/5 pb-4">
+            <Card className="w-full max-w-3xl mx-auto bg-slate-900 border-white/10 shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+                <CardHeader className="relative border-b border-white/5 pb-4 shrink-0">
                     <CardTitle className="text-xl font-semibold text-white flex items-center gap-2">
                         <BookOpen className="h-5 w-5 text-blue-400" />
                         Explicación: <span className="text-slate-200 font-normal ml-1">{quizTitle}</span>
@@ -89,7 +89,7 @@ export function ExplanationModal({ questionId, question, correctAnswer, quizTitl
                     </Button>
                 </CardHeader>
 
-                <CardContent className="flex-1 min-h-0 p-0 relative">
+                <CardContent className="flex-1 min-h-0 p-0 relative overflow-hidden">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                             <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />

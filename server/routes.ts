@@ -1034,7 +1034,7 @@ Formato: Solo el texto del tip con el ejemplo.`;
   // Quiz questions endpoint
   apiRouter.get("/quizzes/:quizId/questions", async (req: Request, res: Response) => {
     const quizId = parseInt(req.params.quizId);
-    const publicQuizIds = [68, 69, 70, 71, 72, 73, 278]; // IDs de cuestionarios públicos - cuestionarios para encuesta modelo tests
+    const publicQuizIds = [68, 69, 70, 71, 72, 73, 278, 279]; // IDs de cuestionarios públicos - cuestionarios para encuesta modelo tests
 
 
     if (isNaN(quizId)) {
@@ -1066,16 +1066,19 @@ Formato: Solo el texto del tip con el ejemplo.`;
         const diff2 = questions.filter(q => q.difficulty === 2);
         const diff3 = questions.filter(q => q.difficulty === 3);
 
-        // Select random subset from each difficulty
-        // Target: 3 Easy, 4 Medium, 3 Hard = 10 questions
-        // If not enough questions in a category, take what's available
-        const selectedDiff1 = diff1.sort(() => 0.5 - Math.random()).slice(0, Math.min(3, diff1.length));
-        const selectedDiff2 = diff2.sort(() => 0.5 - Math.random()).slice(0, Math.min(4, diff2.length));
-        const selectedDiff3 = diff3.sort(() => 0.5 - Math.random()).slice(0, Math.min(3, diff3.length));
+        // Determine distribution based on total questions
+        let count1 = 3, count2 = 4, count3 = 3; // Default for 10 questions
 
-        // If we don't have enough questions to reach 10, fill up from remaining pool if needed
-        // But for now, let's stick to the structured approach. 
-        // If the bank is small, this might return fewer than 10, which is safer than crashing.
+        if (quiz.totalQuestions === 12) {
+          count1 = 4;
+          count2 = 4;
+          count3 = 4;
+        }
+
+        // Select random subset from each difficulty
+        const selectedDiff1 = diff1.sort(() => 0.5 - Math.random()).slice(0, Math.min(count1, diff1.length));
+        const selectedDiff2 = diff2.sort(() => 0.5 - Math.random()).slice(0, Math.min(count2, diff2.length));
+        const selectedDiff3 = diff3.sort(() => 0.5 - Math.random()).slice(0, Math.min(count3, diff3.length));
 
         // Combine and sort by difficulty ascending
         selectedQuestions = [...selectedDiff1, ...selectedDiff2, ...selectedDiff3]
@@ -1587,7 +1590,7 @@ Ejemplo de formato:
       const question = await storage.getQuestion(questionId);
       if (!question) return res.status(404).json({ message: "Question not found" });
 
-      const publicQuizIds = [278]; // Add other public quiz IDs if needed
+      const publicQuizIds = [278, 279]; // Add other public quiz IDs if needed
       const isPublicQuiz = publicQuizIds.includes(question.quizId);
 
       if (!userId && !isPublicQuiz) {
