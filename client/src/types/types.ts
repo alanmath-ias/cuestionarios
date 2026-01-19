@@ -10,6 +10,7 @@ export interface User {
   createdAt?: Date;
   tourStatus?: Record<string, boolean>;
   hintCredits?: number;
+  isImpersonating?: boolean;
 }
 
 export interface Category {

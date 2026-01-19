@@ -52,6 +52,7 @@ declare global {
 declare module "express-session" {
   interface SessionData {
     userId?: number;
+    originalAdminId?: number;
   }
 }
 
@@ -373,7 +374,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...userWithoutPassword,
         role: user.role,
         hintCredits: user.hintCredits,
-        tourStatus: user.tourStatus || {}
+        tourStatus: user.tourStatus || {},
+        isImpersonating: !!req.session.originalAdminId
       });
     } catch (error) {
       console.error("Auth check error:", error);
@@ -396,7 +398,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...userWithoutPassword,
         role: user.role,
         hintCredits: user.hintCredits,
-        tourStatus: user.tourStatus || {}
+        tourStatus: user.tourStatus || {},
+        isImpersonating: !!req.session.originalAdminId
       });
     } catch (error) {
       console.error("Auth check error:", error);
@@ -443,7 +446,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { password: _, ...userWithoutPassword } = user;
       res.json({
         ...userWithoutPassword,
-        tourStatus: user.tourStatus || {}
+        tourStatus: user.tourStatus || {},
+        isImpersonating: !!req.session.originalAdminId
       });
     } catch (error) {
       console.error("Auth check error:", error);
@@ -3198,6 +3202,61 @@ Ejemplo de formato:
     } catch (error) {
       console.error("Error fetching categories:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Impersonate user endpoint
+  app.post("/api/admin/impersonate/:userId", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const targetUserId = parseInt(req.params.userId);
+      if (isNaN(targetUserId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Set the session user ID to the target user
+      req.session.originalAdminId = req.session.userId;
+      req.session.userId = targetUserId;
+
+      // Save the session explicitly to ensure it persists before response
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ message: "Failed to save session" });
+        }
+        res.json({ message: `Impersonating ${targetUser.username}`, user: targetUser });
+      });
+
+    } catch (error) {
+      console.error("Impersonation error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Stop impersonating endpoint
+  app.post("/api/admin/stop-impersonating", async (req: Request, res: Response) => {
+    try {
+      if (!req.session.originalAdminId) {
+        return res.status(400).json({ message: "Not currently impersonating" });
+      }
+
+      req.session.userId = req.session.originalAdminId;
+      req.session.originalAdminId = undefined;
+
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ message: "Failed to save session" });
+        }
+        res.json({ message: "Impersonation stopped" });
+      });
+    } catch (error) {
+      console.error("Stop impersonation error:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 

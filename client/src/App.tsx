@@ -27,6 +27,10 @@ import AdminQuizReview from './pages/admin/AdminQuizReview';
 import AdminReports from './pages/admin/reports';
 import SendEmail from './pages/admin/SendEmail';
 import { AdminBreadcrumbs } from "@/components/admin/AdminBreadcrumbs";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 {/*chat gpt entrenamiento*/ }
 import TrainingPage from "@/pages/training/[categoryId]";
@@ -50,6 +54,39 @@ import LandingPage from "@/pages/landing-page";
 
 //Protectroute que permite el ingreso a cuestionarios publicos:
 const PUBLIC_QUIZZES = [1, 2, 3, 4, 278]; // IDs de los cuestionarios públicos
+
+function ImpersonationBanner() {
+  const { data: user } = useQuery<User>({ queryKey: ['/api/user'] });
+
+  const stopImpersonationMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/admin/stop-impersonating");
+    },
+    onSuccess: () => {
+      window.location.href = "/admin/users";
+    },
+  });
+
+  if (!user?.isImpersonating) return null;
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-4 bg-red-600 text-white px-6 py-3 rounded-full shadow-2xl border-2 border-white/20 animate-in slide-in-from-bottom-5">
+      <div className="flex flex-col">
+        <span className="font-bold text-sm">Modo Vista de Usuario</span>
+        <span className="text-xs opacity-90">Viendo como: {user.username}</span>
+      </div>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => stopImpersonationMutation.mutate()}
+        className="bg-white text-red-600 hover:bg-white/90 font-bold border-0"
+      >
+        <LogOut className="mr-2 h-4 w-4" />
+        Salir
+      </Button>
+    </div>
+  );
+}
 
 function ProtectedRoute({ component: Component, ...rest }: { component: any, path: string }) {
   const { data: user, isLoading } = useQuery<User>({
@@ -309,6 +346,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router />
+      <ImpersonationBanner />
       <Toaster />
     </QueryClientProvider>
   );
