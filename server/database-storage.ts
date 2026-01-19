@@ -1179,12 +1179,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveQuizSubmission(submission: { userId: number; quizId: number; score: number; progressId: number }): Promise<void> {
-    await this.db.insert(quizSubmissions).values({
-      userId: submission.userId,
-      quizId: submission.quizId,
-      score: submission.score,
-      progressId: submission.progressId,
+    // Check if submission already exists for this progressId
+    const existing = await this.db.query.quizSubmissions.findFirst({
+      where: eq(quizSubmissions.progressId, submission.progressId)
     });
+
+    if (existing) {
+      // Update existing submission
+      await this.db
+        .update(quizSubmissions)
+        .set({
+          score: submission.score,
+          completedAt: sql`CURRENT_TIMESTAMP`,
+        })
+        .where(eq(quizSubmissions.id, existing.id));
+    } else {
+      // Insert new submission
+      await this.db.insert(quizSubmissions).values({
+        userId: submission.userId,
+        quizId: submission.quizId,
+        score: submission.score,
+        progressId: submission.progressId,
+      });
+    }
   }
 
   async getQuizSubmissionsForAdmin(): Promise<any[]> {

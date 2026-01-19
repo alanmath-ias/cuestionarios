@@ -168,24 +168,26 @@ const AdminDashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Reportes Pendientes con Alarma */}
-          <Card className={`shadow-xl border border-white/10 bg-slate-900/50 backdrop-blur ${kpis.pendingReports >= 10 ? 'animate-pulse border-red-500/50' : ''}`}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className={`text-sm font-medium ${kpis.pendingReports >= 10 ? 'text-red-400' : 'text-slate-400'}`}>
-                    Reportes Pendientes
-                  </p>
-                  <h3 className={`text-3xl font-bold mt-2 ${kpis.pendingReports >= 10 ? 'text-red-500' : 'text-slate-200'}`}>
-                    {kpis.pendingReports}
-                  </h3>
+          <Link href="/admin/reports">
+            {/* Reportes Pendientes con Alarma */}
+            <Card className={`shadow-xl border border-white/10 bg-slate-900/50 backdrop-blur ${kpis.pendingReports >= 10 ? 'animate-pulse border-red-500/50' : ''}`}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`text-sm font-medium ${kpis.pendingReports >= 10 ? 'text-red-400' : 'text-slate-400'}`}>
+                      Reportes Pendientes
+                    </p>
+                    <h3 className={`text-3xl font-bold mt-2 ${kpis.pendingReports >= 10 ? 'text-red-500' : 'text-slate-200'}`}>
+                      {kpis.pendingReports}
+                    </h3>
+                  </div>
+                  <div className={`p-3 rounded-full border ${kpis.pendingReports >= 10 ? 'bg-red-500/20 border-red-500/40' : 'bg-slate-500/10 border-slate-500/20'}`}>
+                    <AlertOctagon className={`w-6 h-6 ${kpis.pendingReports >= 10 ? 'text-red-500' : 'text-slate-400'}`} />
+                  </div>
                 </div>
-                <div className={`p-3 rounded-full border ${kpis.pendingReports >= 10 ? 'bg-red-500/20 border-red-500/40' : 'bg-slate-500/10 border-slate-500/20'}`}>
-                  <AlertOctagon className={`w-6 h-6 ${kpis.pendingReports >= 10 ? 'text-red-500' : 'text-slate-400'}`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -194,11 +196,16 @@ const AdminDashboard: React.FC = () => {
 
             {/* Envíos Pendientes (Prioridad Alta) */}
             <Card className="border border-white/10 bg-slate-900 shadow-xl">
-              <CardHeader className="pb-3 border-b border-white/5 bg-slate-900/50">
+              <CardHeader className="pb-3 border-b border-white/5 bg-slate-900/50 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg font-bold flex items-center gap-2 text-orange-400">
                   <FileClock className="w-5 h-5" />
                   Envíos Pendientes de Revisión
                 </CardTitle>
+                <Button variant="ghost" size="sm" asChild className="text-xs text-orange-400 hover:text-orange-300 hover:bg-orange-500/10">
+                  <Link href="/admin/calificar">
+                    Ver todo
+                  </Link>
+                </Button>
               </CardHeader>
               <CardContent className="p-0">
                 {recentSubmissions.length === 0 ? (

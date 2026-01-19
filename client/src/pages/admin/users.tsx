@@ -53,6 +53,7 @@ export default function UsersAdmin() {
   const searchString = useSearch();
   const [highlightId, setHighlightId] = useState<number | null>(null);
   const rowRefs = useRef<{ [key: number]: HTMLTableRowElement | null }>({});
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(searchString);
@@ -66,6 +67,12 @@ export default function UsersAdmin() {
   const sortedUsers = users ? [...users].sort((a: any, b: any) =>
     (a.username || "").localeCompare(b.username || "")
   ) : [];
+
+  const filteredUsers = sortedUsers.filter(user =>
+    user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.id.toString().includes(searchQuery)
+  );
 
   useEffect(() => {
     if (highlightId && rowRefs.current[highlightId]) {
@@ -153,11 +160,22 @@ export default function UsersAdmin() {
         </div>
 
         <Card className="bg-slate-900 border border-white/10 shadow-xl">
-          <CardHeader className="border-b border-white/5 bg-slate-900/50">
-            <CardTitle className="text-slate-200">Usuarios Registrados</CardTitle>
-            <CardDescription className="text-slate-400">
-              Lista de todos los usuarios y sus roles.
-            </CardDescription>
+          <CardHeader className="border-b border-white/5 bg-slate-900/50 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-slate-200">Usuarios Registrados</CardTitle>
+              <CardDescription className="text-slate-400">
+                Lista de todos los usuarios y sus roles.
+              </CardDescription>
+            </div>
+            <div className="relative w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Buscar usuario..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 bg-slate-950 border-slate-800 text-slate-200 focus:ring-blue-500/50"
+              />
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
@@ -172,7 +190,7 @@ export default function UsersAdmin() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedUsers?.map((user: any) => (
+                {filteredUsers?.map((user: any) => (
                   <TableRow
                     key={user.id}
                     ref={(el) => (rowRefs.current[user.id] = el)}
