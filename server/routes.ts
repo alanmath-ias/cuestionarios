@@ -77,6 +77,9 @@ type ProgressWithQuiz = typeof studentProgress.$inferSelect & {
 
 
 
+
+const publicQuizIds = [278, 279, 280];
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   const apiRouter = express.Router();
@@ -1031,11 +1034,8 @@ Formato: Solo el texto del tip con el ejemplo.`;
     }
   });
 
-  // Quiz questions endpoint
   apiRouter.get("/quizzes/:quizId/questions", async (req: Request, res: Response) => {
     const quizId = parseInt(req.params.quizId);
-    const publicQuizIds = [68, 69, 70, 71, 72, 73, 278, 279]; // IDs de cuestionarios públicos - cuestionarios para encuesta modelo tests
-
 
     if (isNaN(quizId)) {
       return res.status(400).json({ message: "Invalid quiz ID" });
@@ -1590,7 +1590,7 @@ Ejemplo de formato:
       const question = await storage.getQuestion(questionId);
       if (!question) return res.status(404).json({ message: "Question not found" });
 
-      const publicQuizIds = [278, 279]; // Add other public quiz IDs if needed
+      const publicQuizIds = [278, 279, 280]; // Add other public quiz IDs if needed
       const isPublicQuiz = publicQuizIds.includes(question.quizId);
 
       if (!userId && !isPublicQuiz) {

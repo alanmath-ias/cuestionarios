@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, PlayCircle, GraduationCap, BrainCircuit, ArrowRight, Star, Calculator, BookOpen, Sigma, Atom, ChevronDown, Sparkles } from "lucide-react";
+import { CheckCircle2, PlayCircle, GraduationCap, BrainCircuit, ArrowRight, Star, Calculator, BookOpen, Sigma, Atom, ChevronDown, Sparkles, Triangle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import {
@@ -25,7 +25,7 @@ export default function LandingPage() {
             icon: <Calculator className="w-8 h-8 text-blue-500" />,
             description: "Domina los fundamentos: operaciones, fracciones y más.",
             active: true,
-            quizId: 278 // ID del test de nivelación de aritmética
+            quizId: 278
         },
         {
             id: "algebra",
@@ -33,21 +33,31 @@ export default function LandingPage() {
             icon: <Sigma className="w-8 h-8 text-purple-500" />,
             description: "Ecuaciones, funciones y polinomios simplificados.",
             active: true,
-            quizId: 279 // ID del test de nivelación de álgebra
+            quizId: 279
+        },
+        {
+            id: "trigonometry",
+            title: "Trigonometría",
+            icon: <Triangle className="w-8 h-8 text-indigo-500" />,
+            description: "Ángulos, funciones y triángulos.",
+            active: true,
+            quizId: 280
         },
         {
             id: "calculus",
             title: "Cálculo",
             icon: <BookOpen className="w-8 h-8 text-pink-500" />,
             description: "Límites, derivadas e integrales paso a paso.",
-            active: false
+            active: false,
+            quizId: null
         },
         {
             id: "physics",
             title: "Física",
             icon: <Atom className="w-8 h-8 text-cyan-500" />,
             description: "Mecánica, energía y movimiento explicados.",
-            active: false
+            active: false,
+            quizId: null
         }
     ];
 
