@@ -13,16 +13,20 @@ interface QuizDetailsDialogProps {
         score?: number;
         timeSpent?: number;
         progressId?: string | number;
+        feedback?: string;
     } | null;
 }
 
 export function QuizDetailsDialog({ open, onOpenChange, quiz }: QuizDetailsDialogProps) {
     const { data: feedbackData, isLoading: loadingFeedback } = useQuery({
         queryKey: ['/api/quiz-feedback', quiz?.progressId],
-        enabled: !!quiz?.progressId,
+        enabled: !!quiz?.progressId && !quiz?.feedback,
     });
 
     if (!quiz) return null;
+
+    const feedbackText = quiz.feedback || feedbackData?.feedback;
+    const isLoading = !quiz.feedback && loadingFeedback;
 
     const formatTime = (seconds: number | undefined) => {
         if (seconds === undefined) return "0:00 min";
@@ -59,14 +63,14 @@ export function QuizDetailsDialog({ open, onOpenChange, quiz }: QuizDetailsDialo
                     </div>
                 </div>
 
-                {loadingFeedback ? (
+                {isLoading ? (
                     <div className="flex justify-center py-6"><Spinner className="text-blue-500" /></div>
-                ) : feedbackData?.feedback ? (
+                ) : feedbackText ? (
                     <div className="bg-purple-500/10 p-5 rounded-xl border border-purple-500/20">
                         <h4 className="text-sm font-bold text-purple-300 mb-2 flex items-center gap-2">
                             <MessageCircle className="w-4 h-4" /> Feedback de AlanMath
                         </h4>
-                        <p className="text-sm text-purple-200/80 whitespace-pre-wrap leading-relaxed">{feedbackData.feedback}</p>
+                        <p className="text-sm text-purple-200/80 whitespace-pre-wrap leading-relaxed">{feedbackText}</p>
                     </div>
                 ) : (
                     <div className="text-center py-6 text-sm text-slate-500 italic bg-slate-800/30 rounded-xl border border-white/5">

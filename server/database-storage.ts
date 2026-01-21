@@ -385,9 +385,13 @@ export class DatabaseStorage implements IStorage {
         progressId: studentProgress.id,
         completedQuestions: sql<number>`(SELECT COUNT(DISTINCT question_id) FROM student_answers WHERE student_answers.progress_id = ${studentProgress.id})`.mapWith(Number),
         score: studentProgress.score,
-        timeSpent: studentProgress.timeSpent, // <- Aquí está el cambio clave
-        completedAt: studentProgress.completedAt, // <- AÃ±ade esta lÃ­nea
-        url: quizzes.url, // â† AÃ±ade esta lÃ­nea
+        timeSpent: studentProgress.timeSpent,
+        completedAt: studentProgress.completedAt,
+        url: quizzes.url,
+        feedback: quizFeedback.feedback,
+        totalQuestions: quizzes.totalQuestions,
+        description: quizzes.description,
+        subcategoryId: quizzes.subcategoryId,
       })
       .from(quizzes)
       .leftJoin(userQuizzes, and(
@@ -402,6 +406,7 @@ export class DatabaseStorage implements IStorage {
         eq(quizSubmissions.userId, userId),
         eq(quizSubmissions.quizId, quizzes.id)
       ))
+      .leftJoin(quizFeedback, eq(quizFeedback.progressId, studentProgress.id))
       .where(or(
         isNotNull(userQuizzes.quizId),
         isNotNull(studentProgress.id)

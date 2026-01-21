@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { CheckCircle2, ChevronLeft, Clock, Calendar, Search, Trophy } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Clock, Calendar, Search, Trophy, MessageSquare } from "lucide-react";
 import { Link } from "wouter";
 import { UserQuiz } from "@/types/types";
 import { useState } from "react";
@@ -14,6 +14,7 @@ interface QuizWithFeedback extends UserQuiz {
     completedAt?: string | Date;
     score?: number;
     timeSpent?: number;
+    feedback?: string;
 }
 
 async function fetchQuizzes() {
@@ -73,38 +74,55 @@ export default function HistoryPage() {
 
                 <div className="grid gap-4">
                     {completedQuizzes.length > 0 ? (
-                        completedQuizzes.map((quiz) => (
-                            <Link key={quiz.progressId || quiz.id} href={`/results/${quiz.progressId}`}>
-                                <Card className="bg-slate-900/40 border-white/5 hover:bg-slate-900/60 hover:border-blue-500/30 transition-all cursor-pointer backdrop-blur-sm group">
-                                    <CardContent className="p-5 flex items-center gap-5">
-                                        <div className="h-14 w-14 rounded-full bg-green-500/10 flex items-center justify-center shrink-0 border border-green-500/20 group-hover:scale-110 transition-transform">
-                                            <Trophy className="h-7 w-7 text-green-400" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-bold text-lg text-slate-200 group-hover:text-blue-400 transition-colors truncate">{quiz.title}</h3>
-                                            <div className="flex items-center gap-4 text-sm text-slate-500 mt-1">
-                                                <span className="flex items-center gap-1.5">
-                                                    <Calendar className="w-3.5 h-3.5" />
-                                                    {new Date(quiz.completedAt || '').toLocaleDateString()}
-                                                </span>
-                                                <span className="flex items-center gap-1.5">
-                                                    <Clock className="w-3.5 h-3.5" />
-                                                    {quiz.timeSpent || 0} min
-                                                </span>
+                        completedQuizzes.map((quiz) => {
+                            const hasFeedback = quiz.feedback && quiz.feedback.length > 0;
+                            return (
+                                <Link key={quiz.progressId || quiz.id} href={`/results/${quiz.progressId}`}>
+                                    <Card className={`bg-slate-900/40 border-white/5 transition-all cursor-pointer backdrop-blur-sm group ${hasFeedback
+                                        ? "hover:bg-blue-900/20 hover:border-blue-500/30 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.2)]"
+                                        : "hover:bg-slate-900/60 hover:border-purple-500/30"
+                                        }`}>
+                                        <CardContent className="p-5 flex items-center gap-5">
+                                            <div className={`h-14 w-14 rounded-full flex items-center justify-center shrink-0 border group-hover:scale-110 transition-transform ${hasFeedback
+                                                ? "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                                                : "bg-green-500/10 border-green-500/20 text-green-400"
+                                                }`}>
+                                                {hasFeedback ? <MessageSquare className="h-7 w-7" /> : <Trophy className="h-7 w-7" />}
                                             </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="flex flex-col items-end">
-                                                <span className="text-2xl font-bold text-white group-hover:text-green-400 transition-colors">
-                                                    {quiz.score}<span className="text-sm text-slate-500 font-normal">/10</span>
-                                                </span>
-                                                <span className="text-xs text-slate-500 uppercase tracking-wider font-medium">Puntaje</span>
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className={`font-bold text-lg transition-colors truncate ${hasFeedback ? "text-slate-200 group-hover:text-blue-400" : "text-slate-200 group-hover:text-green-400"
+                                                    }`}>{quiz.title}</h3>
+                                                <div className="flex items-center gap-4 text-sm text-slate-500 mt-1">
+                                                    <span className="flex items-center gap-1.5">
+                                                        <Calendar className="w-3.5 h-3.5" />
+                                                        {new Date(quiz.completedAt || '').toLocaleDateString()}
+                                                    </span>
+                                                    <span className="flex items-center gap-1.5">
+                                                        <Clock className="w-3.5 h-3.5" />
+                                                        {quiz.timeSpent || 0} min
+                                                    </span>
+                                                    {hasFeedback && (
+                                                        <span className="flex items-center gap-1.5 text-blue-400 font-medium">
+                                                            <MessageSquare className="w-3.5 h-3.5" />
+                                                            Feedback disponible
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        ))
+                                            <div className="text-right">
+                                                <div className="flex flex-col items-end">
+                                                    <span className={`text-2xl font-bold transition-colors ${hasFeedback ? "text-white group-hover:text-blue-400" : "text-white group-hover:text-green-400"
+                                                        }`}>
+                                                        {quiz.score}<span className="text-sm text-slate-500 font-normal">/10</span>
+                                                    </span>
+                                                    <span className="text-xs text-slate-500 uppercase tracking-wider font-medium">Puntaje</span>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            );
+                        })
                     ) : (
                         <div className="text-center py-16 px-4 bg-slate-900/30 rounded-3xl border border-white/5 border-dashed">
                             <div className="inline-flex p-4 rounded-full bg-slate-800/50 mb-4">

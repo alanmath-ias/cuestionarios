@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock } from "lucide-react";
 import { startActiveQuizTour } from "@/lib/tour";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -86,6 +86,9 @@ const ActiveQuiz = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isIncompleteDialogOpen, setIsIncompleteDialogOpen] = useState(false);
 
+  // New state for cumulative time
+  const [previousTimeSpent, setPreviousTimeSpent] = useState<number>(0);
+
   // Report Error State
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [reportDescription, setReportDescription] = useState("");
@@ -165,12 +168,25 @@ const ActiveQuiz = () => {
   };
 
   // Timer
+  // IMPORTANT: initialElapsedTime is set to 0 to restart the visual timer for this session.
+  // The total time will be calculated as previousTimeSpent + elapsedTime.
   const { formattedTime, elapsedTime, start } = useTimer({
     initialTime: quiz?.timeLimit || 0,
-    initialElapsedTime: progress?.timeSpent || 0,
+    initialElapsedTime: 0,
     autoStart: session?.userId !== 1,
     onTimeUp: () => handleFinishQuiz()
   });
+
+  // Helper to calculate total cumulative time
+  const getTotalTime = () => {
+    return previousTimeSpent + elapsedTime;
+  };
+
+  const formatTotalTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   // Effects
   useEffect(() => {
@@ -179,6 +195,9 @@ const ActiveQuiz = () => {
         setLocation(`/results/${progress.id}`, { replace: true });
         return;
       }
+
+      // Initialize previousTimeSpent from the server
+      setPreviousTimeSpent(progress.timeSpent || 0);
 
       const completedCount = progress.completedQuestions || 0;
       if (completedCount > 0 && completedCount < questions.length) {
@@ -264,7 +283,7 @@ const ActiveQuiz = () => {
       answerId: selectedAnswerId,
       isCorrect: selectedAnswer?.isCorrect || false,
       variables: currentQuestion.variables,
-      timeSpent: elapsedTime,
+      timeSpent: elapsedTime, // This tracks time for this specific answer in this session
     };
 
     try {
@@ -301,7 +320,7 @@ const ActiveQuiz = () => {
         await createProgressMutation.mutateAsync({
           ...progress,
           completedQuestions: Math.max(progress.completedQuestions ?? 0, currentQuestionIndex + 1),
-          timeSpent: elapsedTime,
+          timeSpent: getTotalTime(), // Save cumulative time
         });
 
         setCurrentQuestionIndex(currentQuestionIndex + 1);
@@ -430,12 +449,13 @@ const ActiveQuiz = () => {
 
     try {
       const score = studentAnswers.length > 0 ? Number(((studentAnswers.filter(a => a.isCorrect).length / studentAnswers.length) * 10).toFixed(1)) : 0;
+      const totalTime = getTotalTime();
 
       const progressUpdate = {
         ...progress,
         status: 'completed' as const,
         score,
-        timeSpent: elapsedTime,
+        timeSpent: totalTime, // Save cumulative time
         completedAt: new Date().toISOString()
       };
 
@@ -460,6 +480,20 @@ const ActiveQuiz = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  const handleExit = async () => {
+    if (progress) {
+      try {
+        await createProgressMutation.mutateAsync({
+          ...progress,
+          timeSpent: getTotalTime(),
+        });
+      } catch (e) {
+        console.error("Error saving progress on exit", e);
+      }
+    }
+    window.history.back();
   };
 
   if (loadingQuiz || loadingQuestions) {
@@ -499,7 +533,6 @@ const ActiveQuiz = () => {
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[100px]" />
       </div>
-
       <div className="container mx-auto px-4 py-8 max-w-5xl relative z-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
@@ -508,7 +541,7 @@ const ActiveQuiz = () => {
                 variant="ghost"
                 size="sm"
                 className="text-slate-400 hover:text-white hover:bg-white/10 -ml-2"
-                onClick={() => window.history.back()}
+                onClick={handleExit}
               >
                 <ArrowLeft className="h-5 w-5 mr-1" />
                 Salir
@@ -527,6 +560,14 @@ const ActiveQuiz = () => {
                 <Timer className="h-4 w-4 mr-2 text-blue-400" />
                 <span className={`font- mono font - medium ${elapsedTime > (quiz?.timeLimit || 0) * 0.9 ? 'text-red-400 animate-pulse' : 'text-slate-200'} `}>
                   {formattedTime()}
+                </span>
+              </div>
+
+              {/* New Cumulative Time Display */}
+              <div className="flex items-center text-slate-400 bg-slate-900/50 px-3 py-1 rounded-full border border-white/5" title="Tiempo total acumulado">
+                <Clock className="h-4 w-4 mr-2 text-purple-400" />
+                <span className="font-mono font-medium text-slate-200">
+                  {formatTotalTime(getTotalTime())}
                 </span>
               </div>
             </div>
@@ -693,11 +734,11 @@ const ActiveQuiz = () => {
                   >
                     <div className="flex items-center gap-4 relative z-10 w-full">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors
-                        ${isSelected || (isAnswered && answer.isCorrect)
+                          ${isSelected || (isAnswered && answer.isCorrect)
                           ? 'bg-white/10 border-white/20 text-white'
                           : 'bg-slate-900/50 border-white/10 text-slate-500 group-hover:text-slate-300 group-hover:border-white/20'
                         }
-                      `}>
+                        `}>
                         {String.fromCharCode(65 + index)}
                       </div>
                       <div className="text-base font-medium flex-1">

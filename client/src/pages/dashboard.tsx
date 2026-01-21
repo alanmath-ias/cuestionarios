@@ -35,7 +35,10 @@ import {
   Gamepad2,
   ArrowRight,
   Map as MapIcon,
-  ArrowLeft
+  ArrowLeft,
+  MessageSquare,
+  Clock,
+  Flame
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { startDashboardTour } from "@/lib/tour";
@@ -58,6 +61,7 @@ interface QuizWithFeedback extends UserQuiz {
   score?: number;
   timeSpent?: number;
   url?: string | null;
+  feedback?: string;
 }
 
 async function fetchCurrentUser() {
@@ -237,32 +241,44 @@ function StatCard({
 }
 
 function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback, onClick: (quiz: QuizWithFeedback) => void }) {
+  const hasFeedback = quiz.feedback && quiz.feedback.length > 0;
+
   return (
     <div
       onClick={() => onClick(quiz)}
-      className="group flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 cursor-pointer transition-all hover:bg-slate-800/60 hover:border-purple-500/30 hover:shadow-[0_0_15px_-3px_rgba(168,85,247,0.15)]"
+      className={`group flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:shadow-[0_0_15px_-3px_rgba(168,85,247,0.15)] ${hasFeedback
+          ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20"
+          : "bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-purple-500/30"
+        }`}
     >
-      <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-        <CheckCircle2 className="h-5 w-5 text-green-400" />
+      <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hasFeedback ? "bg-blue-500/20 text-blue-400" : "bg-green-500/20 text-green-400"
+        }`}>
+        {hasFeedback ? <MessageSquare className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-semibold text-sm truncate text-slate-200">{quiz.title}</h4>
-        <p className="text-xs text-slate-500 truncate">{quiz.difficulty} • {new Date(quiz.completedAt || '').toLocaleDateString()}</p>
+        <h4 className={`font-semibold text-sm truncate transition-colors ${hasFeedback ? "text-blue-200" : "text-slate-200"}`}>{quiz.title}</h4>
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span className="truncate">{quiz.difficulty} • {new Date(quiz.completedAt || '').toLocaleDateString()}</span>
+          {hasFeedback && (
+            <span className="flex items-center gap-1 text-blue-400 font-bold animate-pulse">
+              <MessageSquare className="w-3 h-3" /> Feedback
+            </span>
+          )}
+        </div>
       </div>
       <div className="text-right shrink-0">
-        <span className="block text-sm font-bold text-green-400">{(quiz.score || 0)}/10</span>
+        <span className={`block text-sm font-bold ${hasFeedback ? "text-blue-400" : "text-green-400"}`}>{(quiz.score || 0)}/10</span>
       </div>
       <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-slate-400" />
     </div>
   );
 }
 
-
-
 export default function UserDashboard() {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | null>(null);
   const [showPendingDialog, setShowPendingDialog] = useState(false);
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [showRestZone, setShowRestZone] = useState(false);
   const [miniQuizId, setMiniQuizId] = useState<number | null>(null);
   const [pendingSearchQuery, setPendingSearchQuery] = useState("");
@@ -558,6 +574,17 @@ export default function UserDashboard() {
     }
   }, [] as QuizWithFeedback[]);
 
+  // Filter quizzes with feedback
+  const feedbackQuizzes = quizzes?.filter(q => q.feedback && q.feedback.length > 0 && !q.reviewed) || [];
+
+  const stats = {
+    completedQuizzes: uniqueCompletedQuizzes.length,
+    averageScore: uniqueCompletedQuizzes.length > 0
+      ? Math.round(uniqueCompletedQuizzes.reduce((acc, curr) => acc + (curr.score || 0), 0) / uniqueCompletedQuizzes.length * 10)
+      : 0,
+    totalTime: uniqueCompletedQuizzes.reduce((acc, curr) => acc + (curr.timeSpent || 0), 0)
+  };
+
   // Calculate breakdown by category
   const categoryBreakdown = completedQuizzes.reduce((acc, quiz) => {
     const catName = categories?.find(c => c.id === quiz.categoryId)?.name || 'Otros';
@@ -600,6 +627,27 @@ export default function UserDashboard() {
 
 
           {/* Alert Section */}
+          {feedbackQuizzes.length > 0 && (
+            <div
+              onClick={() => {
+                if (feedbackQuizzes.length === 1) {
+                  // Navigate directly if only one
+                  window.location.href = `/results/${feedbackQuizzes[0].progressId}`;
+                } else {
+                  // Show dialog if multiple
+                  setShowFeedbackDialog(true);
+                }
+              }}
+              className="animate-pulse flex items-center gap-2 bg-blue-500/10 text-blue-400 px-4 py-2 rounded-full border border-blue-500/20 shadow-sm cursor-pointer hover:bg-blue-500/20 transition-colors"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span className="text-sm font-bold">
+                {feedbackQuizzes.length === 1
+                  ? "Tienes 1 nuevo feedback"
+                  : `Tienes ${feedbackQuizzes.length} nuevos feedbacks`}
+              </span>
+            </div>
+          )}
           {pendingQuizzes.length > 0 && (
             <div
               onClick={() => setShowPendingDialog(true)}
@@ -1290,6 +1338,44 @@ export default function UserDashboard() {
                 </div>
               )}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Feedback Selection Dialog */}
+        <Dialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog}>
+          <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <MessageSquare className="w-6 h-6 text-blue-400" />
+                Nuevos Feedbacks Recibidos
+              </DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Has recibido comentarios en los siguientes cuestionarios. Selecciona uno para ver los detalles.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              {feedbackQuizzes.map((quiz) => (
+                <div
+                  key={quiz.id}
+                  onClick={() => window.location.href = `/results/${quiz.progressId}`}
+                  className="flex items-center justify-between p-4 rounded-xl bg-slate-800/50 border border-white/5 cursor-pointer hover:bg-slate-800 hover:border-blue-500/30 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+                      <MessageSquare className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-slate-200 group-hover:text-blue-400 transition-colors">{quiz.title}</h4>
+                      <p className="text-xs text-slate-500">{new Date(quiz.completedAt || '').toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-slate-400" />
+                </div>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setShowFeedbackDialog(false)}>Cerrar</Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
