@@ -1075,10 +1075,20 @@ Formato: Solo el texto del tip con el ejemplo.`;
           count3 = 4;
         }
 
-        // Select random subset from each difficulty
-        const selectedDiff1 = diff1.sort(() => 0.5 - Math.random()).slice(0, Math.min(count1, diff1.length));
-        const selectedDiff2 = diff2.sort(() => 0.5 - Math.random()).slice(0, Math.min(count2, diff2.length));
-        const selectedDiff3 = diff3.sort(() => 0.5 - Math.random()).slice(0, Math.min(count3, diff3.length));
+        // Fisher-Yates shuffle function
+        const shuffleArray = <T>(array: T[]): T[] => {
+          const newArray = [...array];
+          for (let i = newArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+          }
+          return newArray;
+        };
+
+        // Select random subset from each difficulty using proper shuffle
+        const selectedDiff1 = shuffleArray(diff1).slice(0, Math.min(count1, diff1.length));
+        const selectedDiff2 = shuffleArray(diff2).slice(0, Math.min(count2, diff2.length));
+        const selectedDiff3 = shuffleArray(diff3).slice(0, Math.min(count3, diff3.length));
 
         // Combine and sort by difficulty ascending
         selectedQuestions = [...selectedDiff1, ...selectedDiff2, ...selectedDiff3]

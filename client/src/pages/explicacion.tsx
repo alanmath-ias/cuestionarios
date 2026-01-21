@@ -89,7 +89,7 @@ export function ExplanationModal({ questionId, question, correctAnswer, quizTitl
                     </Button>
                 </CardHeader>
 
-                <CardContent className="flex-1 min-h-0 p-0 relative overflow-hidden">
+                <CardContent className="flex-1 min-h-0 p-0 relative overflow-hidden flex flex-col">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                             <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />
@@ -110,7 +110,7 @@ export function ExplanationModal({ questionId, question, correctAnswer, quizTitl
                             </Button>
                         </div>
                     ) : (
-                        <div className="h-full overflow-y-auto p-6 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                             <div className="space-y-6 pb-6">
                                 <div className="p-5 bg-slate-800/50 rounded-xl border border-white/5">
                                     <h4 className="font-medium text-blue-400 mb-3 flex items-center gap-2">

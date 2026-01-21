@@ -79,6 +79,7 @@ function PublicActiveQuiz() {
   const [textAnswers, setTextAnswers] = useState<Record<number, string>>({});
   const [isNavigating, setIsNavigating] = useState(false);
   const [isIncompleteDialogOpen, setIsIncompleteDialogOpen] = useState(false);
+  const [lastQuestionFinishTime, setLastQuestionFinishTime] = useState(0);
 
   // Hint State
   const [isHintDialogOpen, setIsHintDialogOpen] = useState(false);
@@ -223,11 +224,15 @@ function PublicActiveQuiz() {
     const selectedAnswer = currentQuestion.answers.find(a => a.id === selectedAnswerId);
     const isCorrect = selectedAnswer?.isCorrect || false;
 
+    // Calculate delta time
+    const deltaTime = elapsedTime - lastQuestionFinishTime;
+    setLastQuestionFinishTime(elapsedTime);
+
     const studentAnswer: StudentAnswer = {
       questionId: currentQuestion.id,
       answerId: selectedAnswerId,
       isCorrect,
-      timeSpent: elapsedTime,
+      timeSpent: deltaTime,
     };
 
     console.log('submitCurrentAnswer: generated answer', studentAnswer);
@@ -243,12 +248,16 @@ function PublicActiveQuiz() {
     const currentQuestion = questions[currentQuestionIndex];
     const answerText = textAnswers[currentQuestion.id];
 
+    // Calculate delta time
+    const deltaTime = elapsedTime - lastQuestionFinishTime;
+    setLastQuestionFinishTime(elapsedTime);
+
     const studentAnswer: StudentAnswer = {
       questionId: currentQuestion.id,
       answerId: null,
       textAnswer: answerText,
       isCorrect: false, // Text answers usually need manual grading or specific logic
-      timeSpent: elapsedTime,
+      timeSpent: deltaTime,
     };
 
     setStudentAnswers([...studentAnswers, studentAnswer]);
