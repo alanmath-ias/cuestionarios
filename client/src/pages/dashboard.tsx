@@ -53,6 +53,8 @@ import { ContentRenderer } from "@/components/ContentRenderer";
 import { Input } from "@/components/ui/input";
 import { QuizDetailsDialog } from "@/components/dialogs/QuizDetailsDialog";
 import { RestZoneDialog } from "@/components/dialogs/RestZoneDialog";
+import { WelcomeDialog } from "@/components/dialogs/WelcomeDialog";
+import { getRandomQuote } from "@/lib/motivational-quotes";
 
 interface QuizWithFeedback extends UserQuiz {
   progressId?: string;
@@ -247,8 +249,8 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback, onClick: (qui
     <div
       onClick={() => onClick(quiz)}
       className={`group flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:shadow-[0_0_15px_-3px_rgba(168,85,247,0.15)] ${hasFeedback
-          ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20"
-          : "bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-purple-500/30"
+        ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20"
+        : "bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-purple-500/30"
         }`}
     >
       <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hasFeedback ? "bg-blue-500/20 text-blue-400" : "bg-green-500/20 text-green-400"
@@ -287,6 +289,15 @@ export default function UserDashboard() {
   const [showCreditsInfo, setShowCreditsInfo] = useState(false);
   const [selectedCategoryForDetails, setSelectedCategoryForDetails] = useState<Category | null>(null);
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
+
+  // Welcome Dialog State
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+  const [lastActivity, setLastActivity] = useState<QuizWithFeedback | null>(null);
+  const [motivationalMessage, setMotivationalMessage] = useState("");
+
+  useEffect(() => {
+    setMotivationalMessage(getRandomQuote());
+  }, []);
 
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -454,20 +465,25 @@ export default function UserDashboard() {
     const today = new Date().toDateString();
     const lastShown = localStorage.getItem('mathTipLastShown');
 
-    if (mathTipData?.tip && lastShown !== today) {
+    // Only show tip if welcome dialog is NOT shown
+    if (mathTipData?.tip && lastShown !== today && !showWelcomeDialog) {
       const timer = setTimeout(() => {
         toast({
           title: "💡 Tip Matemático",
-          description: <ContentRenderer content={mathTipData.tip} className="text-white/90 text-lg font-medium text-center mt-2" />,
-          duration: 10000,
-          className: "w-80 h-auto aspect-[4/3] flex flex-col justify-center items-center bg-slate-900 border border-indigo-500/30 text-slate-200 shadow-2xl rounded-2xl p-6"
+          description: (
+            <div className="max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+              <ContentRenderer content={mathTipData.tip} className="text-white/90 text-base font-medium text-center mt-2" />
+            </div>
+          ),
+          duration: 15000, // Give more time to read
+          className: "w-96 h-auto flex flex-col justify-center items-center bg-slate-900 border border-indigo-500/30 text-slate-200 shadow-2xl rounded-2xl p-6"
         });
         localStorage.setItem('mathTipLastShown', today);
-      }, 1500);
+      }, 2000); // Wait 2 seconds after welcome dialog is closed (or if it wasn't shown)
 
       return () => clearTimeout(timer);
     }
-  }, [mathTipData, toast]);
+  }, [mathTipData, toast, showWelcomeDialog]);
 
   const isLoading = loadingUser || loadingCategories || loadingQuizzes;
 
@@ -518,6 +534,55 @@ export default function UserDashboard() {
       }
     }
   }, [categories, selectedVideo]);
+
+  // Determine last activity and show welcome dialog
+  useEffect(() => {
+    if (quizzes && quizzes.length > 0) {
+      // Sort by most recent interaction (completedAt or just updated if we had that, but completedAt is what we have for now)
+      // For in-progress, we might need to rely on the fact that they are in the list. 
+      // Ideally we'd have an 'updatedAt' field. For now, we'll use completedAt for completed ones.
+      // For pending ones, we don't have a timestamp in the frontend Quiz interface easily accessible for sorting 
+      // unless we look at 'progress' object if available.
+      // Let's try to find the most relevant one.
+
+      const allQuizzes = [...quizzes];
+      // Sort by ID as a proxy for recency if no date? No, ID is quiz ID.
+      // We need the user_quiz interaction time.
+      // Assuming the API returns them in some order or we can use what we have.
+      // Let's prioritize the most recently completed OR the first pending one?
+
+      // Actually, let's look at the 'sortedCompletedQuizzes' for completed.
+      // For pending, we just take the first one?
+
+      // Let's try to find the absolute last interaction.
+      // If we have mixed pending and completed, it's hard to know which was LAST without a unified date.
+      // But the user said: "Si la última vez que ingresó no terminó el cuestionario..."
+
+      // Let's prioritize IN PROGRESS (Pending) as the "last thing they might want to continue".
+      // If there are pending quizzes, pick the first one (or random?).
+      // If no pending, pick the last completed.
+
+      let activity: QuizWithFeedback | null = null;
+
+      const pending = quizzes.filter(q => q.status !== 'completed');
+      const completed = quizzes.filter(q => q.status === 'completed').sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+
+      if (pending.length > 0) {
+        // Pick the first pending one. 
+        activity = pending[0];
+      } else if (completed.length > 0) {
+        activity = completed[0];
+      }
+
+      setLastActivity(activity);
+
+      const hasSeenWelcome = sessionStorage.getItem('welcomeShown');
+      if (!hasSeenWelcome && activity) {
+        setShowWelcomeDialog(true);
+        sessionStorage.setItem('welcomeShown', 'true');
+      }
+    }
+  }, [quizzes]);
 
   const [_, setLocation] = useLocation();
 
@@ -614,7 +679,7 @@ export default function UserDashboard() {
                 Hola <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">{(currentUser?.username || 'Estudiante').charAt(0).toUpperCase() + (currentUser?.username || 'Estudiante').slice(1)}</span> 👋
               </h1>
             </div>
-            <p className="text-slate-400 mt-1">Aquí tienes el resumen de tu progreso hoy.</p>
+            <p className="text-slate-400 mt-1 italic">"{motivationalMessage}"</p>
             <div
               className="mt-2 inline-flex items-center bg-yellow-500/10 text-yellow-400 px-3 py-1 rounded-full text-sm font-medium border border-yellow-500/20 cursor-pointer hover:bg-yellow-500/20 transition-colors"
               onClick={() => setShowCreditsInfo(true)}
@@ -654,7 +719,11 @@ export default function UserDashboard() {
               className="animate-pulse flex items-center gap-2 bg-yellow-500/10 text-yellow-400 px-4 py-2 rounded-full border border-yellow-500/20 shadow-sm cursor-pointer hover:bg-yellow-500/20 transition-colors"
             >
               <AlertTriangle className="w-4 h-4" />
-              <span className="text-sm font-bold">Tienes {pendingQuizzes.length} actividades pendientes</span>
+              <span className="text-sm font-bold">
+                {pendingQuizzes.length > 5
+                  ? "Tienes varias actividades pendientes"
+                  : `Tienes ${pendingQuizzes.length} actividades pendientes`}
+              </span>
             </div>
           )}
         </div>
@@ -1380,6 +1449,13 @@ export default function UserDashboard() {
         </Dialog>
 
         <RestZoneDialog open={showRestZone} onOpenChange={setShowRestZone} />
+
+        <WelcomeDialog
+          open={showWelcomeDialog}
+          onOpenChange={setShowWelcomeDialog}
+          username={currentUser?.username || 'Estudiante'}
+          lastActivity={lastActivity}
+        />
       </div>
       <FloatingWhatsApp
         message="Hola, me gustaría cotizar clases de refuerzo para mejorar mi rendimiento en matemáticas."

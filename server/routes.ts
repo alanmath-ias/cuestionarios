@@ -508,12 +508,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ tip: "Recuerda revisar siempre los signos en tus operaciones." });
       }
 
-      const prompt = `Genera un tip matemático MUY BREVE (máximo 15 palabras) sobre el tema específico proporcionado.
+      const prompt = `Actúa como un profesor experto de matemáticas. Genera un "Tip Matemático" valioso y pedagógico sobre el tema específico proporcionado.
 Contexto: ${context}
-Si hubo errores, da un consejo para evitarlos. Si no, da un dato clave sobre ese tema.
-IMPORTANTE: Incluye un PEQUEÑO ejemplo matemático (máx 10 caracteres) en formato LaTeX encerrado entre signos de exclamación invertidos (¡...¡). Ejemplo: ¡x^2+1¡
-Tono: Curioso y útil.
-Formato: Solo el texto del tip con el ejemplo.`;
+
+Objetivo: Que el estudiante entienda realmente la idea clave o un proceso fundamental para resolver este tipo de problemas.
+Requisitos:
+1. Explicación Clara: Explica el "por qué" o el "cómo" de forma sencilla pero profunda. Evita enunciados vacíos.
+2. Ejemplo Concreto: Incluye un ejemplo breve que ilustre perfectamente el concepto. No solo una ecuación, sino una pequeña demostración de la idea.
+3. Conexión: Si hubo errores, explica cómo evitarlos específicamente.
+4. Formato LaTeX: Usa signos de exclamación invertidos (¡...¡) para TODA la notación matemática. Ejemplo: ¡x^2 + 1¡.
+
+Longitud: Máximo 40-50 palabras. Conciso pero útil.
+Tono: Alentador, profesional y educativo.`;
 
       const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
@@ -525,7 +531,7 @@ Formato: Solo el texto del tip con el ejemplo.`;
           model: 'deepseek-chat',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.7,
-          max_tokens: 60,
+          max_tokens: 150,
         }),
       });
 

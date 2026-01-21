@@ -50,6 +50,7 @@ export function UserMenu({ user }: UserMenuProps) {
 
       // Limpia toda la caché de React Query
       queryClient.clear();
+      sessionStorage.removeItem('welcomeShown'); // Reset welcome dialog for next login
 
       toast({
         title: "Sesión cerrada",
@@ -74,6 +75,7 @@ export function UserMenu({ user }: UserMenuProps) {
     localStorage.removeItem('surveyFormData');
     localStorage.removeItem('completedTests');
     sessionStorage.removeItem('quizResult');
+    sessionStorage.removeItem('welcomeShown'); // Reset welcome dialog for next login
 
     setAgeModalOpen(true);
     setOpen(false); // Close dropdown
