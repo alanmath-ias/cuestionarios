@@ -95,3 +95,13 @@ export interface Subcategory {
   youtube_sublink?: string | null
 }
 
+
+export interface RoadmapNode {
+  id: number;
+  title: string;
+  description: string;
+  status: 'locked' | 'available' | 'completed';
+  type: 'subcategory' | 'quiz';
+  progress?: number;
+  onClick: () => void;
+}

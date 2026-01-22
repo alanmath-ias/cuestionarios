@@ -38,8 +38,11 @@ import {
   ArrowLeft,
   MessageSquare,
   Clock,
-  Flame
+  Flame,
+  Star
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { startDashboardTour } from "@/lib/tour";
 import { Link, useLocation } from "wouter";
@@ -55,6 +58,8 @@ import { QuizDetailsDialog } from "@/components/dialogs/QuizDetailsDialog";
 import { RestZoneDialog } from "@/components/dialogs/RestZoneDialog";
 import { WelcomeDialog } from "@/components/dialogs/WelcomeDialog";
 import { getRandomQuote } from "@/lib/motivational-quotes";
+import { HorizontalRoadmap } from "@/components/roadmap/HorizontalRoadmap";
+import { RoadmapNode } from "@/types/types";
 
 interface QuizWithFeedback extends UserQuiz {
   progressId?: string;
@@ -355,12 +360,90 @@ export default function UserDashboard() {
     enabled: !!selectedCategoryForDetails,
   });
 
+  // --- Roadmap Data Logic ---
+  const [expandedRoadmapCategoryId, setExpandedRoadmapCategoryId] = useState<number | null>(null);
+  const activeCategoryId = expandedRoadmapCategoryId;
+
+  const { data: activeCategorySubcategories } = useQuery<any[]>({
+    queryKey: ["category-subcategories-roadmap", activeCategoryId],
+    queryFn: async () => {
+      if (!activeCategoryId) return [];
+      const res = await fetch(`/api/admin/subcategories/by-category/${activeCategoryId}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!activeCategoryId,
+  });
+
+  const { data: activeCategoryQuizzes } = useQuery<Quiz[]>({
+    queryKey: ["category-quizzes-roadmap", activeCategoryId],
+    queryFn: () => activeCategoryId ? fetchCategoryQuizzes(activeCategoryId) : Promise.resolve([]),
+    enabled: !!activeCategoryId,
+  });
+
+  // Calculate Roadmap Nodes
+  const roadmapNodes: RoadmapNode[] = (activeCategorySubcategories || []).map((sub, index) => {
+    const subQuizzes = activeCategoryQuizzes?.filter(q => q.subcategoryId === sub.id) || [];
+
+    // Calculate progress
+    let progressPercent = 0;
+    if (subQuizzes.length > 0 && quizzes) {
+      const completedCount = subQuizzes.filter(q =>
+        quizzes.some(uq => uq.id === q.id && uq.status === 'completed')
+      ).length;
+      progressPercent = (completedCount / subQuizzes.length) * 100;
+    }
+
+    // Determine status
+    let status: 'locked' | 'available' | 'completed' = 'locked';
+    if (progressPercent >= 100) {
+      status = 'completed';
+    } else {
+      // Check previous node
+      const prevSub = activeCategorySubcategories![index - 1];
+      if (!prevSub) {
+        status = 'available'; // First node is always available
+      } else {
+        // Calculate prev progress
+        const prevQuizzes = activeCategoryQuizzes?.filter(q => q.subcategoryId === prevSub.id) || [];
+        const prevCompletedCount = prevQuizzes.filter(q =>
+          quizzes?.some(uq => uq.id === q.id && uq.status === 'completed')
+        ).length;
+        const prevProgress = prevQuizzes.length > 0 ? (prevCompletedCount / prevQuizzes.length) * 100 : 100;
+
+        if (prevProgress >= 100) {
+          status = 'available';
+        }
+      }
+    }
+
+    // If started but not finished, it's available (and overrides locked if logic above failed)
+    if (progressPercent > 0 && progressPercent < 100) {
+      status = 'available';
+    }
+
+    return {
+      id: sub.id,
+      title: sub.name,
+      description: sub.description,
+      status,
+      type: 'subcategory',
+      progress: progressPercent,
+      onClick: () => {
+        const category = categories?.find(c => c.id === activeCategoryId);
+        if (category) {
+          handleCategorySelect(category, sub);
+        }
+      }
+    };
+  });
+
   const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
   const [quizSearchQuery, setQuizSearchQuery] = useState("");
 
-  // Reset subcategory selection and search queries when category changes
+  // Reset search queries when category changes
   useEffect(() => {
-    setSelectedSubcategory(null);
     setCategorySearchQuery("");
     setQuizSearchQuery("");
   }, [selectedCategoryForDetails]);
@@ -428,9 +511,15 @@ export default function UserDashboard() {
   };
 
   // Wrap state setters to sync URL
-  const handleCategorySelect = (category: Category | null) => {
+  const handleCategorySelect = (category: Category | null, subcategoryToSelect?: any) => {
     setSelectedCategoryForDetails(category);
-    updateUrlState(category, null);
+    if (subcategoryToSelect) {
+      setSelectedSubcategory(subcategoryToSelect);
+      updateUrlState(category, subcategoryToSelect);
+    } else {
+      setSelectedSubcategory(null);
+      updateUrlState(category, null);
+    }
   };
 
   const handleSubcategorySelect = (subcategory: any | null) => {
@@ -727,6 +816,72 @@ export default function UserDashboard() {
             </div>
           )}
         </div>
+
+        {/* Stars Navigation & Roadmap */}
+        <div className="mb-8 space-y-4">
+          {/* Stars Navigation */}
+          <div className="flex items-center justify-center gap-4 py-4 flex-wrap">
+            {categories?.map((category) => (
+              <TooltipProvider key={category.id}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <motion.button
+                      whileHover={{ scale: 1.2, rotate: 15 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setExpandedRoadmapCategoryId(expandedRoadmapCategoryId === category.id ? null : category.id)}
+                      className={cn(
+                        "relative p-3 rounded-full transition-all duration-300",
+                        expandedRoadmapCategoryId === category.id
+                          ? "bg-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.5)]"
+                          : "hover:bg-slate-800"
+                      )}
+                    >
+                      <Star
+                        className={cn(
+                          "w-8 h-8 transition-all duration-300",
+                          expandedRoadmapCategoryId === category.id
+                            ? "text-yellow-400 fill-yellow-400 animate-pulse"
+                            : "text-slate-600 hover:text-yellow-500 hover:fill-yellow-500/20"
+                        )}
+                      />
+                      {/* Active Indicator Dot */}
+                      {expandedRoadmapCategoryId === category.id && (
+                        <motion.div
+                          layoutId="activeStarDot"
+                          className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-yellow-500"
+                        />
+                      )}
+                    </motion.button>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-slate-900 border-slate-800 text-yellow-200 font-bold">
+                    <p>Tu camino en {category.name}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+          </div>
+
+          {/* Expandable Roadmap */}
+          <AnimatePresence>
+            {expandedRoadmapCategoryId && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, y: -20 }}
+                animate={{ opacity: 1, height: 'auto', y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -20 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <HorizontalRoadmap
+                  nodes={roadmapNodes}
+                  title={categories?.find(c => c.id === expandedRoadmapCategoryId)?.name ? `Tu camino en ${categories.find(c => c.id === expandedRoadmapCategoryId)?.name}` : 'Tu Progreso'}
+                  className="bg-slate-900/50 border border-white/5 rounded-2xl shadow-2xl"
+                  onClose={() => setExpandedRoadmapCategoryId(null)}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
 
         {/* Main Layout: 2 Columns (Content | Sidebar) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1222,7 +1377,6 @@ export default function UserDashboard() {
         <Dialog open={!!selectedCategoryForDetails} onOpenChange={(open) => {
           if (!open) {
             handleCategorySelect(null);
-            handleSubcategorySelect(null);
           }
         }}>
           <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col bg-slate-900 border-white/10 text-slate-200 overflow-hidden">
@@ -1461,6 +1615,6 @@ export default function UserDashboard() {
         message="Hola, me gustaría cotizar clases de refuerzo para mejorar mi rendimiento en matemáticas."
         tooltip="Cotizar Clases de Refuerzo"
       />
-    </div>
+    </div >
   );
 }
