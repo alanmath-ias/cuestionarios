@@ -78,7 +78,7 @@ type ProgressWithQuiz = typeof studentProgress.$inferSelect & {
 
 
 
-const publicQuizIds = [278, 279, 280];
+const publicQuizIds = [278, 279, 280, 281, 282, 283, 285, 286];
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
@@ -1079,6 +1079,14 @@ Tono: Alentador, profesional y educativo.`;
           count1 = 4;
           count2 = 4;
           count3 = 4;
+        } else if (quiz.totalQuestions === 15) {
+          count1 = 5;
+          count2 = 5;
+          count3 = 5;
+        } else if (quiz.totalQuestions === 20) {
+          count1 = 6;
+          count2 = 8;
+          count3 = 6;
         }
 
         // Fisher-Yates shuffle function
@@ -1606,7 +1614,7 @@ Ejemplo de formato:
       const question = await storage.getQuestion(questionId);
       if (!question) return res.status(404).json({ message: "Question not found" });
 
-      const publicQuizIds = [278, 279, 280]; // Add other public quiz IDs if needed
+      // const publicQuizIds = [278, 279, 280]; // Removed to use global variable
       const isPublicQuiz = publicQuizIds.includes(question.quizId);
 
       if (!userId && !isPublicQuiz) {

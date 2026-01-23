@@ -1,7 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, PlayCircle, GraduationCap, BrainCircuit, ArrowRight, Star, Calculator, BookOpen, Sigma, Atom, ChevronDown, Sparkles, Triangle } from "lucide-react";
+import { CheckCircle2, PlayCircle, GraduationCap, BrainCircuit, ArrowRight, Star, Calculator, BookOpen, Sigma, Atom, ChevronDown, Sparkles, Triangle, Activity, BarChart3, Layers } from "lucide-react";
+
 import { motion } from "framer-motion";
 import { useState } from "react";
 import {
@@ -23,7 +24,7 @@ export default function LandingPage() {
             id: "arithmetic",
             title: "Aritmética",
             icon: <Calculator className="w-8 h-8 text-blue-500" />,
-            description: "Domina los fundamentos: operaciones, fracciones y más.",
+            description: "Bases numéricas claras: operaciones, fracciones, potencias y razonamiento básico.",
             active: true,
             quizId: 278
         },
@@ -31,7 +32,7 @@ export default function LandingPage() {
             id: "algebra",
             title: "Álgebra",
             icon: <Sigma className="w-8 h-8 text-purple-500" />,
-            description: "Ecuaciones, funciones y polinomios simplificados.",
+            description: "Lenguaje del álgebra: ecuaciones, expresiones y funciones paso a paso.",
             active: true,
             quizId: 279
         },
@@ -39,25 +40,49 @@ export default function LandingPage() {
             id: "trigonometry",
             title: "Trigonometría",
             icon: <Triangle className="w-8 h-8 text-indigo-500" />,
-            description: "Ángulos, funciones y triángulos.",
+            description: "Ángulos y funciones trigonométricas: triángulos, identidades y aplicaciones.",
             active: true,
             quizId: 280
         },
         {
             id: "calculus",
-            title: "Cálculo",
+            title: "Cálculo Diferencial",
             icon: <BookOpen className="w-8 h-8 text-pink-500" />,
-            description: "Límites, derivadas e integrales paso a paso.",
-            active: false,
-            quizId: null
+            description: "Cambio y variación: límites, derivadas y aplicaciones fundamentales.",
+            active: true,
+            quizId: 281
+        },
+        {
+            id: "integral-calculus",
+            title: "Cálculo Integral",
+            icon: <Layers className="w-8 h-8 text-emerald-500" />,
+            description: "Cálculo de áreas y acumulaciones: integrales y aplicaciones esenciales.",
+            active: true,
+            quizId: 283
+        },
+        {
+            id: "differential-equations",
+            title: "Ecuaciones Diferenciales",
+            icon: <Activity className="w-8 h-8 text-orange-500" />,
+            description: "Modelos con ecuaciones diferenciales: crecimiento, movimiento y sistemas.",
+            active: true,
+            quizId: 282
         },
         {
             id: "physics",
-            title: "Física",
+            title: "Física Mecánica",
             icon: <Atom className="w-8 h-8 text-cyan-500" />,
-            description: "Mecánica, energía y movimiento explicados.",
-            active: false,
-            quizId: null
+            description: "Física desde el movimiento: fuerzas, energía y modelos matemáticos.",
+            active: true,
+            quizId: 286
+        },
+        {
+            id: "statistics",
+            title: "Estadística",
+            icon: <BarChart3 className="w-8 h-8 text-yellow-500" />,
+            description: "Entender los datos: promedios, variabilidad, probabilidad y decisiones.",
+            active: true,
+            quizId: 285
         }
     ];
 
