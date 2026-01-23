@@ -67,6 +67,7 @@ export default function HistoryPage() {
                             placeholder="Buscar actividad..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
+                            autoFocus={false}
                             className="pl-10 bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-600 focus:border-blue-500/50 focus:ring-blue-500/20 rounded-xl"
                         />
                     </div>
@@ -90,9 +91,9 @@ export default function HistoryPage() {
                                                 {hasFeedback ? <MessageSquare className="h-7 w-7" /> : <Trophy className="h-7 w-7" />}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h3 className={`font-bold text-lg transition-colors truncate ${hasFeedback ? "text-slate-200 group-hover:text-blue-400" : "text-slate-200 group-hover:text-green-400"
+                                                <h3 className={`font-bold text-lg transition-colors line-clamp-2 ${hasFeedback ? "text-slate-200 group-hover:text-blue-400" : "text-slate-200 group-hover:text-green-400"
                                                     }`}>{quiz.title}</h3>
-                                                <div className="flex items-center gap-4 text-sm text-slate-500 mt-1">
+                                                <div className="flex items-center gap-4 text-sm text-slate-500 mt-1 flex-wrap">
                                                     <span className="flex items-center gap-1.5">
                                                         <Calendar className="w-3.5 h-3.5" />
                                                         {new Date(quiz.completedAt || '').toLocaleDateString()}

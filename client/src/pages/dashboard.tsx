@@ -263,20 +263,20 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback, onClick: (qui
         {hasFeedback ? <MessageSquare className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className={`font-semibold text-sm truncate transition-colors ${hasFeedback ? "text-blue-200" : "text-slate-200"}`}>{quiz.title}</h4>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span className="truncate">{quiz.difficulty} • {new Date(quiz.completedAt || '').toLocaleDateString()}</span>
+        <h4 className={`font-semibold text-sm transition-colors line-clamp-2 ${hasFeedback ? "text-blue-200" : "text-slate-200"}`}>{quiz.title}</h4>
+        <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+          <span className="truncate max-w-[120px]">{quiz.difficulty} • {new Date(quiz.completedAt || '').toLocaleDateString()}</span>
           {hasFeedback && (
-            <span className="flex items-center gap-1 text-blue-400 font-bold animate-pulse">
+            <span className="flex items-center gap-1 text-blue-400 font-bold animate-pulse shrink-0">
               <MessageSquare className="w-3 h-3" /> Feedback
             </span>
           )}
         </div>
       </div>
-      <div className="text-right shrink-0">
+      <div className="text-right shrink-0 self-start mt-1">
         <span className={`block text-sm font-bold ${hasFeedback ? "text-blue-400" : "text-green-400"}`}>{(quiz.score || 0)}/10</span>
       </div>
-      <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-slate-400" />
+      <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-slate-400 shrink-0" />
     </div>
   );
 }
@@ -956,11 +956,11 @@ export default function UserDashboard() {
                 <div className="space-y-2">
                   {pendingQuizzes.length > 0 ? (
                     pendingQuizzes.map((quiz) => (
-                      <div key={quiz.id} className="group flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-yellow-500/30 hover:shadow-[0_0_15px_-3px_rgba(234,179,8,0.15)]">
+                      <div key={quiz.id} className="group flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-yellow-500/30 hover:shadow-[0_0_15px_-3px_rgba(234,179,8,0.15)] overflow-x-auto">
                         <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
                           <PlayCircle className="h-5 w-5 text-yellow-500" />
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-[180px]">
                           <h4 className="font-semibold text-sm text-slate-200">{quiz.title}</h4>
                           <p className="text-xs text-slate-500 truncate">{quiz.difficulty}</p>
                         </div>
@@ -1196,7 +1196,7 @@ export default function UserDashboard() {
 
         {/* Pending Activities Dialog */}
         <Dialog open={showPendingDialog} onOpenChange={setShowPendingDialog}>
-          <DialogContent className="sm:max-w-lg bg-slate-900 border-white/10 text-slate-200">
+          <DialogContent className="sm:max-w-lg bg-slate-900 border-white/10 text-slate-200" onOpenAutoFocus={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-yellow-500">
                 <PlayCircle className="w-6 h-6" />
@@ -1379,7 +1379,7 @@ export default function UserDashboard() {
             handleCategorySelect(null);
           }
         }}>
-          <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col bg-slate-900 border-white/10 text-slate-200 overflow-hidden">
+          <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col bg-slate-900 border-white/10 text-slate-200 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl text-blue-400">
                 {selectedSubcategory ? (

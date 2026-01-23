@@ -18,7 +18,7 @@ interface QuizDetailsDialogProps {
 }
 
 export function QuizDetailsDialog({ open, onOpenChange, quiz }: QuizDetailsDialogProps) {
-    const { data: feedbackData, isLoading: loadingFeedback } = useQuery({
+    const { data: feedbackData, isLoading: loadingFeedback } = useQuery<{ feedback: string }>({
         queryKey: ['/api/quiz-feedback', quiz?.progressId],
         enabled: !!quiz?.progressId && !quiz?.feedback,
     });
@@ -39,9 +39,9 @@ export function QuizDetailsDialog({ open, onOpenChange, quiz }: QuizDetailsDialo
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md bg-slate-900 border-white/10 text-slate-200">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-white">
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        {quiz.title}
+                    <DialogTitle className="flex items-start gap-2 text-white whitespace-normal leading-tight text-left">
+                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
+                        <span>{quiz.title}</span>
                     </DialogTitle>
                     <DialogDescription className="text-slate-400">
                         Completado el {quiz.completedAt ? new Date(quiz.completedAt).toLocaleDateString() : ''}
