@@ -263,7 +263,7 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback, onClick: (qui
         {hasFeedback ? <MessageSquare className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className={`font-semibold text-sm transition-colors line-clamp-2 ${hasFeedback ? "text-blue-200" : "text-slate-200"}`}>{quiz.title}</h4>
+        <h4 className={`font-semibold text-sm transition-colors line-clamp-3 ${hasFeedback ? "text-blue-200" : "text-slate-200"}`}>{quiz.title}</h4>
         <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
           <span className="truncate max-w-[120px]">{quiz.difficulty} • {new Date(quiz.completedAt || '').toLocaleDateString()}</span>
           {hasFeedback && (
@@ -956,35 +956,45 @@ export default function UserDashboard() {
                 <div className="space-y-2">
                   {pendingQuizzes.length > 0 ? (
                     pendingQuizzes.map((quiz) => (
-                      <div key={quiz.id} className="group flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-yellow-500/30 hover:shadow-[0_0_15px_-3px_rgba(234,179,8,0.15)] overflow-x-auto">
-                        <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
-                          <PlayCircle className="h-5 w-5 text-yellow-500" />
+                      <div key={quiz.id} className="group flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-yellow-500/30 hover:shadow-[0_0_15px_-3px_rgba(234,179,8,0.15)]">
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                          <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
+                            <PlayCircle className="h-5 w-5 text-yellow-500" />
+                          </div>
+                          <div className="flex-1 min-w-0 sm:hidden">
+                            <h4 className="font-semibold text-sm text-slate-200 line-clamp-2">{quiz.title}</h4>
+                            <p className="text-xs text-slate-500 truncate">{quiz.difficulty}</p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-[180px]">
+
+                        <div className="flex-1 min-w-0 hidden sm:block">
                           <h4 className="font-semibold text-sm text-slate-200">{quiz.title}</h4>
                           <p className="text-xs text-slate-500 truncate">{quiz.difficulty}</p>
                         </div>
-                        <div className="flex shrink-0 items-center gap-2">
+
+                        <div className="flex items-center justify-between w-full sm:w-auto gap-2 mt-2 sm:mt-0 pl-12 sm:pl-0">
                           {(quiz.completedQuestions || 0) > 0 && (
-                            <span className="text-xs font-medium text-yellow-500/80 mr-2">
+                            <span className="text-xs font-medium text-yellow-500/80 mr-auto sm:mr-2">
                               Progreso: {quiz.completedQuestions}
                             </span>
                           )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-xs bg-transparent border-slate-700 text-slate-400 hover:text-white hover:bg-white/10"
-                            onClick={(e) => handleMiniStart(e, quiz.id)}
-                          >
-                            Mini
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="h-7 px-3 text-xs bg-yellow-600 hover:bg-yellow-700 text-white border-none shadow-sm"
-                            onClick={() => setLocation(`/quiz/${quiz.id}`)}
-                          >
-                            Normal
-                          </Button>
+                          <div className="flex gap-2 ml-auto">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs bg-transparent border-slate-700 text-slate-400 hover:text-white hover:bg-white/10"
+                              onClick={(e) => handleMiniStart(e, quiz.id)}
+                            >
+                              Mini
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="h-7 px-3 text-xs bg-yellow-600 hover:bg-yellow-700 text-white border-none shadow-sm"
+                              onClick={() => setLocation(`/quiz/${quiz.id}`)}
+                            >
+                              Normal
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))
