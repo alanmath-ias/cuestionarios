@@ -286,6 +286,7 @@ export default function UserDashboard() {
   const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | null>(null);
   const [showPendingDialog, setShowPendingDialog] = useState(false);
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [showSocialDialog, setShowSocialDialog] = useState(false); // New state for social dialog
   const [showRestZone, setShowRestZone] = useState(false);
   const [miniQuizId, setMiniQuizId] = useState<number | null>(null);
   const [pendingSearchQuery, setPendingSearchQuery] = useState("");
@@ -781,40 +782,42 @@ export default function UserDashboard() {
 
 
           {/* Alert Section */}
-          {feedbackQuizzes.length > 0 && (
-            <div
-              onClick={() => {
-                if (feedbackQuizzes.length === 1) {
-                  // Navigate directly if only one
-                  window.location.href = `/results/${feedbackQuizzes[0].progressId}`;
-                } else {
-                  // Show dialog if multiple
-                  setShowFeedbackDialog(true);
-                }
-              }}
-              className="animate-pulse flex items-center gap-2 bg-blue-500/10 text-blue-400 px-4 py-2 rounded-full border border-blue-500/20 shadow-sm cursor-pointer hover:bg-blue-500/20 transition-colors"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span className="text-sm font-bold">
-                {feedbackQuizzes.length === 1
-                  ? "Tienes 1 nuevo feedback"
-                  : `Tienes ${feedbackQuizzes.length} nuevos feedbacks`}
-              </span>
-            </div>
-          )}
-          {pendingQuizzes.length > 0 && (
-            <div
-              onClick={() => setShowPendingDialog(true)}
-              className="animate-pulse flex items-center gap-2 bg-yellow-500/10 text-yellow-400 px-4 py-2 rounded-full border border-yellow-500/20 shadow-sm cursor-pointer hover:bg-yellow-500/20 transition-colors"
-            >
-              <AlertTriangle className="w-4 h-4" />
-              <span className="text-sm font-bold">
-                {pendingQuizzes.length > 5
-                  ? "Tienes varias actividades pendientes"
-                  : `Tienes ${pendingQuizzes.length} actividades pendientes`}
-              </span>
-            </div>
-          )}
+          <div className="flex flex-col gap-3 items-start">
+            {pendingQuizzes.length > 0 && (
+              <div
+                onClick={() => setShowPendingDialog(true)}
+                className="animate-pulse flex items-center gap-2 bg-yellow-500/10 text-yellow-400 px-4 py-2 rounded-full border border-yellow-500/20 shadow-sm cursor-pointer hover:bg-yellow-500/20 transition-colors"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                <span className="text-sm font-bold">
+                  {pendingQuizzes.length > 5
+                    ? "Tienes varias actividades pendientes"
+                    : `Tienes ${pendingQuizzes.length} actividades pendientes`}
+                </span>
+              </div>
+            )}
+            {feedbackQuizzes.length > 0 && (
+              <div
+                onClick={() => {
+                  if (feedbackQuizzes.length === 1) {
+                    // Navigate directly if only one
+                    window.location.href = `/results/${feedbackQuizzes[0].progressId}`;
+                  } else {
+                    // Show dialog if multiple
+                    setShowFeedbackDialog(true);
+                  }
+                }}
+                className="animate-pulse flex items-center gap-2 bg-blue-500/10 text-blue-400 px-4 py-2 rounded-full border border-blue-500/20 shadow-sm cursor-pointer hover:bg-blue-500/20 transition-colors"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span className="text-sm font-bold">
+                  {feedbackQuizzes.length === 1
+                    ? "Tienes 1 nuevo comentario"
+                    : `Tienes ${feedbackQuizzes.length} nuevos comentarios`}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Stars Navigation & Roadmap */}
@@ -1106,22 +1109,23 @@ export default function UserDashboard() {
             </div>
 
             {/* Promo Banners */}
-            <PromoBanner
-              title="Síguenos"
-              subtitle="@alanmath.ias"
-              icon={Instagram}
-              colorClass="bg-gradient-to-br from-purple-600 to-pink-500 text-white"
-              href="https://www.instagram.com/alanmath.ias/"
-              buttonText="Ver perfil"
-              compact={true}
-            />
+            <div onClick={(e) => { e.preventDefault(); setShowSocialDialog(true); }} className="cursor-pointer">
+              <PromoBanner
+                title="Síguenos en nuestras redes"
+                subtitle="@alanmath.ias"
+                icon={Instagram}
+                colorClass="bg-gradient-to-br from-purple-600 to-pink-500 text-white"
+                href="#"
+                buttonText="Ver redes"
+                compact={true}
+              />
+            </div>
 
             <PromoBanner
               title="eBook Exclusivo"
               subtitle="Movimiento Parabólico"
               icon={ShoppingBag}
-              colorClass="bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-orange-900/40"
-              bgImage="https://imagenes.alanmath.com/ebook-cover-placeholder.jpg"
+              colorClass="bg-gradient-to-br from-[#8B4513] to-[#A0522D] text-white shadow-lg shadow-orange-900/40"
               href="https://alanmatiasvilla1000.hotmart.host/el-fascinante-movimiento-parabolico-guia-practica-de-alanmath-f1416e10-f1d2-49ac-aa29-2e8318b2fea4"
               buttonText="Ver eBook"
               compact={true}
@@ -1571,6 +1575,82 @@ export default function UserDashboard() {
                 </div>
               )}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Social Media Dialog */}
+        <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
+          <DialogContent className="sm:max-w-md bg-slate-900 border-white/10 text-slate-200">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-pink-500">
+                <Instagram className="w-6 h-6" />
+                Síguenos en Redes
+              </DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Únete a nuestra comunidad en todas las plataformas.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 gap-3 py-4">
+              <a href="https://www.youtube.com/@AlanMath" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors group">
+                <div className="p-2 bg-red-500/20 rounded-full text-red-500 group-hover:scale-110 transition-transform">
+                  <Youtube className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-200">YouTube</h4>
+                  <p className="text-xs text-slate-400">Tutoriales y clases completas</p>
+                </div>
+                <ExternalLink className="w-4 h-4 ml-auto text-slate-500 group-hover:text-white" />
+              </a>
+
+              <a href="https://www.instagram.com/alanmath.ias/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-4 rounded-xl bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 transition-colors group">
+                <div className="p-2 bg-pink-500/20 rounded-full text-pink-500 group-hover:scale-110 transition-transform">
+                  <Instagram className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-200">Instagram</h4>
+                  <p className="text-xs text-slate-400">Tips rápidos y novedades</p>
+                </div>
+                <ExternalLink className="w-4 h-4 ml-auto text-slate-500 group-hover:text-white" />
+              </a>
+
+              <a href="https://www.tiktok.com/@alanmath.ias" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-4 rounded-xl bg-slate-800 border border-white/10 hover:bg-slate-700 transition-colors group">
+                <div className="p-2 bg-black/40 rounded-full text-white group-hover:scale-110 transition-transform">
+                  <span className="font-bold text-lg">Tk</span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-200">TikTok</h4>
+                  <p className="text-xs text-slate-400">Hacks matemáticos virales</p>
+                </div>
+                <ExternalLink className="w-4 h-4 ml-auto text-slate-500 group-hover:text-white" />
+              </a>
+
+              <a href="https://www.facebook.com/people/AlanMathias/61572215860800/?name=xhp_nt_" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-4 rounded-xl bg-blue-600/10 border border-blue-600/20 hover:bg-blue-600/20 transition-colors group">
+                <div className="p-2 bg-blue-600/20 rounded-full text-blue-500 group-hover:scale-110 transition-transform">
+                  <Globe className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-200">Facebook</h4>
+                  <p className="text-xs text-slate-400">Comunidad y eventos</p>
+                </div>
+                <ExternalLink className="w-4 h-4 ml-auto text-slate-500 group-hover:text-white" />
+              </a>
+
+              <a href="https://alanmath.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-4 rounded-xl bg-cyan-600/10 border border-cyan-600/20 hover:bg-cyan-600/20 transition-colors group">
+                <div className="p-2 bg-cyan-600/20 rounded-full text-cyan-500 group-hover:scale-110 transition-transform">
+                  <Globe className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-200">Sitio Web</h4>
+                  <p className="text-xs text-slate-400">Visita nuestra página oficial</p>
+                </div>
+                <ExternalLink className="w-4 h-4 ml-auto text-slate-500 group-hover:text-white" />
+              </a>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setShowSocialDialog(false)} className="w-full bg-slate-800 hover:bg-slate-700 text-white">
+                Cerrar
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 

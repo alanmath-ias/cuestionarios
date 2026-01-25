@@ -109,11 +109,7 @@ export function Header({ user, pendingCount }: HeaderProps) {
           </div>
 
           <div className="hidden md:flex items-center gap-4 border-l border-white/10 pl-6">
-            <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-[#FF0000] transition-colors" aria-label="YouTube"><Youtube size={18} /></a>
-            <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-[#E1306C] transition-colors" aria-label="Instagram"><Instagram size={18} /></a>
-            <a href={socialLinks.tiktok} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors" aria-label="TikTok"><FaTiktok size={16} /></a>
-            <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-500 transition-colors" aria-label="Facebook"><FaFacebook size={16} /></a>
-            <a href={socialLinks.website} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-400 transition-colors" aria-label="Sitio Web"><Globe size={16} /></a>
+            {/* Social icons removed as per user request */}
           </div>
 
           {user ? (
