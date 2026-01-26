@@ -24,7 +24,9 @@ export default function SubscriptionPage() {
         },
         onSuccess: (data) => {
             if (data.id) {
-                window.location.href = `https://www.mercadopago.com.co/checkout/v1/redirect?pref_id=${data.id}`;
+                const url = `https://www.mercadopago.com.co/checkout/v1/redirect?pref_id=${data.id}`;
+                window.open(url, '_blank');
+                setLoading(false); // Stop loading since we opened a new tab
             }
         },
         onError: (error) => {
