@@ -302,6 +302,24 @@ export class DatabaseStorage implements IStorage {
     return updatedUser;
   }
 
+  async updateUserSubscription(userId: number, status: string, plan: string, endDate: string): Promise<User> {
+    const [updatedUser] = await this.db
+      .update(users)
+      .set({
+        subscriptionStatus: status,
+        subscriptionPlan: plan,
+        subscriptionEndDate: endDate,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!updatedUser) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+
+    return updatedUser;
+  }
+
   async getUserQuizzes(userId: number): Promise<Quiz[]> {
     const result = await this.db
       .select()

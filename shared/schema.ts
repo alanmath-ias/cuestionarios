@@ -18,6 +18,10 @@ export const users = pgTable("users", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	hintCredits: integer("hint_credits").default(50).notNull(),
 	tourStatus: jsonb("tour_status").default({}),
+	mercadopagoPayerId: text("mercadopago_payer_id"),
+	subscriptionStatus: text("subscription_status").default('free'),
+	subscriptionPlan: text("subscription_plan"),
+	subscriptionEndDate: timestamp("subscription_end_date", { mode: 'string' }),
 }, (table) => [
 	unique("users_username_unique").on(table.username),
 ]);

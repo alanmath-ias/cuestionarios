@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, HelpCircle, Gamepad2, BrainCircuit } from 'lucide-react';
+import { ChevronDown, HelpCircle, Gamepad2, BrainCircuit, CreditCard } from 'lucide-react';
 import { RestZoneDialog } from '@/components/dialogs/RestZoneDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
@@ -107,6 +107,11 @@ export function UserMenu({ user }: UserMenuProps) {
           <DropdownMenuItem onClick={handleDiagnosticClick}>
             <BrainCircuit className="mr-2 h-4 w-4" />
             <span>Diagnóstico IA</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={() => setLocation('/subscription')}>
+            <CreditCard className="mr-2 h-4 w-4" />
+            <span>Suscripción</span>
           </DropdownMenuItem>
 
           {user.role === 'admin' ? (

@@ -20,6 +20,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, userData: Partial<User>): Promise<User>;
   updateUserCredits(id: number, credits: number): Promise<User>;
+  updateUserSubscription(userId: number, status: string, plan: string, endDate: string): Promise<User>;
   deleteUser(id: number): Promise<void>;
 
   // Category methods
@@ -429,7 +430,11 @@ export class MemStorage implements IStorage {
       role: insertUser.role ?? "student",
       createdAt: new Date().toISOString(),
       hintCredits: 50,
-      tourStatus: {}
+      tourStatus: {},
+      mercadopagoPayerId: null,
+      subscriptionStatus: 'free',
+      subscriptionPlan: null,
+      subscriptionEndDate: null
     };
     this.users.set(id, user);
     return user;
@@ -452,6 +457,21 @@ export class MemStorage implements IStorage {
     }
     const updatedUser = { ...user, hintCredits: credits };
     this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async updateUserSubscription(userId: number, status: string, plan: string, endDate: string): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+    const updatedUser = {
+      ...user,
+      subscriptionStatus: status,
+      subscriptionPlan: plan,
+      subscriptionEndDate: endDate
+    };
+    this.users.set(userId, updatedUser);
     return updatedUser;
   }
 

@@ -27,6 +27,8 @@ import { requireAuth } from "./middleware/requireAuth.js";
 
 //chat gpt cuestionarios a usuarios
 import { DatabaseStorage } from './database-storage.js'; // Ruta ajustada para usar .js
+import { createSubscriptionPreference, getPayment } from './mercadopago.js';
+
 //fin chat gpt cuestionarios a usuarios
 
 //chat gpt dashboar personalizado
@@ -785,6 +787,90 @@ Tono: Alentador, profesional y educativo.`;
     } catch (error) {
       console.error("Error sending email:", error);
       res.status(500).json({ message: "Error sending email" });
+    }
+  });
+
+  // Mercado Pago Routes
+  apiRouter.post("/create-preference", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = req.user!;
+      const { planName, price } = req.body;
+
+      if (!planName || !price) {
+        return res.status(400).json({ message: "Plan name and price are required" });
+      }
+
+      const preference = await createSubscriptionPreference(user, planName, price);
+      res.json({ id: preference.id });
+    } catch (error) {
+      console.error("Error creating preference:", error);
+      res.status(500).json({ message: "Error creating preference" });
+    }
+  });
+
+  apiRouter.post("/webhook/mercadopago", async (req: Request, res: Response) => {
+    const { type, data } = req.body;
+    const topic = req.query.topic || type;
+    const id = req.query.id || data?.id;
+
+    try {
+      if (topic === 'payment' && id) {
+        const payment = await getPayment(id as string);
+
+        if (payment.status === 'approved') {
+          const userId = Number(payment.external_reference);
+          const plan = payment.metadata.plan || 'premium';
+
+          // Calculate end date (1 month from now)
+          const endDate = new Date();
+          endDate.setMonth(endDate.getMonth() + 1);
+
+          await storage.updateUserSubscription(userId, 'active', plan, endDate.toISOString());
+          console.log(`User ${userId} subscription updated to active.`);
+        }
+      }
+      res.sendStatus(200);
+    } catch (error) {
+      console.error("Webhook error:", error);
+      res.sendStatus(500);
+    }
+  });
+
+  // Manual verification endpoint for local development
+  apiRouter.post("/verify-payment", requireAuth, async (req: Request, res: Response) => {
+    const { paymentId } = req.body;
+
+    if (!paymentId) {
+      return res.status(400).json({ message: "Payment ID is required" });
+    }
+
+    try {
+      const payment = await getPayment(paymentId);
+
+      if (payment.status === 'approved') {
+        const userId = Number(payment.external_reference);
+
+        // Verify the user is verifying their own payment
+        if (userId !== req.user!.id) {
+          return res.status(403).json({ message: "Unauthorized verification" });
+        }
+
+        const plan = payment.metadata.plan || 'premium';
+
+        // Calculate end date (1 month from now)
+        const endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + 1);
+
+        await storage.updateUserSubscription(userId, 'active', plan, endDate.toISOString());
+        console.log(`[Manual Verify] User ${userId} subscription updated to active.`);
+
+        res.json({ success: true, status: 'approved' });
+      } else {
+        res.json({ success: false, status: payment.status });
+      }
+    } catch (error) {
+      console.error("Manual verification error:", error);
+      res.status(500).json({ message: "Error verifying payment" });
     }
   });
   //Obtener el nombre del usuario

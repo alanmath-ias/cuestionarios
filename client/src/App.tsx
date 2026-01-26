@@ -51,6 +51,10 @@ import ForgotPasswordPage from '@/pages/forgot-password';
 import ResetPasswordPage from '@/pages/reset-password';
 
 import LandingPage from "@/pages/landing-page";
+import SubscriptionPage from "@/pages/subscription";
+import PaymentSuccessPage from "@/pages/payment-success";
+import PaymentFailurePage from "@/pages/payment-failure";
+
 
 //Protectroute que permite el ingreso a cuestionarios publicos:
 const PUBLIC_QUIZZES = [1, 2, 3, 4, 278]; // IDs de los cuestionarios públicos
@@ -253,6 +257,15 @@ function Router() {
       </Route>
       <Route path="/history">
         {() => <ProtectedRoute component={HistoryPage} path="/history" />}
+      </Route>
+      <Route path="/subscription">
+        {() => <ProtectedRoute component={SubscriptionPage} path="/subscription" />}
+      </Route>
+      <Route path="/payment-success">
+        {() => <ProtectedRoute component={PaymentSuccessPage} path="/payment-success" />}
+      </Route>
+      <Route path="/payment-failure">
+        {() => <ProtectedRoute component={PaymentFailurePage} path="/payment-failure" />}
       </Route>
 
       {/* Rutas administrativas */}

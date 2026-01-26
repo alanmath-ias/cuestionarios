@@ -26,6 +26,10 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       password: user.password,
       hintCredits: user.hintCredits,
       tourStatus: user.tourStatus,
+      mercadopagoPayerId: user.mercadopagoPayerId,
+      subscriptionStatus: user.subscriptionStatus,
+      subscriptionPlan: user.subscriptionPlan,
+      subscriptionEndDate: user.subscriptionEndDate,
     };
 
     next();
