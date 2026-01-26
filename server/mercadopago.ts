@@ -35,6 +35,7 @@ export const createSubscriptionPreference = async (user: User, planName: string,
                 },
                 back_urls: backUrls,
                 auto_return: 'approved',
+                notification_url: `${process.env.APP_URL || 'https://app.alanmath.com'}/api/webhook/mercadopago`,
                 external_reference: user.id.toString(),
                 statement_descriptor: 'ALANMATH',
                 metadata: {
