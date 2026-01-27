@@ -22,6 +22,8 @@ import { useSession } from "@/hooks/useSession";
 import { ContentRenderer } from "@/components/ContentRenderer";
 import { AIMarkdown } from "@/components/ui/ai-markdown";
 
+const SURVEY_QUIZ_IDS = [68, 69, 73, 72];
+
 // Interfaces
 interface Quiz {
   id: number;
@@ -667,7 +669,7 @@ const ActiveQuiz = () => {
                   Pista {index + 1}
                 </h4>
                 <div className="text-slate-300">
-                  <AIMarkdown content={hint} />
+                  <AIMarkdown content={hint} className="prose-invert [&_*]:text-slate-200" />
                 </div>
               </div>
             ))}
@@ -754,10 +756,10 @@ const ActiveQuiz = () => {
           )}
         </div>
 
-        <div className="flex justify-between items-center mb-8">
+        <div className="relative flex justify-between items-center mb-8">
           <Button
             variant="outline"
-            className="flex items-center border-white/10 text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-900/50"
+            className="flex items-center border-white/10 text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-900/50 z-10"
             onClick={handlePreviousQuestion}
             disabled={currentQuestionIndex === 0}
           >
@@ -765,45 +767,46 @@ const ActiveQuiz = () => {
             Anterior
           </Button>
 
-          <Button
-            id="tour-hint-button"
-            variant="outline"
-            size="sm"
-            className="h-10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 bg-yellow-500/5 backdrop-blur-sm"
-            onClick={() => setIsHintDialogOpen(true)}
-            disabled={!session?.userId || answeredQuestions[currentQuestionIndex]}
-          >
-            <Lightbulb className="mr-2 h-4 w-4" />
-            ¿Una Pista?
-          </Button>
-
-          {session?.userId === 2 && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-10 border-red-500/30 text-red-400 hover:bg-red-500/10 ml-2"
-              onClick={() => setIsReportDialogOpen(true)}
-            >
-              <Flag className="mr-2 h-4 w-4" />
-              Reportar
-            </Button>
+          {!SURVEY_QUIZ_IDS.includes(parseInt(quizId!)) && (
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0">
+              <Button
+                variant="outline"
+                className="flex items-center border-yellow-500/50 text-yellow-400 bg-yellow-500/5 hover:bg-yellow-500 hover:text-slate-900 hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] transition-all duration-300 scale-100 hover:scale-110"
+                onClick={() => setIsHintDialogOpen(true)}
+              >
+                <Lightbulb className="mr-2 h-4 w-4" />
+                Pista
+              </Button>
+            </div>
           )}
 
-          <Button
-            onClick={handleNextQuestion}
-            disabled={isNavigating || (currentQuestion.type === 'text' && !answeredQuestions[currentQuestionIndex])}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-none shadow-lg shadow-blue-500/20"
-          >
-            {isNavigating ? (
-              'Procesando...'
-            ) : (
-              <>
-                {/* Show Finalize if we are on the last question OR if all questions have been answered */}
-                {(currentQuestionIndex >= (questions?.length || 0) - 1) || (Object.keys(answeredQuestions).length === (questions?.length || 0)) || (Object.keys(answeredQuestions).length === (questions?.length || 0) - 1 && !answeredQuestions[currentQuestionIndex]) ? 'Finalizar' : 'Siguiente'}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
+          <div className="flex items-center gap-2 z-10 ml-auto">
+            {session?.userId === 2 && (
+              <Button
+                variant="outline"
+                className="flex items-center border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 bg-red-500/5"
+                onClick={() => setIsReportDialogOpen(true)}
+              >
+                <Flag className="mr-2 h-4 w-4" />
+                Reportar
+              </Button>
             )}
-          </Button>
+
+            <Button
+              onClick={handleNextQuestion}
+              disabled={isNavigating || (currentQuestion.type === 'text' && !answeredQuestions[currentQuestionIndex])}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-none shadow-lg shadow-blue-500/20"
+            >
+              {isNavigating ? (
+                'Procesando...'
+              ) : (
+                <>
+                  {(currentQuestionIndex >= (questions?.length || 0) - 1) || (Object.keys(answeredQuestions).length === (questions?.length || 0)) || (Object.keys(answeredQuestions).length === (questions?.length || 0) - 1 && !answeredQuestions[currentQuestionIndex]) ? 'Finalizar' : 'Siguiente'}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         <div id="tour-quiz-navigation" className="mt-8 bg-slate-900/30 p-4 rounded-xl border border-white/5 backdrop-blur-sm">

@@ -505,7 +505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[MathTip] Selected topic: ${quiz.title}`);
 
       // 4. Generate Tip with DeepSeek
-      const apiKey = process.env.VITE_DEEPSEEK_API_KEY;
+      const apiKey = process.env.DEEPSEEK_API_KEY;
       if (!apiKey) {
         return res.json({ tip: "Recuerda revisar siempre los signos en tus operaciones." });
       }
@@ -533,7 +533,7 @@ Tono: Alentador, profesional y educativo.`;
           model: 'deepseek-chat',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.7,
-          max_tokens: 150,
+          max_tokens: 400,
         }),
       });
 
@@ -571,7 +571,7 @@ Tono: Alentador, profesional y educativo.`;
         });
       }
 
-      const apiKey = process.env.VITE_DEEPSEEK_API_KEY;
+      const apiKey = process.env.DEEPSEEK_API_KEY || process.env.VITE_DEEPSEEK_API_KEY;
       if (!apiKey) {
         return res.json({
           diagnosis: "Detectamos algunos errores. Te recomendamos revisar los temas donde fallaste y practicar más."
@@ -651,6 +651,70 @@ Tono: Alentador, profesional y educativo.`;
       console.error("[Diagnosis] Error generating diagnosis:", error);
       res.json({
         diagnosis: "Detectamos algunos conceptos que necesitan refuerzo. Con práctica constante y explicaciones claras, subirás de nivel rápidamente."
+      });
+    }
+  });
+
+  // Encuesta Feedback Endpoint
+  apiRouter.post("/encuesta-feedback", async (req: Request, res: Response) => {
+    try {
+      const { formData, prediction } = req.body;
+
+      if (!formData || typeof prediction !== 'number') {
+        return res.status(400).json({ message: "Invalid data format" });
+      }
+
+      const apiKey = process.env.DEEPSEEK_API_KEY;
+      if (!apiKey) {
+        return res.json({
+          feedback: "Para mejorar en matemáticas, te recomendamos establecer un horario de estudio fijo, practicar ejercicios diariamente y no dudar en pedir ayuda a tus profesores cuando no entiendas un tema."
+        });
+      }
+
+      const prompt = `
+        Actúa como un orientador académico experto en matemáticas.
+        Analiza el siguiente perfil de estudiante y su predicción de rendimiento:
+        
+        Datos del estudiante:
+        ${Object.entries(formData).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+        
+        Predicción de nota (0-20): ${prediction.toFixed(1)}
+        
+        Tu tarea:
+        1. Genera 3 consejos personalizados, prácticos y motivadores para que este estudiante mejore su rendimiento.
+        2. Ten en cuenta sus hábitos (estudio, sueño, salidas), contexto familiar y dificultades previas.
+        3. El tono debe ser empático pero directo.
+        4. Devuelve el texto en formato markdown (puedes usar negritas y listas).
+        5. Máximo 150 palabras en total.
+      `;
+
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 400,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("DeepSeek API error");
+      }
+
+      const data = await response.json();
+      const feedback = data.choices?.[0]?.message?.content?.trim();
+
+      res.json({ feedback });
+
+    } catch (error) {
+      console.error("[Encuesta Feedback] Error:", error);
+      res.json({
+        feedback: "Estamos teniendo problemas para generar tus consejos personalizados en este momento. Sin embargo, recuerda que la constancia es clave para el éxito en matemáticas."
       });
     }
   });
@@ -1625,7 +1689,7 @@ Ejemplo de formato:
 2. Aplicamos: ¡fórmula!
 3. Resolvemos: ¡operación!`;
 
-      const apiKey = process.env.VITE_DEEPSEEK_API_KEY;
+      const apiKey = process.env.DEEPSEEK_API_KEY || process.env.VITE_DEEPSEEK_API_KEY;
 
       if (!apiKey) {
         console.error("DeepSeek API key not found in environment variables");
@@ -2363,6 +2427,115 @@ Ejemplo de formato:
   });
 
   // Search Routes
+  apiRouter.post("/ai/consult", async (req: Request, res: Response) => {
+    const { formData, prediction } = req.body;
+
+    if (!formData || prediction === undefined) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const formDataToText = (formData: any, prediccion: number): string => {
+      const readableData = {
+        "Edad": formData.age,
+        "Sexo": formData.sex,
+        "Dirección": formData.address,
+        "Tamaño familiar": formData.famsize,
+        "Padres viven juntos": formData.Pstatus,
+        "Educación madre": formData.Medu,
+        "Educación padre": formData.Fedu,
+        "Trabajo madre": formData.Mjob,
+        "Trabajo padre": formData.Fjob,
+        "Motivo para elegir la escuela": formData.reason,
+        "Tutor legal": formData.guardian,
+        "Tiempo de viaje a la escuela": formData.traveltime,
+        "Tiempo semanal de estudio": formData.studytime,
+        "Materias reprobadas antes": formData.failures,
+        "Apoyo educativo escolar": formData.schoolsup,
+        "Apoyo educativo familiar": formData.famsup,
+        "Clases extras pagas": formData.paid,
+        "Actividades extracurriculares": formData.activities,
+        "Asistió a preescolar": formData.nursery,
+        "Desea cursar estudios superiores": formData.higher,
+        "Tiene internet en casa": formData.internet,
+        "Tiene pareja": formData.romantic,
+        "Relación familiar": formData.famrel,
+        "Tiempo libre diario": formData.freetime,
+        "Salidas con amigos": formData.goout,
+        "Consumo de alcohol entre semana": formData.Dalc,
+        "Consumo de alcohol en fines de semana": formData.Walc,
+        "Salud": formData.health,
+        "Inasistencias escolares": formData.absences,
+        "Nota en test de lenguaje": (formData.G1 / 2).toFixed(1),
+        "Nota en test de matemáticas": (formData.G2 / 2).toFixed(1),
+        "Nota final predicha": (prediccion / 2).toFixed(1),
+      };
+
+      return Object.entries(readableData)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
+    };
+
+    const prompt = `
+  Eres un experto en aprendizaje automático. Un modelo ha estimado el rendimiento académico del estudiante en ${(prediction / 2).toFixed(1)} / 10.
+  
+  Analiza la situación del estudiante con base en sus datos, y entrega una retroalimentación clara, amable, motivadora y fácil de entender el mensaje será leído directamente al estudiante, entonces háblale al este directamente. Organiza el resultado así:
+  Comienza escribiendo inmediatamente el primer punto que te comparto enseguida, no escribas nada antes, ve directo a los puntos sin responderme a mi nada
+  ---
+  
+  1. Diagnóstico general: Explica si el estudiante va bien o tiene aspectos por mejorar, sin ser duro.
+  
+  2. Factores más influyentes: Menciona de forma humana las variables clave (por ejemplo: "tiempo que dedicas a estudiar", "consumo de alcohol en fines de semana").
+  
+  3. Sugerencias personalizadas para mejorar: Ofrece consejos prácticos. No uses nombres técnicos ni nada en inglés.
+  
+  ---
+  
+  Evita usar nombres de variables como "G2", "studytime", etc. Usa expresiones humanas, como "test de matemáticas" o "tiempo de estudio".
+  NO USES ASTERISCOS EN LAS RESPUESTAS, COLOCA ÍCONOS RELEVANTES PARA CADA FACTOR Y SUGERENCIA EN LUGAR DE GUIONES O ASTERISCOS
+  SIEMPRE ACONSEJA CLASES DE MATEMÁTICAS EXTRAS, PERSONALIZADAS NO IMPORTA EL RESULTADO
+  DEJA UNA TABULACIÓN PARA CADA ITEM QUE CORRESPONDA A 1, 2 O 3 LA IDEA ES QUE SE VEA AGRADABLE
+  Muy importante, si el puntaje sobre cualquier pregunta relacionada con el alcohol es el mínimo, no menciones nada sobre el alcohol, ni como algo bueno ni como algo malo, cero menciones 
+  
+  Aquí están los datos del estudiante:
+  
+  ${formDataToText(formData, prediction)}
+  `;
+
+    try {
+      const apiKey = process.env.DEEPSEEK_API_KEY || process.env.VITE_DEEPSEEK_API_KEY;
+
+      if (!apiKey) {
+        console.error("DeepSeek API key missing");
+        return res.status(500).json({ message: "Server configuration error" });
+      }
+
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`DeepSeek API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data?.choices?.[0]?.message?.content || 'No se pudo generar una recomendación.';
+      res.json({ content });
+
+    } catch (error) {
+      console.error("Error generating AI consultation:", error);
+      res.status(500).json({ message: "Error generating consultation" });
+    }
+  });
+
   apiRouter.get("/admin/search/users", requireAdmin, async (req, res) => {
     try {
       const query = req.query.q as string;

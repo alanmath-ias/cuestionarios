@@ -552,8 +552,11 @@ export default function UserDashboard() {
   });
 
   useEffect(() => {
+    if (!currentUser?.id) return;
+
     const today = new Date().toDateString();
-    const lastShown = localStorage.getItem('mathTipLastShown');
+    const storageKey = `mathTipLastShown_${currentUser.id}`;
+    const lastShown = localStorage.getItem(storageKey);
 
     // Only show tip if welcome dialog is NOT shown
     if (mathTipData?.tip && lastShown !== today && !showWelcomeDialog) {
@@ -561,19 +564,19 @@ export default function UserDashboard() {
         toast({
           title: "💡 Tip Matemático",
           description: (
-            <div className="max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+            <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
               <ContentRenderer content={mathTipData.tip} className="text-white/90 text-base font-medium text-center mt-2" />
             </div>
           ),
-          duration: 15000, // Give more time to read
-          className: "w-96 h-auto flex flex-col justify-center items-center bg-slate-900 border border-indigo-500/30 text-slate-200 shadow-2xl rounded-2xl p-6"
+          duration: 15000, // Auto-close after 15 seconds
+          className: "w-full md:w-[400px] h-auto flex flex-col justify-center items-center bg-slate-900 border border-indigo-500/30 text-slate-200 shadow-2xl rounded-2xl p-6 md:mr-12 [&>button[toast-close]]:!text-slate-400 [&>button[toast-close]]:!opacity-100 [&>button[toast-close]]:hover:!text-white [&>button[toast-close]]:hover:!bg-white/10 [&>button[toast-close]]:scale-125 [&>button[toast-close]]:top-3 [&>button[toast-close]]:right-3"
         });
-        localStorage.setItem('mathTipLastShown', today);
+        localStorage.setItem(storageKey, today);
       }, 2000); // Wait 2 seconds after welcome dialog is closed (or if it wasn't shown)
 
       return () => clearTimeout(timer);
     }
-  }, [mathTipData, toast, showWelcomeDialog]);
+  }, [mathTipData, toast, showWelcomeDialog, currentUser]);
 
   const isLoading = loadingUser || loadingCategories || loadingQuizzes;
 

@@ -187,6 +187,35 @@ function QuizResults() {
             </Button>
             <h2 className="text-3xl font-bold text-white">Resultados</h2>
           </div>
+
+          {/* Botón para volver a la encuesta si es un quiz obligatorio */}
+          {[68, 69, 72, 73].includes(results?.quiz.id || 0) && (
+            <Button
+              onClick={() => {
+                if (!results) return;
+
+                // Calcular puntaje en escala 0-20 (el quiz es sobre 10)
+                const score = (results.answers.filter(a => a.isCorrect).length / results.answers.length) * 20;
+
+                // Determinar si es G1 (Lenguaje) o G2 (Matemáticas)
+                const field = [68, 69].includes(results.quiz.id) ? 'G1' : 'G2';
+
+                // Guardar resultado para que la encuesta lo procese
+                sessionStorage.setItem('quizResult', JSON.stringify({
+                  field,
+                  value: Math.round(score), // Redondear a entero
+                  quizId: results.quiz.id
+                }));
+
+                // Volver a la encuesta
+                setLocation('/encuestapage');
+              }}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-blue-500/20"
+            >
+              <BookOpen className="mr-2 h-4 w-4" />
+              Volver a la Encuesta
+            </Button>
+          )}
         </div>
 
         {isLoading ? (

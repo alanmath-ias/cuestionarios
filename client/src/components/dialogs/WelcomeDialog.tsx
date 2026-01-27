@@ -54,9 +54,9 @@ export function WelcomeDialog({ open, onOpenChange, username, lastActivity }: We
 
                 <DialogFooter className="flex-col sm:flex-row gap-2 mt-4">
                     <Button
-                        variant="ghost"
+                        variant="outline"
                         onClick={() => onOpenChange(false)}
-                        className="text-slate-400 hover:text-white"
+                        className="bg-transparent border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
                     >
                         {isCompleted ? "Cerrar" : "Más tarde"}
                     </Button>

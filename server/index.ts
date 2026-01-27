@@ -68,21 +68,32 @@ app.get('/api/env', (_req, res) => {
 
 // Session middleware usando PostgreSQL
 const PgStore = PgSession(session);
+const isProduction = process.env.NODE_ENV === "production";
+
+if (isProduction) {
+  app.set("trust proxy", 1); // trust first proxy
+}
+
 app.use(session({
   secret: process.env.SESSION_SECRET || "alanmath-secret-key",
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false,
+    secure: false, // Revertido a false para permitir login en localhost (producción local)
+    sameSite: "lax",
     maxAge: 86400000, // 1 día
   },
   store: new PgStore({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: true,
-    ssl: { rejectUnauthorized: false }, // Si estás usando SSL
+    poolOptions: {
+      max: 5,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    },
+    ssl: { rejectUnauthorized: false },
   } as any),
 }));
-//console.log("Intentando conectar a la base de datos:", process.env.DATABASE_URL);
 
 // Middleware de logging
 app.use((req, res, next) => {

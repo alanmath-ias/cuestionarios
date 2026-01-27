@@ -84,7 +84,7 @@ export function UserMenu({ user }: UserMenuProps) {
   const handleAgeSelection = (isUnder12: boolean) => {
     setAgeModalOpen(false);
     // Navegar a EncuestaPage con parámetros de edad y reset
-    window.location.href = `/encuestapage?ageGroup=${isUnder12 ? 'child' : 'teen'}&reset=true`;
+    setLocation(`/encuestapage?ageGroup=${isUnder12 ? 'child' : 'teen'}&reset=true`);
   };
 
   return (
@@ -167,22 +167,33 @@ export function UserMenu({ user }: UserMenuProps) {
       <RestZoneDialog open={showRestZone} onOpenChange={setShowRestZone} />
 
       <Dialog open={ageModalOpen} onOpenChange={setAgeModalOpen}>
-        <DialogContent>
+        <DialogContent className="bg-slate-900 border-white/10 text-slate-200 sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Selecciona tu grupo de edad</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <BrainCircuit className="h-5 w-5 text-blue-400" />
+              Selecciona tu grupo de edad
+            </DialogTitle>
           </DialogHeader>
-          <div className="flex gap-4 mt-4">
+          <div className="grid grid-cols-2 gap-4 mt-4">
             <Button
               onClick={() => handleAgeSelection(true)}
-              className="w-full"
+              className="h-24 flex flex-col gap-2 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/30 text-blue-200 hover:text-white transition-all"
             >
-              7 a 11 años
+              <div className="p-2 bg-blue-500/20 rounded-full">
+                <Gamepad2 className="h-5 w-5 text-blue-400" />
+              </div>
+              <span className="font-bold">Niño</span>
+              <span className="text-xs text-blue-300/70">7 a 11 años</span>
             </Button>
             <Button
               onClick={() => handleAgeSelection(false)}
-              className="w-full"
+              className="h-24 flex flex-col gap-2 bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/30 text-purple-200 hover:text-white transition-all"
             >
-              12 a 16 años
+              <div className="p-2 bg-purple-500/20 rounded-full">
+                <BrainCircuit className="h-5 w-5 text-purple-400" />
+              </div>
+              <span className="font-bold">Adolescente</span>
+              <span className="text-xs text-purple-300/70">12 a 16 años</span>
             </Button>
           </div>
         </DialogContent>
