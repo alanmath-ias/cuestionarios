@@ -11,10 +11,11 @@ import { drizzle } from "drizzle-orm/postgres-js";
 export const users = pgTable("users", {
 	id: serial("id").primaryKey().notNull(),
 	username: text("username").notNull(),
-	password: text("password").notNull(),
+	password: text("password"), // Optional for Google Auth users
 	name: text("name").notNull(),
 	email: text("email"),
 	role: text("role").default('student').notNull(),
+	googleId: text("google_id").unique(), // Added for Google Auth
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	hintCredits: integer("hint_credits").default(50).notNull(),
 	tourStatus: jsonb("tour_status").default({}),
@@ -224,6 +225,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
 	name: true,
 	email: true,
 	role: true,
+	googleId: true,
 });
 
 export const insertCategorySchema = createInsertSchema(categories).pick({

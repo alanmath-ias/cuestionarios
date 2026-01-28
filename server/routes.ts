@@ -37,16 +37,13 @@ import { userQuizzes, studentProgress, quizSubmissions, parents } from "../share
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 //import bcrypt from 'bcrypt';
-
-
-
+import passport from "passport";
+import { setupAuth } from "./auth.js";
+import { User as DrizzleUser } from "../shared/schema.js";
 
 declare global {
   namespace Express {
-    interface Request {
-      user?: User;
-      role?: string;
-    }
+    interface User extends DrizzleUser { }
   }
 }
 
@@ -86,6 +83,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   const apiRouter = express.Router();
   app.use("/api", apiRouter);
+
+  // Auth Setup
+  setupAuth();
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  // Google Auth Routes
+  app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+  app.get('/auth/google/callback',
+    (req, res, next) => {
+      passport.authenticate('google', (err: any, user: any, info: any) => {
+        if (err) { return next(err); }
+        if (!user) { return res.redirect('/auth'); }
+
+        req.logIn(user, (err) => {
+          if (err) { return next(err); }
+
+          req.session.userId = user.id;
+          req.session.save((err) => {
+            if (err) console.error("Session save error:", err);
+
+            // Redirect to welcome if new user, otherwise dashboard
+            if (info && info.isNewUser) {
+              return res.redirect('/welcome');
+            }
+            return res.redirect('/dashboard');
+          });
+        });
+      })(req, res, next);
+    }
+  );
 
   // Middleware para verificar si el usuario es administrador
   const requireAdmin = async (req: Request, res: Response, next: () => void) => {

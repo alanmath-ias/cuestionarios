@@ -22,6 +22,9 @@ export interface IStorage {
   updateUserCredits(id: number, credits: number): Promise<User>;
   updateUserSubscription(userId: number, status: string, plan: string, endDate: string): Promise<User>;
   deleteUser(id: number): Promise<void>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
+  updateUserGoogleId(userId: number, googleId: string): Promise<void>;
+  getUserByEmail(email: string): Promise<User | undefined>;
 
   // Category methods
   getCategories(): Promise<Category[]>;
@@ -167,6 +170,9 @@ export class MemStorage implements IStorage {
   async getCategoriesByUserId(userId: number): Promise<any[]> { return []; }
   async getQuizzesByUserId(userId: number): Promise<any[]> { return []; }
   async updateUserCategories(userId: number, categoryIds: number[]): Promise<void> { }
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> { return undefined; }
+  async updateUserGoogleId(userId: number, googleId: string): Promise<void> { }
+  async getUserByEmail(email: string): Promise<User | undefined> { return undefined; }
 
   async getAllSubcategories(): Promise<any[]> { return []; }
   async getSubcategoriesByCategory(categoryId: number): Promise<any[]> { return []; }
@@ -426,8 +432,10 @@ export class MemStorage implements IStorage {
     const user: User = {
       ...insertUser,
       id,
+      password: insertUser.password ?? null,
       email: insertUser.email ?? null,
       role: insertUser.role ?? "student",
+      googleId: insertUser.googleId ?? null,
       createdAt: new Date().toISOString(),
       hintCredits: 50,
       tourStatus: {},

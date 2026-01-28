@@ -30,6 +30,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       subscriptionStatus: user.subscriptionStatus,
       subscriptionPlan: user.subscriptionPlan,
       subscriptionEndDate: user.subscriptionEndDate,
+      googleId: user.googleId,
     };
 
     next();

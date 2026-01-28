@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
+import { useLocation, Link } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useLocation, Link } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { useQuery } from '@tanstack/react-query';
-import { FaWhatsapp } from 'react-icons/fa';
 import { ArrowLeft } from 'lucide-react';
+import { FcGoogle } from 'react-icons/fc';
+import { FaWhatsapp } from 'react-icons/fa';
 
 interface User {
   id: number;
-  name: string;
   username: string;
   email?: string;
   role?: string;
+  name?: string;
 }
 
 export default function AuthPage() {
@@ -274,6 +275,26 @@ export default function AuthPage() {
               </Button>
             </form>
           )}
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-slate-700" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-slate-900 px-2 text-slate-400">O continuar con</span>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full mt-4 bg-white text-black hover:bg-slate-200 border-transparent font-medium"
+              onClick={() => window.location.href = '/auth/google'}
+            >
+              <FcGoogle className="mr-2 h-5 w-5" />
+              Google
+            </Button>
+          </div>
 
           {/* Sección de ayuda */}
           <div className="mt-8 pt-6 border-t border-white/10">

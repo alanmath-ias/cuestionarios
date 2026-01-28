@@ -87,7 +87,7 @@ app.use(session({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: true,
     poolOptions: {
-      max: 5,
+      max: 2, // Reduced from 5 to prevent "too many clients" error
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
     },

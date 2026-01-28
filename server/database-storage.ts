@@ -1174,6 +1174,22 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.googleId, googleId));
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async updateUserGoogleId(userId: number, googleId: string): Promise<void> {
+    await this.db.update(users)
+      .set({ googleId })
+      .where(eq(users.id, userId));
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.email, email));
+    return result.length > 0 ? result[0] : undefined;
+  }
+
   async deleteUser(id: number): Promise<void> {
     await this.db.delete(studentAnswers).where(
       inArray(
