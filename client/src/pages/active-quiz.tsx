@@ -768,7 +768,7 @@ const ActiveQuiz = () => {
           </Button>
 
           {!SURVEY_QUIZ_IDS.includes(parseInt(quizId!)) && (
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0">
+            <div className={session?.userId === 2 ? "z-0 px-2" : "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0"}>
               <Button
                 variant="outline"
                 className="flex items-center border-yellow-500/50 text-yellow-400 bg-yellow-500/5 hover:bg-yellow-500 hover:text-slate-900 hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] transition-all duration-300 scale-100 hover:scale-110"

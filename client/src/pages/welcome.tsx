@@ -16,21 +16,28 @@ export default function WelcomePage() {
     const [_, setLocation] = useLocation();
     const { toast } = useToast();
     const [username, setUsername] = useState('');
+    const [needsUsername, setNeedsUsername] = useState(false);
 
     const { data: user } = useQuery<User>({
         queryKey: ['/api/user'],
         retry: false,
     });
-
     useEffect(() => {
         if (user) {
-            setUsername(user.name || user.username);
+            const isGoogleTempUser = user.username.startsWith('google_');
+
+            if (isGoogleTempUser) {
+                setNeedsUsername(true);
+                setUsername('');
+            } else {
+                setLocation('/');
+            }
         }
-    }, [user]);
+    }, [user, setLocation]);
 
     const updateProfileMutation = useMutation({
         mutationFn: async (newUsername: string) => {
-            await apiRequest('PATCH', `/api/users/${user?.id}`, { username: newUsername });
+            await apiRequest('PATCH', '/api/user', { username: newUsername });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -46,7 +53,15 @@ export default function WelcomePage() {
     });
 
     const handleStart = () => {
-        if (username !== user?.username) {
+        if (needsUsername) {
+            if (!username.trim()) {
+                toast({
+                    title: "Nombre de usuario requerido",
+                    description: "Por favor elige un nombre de usuario para continuar.",
+                    variant: "destructive"
+                });
+                return;
+            }
             updateProfileMutation.mutate(username);
         } else {
             setLocation('/');
@@ -63,23 +78,29 @@ export default function WelcomePage() {
                         <img src={bannerUrl} alt="Bienvenido a AlanMath" className="max-w-[200px] h-auto rounded-lg shadow-sm" />
                     </div>
                     <h1 className="text-4xl font-bold text-primary mb-2">¡Bienvenid@ a AlanMath!</h1>
-                    <h2 className="text-2xl font-semibold text-gray-700">Hola {user?.name || 'Estudiante'}</h2>
-                    <p className="text-gray-500 mt-2">¿Qué nombre de usuario quieres usar?</p>
+                    <h2 className="text-2xl font-semibold text-gray-700">
+                        Hola {user?.name || user?.username || 'Estudiante'}
+                    </h2>
+                    {needsUsername && (
+                        <p className="text-gray-500 mt-2">¿Qué nombre de usuario quieres usar?</p>
+                    )}
                 </div>
 
                 <div className="space-y-6 text-lg">
-                    <div className="flex justify-center">
-                        <div className="w-full max-w-sm">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de Usuario</label>
-                            <input
-                                type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                placeholder="Elige un nombre de usuario"
-                            />
+                    {needsUsername && (
+                        <div className="flex justify-center">
+                            <div className="w-full max-w-sm">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de Usuario</label>
+                                <input
+                                    type="text"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="Elige un nombre de usuario"
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     <div className="flex items-start gap-4">
                         <BookOpen className="flex-shrink-0 mt-1 text-blue-500" size={24} />

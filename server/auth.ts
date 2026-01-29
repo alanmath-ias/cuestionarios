@@ -29,7 +29,7 @@ export function setupAuth() {
                 } else {
                     // 3. Create new user
                     user = await storage.createUser({
-                        username: email.split('@')[0] + '_' + Math.random().toString(36).substring(7), // Generate unique username
+                        username: 'google_' + email.split('@')[0] + '_' + Math.random().toString(36).substring(7), // Generate unique username
                         name: name,
                         email: email,
                         password: null, // No password
