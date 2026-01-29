@@ -56,11 +56,11 @@ export default function ForgotPasswordPage() {
                             <div className="bg-green-500/10 text-green-400 border border-green-500/20 p-4 rounded-xl">
                                 <p className="font-bold">¡Solicitud enviada!</p>
                                 <p className="text-sm mt-2 opacity-90">
-                                    Revisa tu correo electrónico (y la carpeta de spam) para encontrar el enlace de recuperación.
+                                    Revisa tu correo electrónico (y la carpeta de spam) para encontrar el enlace de recuperación. Dale click al enlace, y listo, digita tu nueva contraseña
                                 </p>
                             </div>
                             <Link href="/auth">
-                                <Button variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
+                                <Button className="w-full bg-slate-800 text-white hover:bg-slate-700 border border-slate-700">
                                     <ArrowLeft className="mr-2 h-4 w-4" />
                                     Volver al inicio de sesión
                                 </Button>

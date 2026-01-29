@@ -283,38 +283,40 @@ export default function UsersAdmin() {
                         >
                           <BookOpen className="h-4 w-4" />
                         </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                              disabled={user.role === "admin"}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="bg-slate-900 border-slate-800">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle className="text-white">¿Estás seguro?</AlertDialogTitle>
-                              <AlertDialogDescription className="text-slate-400">
-                                Esta acción no se puede deshacer. Esto eliminará permanentemente al usuario
-                                y todos sus datos asociados.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel className="bg-slate-800 text-white hover:bg-slate-700 border-slate-700">
-                                Cancelar
-                              </AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteUserMutation.mutate(user.id)}
-                                className="bg-red-600 hover:bg-red-700 text-white"
+                        {user.id !== 1 && user.id !== 2 && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                                disabled={user.role === "admin"}
                               >
-                                Eliminar
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-slate-900 border-slate-800">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-white">¿Estás seguro?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-slate-400">
+                                  Esta acción no se puede deshacer. Esto eliminará permanentemente al usuario
+                                  y todos sus datos asociados.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="bg-slate-800 text-white hover:bg-slate-700 border-slate-700">
+                                  Cancelar
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteUserMutation.mutate(user.id)}
+                                  className="bg-red-600 hover:bg-red-700 text-white"
+                                >
+                                  Eliminar
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

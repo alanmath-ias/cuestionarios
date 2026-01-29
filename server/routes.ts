@@ -489,6 +489,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user profile
+  // Update user profile
+  apiRouter.patch("/user", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    const { username, email, currentPassword, newPassword } = req.body;
+
+    // Validate input
+    if (username && (typeof username !== 'string' || username.trim().length < 3)) {
+      return res.status(400).json({ message: "El nombre de usuario debe tener al menos 3 caracteres" });
+    }
+
+    if (email && (typeof email !== 'string' || !email.includes('@'))) {
+      return res.status(400).json({ message: "El correo electrónico no es válido" });
+    }
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
+
+      // Password Change Logic
+      if (newPassword) {
+        if (!currentPassword) {
+          return res.status(400).json({ message: "Debes ingresar tu contraseña actual" });
+        }
+        // Verify current password (Plain text as per current system)
+        if (user.password !== currentPassword) {
+          return res.status(400).json({ message: "La contraseña actual es incorrecta" });
+        }
+        if (newPassword.length < 6) {
+          return res.status(400).json({ message: "La nueva contraseña debe tener al menos 6 caracteres" });
+        }
+      }
+
+      // Check if username is taken by another user
+      if (username && username !== user.username) {
+        const existingUser = await storage.getUserByUsername(username);
+        if (existingUser && existingUser.id !== userId) {
+          return res.status(400).json({ message: "El nombre de usuario ya está en uso" });
+        }
+      }
+
+      // Check if email is taken by another user (if email is provided)
+      if (email && email !== user.email) {
+        const existingEmailUser = await storage.getUserByEmail(email);
+        if (existingEmailUser && existingEmailUser.id !== userId) {
+          return res.status(400).json({ message: "El correo electrónico ya está en uso" });
+        }
+      }
+
+      const updateData: any = {};
+      if (username) updateData.username = username;
+      if (email) updateData.email = email;
+      if (newPassword) updateData.password = newPassword;
+
+      const updatedUser = await storage.updateUser(userId, updateData);
+
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Error al actualizar el perfil" });
+    }
+  });
+
   // Math Tip Endpoint
   apiRouter.get("/user/math-tip", async (req: Request, res: Response) => {
     const userId = req.session.userId;
@@ -785,6 +851,12 @@ Tono: Alentador, profesional y educativo.`;
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) {
       return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    // PROTECTED ACCOUNTS: Prevent deletion of Admin (1) and Alan (2)
+    if (userId === 1 || userId === 2) {
+      console.warn(`⛔ Attempted to delete protected user ${userId}`);
+      return res.status(403).json({ message: "This user account is protected and cannot be deleted." });
     }
 
     try {
