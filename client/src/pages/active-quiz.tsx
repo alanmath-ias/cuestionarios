@@ -192,45 +192,50 @@ const ActiveQuiz = () => {
 
   // Effects
   useEffect(() => {
-    if (!isInitialized && progress && questions) {
-      if (progress.status === 'completed') {
-        setLocation(`/results/${progress.id}`, { replace: true });
-        return;
-      }
+    if (!isInitialized && questions) {
+      if (progress) {
+        if (progress.status === 'completed' && mode !== 'readonly') {
+          setLocation(`/results/${progress.id}`, { replace: true });
+          return;
+        }
 
-      // Initialize previousTimeSpent from the server
-      setPreviousTimeSpent(progress.timeSpent || 0);
+        // Initialize previousTimeSpent from the server
+        setPreviousTimeSpent(progress.timeSpent || 0);
 
-      const completedCount = progress.completedQuestions || 0;
-      if (completedCount > 0 && completedCount < questions.length) {
-        setCurrentQuestionIndex(completedCount);
-      }
+        const completedCount = progress.completedQuestions || 0;
+        if (completedCount > 0 && completedCount < questions.length) {
+          setCurrentQuestionIndex(completedCount);
+        }
 
-      if (progress.answers && Array.isArray(progress.answers)) {
-        const restoredAnswers = progress.answers.map((ans: any) => {
-          if (ans.isCorrect === null && ans.answerId) {
-            const question = questions.find(q => q.id === ans.questionId);
-            const answerDef = question?.answers?.find((a: any) => a.id === ans.answerId);
-            if (answerDef) {
-              return { ...ans, isCorrect: answerDef.isCorrect };
+        if (progress.answers && Array.isArray(progress.answers)) {
+          const restoredAnswers = progress.answers.map((ans: any) => {
+            if (ans.isCorrect === null && ans.answerId) {
+              const question = questions.find(q => q.id === ans.questionId);
+              const answerDef = question?.answers?.find((a: any) => a.id === ans.answerId);
+              if (answerDef) {
+                return { ...ans, isCorrect: answerDef.isCorrect };
+              }
             }
-          }
-          return ans;
-        });
-        setStudentAnswers(restoredAnswers);
+            return ans;
+          });
+          setStudentAnswers(restoredAnswers);
 
-        const answeredMap: Record<number, boolean> = {};
-        restoredAnswers.forEach((ans: any) => {
-          const qIndex = questions.findIndex(q => q.id === ans.questionId);
-          if (qIndex !== -1) {
-            answeredMap[qIndex] = true;
-          }
-        });
-        setAnsweredQuestions(answeredMap);
+          const answeredMap: Record<number, boolean> = {};
+          restoredAnswers.forEach((ans: any) => {
+            const qIndex = questions.findIndex(q => q.id === ans.questionId);
+            if (qIndex !== -1) {
+              answeredMap[qIndex] = true;
+            }
+          });
+          setAnsweredQuestions(answeredMap);
+        }
+        setIsInitialized(true);
+      } else if (mode === 'readonly') {
+        // If readonly and NO progress, just initialize empty state
+        setIsInitialized(true);
       }
-      setIsInitialized(true);
     }
-  }, [progress, questions, setLocation, isInitialized]);
+  }, [progress, questions, setLocation, isInitialized, mode]);
 
   useEffect(() => {
     if (questions && questions[currentQuestionIndex]) {
@@ -242,8 +247,10 @@ const ActiveQuiz = () => {
     }
   }, [questions, currentQuestionIndex]);
 
+  const isReadOnly = mode === 'readonly';
+
   useEffect(() => {
-    if (quiz && session?.userId && !progress && session.userId !== 1) {
+    if (quiz && session?.userId && !progress && session.userId !== 1 && !isReadOnly) {
       createProgressMutation.mutate({
         userId: session.userId,
         quizId: parseInt(quizId!),
@@ -253,7 +260,7 @@ const ActiveQuiz = () => {
         mode: mode || 'standard'
       });
     }
-  }, [quiz, session, progress, quizId]);
+  }, [quiz, session, progress, quizId, isReadOnly]);
 
   useEffect(() => {
     if (!loadingQuiz && !loadingQuestions && session?.userId && !session.tourStatus?.activeQuiz) {
@@ -556,23 +563,30 @@ const ActiveQuiz = () => {
                   Modo Admin - Sin Guardar
                 </Badge>
               )}
+              {isReadOnly && (
+                <Badge variant="outline" className="text-blue-400 border-blue-500/50 bg-blue-500/10 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Modo Solo Lectura
+                </Badge>
+              )}
             </h1>
-            <div className="flex items-center gap-2 mt-2">
-              <div id="tour-timer" className="flex items-center text-slate-400 bg-slate-900/50 px-3 py-1 rounded-full border border-white/5">
-                <Timer className="h-4 w-4 mr-2 text-blue-400" />
-                <span className={`font- mono font - medium ${elapsedTime > (quiz?.timeLimit || 0) * 0.9 ? 'text-red-400 animate-pulse' : 'text-slate-200'} `}>
-                  {formattedTime()}
-                </span>
-              </div>
+            {!isReadOnly && (
+              <div className="flex items-center gap-2 mt-2">
+                <div id="tour-timer" className="flex items-center text-slate-400 bg-slate-900/50 px-3 py-1 rounded-full border border-white/5">
+                  <Timer className="h-4 w-4 mr-2 text-blue-400" />
+                  <span className={`font- mono font - medium ${elapsedTime > (quiz?.timeLimit || 0) * 0.9 ? 'text-red-400 animate-pulse' : 'text-slate-200'} `}>
+                    {formattedTime()}
+                  </span>
+                </div>
 
-              {/* New Cumulative Time Display */}
-              <div className="flex items-center text-slate-400 bg-slate-900/50 px-3 py-1 rounded-full border border-white/5" title="Tiempo total acumulado">
-                <Clock className="h-4 w-4 mr-2 text-purple-400" />
-                <span className="font-mono font-medium text-slate-200">
-                  {formatTotalTime(getTotalTime())}
-                </span>
+                {/* New Cumulative Time Display */}
+                <div className="flex items-center text-slate-400 bg-slate-900/50 px-3 py-1 rounded-full border border-white/5" title="Tiempo total acumulado">
+                  <Clock className="h-4 w-4 mr-2 text-purple-400" />
+                  <span className="font-mono font-medium text-slate-200">
+                    {formatTotalTime(getTotalTime())}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-3 bg-slate-900/50 p-2 rounded-xl border border-white/10 backdrop-blur-sm shadow-xl">
@@ -686,9 +700,9 @@ const ActiveQuiz = () => {
                 placeholder="Escribe tu respuesta aquí..."
                 rows={4}
                 disabled={answeredQuestions[currentQuestionIndex]}
-                className="bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-600 focus:border-blue-500/50 focus:ring-blue-500/20 resize-none"
+                className="bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-600 focus:border-blue-500/50 focus:ring-blue-500/20 resize-none disabled:opacity-50"
               />
-              {!answeredQuestions[currentQuestionIndex] && (
+              {!answeredQuestions[currentQuestionIndex] && !isReadOnly && (
                 <Button
                   onClick={handleTextAnswerSubmit}
                   disabled={!textAnswers[currentQuestion.id]?.trim()}
@@ -730,9 +744,9 @@ const ActiveQuiz = () => {
                 return (
                   <button
                     key={answer.id}
-                    onClick={() => !isAnswered && handleSelectAnswer(answer.id)}
-                    disabled={isAnswered}
-                    className={`w-full text-left p-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass}`}
+                    onClick={() => !isAnswered && !isReadOnly && handleSelectAnswer(answer.id)}
+                    disabled={isAnswered || isReadOnly}
+                    className={`w-full text-left p-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass} ${isReadOnly ? 'cursor-default opacity-80' : ''}`}
                   >
                     <div className="flex items-center gap-4 relative z-10 w-full">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors
@@ -767,18 +781,27 @@ const ActiveQuiz = () => {
             Anterior
           </Button>
 
-          {!SURVEY_QUIZ_IDS.includes(parseInt(quizId!)) && (
-            <div className={session?.userId === 2 ? "z-0 px-2" : "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0"}>
-              <Button
-                variant="outline"
-                className="flex items-center border-yellow-500/50 text-yellow-400 bg-yellow-500/5 hover:bg-yellow-500 hover:text-slate-900 hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] transition-all duration-300 scale-100 hover:scale-110"
-                onClick={() => setIsHintDialogOpen(true)}
-              >
-                <Lightbulb className="mr-2 h-4 w-4" />
-                Pista
-              </Button>
-            </div>
-          )}
+          {/* Hint Button: Disabled for parents (mode=readonly) with tooltip */}
+          <div className={session?.userId === 2 ? "z-0 px-2" : "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0"}>
+            <Button
+              variant="outline"
+              className={`flex items-center border-yellow-500/50 text-yellow-400 bg-yellow-500/5 hover:bg-yellow-500 hover:text-slate-900 hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] transition-all duration-300 scale-100 hover:scale-110 ${isReadOnly ? 'opacity-50 cursor-not-allowed hover:bg-yellow-500/5 hover:text-yellow-400 hover:scale-100 hover:shadow-none' : ''}`}
+              onClick={() => {
+                if (isReadOnly) {
+                  toast({
+                    title: "Función de Estudiante",
+                    description: "Solo tu hij@ puede ver las pistas.",
+                    variant: "default",
+                  });
+                } else {
+                  setIsHintDialogOpen(true);
+                }
+              }}
+            >
+              <Lightbulb className="mr-2 h-4 w-4" />
+              Pista
+            </Button>
+          </div>
 
           <div className="flex items-center gap-2 z-10 ml-auto">
             {session?.userId === 2 && (

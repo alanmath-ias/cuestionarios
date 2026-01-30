@@ -15,9 +15,10 @@ interface QuizDetailsDialogProps {
         progressId?: string | number;
         feedback?: string;
     } | null;
+    childId?: string;
 }
 
-export function QuizDetailsDialog({ open, onOpenChange, quiz }: QuizDetailsDialogProps) {
+export function QuizDetailsDialog({ open, onOpenChange, quiz, childId }: QuizDetailsDialogProps) {
     const { data: feedbackData, isLoading: loadingFeedback } = useQuery<{ feedback: string }>({
         queryKey: ['/api/quiz-feedback', quiz?.progressId],
         enabled: !!quiz?.progressId && !quiz?.feedback,
@@ -90,7 +91,7 @@ export function QuizDetailsDialog({ open, onOpenChange, quiz }: QuizDetailsDialo
                     </Button>
                     <Button
                         className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/20"
-                        onClick={() => window.location.href = `/results/${quiz.progressId}`}
+                        onClick={() => window.location.href = `/results/${quiz.progressId}${childId ? `?user_id=${childId}` : ''}`}
                     >
                         Ver Detalles <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>

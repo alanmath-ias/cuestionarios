@@ -130,7 +130,14 @@ function QuizList() {
   });
 
   const { data: progress, isLoading: loadingProgress } = useQuery<Progress[]>({
-    queryKey: ['/api/progress'],
+    queryKey: ['/api/progress', searchParams.get('user_id')],
+    queryFn: async () => {
+      const parentUserId = searchParams.get('user_id');
+      const url = parentUserId ? `/api/progress?user_id=${parentUserId}` : '/api/progress';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Error fetching progress');
+      return res.json();
+    }
   });
 
   const quizzesBySubcategory = Array.isArray(subcategories)
@@ -157,7 +164,9 @@ function QuizList() {
   };
 
   const handleQuizAction = (quizId: number) => {
-    setLocation(`/quiz/${quizId}`);
+    const parentUserId = searchParams.get('user_id');
+    const modeParam = parentUserId ? '?mode=readonly' : '';
+    setLocation(`/quiz/${quizId}${modeParam}`);
   };
 
   const handleTraining = (subcategoryId: number) => {
@@ -492,7 +501,7 @@ function QuizList() {
                               </span>
 
                               <div className="flex gap-2">
-                                {!isCompleted && (
+                                {!isCompleted && !searchParams.get('user_id') && (
                                   <Button
                                     size="sm"
                                     className="h-7 px-2 text-xs bg-slate-700 hover:bg-slate-600 text-white border border-slate-600"
@@ -506,7 +515,10 @@ function QuizList() {
                                   className={`h-7 px-3 text-xs font-medium ${isCompleted ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
                                   onClick={() => {
                                     if (isCompleted && quizProgress) {
-                                      setLocation(`/results/${quizProgress.id}`);
+                                      // Ensure user_id is passed if present
+                                      const parentUserId = searchParams.get('user_id');
+                                      const resultUrl = `/results/${quizProgress.id}${parentUserId ? `?user_id=${parentUserId}` : ''}`;
+                                      setLocation(resultUrl);
                                     } else {
                                       handleQuizAction(quiz.id);
                                     }

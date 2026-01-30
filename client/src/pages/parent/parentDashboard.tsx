@@ -2,38 +2,56 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { Category } from "@/types/types";
-import { UserQuiz } from "@/types/types";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Category, UserQuiz } from "@/types/types";
 import {
   BookOpen,
   ListChecks,
   ChevronRight,
   CheckCircle2,
   ClipboardList,
-  ClipboardCheck,
+  PlayCircle,
   MessageCircle,
   AlertTriangle,
   Sparkles,
+  Youtube,
+  Map as MapIcon,
+  Gamepad2,
+  X,
+  Trophy,
+  Globe,
+  ShoppingBag,
+  ArrowRight,
+  Target,
+  XCircle,
+  Instagram,
+  BarChart3,
+  ExternalLink
 } from "lucide-react";
-import { Link } from "wouter";
-import { useEffect } from "react";
-import { Youtube } from 'lucide-react';
-import { useParams } from "wouter";
+import { Link, useLocation, useParams } from "wouter";
+import { useEffect, useState, useRef } from "react";
+import VideoEmbed from "../VideoEmbed"; // Relative import since both are in src/pages (parent is subdir)
+import { QuizDetailsDialog } from "@/components/dialogs/QuizDetailsDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
+// --- Types ---
 interface QuizWithFeedback extends UserQuiz {
   progressId?: string;
   reviewed?: boolean;
   completedAt?: string | Date;
   score?: number;
   timeSpent?: number;
+  feedback?: string;
+  userStatus?: string;
 }
 
+// --- Data Fetching ---
 async function fetchParentChild() {
   const response = await fetch("/api/parent/child", { credentials: "include" });
   if (!response.ok) throw new Error("No se pudo obtener el hijo asociado");
@@ -41,17 +59,13 @@ async function fetchParentChild() {
 }
 
 async function fetchChildCategories(childId: string) {
-  const response = await fetch(`/api/user/categories?user_id=${childId}`, {
-    credentials: "include",
-  });
+  const response = await fetch(`/api/user/categories?user_id=${childId}`, { credentials: "include" });
   if (!response.ok) throw new Error("Error al obtener materias del hijo");
   return response.json();
 }
 
 async function fetchChildQuizzes(childId: string) {
-  const response = await fetch(`/api/user/quizzes?user_id=${childId}`, {
-    credentials: "include",
-  });
+  const response = await fetch(`/api/user/quizzes?user_id=${childId}`, { credentials: "include" });
   if (!response.ok) throw new Error("Error al obtener cuestionarios del hijo");
   return response.json();
 }
@@ -62,77 +76,179 @@ async function fetchChildAlerts(childId: string) {
   return res.json();
 }
 
-async function fetchQuizFeedback(progressId: string) {
-  if (!progressId) return null;
-  const res = await fetch(`/api/quiz-feedback/${progressId}`);
-  if (!res.ok) return null;
-  return res.json();
+async function fetchAuthenticatedUser() {
+  const response = await fetch("/api/user", { credentials: "include" });
+  if (!response.ok) throw new Error("No se pudo obtener el usuario");
+  return response.json();
 }
 
-function CompletedQuizCard({ quiz, childId }: { quiz: QuizWithFeedback; childId: string }) {
-  const { data: feedback, isLoading: loadingFeedback } = useQuery({
-    queryKey: ['quiz-feedback', quiz.progressId],
-    queryFn: () => quiz.progressId ? fetchQuizFeedback(quiz.progressId) : null,
-    enabled: !!quiz.progressId
-  });
+// --- Local Components (Copied from Dashboard to avoid modifying shared files) ---
 
+function PromoBanner({
+  title,
+  subtitle,
+  icon: Icon,
+  colorClass,
+  bgImage,
+  href,
+  buttonText,
+  compact = false
+}: {
+  title: string,
+  subtitle: string,
+  icon: any,
+  colorClass: string,
+  bgImage?: string,
+  href: string,
+  buttonText: string,
+  compact?: boolean
+}) {
   return (
-    <Card className="rounded-2xl bg-green-50 border border-green-200 shadow-sm hover:shadow-md transition-all relative">
-      <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
-        {quiz.reviewed && (
-          <div className="flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold">
-            <CheckCircle2 className="h-3 w-3 mr-1" />
-            Revisado
-          </div>
-        )}
-        {feedback?.feedback && (
-          <div className="flex items-center bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-semibold">
-            <MessageCircle className="h-3 w-3 mr-1" />
-            Feedback
-          </div>
-        )}
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`group relative overflow-hidden rounded-3xl p-6 flex flex-col justify-between w-full transition-all duration-300 hover:shadow-xl hover:scale-[1.02] ${colorClass} ${compact ? 'h-[140px] min-h-[140px]' : 'h-full min-h-[160px]'}`}
+      style={bgImage ? { backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+    >
+      {bgImage && <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover:via-black/50 transition-colors z-0" />}
+
+      <div className="relative z-10 flex justify-between items-start">
+        <div className={`p-2 rounded-full ${bgImage ? 'bg-white/20 backdrop-blur-md text-white' : 'bg-white/20 backdrop-blur-sm text-white'}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <ExternalLink className={`w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-white`} />
       </div>
-      
-      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 pr-10">
-        <div>
-          <CardTitle className="text-lg text-green-800 font-semibold">{quiz.title}</CardTitle>
-          <CardDescription className="text-sm capitalize text-green-700">
-            {quiz.difficulty}
-          </CardDescription>
+
+      <div className="relative z-10 mt-2">
+        <h3 className={`text-lg font-bold mb-0.5 leading-tight text-white`}>{title}</h3>
+        <p className={`text-xs font-medium mb-2 text-white/90`}>{subtitle}</p>
+        <div className={`inline-flex items-center text-xs font-bold text-white`}>
+          {buttonText} <ChevronRight className="w-3 h-3 ml-1" />
         </div>
-        <div className="absolute bottom-3 right-3">
-          <CheckCircle2 className="h-6 w-6 text-green-600" />
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        {!loadingFeedback && feedback?.feedback && (
-          <div className="mb-3 bg-white p-3 rounded border border-green-200">
-            <h4 className="text-sm font-semibold text-green-800 mb-1">Retroalimentación AlanMath:</h4>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{feedback.feedback}</p>
-          </div>
-        )}
-        <Link href={`/results/${quiz.progressId}?user_id=${childId}`}>
-          <Button variant="outline" className="flex items-center text-green-700 border-green-400 hover:bg-green-100">
-            Ver Resultados
-            <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        </Link>
-      </CardContent>
-    </Card>
+      </div>
+    </a>
   );
 }
 
-async function fetchAuthenticatedUser() {
-    const response = await fetch("/api/user", { credentials: "include" });
-    if (!response.ok) throw new Error("No se pudo obtener la información del usuario");
-    return response.json();
-  }
+function StatCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  colorClass,
+  progress,
+  total,
+  completed,
+  breakdown
+}: {
+  title: string,
+  value: string,
+  subtitle: string,
+  icon: any,
+  colorClass: string,
+  progress?: number,
+  total?: number,
+  completed?: number,
+  breakdown?: Record<string, number>
+}) {
+  return (
+    <div className={`rounded-3xl p-5 flex flex-col h-full ${colorClass} relative overflow-hidden`}>
+      {/* Background Pattern */}
+      <div className="absolute right-[-20px] top-[-20px] opacity-10 pointer-events-none">
+        <Icon className="w-32 h-32" />
+      </div>
 
-  
+      <div className="flex justify-between items-start mb-4 relative z-10">
+        <span className="font-semibold opacity-80 text-sm">{title}</span>
+        <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
+          <Icon className="w-5 h-5" />
+        </div>
+      </div>
+
+      <div className="relative z-10 mb-4">
+        <div className="flex items-baseline gap-1 mb-1">
+          <div className="text-4xl font-bold">{value}</div>
+        </div>
+        <div className="text-xs font-medium opacity-70 uppercase tracking-wide mb-3">{subtitle}</div>
+
+        {progress !== undefined && (
+          <div className="space-y-2">
+            <div className="h-2 w-full bg-black/10 rounded-full overflow-hidden">
+              <div className="h-full bg-current opacity-80 transition-all duration-1000 ease-out" style={{ width: `${progress}%` }} />
+            </div>
+            {total !== undefined && completed !== undefined && (
+              <div className="flex justify-between text-xs font-medium opacity-80">
+                <span>{completed} completadas</span>
+                <span>{total} total</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {breakdown && Object.keys(breakdown).length > 0 && typeof breakdown === 'object' && ( // Added type check safety
+        <div className="relative z-10 mt-auto pt-4 border-t border-white/20">
+          <p className="text-xs font-bold mb-2 opacity-90 flex items-center gap-1">
+            <BarChart3 className="w-3 h-3" /> Por Área:
+          </p>
+          <div className="space-y-1.5">
+            {Object.entries(breakdown).slice(0, 4).map(([name, count]) => (
+              <div key={name} className="flex justify-between items-center text-xs">
+                <span className="opacity-80 truncate max-w-[120px]">{name}</span>
+                <span className="font-bold bg-white/20 px-1.5 py-0.5 rounded text-[10px]">{count as number}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback; onClick: (quiz: QuizWithFeedback) => void }) {
+  const hasFeedback = !!quiz.reviewed || !!quiz.feedback;
+
+  return (
+    <div
+      onClick={() => onClick(quiz)}
+      className={`group flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:shadow-[0_0_15px_-3px_rgba(16,185,129,0.15)] ${hasFeedback
+        ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20"
+        : "bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-emerald-500/30"
+        }`}
+    >
+      <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hasFeedback ? "bg-blue-500/20 text-blue-400" : "bg-green-500/20 text-green-400"
+        }`}>
+        <CheckCircle2 className="h-5 w-5" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <h4 className="font-semibold text-sm text-slate-200 truncate">{quiz.title}</h4>
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span>{quiz.difficulty}</span>
+          {quiz.score !== undefined && (
+            <span className={quiz.score >= 70 ? "text-green-400" : "text-yellow-400"}>
+              • {quiz.score !== undefined ? Number(quiz.score).toFixed(1) : '-'} / 10
+            </span>
+          )}
+        </div>
+      </div>
+      {(quiz.reviewed || hasFeedback) && (
+        <div className="bg-blue-500/20 px-2 py-1 rounded text-[10px] text-blue-300 border border-blue-500/30">
+          Feedback
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Main Component ---
 export default function ParentDashboard() {
   const queryClient = useQueryClient();
   const params = useParams();
+  const [, setLocation] = useLocation();
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | null>(null);
+  const videoSectionRef = useRef<HTMLDivElement>(null);
 
   const queryOptions = {
     refetchOnWindowFocus: true,
@@ -140,65 +256,88 @@ export default function ParentDashboard() {
     staleTime: 1000 * 60,
   };
 
-// Obtener datos del usuario autenticado
-const { data: user, isLoading: loadingUser } = useQuery({
+  const { data: currentUser } = useQuery({
     queryKey: ["authenticated-user"],
     queryFn: fetchAuthenticatedUser,
   });
 
-  // Primero obtenemos el hijo asociado al padre
-  const { data: childData, isLoading: loadingChild } = useQuery({
+  const { data: parentChild } = useQuery({
     queryKey: ["parent-child"],
     queryFn: fetchParentChild,
     ...queryOptions,
   });
 
-  const childId = childData?.child_id || params.childId;
- //const childId = childData?.child_id;
+  // Use child ID if available
+  const childId = parentChild?.child_id || params.childId;
 
-  // Luego obtenemos todos los datos del hijo
   const { data: categories, isLoading: loadingCategories } = useQuery<Category[]>({
     queryKey: ["child-categories", childId],
     queryFn: () => fetchChildCategories(childId),
-    ...queryOptions,
     enabled: !!childId,
   });
 
   const { data: quizzes, isLoading: loadingQuizzes } = useQuery<QuizWithFeedback[]>({
     queryKey: ["child-quizzes", childId],
     queryFn: () => fetchChildQuizzes(childId),
-    ...queryOptions,
     enabled: !!childId,
   });
 
   const { data: alerts } = useQuery({
     queryKey: ["child-alerts", childId],
     queryFn: () => fetchChildAlerts(childId),
-    ...queryOptions,
     enabled: !!childId,
   });
 
-  const isLoading = loadingChild || loadingCategories || loadingQuizzes;
-
-  
-
+  // Effect to select the first video by default when categories load
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && childId) {
-        queryClient.invalidateQueries({ queryKey: ["parent-child"] });
-        queryClient.invalidateQueries({ queryKey: ["child-categories"] });
-        queryClient.invalidateQueries({ queryKey: ["child-quizzes"] });
-        queryClient.invalidateQueries({ queryKey: ["child-alerts"] });
+    if (categories && categories.length > 0 && !selectedVideo) {
+      // Find first category with a video
+      const categoryWithVideo = categories.find(c => c.youtubeLink);
+      if (categoryWithVideo && categoryWithVideo.youtubeLink) {
+        setSelectedVideo(categoryWithVideo.youtubeLink);
       }
-    };
+    }
+  }, [categories, selectedVideo]);
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [queryClient, childId]);
+  const completedQuizzes: QuizWithFeedback[] = quizzes?.filter((q: any) => q.userStatus === 'completed') || [];
+  const pendingQuizzes: QuizWithFeedback[] = quizzes?.filter((q: any) => q.userStatus === 'pending') || [];
 
-  if (isLoading) {
+  // Dedup completed quizzes
+  const uniqueCompletedQuizzes = Array.from(new Map(completedQuizzes.map(item => [item.id, item])).values())
+    .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+
+  const progressPercentage = quizzes && quizzes.length > 0
+    ? (completedQuizzes.length / quizzes.length) * 100
+    : 0;
+
+  const categoryBreakdown = categories?.reduce((acc, cat) => {
+    const catQuizzes = quizzes?.filter(q => q.categoryId === cat.id) || [];
+    const completed = catQuizzes.filter(q => q.userStatus === "completed").length;
+    acc[cat.name] = completed;
+    return acc;
+  }, {} as Record<string, number>) || {};
+
+  const handleCreateVideo = (link: string) => {
+    setSelectedVideo(link);
+    setTimeout(() => {
+      videoSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
+
+  const handleViewResults = (quiz: QuizWithFeedback) => {
+    setSelectedQuiz(quiz);
+  };
+
+  if (loadingCategories || loadingQuizzes) {
+    return (
+      <div className="flex justify-center items-center min-h-[300px]">
+        <Spinner className="h-12 w-12" />
+      </div>
+    );
+  }
+
+  // Also check if child info is loading to avoid false negative
+  if (parentChild === undefined) {
     return (
       <div className="flex justify-center items-center min-h-[300px]">
         <Spinner className="h-12 w-12" />
@@ -208,221 +347,262 @@ const { data: user, isLoading: loadingUser } = useQuery({
 
   if (!childId) {
     return (
-      <div className="container mx-auto py-8">
-        <h1 className="text-3xl font-bold mb-4">Hola {user?.name}</h1>
-        <p className="text-muted-foreground">No se ha podido identificar al estudiante asociado.</p>
+      <div className="container mx-auto py-8 text-center">
+        <h1 className="text-3xl font-bold mb-4">Hola {currentUser?.name}</h1>
+        <p className="text-muted-foreground">No se ha identificado un estudiante asociado a tu cuenta.</p>
       </div>
     );
   }
 
-  const completedQuizzes = quizzes?.filter((q) => q.status === "completed") || [];
-  const pendingQuizzes = quizzes?.filter((q) => q.status !== "completed") || [];
-
-  const progressPercentage = quizzes && quizzes.length > 0
-    ? (completedQuizzes.length / quizzes.length) * 100
-    : 0;
-
-
-
-    
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-4">Hola {user?.name}!</h1>
-      <h2 className="text-xl font-semibold text-gray-700 mb-6">
-  Aquí puedes ver las Materias, Tareas y Progreso de 
-  <span className="text-2xl font-bold text-gray-900 ml-2">
-    {childData?.child_name || 'tu hijo'}
-  </span>
-</h2>
-      {alerts?.hasPendingTasks && (
-        <div className="mb-4 p-4 rounded-xl bg-yellow-100 text-yellow-800 flex items-center gap-2 shadow-md">
-          <AlertTriangle className="w-5 h-5" />
-          {childData?.child_name || 'tu hijo'} tiene tareas pendientes por resolver.
+    <div className="container mx-auto py-8 px-4 md:px-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-white">
+            Hola, {currentUser?.name}!
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
+            Estás viendo el progreso de <span className="font-bold text-indigo-500">{parentChild?.child_name || 'tu hijo'}</span>
+          </p>
         </div>
-      )}
 
-      {alerts?.hasFeedback && (
-        <div className="mb-4 p-4 rounded-xl bg-green-100 text-green-800 flex items-center gap-2 shadow-md">
-          <MessageCircle className="w-5 h-5" />
-          Tu hijo ha recibido retroalimentación en uno o más cuestionarios.
-        </div>
-      )}
+        {alerts?.hasPendingTasks && (
+          <div className="px-4 py-2 rounded-full bg-yellow-500/10 text-yellow-600 text-sm font-medium flex items-center gap-2 border border-yellow-500/20">
+            <AlertTriangle className="w-4 h-4" />
+            Tareas pendientes
+          </div>
+        )}
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Card de Progreso General */}
-        <Card className="shadow-lg bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-indigo-800">
-              Progreso General
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <div className="text-5xl font-bold text-indigo-600 mb-2">
-              {progressPercentage.toFixed(0)}%
-            </div>
-            <div className="text-indigo-500 font-medium">
-              DE TAREAS COMPLETADAS
-            </div>
-            <div className="mt-4 h-2 bg-indigo-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-indigo-600 transition-all duration-1000 ease-out"
-                style={{ width: `${progressPercentage}%` }}
-              ></div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Card de Actividad Reciente */}
-        <Card className="shadow-lg bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-green-800">
-              Actividad Reciente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {completedQuizzes.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                {completedQuizzes.slice(0, 3).map((quiz) => (
-                  <div 
-                    key={quiz.id} 
-                    className="flex items-center gap-3 p-3 rounded-lg transition-all 
-                              hover:bg-white hover:shadow-sm hover:border hover:border-green-200"
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* 1. Actividad Reciente */}
+          <div className="rounded-3xl bg-slate-900/50 border border-emerald-500/20 backdrop-blur-sm shadow-lg shadow-emerald-900/20 p-5 h-[320px] flex flex-col relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl -z-10 transition-all duration-700 group-hover:bg-emerald-500/20" />
+
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg text-emerald-100 flex items-center gap-2">
+                <ListChecks className="w-5 h-5 text-emerald-400" /> Actividad Reciente (Estudiante)
+              </h3>
+            </div>
+
+            <ScrollArea className="flex-1 -mr-3 pr-3">
+              <div className="space-y-2">
+                {uniqueCompletedQuizzes.length > 0 ? (
+                  uniqueCompletedQuizzes.slice(0, 5).map((quiz) => (
+                    <ActivityItem
+                      key={quiz.id + "-activity"}
+                      quiz={quiz}
+                      onClick={(q) => handleViewResults(q)}
+                    />
+                  ))
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500">
+                    <ClipboardList className="w-12 h-12 mb-2 opacity-20" />
+                    <p className="text-sm">Aún no ha completado cuestionarios.</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Video Player */}
+          {selectedVideo && (
+            <div ref={videoSectionRef} className="w-full bg-black rounded-3xl overflow-hidden shadow-2xl shadow-purple-900/20 relative animate-in fade-in slide-in-from-top-4 duration-500 border border-white/10">
+              <div className="absolute top-2 right-2 z-10">
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="h-6 w-6 rounded-full bg-black/50 hover:bg-black/70 text-white border-none"
+                  onClick={() => setSelectedVideo(null)}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+              <VideoEmbed youtubeLink={selectedVideo} />
+            </div>
+          )}
+
+          {/* 2. Pendientes (Read Only) */}
+          <div className="rounded-3xl bg-slate-900/50 border border-yellow-500/20 backdrop-blur-sm p-5 h-[320px] flex flex-col relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl -z-10" />
+
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg text-yellow-500 flex items-center gap-2">
+                <PlayCircle className="w-5 h-5" /> Actividades Pendientes ({pendingQuizzes.length})
+              </h3>
+              <span className="text-xs font-semibold bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded border border-yellow-500/20">
+                Solo Lectura
+              </span>
+            </div>
+
+            <ScrollArea className="flex-1 -mr-3 pr-3">
+              <div className="space-y-2">
+                {pendingQuizzes.length > 0 ? (
+                  pendingQuizzes.map((quiz) => (
+                    <div key={quiz.id + "-pending"} className="group flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-yellow-500/30">
+                      <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
+                          <PlayCircle className="h-5 w-5 text-yellow-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-sm text-slate-200 line-clamp-2">{quiz.title}</h4>
+                          <p className="text-xs text-slate-500 truncate">{quiz.difficulty}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center ml-auto gap-2">
+                        <Button
+                          size="sm"
+                          className="h-8 md:h-9 px-4 text-xs md:text-sm bg-yellow-600 hover:bg-yellow-700 text-white border-none shadow-sm w-full md:w-auto mt-2 md:mt-0"
+                          onClick={() => setLocation(`/quiz/${quiz.id}?mode=readonly`)}
+                        >
+                          Ver (Solo Lectura)
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500">
+                    <CheckCircle2 className="w-12 h-12 mb-2 opacity-20 text-green-500" />
+                    <p className="text-sm">¡Todo al día!</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* 3. Materias (Restricted) */}
+          <div className="relative rounded-3xl bg-slate-900/50 border border-rose-500/20 backdrop-blur-sm shadow-lg shadow-rose-900/20 p-5 h-[320px] flex flex-col overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-60 h-60 bg-rose-600/20 rounded-full blur-[80px] -z-10 opacity-60" />
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-orange-500/10 rounded-full blur-[60px] -z-10" />
+
+            <div className="flex items-center justify-between mb-4 relative z-10">
+              <h3 className="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-rose-400" /> Materias del Estudiante
+              </h3>
+            </div>
+
+            <ScrollArea className="flex-1 -mr-3 pr-3">
+              <div className="space-y-3">
+                {categories?.map((category) => (
+                  <div
+                    key={category.id + "-cat"}
+                    className="group relative overflow-hidden rounded-xl border transition-all duration-300 bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-rose-500/30 hover:shadow-[0_0_15px_-3px_rgba(244,63,94,0.15)]"
                   >
-                    <div className="p-2 bg-green-100 rounded-full">
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <div className="flex flex-col md:flex-row md:items-center p-3 gap-3">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="h-12 w-12 rounded-xl flex items-center justify-center shadow-lg shrink-0 transition-transform group-hover:scale-105 bg-rose-500/10 text-rose-400">
+                          <BookOpen className="h-6 w-6" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-base truncate text-slate-200 group-hover:text-rose-200">
+                            {category.name}
+                          </h4>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-2 md:mt-0 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
+                        {category.youtubeLink && (
+                          <button
+                            onClick={() => handleCreateVideo(category.youtubeLink!)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all text-xs font-medium whitespace-nowrap"
+                            title="Ver Videos"
+                          >
+                            <Youtube className="w-3.5 h-3.5" />
+                            <span className="hidden lg:inline">Videos</span>
+                          </button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 px-3 text-xs font-medium border transition-all whitespace-nowrap bg-slate-700/50 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white cursor-help"
+                          title="Opción deshabilitada para padres"
+                        >
+                          <ListChecks className="w-3.5 h-3.5 mr-1.5" />
+                          Temas
+                        </Button>
+                        <Link href={`/category/${category.id}?view=roadmap&user_id=${childId}`}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-3 text-xs font-medium bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all whitespace-nowrap"
+                          >
+                            <MapIcon className="w-3.5 h-3.5 mr-1.5" />
+                            Mapa
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
-                    <div className="text-sm font-medium text-gray-700 flex-1">
-                      {quiz.title}
-                    </div>
-                    <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-6 space-y-3">
-                <div className="mx-auto w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-                  <ClipboardList className="h-7 w-7 text-green-600" />
-                </div>
-                <p className="text-gray-600 font-medium">
-                  Tu hijo aún no ha tenido actividad
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <h2 className="text-xl font-semibold mb-3">Materias que ve {childData?.child_name || 'tu hijo'}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        {categories?.map((category) => (
-          <Card
-            key={category.id}
-            className="rounded-2xl bg-gradient-to-tr from-indigo-100 to-white border border-indigo-200 shadow-md hover:shadow-lg transition-all duration-300"
-          >
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <div>
-                <CardTitle className="text-lg text-indigo-800 font-semibold">{category.name}</CardTitle>
-                <CardDescription className="text-sm text-indigo-600">En Progreso...</CardDescription>
-              </div>
-              <BookOpen className="h-6 w-6 text-indigo-600" />
-            </CardHeader>
-            {/*<CardContent>
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Link href={`/category/${category.id}?user_id=${childId}`} className="w-full sm:w-auto">
-                    <Button
-                      variant="outline"
-                      className="w-full sm:w-auto flex items-center justify-center font-semibold border-indigo-500 text-indigo-700"
-                    >
-                      Ver cuestionarios
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href={`/training/${category.id}?user_id=${childId}`} className="w-full sm:w-auto">
-                    <Button
-                      variant="default"
-                      className="w-full sm:w-auto flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
-                    >
-                      Entrenamiento
-                    </Button>
-                  </Link>
-                </div>
-                {category.youtubeLink && (
-                  <a
-                    href={category.youtubeLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full sm:w-auto"
-                  >
-                    <Button 
-                      size="sm"
-                      className="w-full font-semibold flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-800 dark:hover:bg-gray-700"
-                      >
-                      <Youtube className="h-4 w-4 text-red-600" />
-                       YouTube Videos
-                    </Button>
-                  </a>
-                )}
-              </div>
-            </CardContent>*/}
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <ClipboardList className="h-5 w-5 text-yellow-600" />
-            <h2 className="text-lg font-bold text-yellow-800">Tareas Pendientes</h2>
+            </ScrollArea>
           </div>
-          {pendingQuizzes.length === 0 ? (
-            <p className="text-muted-foreground">Tu hijo no tiene tareas pendientes.</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {pendingQuizzes.map((quiz) => (
-                <Card
-                  key={quiz.id}
-                  className="rounded-2xl bg-yellow-50 border border-yellow-200 shadow-sm hover:shadow-md transition-all"
-                >
-                  <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                    <div>
-                      <CardTitle className="text-lg text-yellow-800 font-semibold">{quiz.title}</CardTitle>
-                      <CardDescription className="text-sm capitalize text-yellow-700">
-                        {quiz.difficulty}
-                      </CardDescription>
-                    </div>
-                    <ListChecks className="h-6 w-6 text-yellow-600" />
-                  </CardHeader>
-                  <CardContent>
-                    <Link href={`/quiz/${quiz.id}?user_id=${childId}`}>
-                      <Button variant="secondary" className="flex items-center bg-yellow-500 text-white hover:bg-yellow-600">
-                        Ver detalles
-                        <ChevronRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
         </div>
 
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <ClipboardCheck className="h-5 w-5 text-green-600" />
-            <h2 className="text-lg font-bold text-green-800">Tareas Terminadas</h2>
+        {/* Right Column (Sidebar) */}
+        <div className="space-y-4">
+          <div className="h-auto min-h-[220px]">
+            <StatCard
+              title="Progreso General"
+              value={`${Math.round((completedQuizzes.length / (quizzes?.length || 1)) * 100)}%`}
+              subtitle="Completado"
+              icon={Target}
+              colorClass="bg-gradient-to-br from-indigo-600 to-purple-700 text-white shadow-lg shadow-indigo-900/20"
+              progress={(completedQuizzes.length / (quizzes?.length || 1)) * 100}
+              total={quizzes?.length || 0}
+              completed={completedQuizzes.length}
+              breakdown={Object.fromEntries(
+                categories?.map((c: any) => [c.name, quizzes?.filter((q: any) => q.categoryId === c.id && q.userStatus === 'completed').length || 0]) || []
+              )}
+            />
           </div>
-          {completedQuizzes.length === 0 ? (
-            <p className="text-muted-foreground">Tu hijo no ha completado ninguna tarea aún.</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {completedQuizzes.map((quiz) => (
-                <CompletedQuizCard key={quiz.id} quiz={quiz} childId={childId} />
-              ))}
+
+          <div className="p-4 rounded-3xl bg-slate-800/50 border border-white/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-3 opacity-10">
+              <Sparkles className="w-16 h-16 text-blue-400" />
             </div>
-          )}
+            <h4 className="flex items-center gap-2 font-bold text-slate-200 mb-2 relative z-10">
+              <span className="flex h-2 w-2 rounded-full bg-blue-400"></span>
+              Modo Padre Activo
+            </h4>
+            <p className="text-xs text-slate-400 relative z-10">
+              Estás viendo el progreso de <strong>{parentChild?.child_name || "tu hijo"}</strong>.
+              Todas las acciones de "Realizar Cuestionario" están deshabilitadas para no afectar sus estadísticas.
+            </p>
+          </div>
+
+          <PromoBanner
+            title="Síguenos"
+            subtitle="@alanmath.ias"
+            icon={Instagram}
+            colorClass="bg-gradient-to-br from-pink-600 to-rose-600 shadow-lg shadow-pink-900/20"
+            href="https://instagram.com/alanmath.ias"
+            buttonText="Ver perfil"
+            compact={true}
+          />
+
+          <PromoBanner
+            title="Ebook Gratuito"
+            subtitle="Potencia tu mente"
+            icon={BookOpen}
+            colorClass="bg-gradient-to-br from-blue-600 to-cyan-600 shadow-lg shadow-blue-900/20"
+            href="https://alanmath.com"
+            buttonText="Descargar"
+            compact={true}
+          />
         </div>
       </div>
+
+      <QuizDetailsDialog
+        open={!!selectedQuiz}
+        onOpenChange={(open) => !open && setSelectedQuiz(null)}
+        quiz={selectedQuiz}
+        childId={childId}
+      />
     </div>
   );
 }

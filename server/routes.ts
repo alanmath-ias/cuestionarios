@@ -1598,14 +1598,28 @@ Tono: Alentador, profesional y educativo.`;
   // Student progress endpoints
   apiRouter.get("/progress", async (req: Request, res: Response) => {
     const userId = req.session.userId;
-
+    const targetUserId = req.query.user_id ? parseInt(req.query.user_id as string) : userId;
 
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
     }
 
     try {
-      const progress = await storage.getStudentProgress(userId);
+      // Security Check if requesting another user's progress
+      if (targetUserId !== userId) {
+        const user = await storage.getUser(userId);
+        if (user?.role === 'parent') {
+          // Verify child relationship
+          const parentChild = await storage.getChildByParentId(userId);
+          if (!parentChild || parentChild.id !== targetUserId) {
+            return res.status(403).json({ message: "Not authorized to view this student's progress" });
+          }
+        } else if (user?.role !== 'admin') {
+          return res.status(403).json({ message: "Not authorized" });
+        }
+      }
+
+      const progress = await storage.getStudentProgress(targetUserId!);
 
       // Enrich progress data with quiz information
       const enrichedProgress = await Promise.all(progress.map(async (p) => {

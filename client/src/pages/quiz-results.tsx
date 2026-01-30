@@ -28,6 +28,7 @@ function QuizResults() {
 
   const searchParams = new URLSearchParams(window.location.search);
   const userId = searchParams.get('user_id');
+  console.log('[QuizResults] Render. progressId:', progressId, 'userId param:', userId);
 
   const handleGoBack = () => {
     window.history.back();

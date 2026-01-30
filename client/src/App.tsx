@@ -110,7 +110,13 @@ function ProtectedRoute({ component: Component, ...rest }: { component: any, pat
       } else if (user?.role === 'admin' && rest.path === '/') {
         navigate('/admin'); // Redirige a /admin si el usuario es administrador
       } else if (user?.role === 'parent') {
-        navigate('/parent-dashboard'); // Redirige a /parent-dashboard si el usuario es un padre
+        // Allow parents to access specific routes like quiz, results, and category
+        const allowedParentRoutes = ['/parent-dashboard', '/quiz/', '/results/', '/category/'];
+        const isAllowed = allowedParentRoutes.some(route => rest.path.startsWith(route));
+
+        if (!isAllowed) {
+          navigate('/parent-dashboard'); // Redirect to parent dashboard only if not on an allowed route
+        }
       }
     }
   }, [user, isLoading, navigate, rest.path]);

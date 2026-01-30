@@ -486,7 +486,10 @@ export class DatabaseStorage implements IStorage {
       }, new Map<number, typeof result[0]>()).values()
     );
 
-    return uniqueResult;
+    return uniqueResult.map(q => ({
+      ...q,
+      userStatus: q.status === 'completed' ? 'completed' : 'pending'
+    }));
   }
 
 
