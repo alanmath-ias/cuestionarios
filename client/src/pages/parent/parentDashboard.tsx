@@ -32,12 +32,22 @@ import {
   XCircle,
   Instagram,
   BarChart3,
-  ExternalLink
+  ExternalLink,
+  ArrowLeft,
+  Search,
+  Ban,
+  Clock,
+  Flame,
+  Star,
+  Book
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Link, useLocation, useParams } from "wouter";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import VideoEmbed from "../VideoEmbed"; // Relative import since both are in src/pages (parent is subdir)
 import { QuizDetailsDialog } from "@/components/dialogs/QuizDetailsDialog";
+import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
+import { startParentDashboardTour } from "@/lib/tour";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 // --- Types ---
@@ -49,6 +59,7 @@ interface QuizWithFeedback extends UserQuiz {
   timeSpent?: number;
   feedback?: string;
   userStatus?: string;
+  subcategoryId?: number;
 }
 
 // --- Data Fetching ---
@@ -249,6 +260,12 @@ export default function ParentDashboard() {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | null>(null);
   const videoSectionRef = useRef<HTMLDivElement>(null);
+  const [isPendingDialogOpen, setIsPendingDialogOpen] = useState(false);
+  const [isRecentDialogOpen, setIsRecentDialogOpen] = useState(false);
+  const [selectedCategoryForDetails, setSelectedCategoryForDetails] = useState<Category | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
+  const [quizSearchQuery, setQuizSearchQuery] = useState("");
 
   const queryOptions = {
     refetchOnWindowFocus: true,
@@ -287,6 +304,36 @@ export default function ParentDashboard() {
     queryFn: () => fetchChildAlerts(childId),
     enabled: !!childId,
   });
+
+  // Fetch Subcategories for selected category
+  const { data: categorySubcategories, isLoading: loadingSubcategories } = useQuery<any[]>({
+    queryKey: ["category-subcategories", selectedCategoryForDetails?.id],
+    queryFn: async () => {
+      if (!selectedCategoryForDetails) return [];
+      const res = await fetch(`/api/admin/subcategories/by-category/${selectedCategoryForDetails.id}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!selectedCategoryForDetails,
+  });
+
+  // Filter quizzes for the selected category (using existing quizzes data)
+  const categoryQuizzes = useMemo<QuizWithFeedback[]>(() => {
+    if (!selectedCategoryForDetails || !quizzes) return [];
+    return quizzes.filter(q => Number(q.categoryId) === Number(selectedCategoryForDetails.id));
+  }, [selectedCategoryForDetails, quizzes]);
+
+  const handleCategorySelect = (category: Category | null) => {
+    setSelectedCategoryForDetails(category);
+    setSelectedSubcategory(null);
+    setCategorySearchQuery("");
+  };
+
+  const handleSubcategorySelect = (subcategory: any | null) => {
+    setSelectedSubcategory(subcategory);
+    setQuizSearchQuery("");
+  };
 
   // Effect to select the first video by default when categories load
   useEffect(() => {
@@ -356,7 +403,7 @@ export default function ParentDashboard() {
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8" id="tour-parent-welcome">
         <div>
           <h1 className="text-3xl font-bold text-white">
             Hola, {currentUser?.name}!
@@ -367,7 +414,10 @@ export default function ParentDashboard() {
         </div>
 
         {alerts?.hasPendingTasks && (
-          <div className="px-4 py-2 rounded-full bg-yellow-500/10 text-yellow-600 text-sm font-medium flex items-center gap-2 border border-yellow-500/20">
+          <div
+            onClick={() => setIsPendingDialogOpen(true)}
+            className="px-4 py-2 rounded-full bg-yellow-500/10 text-yellow-600 text-sm font-medium flex items-center gap-2 border border-yellow-500/20 cursor-pointer hover:bg-yellow-500/20 transition-colors"
+          >
             <AlertTriangle className="w-4 h-4" />
             Tareas pendientes
           </div>
@@ -379,13 +429,21 @@ export default function ParentDashboard() {
         <div className="lg:col-span-2 space-y-6">
 
           {/* 1. Actividad Reciente */}
-          <div className="rounded-3xl bg-slate-900/50 border border-emerald-500/20 backdrop-blur-sm shadow-lg shadow-emerald-900/20 p-5 h-[320px] flex flex-col relative overflow-hidden group">
+          <div id="tour-parent-recent" className="rounded-3xl bg-slate-900/50 border border-emerald-500/20 backdrop-blur-sm shadow-lg shadow-emerald-900/20 p-5 h-[320px] flex flex-col relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl -z-10 transition-all duration-700 group-hover:bg-emerald-500/20" />
 
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg text-emerald-100 flex items-center gap-2">
                 <ListChecks className="w-5 h-5 text-emerald-400" /> Actividad Reciente (Estudiante)
               </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 text-xs"
+                onClick={() => setIsRecentDialogOpen(true)}
+              >
+                Ver todo
+              </Button>
             </div>
 
             <ScrollArea className="flex-1 -mr-3 pr-3">
@@ -426,16 +484,26 @@ export default function ParentDashboard() {
           )}
 
           {/* 2. Pendientes (Read Only) */}
-          <div className="rounded-3xl bg-slate-900/50 border border-yellow-500/20 backdrop-blur-sm p-5 h-[320px] flex flex-col relative overflow-hidden">
+          <div id="tour-parent-pending" className="rounded-3xl bg-slate-900/50 border border-yellow-500/20 backdrop-blur-sm p-5 h-[320px] flex flex-col relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl -z-10" />
 
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg text-yellow-500 flex items-center gap-2">
                 <PlayCircle className="w-5 h-5" /> Actividades Pendientes ({pendingQuizzes.length})
               </h3>
-              <span className="text-xs font-semibold bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded border border-yellow-500/20">
-                Solo Lectura
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded border border-yellow-500/20">
+                  Solo Lectura
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10 text-xs"
+                  onClick={() => setIsPendingDialogOpen(true)}
+                >
+                  Ver todo
+                </Button>
+              </div>
             </div>
 
             <ScrollArea className="flex-1 -mr-3 pr-3">
@@ -475,7 +543,7 @@ export default function ParentDashboard() {
           </div>
 
           {/* 3. Materias (Restricted) */}
-          <div className="relative rounded-3xl bg-slate-900/50 border border-rose-500/20 backdrop-blur-sm shadow-lg shadow-rose-900/20 p-5 h-[320px] flex flex-col overflow-hidden">
+          <div id="tour-parent-subjects" className="relative rounded-3xl bg-slate-900/50 border border-rose-500/20 backdrop-blur-sm shadow-lg shadow-rose-900/20 p-5 h-[320px] flex flex-col overflow-hidden">
             <div className="absolute -top-10 -right-10 w-60 h-60 bg-rose-600/20 rounded-full blur-[80px] -z-10 opacity-60" />
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-orange-500/10 rounded-full blur-[60px] -z-10" />
 
@@ -517,9 +585,9 @@ export default function ParentDashboard() {
                         )}
                         <Button
                           size="sm"
-                          variant="ghost"
-                          className="h-8 px-3 text-xs font-medium border transition-all whitespace-nowrap bg-slate-700/50 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white cursor-help"
-                          title="Opción deshabilitada para padres"
+                          className="h-8 px-3 text-xs font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all whitespace-nowrap"
+                          onClick={() => handleCategorySelect(category)}
+                          title="Ver temas y cuestionarios"
                         >
                           <ListChecks className="w-3.5 h-3.5 mr-1.5" />
                           Temas
@@ -545,7 +613,7 @@ export default function ParentDashboard() {
 
         {/* Right Column (Sidebar) */}
         <div className="space-y-4">
-          <div className="h-auto min-h-[220px]">
+          <div className="h-auto min-h-[220px]" id="tour-parent-stats">
             <StatCard
               title="Progreso General"
               value={`${Math.round((completedQuizzes.length / (quizzes?.length || 1)) * 100)}%`}
@@ -586,7 +654,7 @@ export default function ParentDashboard() {
           />
 
           <PromoBanner
-            title="Ebook Gratuito"
+            title="eBook Exclusivo"
             subtitle="Potencia tu mente"
             icon={BookOpen}
             colorClass="bg-gradient-to-br from-blue-600 to-cyan-600 shadow-lg shadow-blue-900/20"
@@ -603,6 +671,269 @@ export default function ParentDashboard() {
         quiz={selectedQuiz}
         childId={childId}
       />
+
+      {/* Pending Activities Dialog */}
+      <Dialog open={isPendingDialogOpen} onOpenChange={setIsPendingDialogOpen}>
+        <DialogContent className="sm:max-w-lg bg-slate-900 border-white/10 text-slate-200">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-yellow-500">
+              <PlayCircle className="w-6 h-6" />
+              Actividades Pendientes ({pendingQuizzes.length})
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Lista completa de cuestionarios pendientes de tu hijo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="space-y-3 py-2">
+              {pendingQuizzes.length > 0 ? (
+                pendingQuizzes.map((quiz) => (
+                  <div key={quiz.id + "-pending-dialog"} className="group flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-yellow-500/30">
+                    <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
+                      <PlayCircle className="h-5 w-5 text-yellow-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm text-slate-200">{quiz.title}</h4>
+                      <p className="text-xs text-slate-500">{quiz.difficulty}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="text-xs bg-yellow-600 hover:bg-yellow-700 text-white border-none"
+                      onClick={() => {
+                        setIsPendingDialogOpen(false);
+                        setLocation(`/quiz/${quiz.id}?mode=readonly`);
+                      }}
+                    >
+                      Ver
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center p-8 text-slate-500">
+                  <p>No hay actividades pendientes.</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Recent Activity Dialog */}
+      <Dialog open={isRecentDialogOpen} onOpenChange={setIsRecentDialogOpen}>
+        <DialogContent className="sm:max-w-lg bg-slate-900 border-white/10 text-slate-200">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-emerald-400">
+              <ListChecks className="w-6 h-6" />
+              Historial de Actividades
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Historial completo de cuestionarios completados.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="space-y-3 py-2">
+              {uniqueCompletedQuizzes.length > 0 ? (
+                uniqueCompletedQuizzes.map((quiz) => (
+                  <ActivityItem
+                    key={quiz.id + "-recent-dialog"}
+                    quiz={quiz}
+                    onClick={(q) => {
+                      setIsRecentDialogOpen(false);
+                      handleViewResults(q);
+                    }}
+                  />
+                ))
+              ) : (
+                <div className="text-center p-8 text-slate-500">
+                  <p>Aún no hay actividad reciente.</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category Details Dialog (TEMAS) - Replicated and Adapted for Parents */}
+      <Dialog open={!!selectedCategoryForDetails} onOpenChange={(open) => {
+        if (!open) {
+          handleCategorySelect(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col bg-slate-900 border-white/10 text-slate-200 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl text-blue-400">
+              {selectedSubcategory ? (
+                <Button variant="ghost" size="sm" className="p-0 h-auto hover:bg-transparent text-blue-400 hover:text-blue-300 mr-2" onClick={() => handleSubcategorySelect(null)}>
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              ) : (
+                <ListChecks className="h-6 w-6" />
+              )}
+              {selectedSubcategory ? selectedSubcategory.name : `Temas de ${selectedCategoryForDetails?.name}`}
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {selectedSubcategory
+                ? "Selecciona un cuestionario para ver su contenido (Modo Lectura)."
+                : "Selecciona un tema para ver los cuestionarios disponibles."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0 bg-slate-950/30 rounded-xl border border-white/5 mt-2">
+            {!selectedSubcategory ? (
+              // VIEW: List of subcategories
+              <div className="flex-1 flex flex-col min-h-0 p-4">
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Input
+                    placeholder="Buscar tema o cuestionario..."
+                    value={categorySearchQuery}
+                    onChange={(e) => setCategorySearchQuery(e.target.value)}
+                    className="pl-9 bg-slate-950/50 border-slate-800 text-slate-200 placeholder:text-slate-600 focus:ring-blue-500/50"
+                  />
+                </div>
+
+                <ScrollArea className="flex-1 -mr-3 pr-3">
+                  <div className="space-y-3">
+                    {loadingSubcategories ? (
+                      <div className="flex justify-center py-8">
+                        <Spinner className="h-8 w-8 text-blue-500" />
+                      </div>
+                    ) : (
+                      (() => {
+                        const filteredSubcategories = categorySubcategories?.filter(sub =>
+                          sub.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
+                        ) || [];
+
+                        if (filteredSubcategories.length === 0) {
+                          return (
+                            <div className="text-center py-12 text-slate-500">
+                              <Ban className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                              <p>No se encontraron temas.</p>
+                            </div>
+                          )
+                        }
+
+                        return filteredSubcategories.map((sub: any) => {
+                          const subQuizzes = categoryQuizzes?.filter((q: QuizWithFeedback) => Number(q.subcategoryId) === Number(sub.id)) || [];
+                          const completedCount = subQuizzes.filter(q => q.userStatus === 'completed').length; // using userStatus from parentChild quizzes
+                          const progress = subQuizzes.length > 0 ? (completedCount / subQuizzes.length) * 100 : 0;
+
+                          return (
+                            <div
+                              key={sub.id}
+                              onClick={() => handleSubcategorySelect(sub)}
+                              className="group flex items-center justify-between p-4 rounded-xl bg-slate-800/40 border border-white/5 cursor-pointer transition-all hover:bg-slate-800/60 hover:border-blue-500/30 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.15)]"
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+                                  <ListChecks className="h-6 w-6" />
+                                </div>
+                                <div>
+                                  <h4 className="font-bold text-slate-200 group-hover:text-blue-400 transition-colors">{sub.name}</h4>
+                                  <p className="text-sm text-slate-500">{subQuizzes.length} cuestionarios</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="text-right hidden sm:block">
+                                  <span className="text-xs font-medium text-slate-400 block mb-1">Progreso</span>
+                                  <div className="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-500" style={{ width: `${progress}%` }} />
+                                  </div>
+                                </div>
+                                <ChevronRight className="h-5 w-5 text-slate-600 group-hover:text-slate-400" />
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            ) : (
+              // VIEW: Quizzes for selected subcategory
+              <div className="flex-1 flex flex-col min-h-0 p-4">
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Input
+                    placeholder={`Buscar en ${selectedSubcategory.name}...`}
+                    value={quizSearchQuery}
+                    onChange={(e) => setQuizSearchQuery(e.target.value)}
+                    className="pl-9 bg-slate-950/50 border-slate-800 text-slate-200 placeholder:text-slate-600 focus:ring-blue-500/50"
+                  />
+                </div>
+
+                <ScrollArea className="flex-1 -mr-3 pr-3">
+                  <div className="space-y-2">
+                    {(() => {
+                      const quizzesForSub = categoryQuizzes?.filter((q: QuizWithFeedback) =>
+                        Number(q.subcategoryId) === Number(selectedSubcategory.id) &&
+                        q.title.toLowerCase().includes(quizSearchQuery.toLowerCase())
+                      ) || [];
+
+                      if (quizzesForSub.length === 0) {
+                        return (
+                          <div className="text-center py-12 text-slate-500">
+                            <Ban className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                            <p>No se encontraron cuestionarios en este tema.</p>
+                          </div>
+                        )
+                      }
+
+                      return quizzesForSub.map((quiz) => {
+                        const isCompleted = quiz.userStatus === 'completed';
+                        const score = isCompleted ? (quiz.score || 0) : 0;
+
+                        return (
+                          <div key={quiz.id} className="group flex items-center justify-between p-3 rounded-xl bg-slate-800/40 border border-white/5 hover:bg-slate-800/60 transition-all">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                              <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${isCompleted ? "bg-green-500/20 text-green-400" : "bg-slate-700/50 text-slate-400"}`}>
+                                {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : <ListChecks className="h-5 w-5" />}
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="font-semibold text-sm text-slate-200 truncate">{quiz.title}</h4>
+                                <div className="flex items-center gap-2 text-xs text-slate-500">
+                                  <span>{quiz.difficulty}</span>
+                                  {isCompleted && <span className="text-green-400 font-medium">• Completado ({score.toFixed(1)}/10)</span>}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Button
+                                size="sm"
+                                className="h-8 px-3 text-xs bg-slate-700 hover:bg-slate-600 text-white"
+                                onClick={() => setLocation(`/quiz/${quiz.id}?mode=readonly`)}
+                              >
+                                Ver (Solo Lectura)
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="mt-4">
+            <Button onClick={() => setIsPendingDialogOpen(false)} variant="outline" className="hidden">Hidden</Button>
+            <Button onClick={() => setSelectedCategoryForDetails(null)} className="bg-slate-800 hover:bg-slate-700 text-white">
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {currentUser && (
+        <OnboardingTour
+          isOpen={!currentUser.tourStatus?.onboarding}
+          user={currentUser}
+          onComplete={startParentDashboardTour}
+        />
+      )}
     </div>
   );
 }

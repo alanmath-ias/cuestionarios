@@ -27,6 +27,7 @@ export function OnboardingTour({ isOpen, user, onComplete }: OnboardingTourProps
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['/api/user'] });
             queryClient.invalidateQueries({ queryKey: ['current-user'] });
+            queryClient.invalidateQueries({ queryKey: ['authenticated-user'] });
 
             // Persist to localStorage to prevent immediate reappearance
             localStorage.setItem(`onboardingTour_${user.id}`, 'true');

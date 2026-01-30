@@ -111,7 +111,7 @@ function ProtectedRoute({ component: Component, ...rest }: { component: any, pat
         navigate('/admin'); // Redirige a /admin si el usuario es administrador
       } else if (user?.role === 'parent') {
         // Allow parents to access specific routes like quiz, results, and category
-        const allowedParentRoutes = ['/parent-dashboard', '/quiz/', '/results/', '/category/'];
+        const allowedParentRoutes = ['/parent-dashboard', '/quiz/', '/results/', '/category/', '/profile'];
         const isAllowed = allowedParentRoutes.some(route => rest.path.startsWith(route));
 
         if (!isAllowed) {

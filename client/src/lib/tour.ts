@@ -12,6 +12,65 @@ const driverConfig: Config = {
     popoverClass: 'driverjs-theme',
 };
 
+export const startParentDashboardTour = () => {
+    const steps: any[] = [
+        {
+            element: '#tour-parent-welcome',
+            popover: {
+                title: 'Bienvenido Papá/Mamá',
+                description: 'Este es tu centro de control. Aquí podrás supervisar el progreso de tu hijo y entender sus fortalezas.',
+                side: "bottom",
+                align: 'start'
+            }
+        },
+        {
+            element: '#tour-parent-recent',
+            popover: {
+                title: 'Actividad Reciente',
+                description: 'Mira los últimos cuestionarios completados por tu hijo. Haz clic en cualquiera para ver sus resultados detallados.',
+                side: "right",
+                align: 'start'
+            }
+        },
+        {
+            element: '#tour-parent-pending',
+            popover: {
+                title: 'Actividades Pendientes',
+                description: 'Aquí verás las tareas asignadas. Puedes ver el contenido en "Solo Lectura", pero no podrás responder por él.',
+                side: "left",
+                align: 'start'
+            }
+        },
+        {
+            element: '#tour-parent-subjects',
+            popover: {
+                title: 'Plan de Estudios',
+                description: 'Explora las materias y temas que está aprendiendo. Puedes ver los videos y el mapa de ruta.',
+                side: "top",
+                align: 'start'
+            }
+        },
+        {
+            element: '#tour-parent-stats',
+            popover: {
+                title: 'Progreso General',
+                description: 'Un resumen rápido de qué tanto ha avanzado en el curso completo.',
+                side: "left",
+                align: 'start'
+            }
+        }
+    ];
+
+    const driverObj = driver({
+        ...driverConfig,
+        steps: steps
+    });
+
+    driverObj.drive();
+
+    // Mark tour as seen logic is handled by the OnboardingTour component on completion
+};
+
 export const startDashboardTour = () => {
     // 1. Determine which alert element is visible
     const getStartedAlert = document.getElementById('tour-get-started-alert');
@@ -193,6 +252,8 @@ export const startTour = (pathname: string) => {
     setTimeout(() => {
         if (pathname === '/' || pathname === '/dashboard' || pathname === '/admin/AdminDashboard') {
             startDashboardTour();
+        } else if (pathname === '/parent-dashboard') {
+            startParentDashboardTour();
         } else if (pathname.startsWith('/quiz/')) {
             startActiveQuizTour();
         } else if (pathname.startsWith('/results/')) {
