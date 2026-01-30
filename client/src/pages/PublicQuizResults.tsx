@@ -410,7 +410,23 @@ function PublicQuizResults() {
                   </div>
                   <Button
                     className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                    onClick={() => setLocation('/auth?mode=register')}
+                    onClick={() => {
+                      // Construct full import data
+                      // Note: sessionResults only has answers and timestamp, so we combine with current scope vars
+                      const importData = {
+                        quizId: quizId,
+                        score: score,
+                        totalQuestionsCount: totalQuestionsCount,
+                        answers: sessionResults?.studentAnswers || [],
+                        aiDiagnosis: aiDiagnosis // Save the AI report for the dashboard
+                      };
+
+                      sessionStorage.setItem('publicQuizResults', JSON.stringify(importData));
+
+                      // We rely on welcome.tsx to derive the category from this data
+
+                      setLocation('/auth?mode=register');
+                    }}
                   >
                     Crear Cuenta Gratis
                   </Button>

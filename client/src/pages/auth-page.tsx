@@ -7,6 +7,14 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { FaWhatsapp } from 'react-icons/fa';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface User {
   id: number;
@@ -32,6 +40,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredName, setRegisteredName] = useState('');
+  const [showNotFoundDialog, setShowNotFoundDialog] = useState(false);
 
   const { data: user } = useQuery<User>({
     queryKey: ['/api/user'],
@@ -44,6 +53,22 @@ export default function AuthPage() {
       setLocation('/');
     }
   }, [user, setLocation, registrationSuccess]);
+
+  // Handle Google Auth errors from URL
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error === 'not_found') {
+      setShowNotFoundDialog(true);
+      // Clean URL immediately to avoid re-triggering on refresh
+      window.history.replaceState({}, '', '/auth?mode=login');
+    } else if (error === 'failed') {
+      toast({
+        title: 'Error de autenticación',
+        description: 'No se pudo iniciar sesión con Google.',
+        variant: 'destructive',
+      });
+    }
+  }, [location, toast]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,7 +314,10 @@ export default function AuthPage() {
             <Button
               variant="outline"
               className="w-full mt-4 bg-white text-black hover:bg-slate-200 border-transparent font-medium"
-              onClick={() => window.location.href = '/auth/google'}
+              onClick={() => {
+                const intent = showLoginForm ? 'login' : 'register';
+                window.location.href = `/auth/google?intent=${intent}`;
+              }}
             >
               <FcGoogle className="mr-2 h-5 w-5" />
               Google
@@ -312,6 +340,37 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={showNotFoundDialog} onOpenChange={setShowNotFoundDialog}>
+        <DialogContent className="sm:max-w-md bg-slate-900 border-slate-700 text-white">
+          <DialogHeader>
+            <DialogTitle>Cuenta no encontrada</DialogTitle>
+            <DialogDescription className="text-slate-300">
+              No hemos encontrado una cuenta registrada con este correo de Google.
+              <br /><br />
+              ¿Deseas crear una nueva cuenta ahora?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 mt-4">
+            <Button
+              variant="secondary"
+              onClick={() => setShowNotFoundDialog(false)}
+              className="bg-slate-800 hover:bg-slate-700 text-white border-0"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                setShowNotFoundDialog(false);
+                window.location.href = '/auth/google?intent=register';
+              }}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+            >
+              Sí, registrarme
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

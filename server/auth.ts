@@ -8,11 +8,13 @@ export function setupAuth() {
         clientID: process.env.GOOGLE_CLIENT_ID || "",
         clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
         callbackURL: "/auth/google/callback",
-    }, async (accessToken, refreshToken, profile, done) => {
+        passReqToCallback: true
+    }, async (req: any, accessToken, refreshToken, profile, done) => {
         try {
             const email = profile.emails?.[0]?.value;
             const googleId = profile.id;
             const name = profile.displayName;
+            const intent = req.query.state; // 'login' or 'register'
 
             if (!email) return done(new Error("No email found from Google"), undefined);
 
@@ -27,7 +29,14 @@ export function setupAuth() {
                     // Link account
                     await storage.updateUserGoogleId(user.id, googleId);
                 } else {
-                    // 3. Create new user
+                    // Start of Modification: Check Intent
+                    if (intent === 'login') {
+                        // If intent is strictly login and user doesn't exist, FAIL
+                        return done(null, false, { message: 'No registered account found' });
+                    }
+                    // End of Modification
+
+                    // 3. Create new user (Default if intent is register or undefined)
                     user = await storage.createUser({
                         username: 'google_' + email.split('@')[0] + '_' + Math.random().toString(36).substring(7), // Generate unique username
                         name: name,

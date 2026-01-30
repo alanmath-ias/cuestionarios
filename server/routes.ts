@@ -90,13 +90,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(passport.session());
 
   // Google Auth Routes
-  app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+  app.get('/auth/google', (req, res, next) => {
+    const intent = req.query.intent as string || 'register'; // Default to register if not specified
+    passport.authenticate('google', { scope: ['profile', 'email'], state: intent })(req, res, next);
+  });
 
   app.get('/auth/google/callback',
     (req, res, next) => {
       passport.authenticate('google', (err: any, user: any, info: any) => {
         if (err) { return next(err); }
-        if (!user) { return res.redirect('/auth'); }
+        if (!user) {
+          // Handle specific expected errors (like 'No registered account found')
+          if (info && info.message === 'No registered account found') {
+            return res.redirect('/auth?error=not_found&mode=login');
+          }
+          return res.redirect('/auth?error=failed');
+        }
 
         req.logIn(user, (err) => {
           if (err) { return next(err); }
@@ -207,10 +216,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.userId = newUser.id;
       req.session.role = safeRole;
 
+      // Force session save to prevent race conditions
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error("Session save error:", err);
+            return reject(err);
+          }
+          resolve();
+        });
+      });
+
       const { password: _, ...userWithoutPassword } = newUser;
 
       // Enviar correo de bienvenida
       if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS && newUser.email) {
+
         try {
           const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
@@ -489,13 +510,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  apiRouter.get("/categories", async (_req, res) => {
+    const categories = await storage.getCategories();
+    res.json(categories);
+  });
+
+  apiRouter.post("/user/categories", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    const { categoryIds } = req.body;
+
+    if (!Array.isArray(categoryIds)) {
+      return res.status(400).json({ message: "Invalid data format" });
+    }
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      // Check subscription limits logic
+      // Free users: max 1 category
+      // Subscribed users: unlimited
+      const isSubscribed = user.subscriptionStatus === 'active';
+
+      if (!isSubscribed && categoryIds.length > 1) {
+        return res.status(403).json({
+          message: "Solo puedes seleccionar 1 materia con el plan gratuito. Suscríbete para acceder a todas.",
+          requiresSubscription: true
+        });
+      }
+
+      // We replace existing categories (delete all and insert new)
+      await storage.updateUserCategories(userId, categoryIds);
+
+      res.json({ success: true, message: "Categorías actualizadas correctamente" });
+    } catch (error) {
+      console.error("Error updating user categories:", error);
+      res.status(500).json({ message: "Error al actualizar las materias" });
+    }
+  });
+
+  // Import public quiz progress
+  apiRouter.post("/user/import-progress", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    const { quizId, score, answers: userAnswers, totalQuestions } = req.body;
+
+    if (!quizId || score === undefined) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    try {
+      // Check if progress already exists to avoid duplicates
+      const existingProgress = await storage.getStudentProgressByQuiz(userId, quizId);
+      if (existingProgress) {
+        return res.json({ message: "Progress already exists", progress: existingProgress });
+      }
+
+      // Create progress
+      const progress = await storage.createStudentProgress({
+        userId,
+        quizId,
+        status: "completed",
+        score: Number(score),
+        completedQuestions: totalQuestions || 10, // Default to 10 if missing
+        timeSpent: Math.max(Number(req.body.timeSpent) || 60, 60), // Ensure at least 60 seconds (1 min) to avoid NaN/0 min display
+        completedAt: new Date(),
+        hintsUsed: 0
+      });
+
+      // Optionally import answers if provided
+      if (Array.isArray(userAnswers)) {
+        for (const ans of userAnswers) {
+          await storage.createStudentAnswer({
+            progressId: progress.id,
+            questionId: ans.questionId,
+            answerId: ans.answerId, // Fixed: use correct property from client
+            isCorrect: ans.isCorrect,
+            timeSpent: 0
+          });
+        }
+      }
+
+      res.json({ success: true, progress });
+    } catch (error) {
+      console.error("Error importing progress:", error);
+      res.status(500).json({ message: "Error importing progress" });
+    }
+  });
+
   // Update user profile
   // Update user profile
   apiRouter.patch("/user", async (req: Request, res: Response) => {
     const userId = req.session.userId;
     if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
-    const { username, email, currentPassword, newPassword } = req.body;
+    const { username, email, currentPassword, newPassword, tourStatus } = req.body;
 
     // Validate input
     if (username && (typeof username !== 'string' || username.trim().length < 3)) {
@@ -544,6 +656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (username) updateData.username = username;
       if (email) updateData.email = email;
       if (newPassword) updateData.password = newPassword;
+      if (tourStatus) updateData.tourStatus = tourStatus;
 
       const updatedUser = await storage.updateUser(userId, updateData);
 

@@ -672,13 +672,12 @@ function PublicActiveQuiz() {
             )}
             <Button
               variant="outline"
-              size="sm"
-              className="h-10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 bg-yellow-500/5 backdrop-blur-sm relative z-10"
+              className="flex items-center border-yellow-500/50 text-yellow-400 bg-yellow-500/5 hover:bg-yellow-500 hover:text-slate-900 hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] transition-all duration-300 scale-100 hover:scale-110"
               onClick={handleHintClick}
               disabled={answeredQuestions[currentQuestionIndex]}
             >
               <Lightbulb className="mr-2 h-4 w-4" />
-              ¿Una Pista?
+              Pista
             </Button>
           </div>
 

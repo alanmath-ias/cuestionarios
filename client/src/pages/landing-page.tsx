@@ -127,6 +127,13 @@ export default function LandingPage() {
                         AlanMath
                     </span>
                 </div>
+
+                {/* Badge moved to Navbar for Desktop */}
+                <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/50 border border-white/10 backdrop-blur-sm shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                    <Star className="w-3 h-3 text-yellow-400 fill-yellow-400 animate-pulse" />
+                    <span className="text-xs text-slate-200 font-medium">Una nueva forma inteligente de aprender matemáticas</span>
+                </div>
+
                 <div className="flex items-center gap-4">
                     <Link href="/auth">
                         <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-white/10">
@@ -142,7 +149,7 @@ export default function LandingPage() {
             </nav>
 
             {/* Hero Section */}
-            <section className="relative pt-20 pb-32 overflow-hidden">
+            <section className="relative pt-10 md:pt-16 pb-24 overflow-hidden">
                 {/* Background Elements */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
                     <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500/20 rounded-full blur-[100px]" />
@@ -155,10 +162,11 @@ export default function LandingPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8 }}
                     >
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-sm shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 animate-pulse" />
-                            <span className="text-sm text-slate-200 font-medium">Una nueva forma inteligente de aprender matemáticas</span>
-                        </div>
+                        {/* Mobile Badge (only visible on small screens to keep content up) 
+                            Actually user said "put in header to make text go up". On mobile header is small.
+                            Let's keep it hidden on mobile hero to save space, or very small.
+                            I'll omit it from Hero as requested to save space.
+                        */}
 
                         <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
                             Domina las Matemáticas <br />

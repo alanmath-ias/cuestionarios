@@ -24,6 +24,7 @@ import {
   Instagram,
   ShoppingBag,
   X,
+  XCircle,
   PlayCircle,
   Trophy,
   Target,
@@ -39,8 +40,10 @@ import {
   MessageSquare,
   Clock,
   Flame,
-  Star
+  Star,
+  Sparkles
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -60,6 +63,7 @@ import { WelcomeDialog } from "@/components/dialogs/WelcomeDialog";
 import { getRandomQuote } from "@/lib/motivational-quotes";
 import { HorizontalRoadmap } from "@/components/roadmap/HorizontalRoadmap";
 import { RoadmapNode } from "@/types/types";
+import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
 
 interface QuizWithFeedback extends UserQuiz {
   progressId?: string;
@@ -274,7 +278,7 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback, onClick: (qui
         </div>
       </div>
       <div className="text-right shrink-0 self-start mt-1">
-        <span className={`block text-sm font-bold ${hasFeedback ? "text-blue-400" : "text-green-400"}`}>{(quiz.score || 0)}/10</span>
+        <span className={`block text-sm font-bold ${hasFeedback ? "text-blue-400" : "text-green-400"}`}>{Number(quiz.score || 0).toFixed(1)}/10</span>
       </div>
       <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-slate-400 shrink-0" />
     </div>
@@ -282,6 +286,7 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback, onClick: (qui
 }
 
 export default function UserDashboard() {
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | null>(null);
   const [showPendingDialog, setShowPendingDialog] = useState(false);
@@ -293,6 +298,7 @@ export default function UserDashboard() {
 
   // New states for enhancements
   const [showCreditsInfo, setShowCreditsInfo] = useState(false);
+  const [_, setLocation] = useLocation();
   const [selectedCategoryForDetails, setSelectedCategoryForDetails] = useState<Category | null>(null);
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
 
@@ -558,8 +564,10 @@ export default function UserDashboard() {
     const storageKey = `mathTipLastShown_${currentUser.id}`;
     const lastShown = localStorage.getItem(storageKey);
 
-    // Only show tip if welcome dialog is NOT shown
-    if (mathTipData?.tip && lastShown !== today && !showWelcomeDialog) {
+    // Only show tip if welcome dialog is NOT shown AND user has activity (not a new user)
+    // Also wait for Onboarding Tour to finish
+    const isNewUser = quizzes && quizzes.length === 0;
+    if (mathTipData?.tip && lastShown !== today && !showWelcomeDialog && !isNewUser && !showOnboarding) {
       const timer = setTimeout(() => {
         toast({
           title: "💡 Tip Matemático",
@@ -568,41 +576,19 @@ export default function UserDashboard() {
               <ContentRenderer content={mathTipData.tip} className="text-white/90 text-base font-medium text-center mt-2" />
             </div>
           ),
-          duration: 15000, // Auto-close after 15 seconds
+          duration: 15000,
           className: "w-full md:w-[400px] h-auto flex flex-col justify-center items-center bg-slate-900 border border-indigo-500/30 text-slate-200 shadow-2xl rounded-2xl p-6 md:mr-12 [&>button[toast-close]]:!text-slate-400 [&>button[toast-close]]:!opacity-100 [&>button[toast-close]]:hover:!text-white [&>button[toast-close]]:hover:!bg-white/10 [&>button[toast-close]]:scale-125 [&>button[toast-close]]:top-3 [&>button[toast-close]]:right-3"
         });
         localStorage.setItem(storageKey, today);
-      }, 2000); // Wait 2 seconds after welcome dialog is closed (or if it wasn't shown)
+      }, 2000);
 
       return () => clearTimeout(timer);
     }
-  }, [mathTipData, toast, showWelcomeDialog, currentUser]);
+  }, [mathTipData, toast, showWelcomeDialog, currentUser, showOnboarding]);
 
   const isLoading = loadingUser || loadingCategories || loadingQuizzes;
 
-  // Auto-start tour for new users
-  useEffect(() => {
-    if (!isLoading && currentUser?.id && !currentUser.tourStatus?.dashboard) {
-      const timer = setTimeout(() => {
-        // Ensure the element exists before starting the tour to prevent freeze
-        if (document.getElementById('tour-welcome')) {
-          startDashboardTour();
-          // Update DB to mark tour as seen
-          fetch('/api/user/tour-seen', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tourType: 'dashboard' })
-          }).then(res => {
-            if (res.ok) {
-              queryClient.invalidateQueries({ queryKey: ["current-user"] });
-            }
-          });
-        }
-      }, 2000); // Increased delay to 2 seconds for safety
 
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading, currentUser, queryClient]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -613,6 +599,33 @@ export default function UserDashboard() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [queryClient]);
+
+  useEffect(() => {
+    // If not loading, and user has NO subjects, and is NOT viewing the onboarding tour:
+    // Redirect to /welcome so they can pick a subject.
+    const hasSubjects = categories && categories.length > 0;
+    const isTourActive = showOnboarding;
+    const isTourCompleted = currentUser?.tourStatus?.onboarding;
+
+    console.log('Dashboard Redirect Debug:', {
+      isLoading,
+      hasSubjects,
+      isTourActive,
+      isTourCompleted,
+      tourStatus: currentUser?.tourStatus,
+      showOnboardingState: showOnboarding
+    });
+
+    // We only redirect if tour is NOT active. 
+    // If they haven't seen the tour (isTourCompleted false), showOnboarding should become true via the other effect.
+    // So we wait for showOnboarding to stabilize? 
+    // Actually, if !isTourCompleted, the other effect sets showOnboarding(true).
+    // So we just need to ensure we don't redirect if showOnboarding is true OR if we are about to show it.
+
+    if (!isLoading && !hasSubjects && !isTourActive && isTourCompleted) {
+      setLocation('/welcome');
+    }
+  }, [categories, showOnboarding, currentUser, isLoading, setLocation]);
 
   useEffect(() => {
     if (categories && categories.length > 0 && !selectedVideo) {
@@ -661,7 +674,6 @@ export default function UserDashboard() {
       const completed = quizzes.filter(q => q.status === 'completed').sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
 
       if (pending.length > 0) {
-        // Pick the first pending one. 
         activity = pending[0];
       } else if (completed.length > 0) {
         activity = completed[0];
@@ -669,15 +681,46 @@ export default function UserDashboard() {
 
       setLastActivity(activity);
 
-      const hasSeenWelcome = sessionStorage.getItem('welcomeShown');
-      if (!hasSeenWelcome && activity) {
+      // New Onboarding Tour Logic
+      // If user hasn't seen the onboarding tour, show it first.
+
+      // Use localStorage with userId to persist state across sessions/refresh
+      // This prevents the dialog from showing again when navigating back to dashboard
+      const welcomeKey = `welcomeShown_${currentUser.id}`;
+      const hasSeenWelcome = localStorage.getItem(welcomeKey);
+
+      const isNewUserForDialog = !currentUser?.tourStatus?.onboarding;
+
+      // Calculate account age to prevent "Welcome Back" for users who just registered
+      // Even if they finished the tour and have activity (diagnostic), they are not "returning" yet.
+      const accountAge = currentUser.createdAt ? new Date().getTime() - new Date(currentUser.createdAt).getTime() : 100000000;
+      const isRecentAccount = accountAge < 24 * 60 * 60 * 1000; // 24 hours
+
+      // Show ONLY if not seen AND has activity AND is NOT a new user AND account is not recent
+      if (!hasSeenWelcome && activity && !isNewUserForDialog && !isRecentAccount) {
         setShowWelcomeDialog(true);
-        sessionStorage.setItem('welcomeShown', 'true');
+        localStorage.setItem(welcomeKey, 'true');
+      }
+
+    }
+  }, [quizzes, currentUser]);
+
+  // Separate effect for Onboarding Tour to ensure it runs even if user has no quizzes
+  useEffect(() => {
+    if (currentUser) {
+      const userTourKey = `onboardingTour_${currentUser.id}`;
+      const localTourCompleted = localStorage.getItem(userTourKey);
+
+      // Only show if NOT completed in DB AND NOT completed in local storage
+      if (!currentUser.tourStatus?.onboarding && !localTourCompleted) {
+        setShowOnboarding(true);
       }
     }
-  }, [quizzes]);
+  }, [currentUser]);
 
-  const [_, setLocation] = useLocation();
+
+
+
 
   const handleMiniStart = (e: React.MouseEvent, quizId: number) => {
     e.preventDefault();
@@ -703,7 +746,7 @@ export default function UserDashboard() {
     return <AdminDashboard />;
   }
 
-  if (loadingUser || loadingCategories || loadingQuizzes) {
+  if (loadingUser || !currentUser || loadingCategories || !categories || loadingQuizzes || !quizzes) {
     return <div className="flex justify-center items-center min-h-screen bg-slate-950"><Spinner className="h-12 w-12 text-purple-500" /></div>;
   }
 
@@ -786,8 +829,26 @@ export default function UserDashboard() {
 
           {/* Alert Section */}
           <div className="flex flex-col gap-3 items-start">
+            {/* New User Banner */}
+            {quizzes && quizzes.length === 0 && (
+              <div
+                id="tour-get-started-alert"
+                onClick={() => {
+                  const element = document.getElementById('tour-quiz-list');
+                  if (element) element.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="animate-pulse flex items-center gap-2 bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-blue-200 px-4 py-2 rounded-full border border-blue-500/30 shadow-sm cursor-pointer hover:bg-blue-600/30 transition-colors"
+              >
+                <Target className="w-4 h-4 text-purple-400" />
+                <span className="text-sm font-bold">
+                  ¡Comienza tu primera lección!
+                </span>
+              </div>
+            )}
+
             {pendingQuizzes.length > 0 && (
               <div
+                id="tour-pending-alert"
                 onClick={() => setShowPendingDialog(true)}
                 className="animate-pulse flex items-center gap-2 bg-yellow-500/10 text-yellow-400 px-4 py-2 rounded-full border border-yellow-500/20 shadow-sm cursor-pointer hover:bg-yellow-500/20 transition-colors"
               >
@@ -894,7 +955,7 @@ export default function UserDashboard() {
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
             {/* 1. Recent Activity */}
-            <div className="rounded-3xl bg-slate-900/50 border border-white/10 backdrop-blur-sm shadow-xl p-5 h-[300px] flex flex-col">
+            <div className="rounded-3xl bg-slate-900/50 border border-white/10 backdrop-blur-sm shadow-xl p-5 h-auto max-h-[300px] min-h-[150px] flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-lg text-slate-200 flex items-center gap-2">
                   <ListChecks className="w-5 h-5 text-purple-500" /> Actividad Reciente
@@ -943,7 +1004,7 @@ export default function UserDashboard() {
             )}
 
             {/* 3. Pending Activities (Yellow, Play Icon) */}
-            <div id="tour-pending" className="rounded-3xl bg-slate-900/50 border border-yellow-500/20 backdrop-blur-sm p-5 h-[300px] flex flex-col relative overflow-hidden">
+            <div id="tour-pending" className="rounded-3xl bg-slate-900/50 border border-yellow-500/20 backdrop-blur-sm p-5 h-auto max-h-[300px] min-h-[150px] flex flex-col relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl -z-10" />
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-lg text-yellow-500 flex items-center gap-2">
@@ -1023,72 +1084,157 @@ export default function UserDashboard() {
               </div>
 
               <ScrollArea className="flex-1 -mr-3 pr-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {categories?.map((category) => (
-                    <div
-                      key={category.id}
-                      className="group bg-slate-900/80 rounded-xl p-3 border border-slate-800 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 flex flex-col justify-between h-full min-h-[140px] cursor-pointer"
-                      onClick={() => handleCategoryClick(category)}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 shadow-sm">
-                          <BookOpen className="w-4 h-4" />
-                        </div>
-                      </div>
+                <div className={`grid gap-3 ${categories?.length === 1
+                  ? "grid-cols-1"
+                  : "grid-cols-1 sm:grid-cols-2"
+                  }`}>
+                  {categories?.map((category) => {
+                    const isRecommended = (() => {
+                      const rec = localStorage.getItem('pendingRecommendations');
+                      if (rec) {
+                        try {
+                          const parsed = JSON.parse(rec);
+                          return parsed && parsed.categoryId === category.id;
+                        } catch (e) { return false; }
+                      }
+                      return false;
+                    })();
 
-                      <div>
-                        <h4 className="font-bold text-sm text-slate-200 group-hover:text-blue-400 transition-colors mb-3">{category.name}</h4>
+                    const recommendationData = isRecommended ? (() => {
+                      try {
+                        const data = JSON.parse(localStorage.getItem('pendingRecommendations') || '{}');
+                        return data || {};
+                      } catch (e) { return {}; }
+                    })() : {};
 
-                        <div className="grid grid-cols-2 gap-2" onClick={(e) => e.stopPropagation()}>
-                          {/* Botón Video */}
-                          {category.youtubeLink ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                playVideo(category.youtubeLink!);
-                              }}
-                              className="flex items-center justify-center gap-1.5 h-7 text-[10px] font-medium rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
-                            >
-                              <Youtube className="w-3 h-3" /> Videos
-                            </button>
-                          ) : (
-                            <div className="h-7" /> /* Spacer if no video */
+                    const showExpandedCard = categories?.length === 1 && isRecommended;
+
+                    return (
+                      <div
+                        key={category.id}
+                        className={`group bg-slate-900/80 rounded-xl border border-slate-800 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 cursor-pointer overflow-hidden ${showExpandedCard ? 'p-0' : 'p-5 flex flex-col justify-center h-full min-h-[180px]'
+                          }`}
+                        onClick={() => handleCategoryClick(category)}
+                      >
+                        <div className={`flex flex-col md:flex-row h-full ${showExpandedCard ? 'divide-y md:divide-y-0 md:divide-x divide-slate-800' : ''}`}>
+
+                          {/* Left Side: Subject Info (Always Visible) */}
+                          <div className={`flex ${showExpandedCard ? 'flex-col justify-between p-4 md:w-1/2 lg:w-2/5' : 'flex-row items-center justify-between w-full h-full gap-4'}`}>
+                            <div className={`${showExpandedCard ? '' : 'flex flex-col justify-center'}`}>
+                              <div className="flex items-start justify-between mb-2">
+                                <div className={`rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 shadow-sm h-10 w-10`}>
+                                  <BookOpen className={`${categories.length === 1 ? 'h-5 w-5' : 'w-4 h-4'}`} />
+                                </div>
+                              </div>
+
+                              <h4 className={`font-bold text-slate-200 group-hover:text-blue-400 transition-colors mb-3 ${categories.length === 1 ? 'text-xl' : 'text-lg'
+                                }`}>{category.name}</h4>
+                            </div>
+
+                            <div className={`${showExpandedCard ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-2 gap-3 w-[55%]'}`} onClick={(e) => e.stopPropagation()}>
+                              {/* Botón Video */}
+                              {category.youtubeLink ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    playVideo(category.youtubeLink!);
+                                  }}
+                                  className={`flex items-center justify-center gap-1.5 font-medium rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors h-9 text-xs`}
+                                >
+                                  <Youtube className="w-3 h-3" /> Videos
+                                </button>
+                              ) : (
+                                <div className={'h-9'} /> /* Spacer if no video */
+                              )}
+
+                              {/* Botón Entrenamiento */}
+                              <Link href={`/training/${category.id}`} className="w-full">
+                                <Button size="sm" className={`w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all duration-300 h-9 text-xs`}>
+                                  Entrenamiento
+                                </Button>
+                              </Link>
+
+                              {/* Botón Temas */}
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className={`w-full border relative overflow-hidden ${isRecommended
+                                  ? "bg-purple-600 hover:bg-purple-700 text-white border-purple-500 animate-pulse ring-2 ring-purple-500/50"
+                                  : "bg-slate-700 hover:bg-slate-600 text-slate-200 border-slate-600"
+                                  } h-9 text-xs`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCategorySelect(category);
+                                }}
+                              >
+                                <ListChecks className="w-3 h-3 mr-1.5" />
+                                {isRecommended ? "Temas (Recomendado)" : "Temas"}
+                              </Button>
+
+                              {/* Botón Mapa */}
+                              <Link href={`/category/${category.id}?view=roadmap`} className="w-full">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className={`w-full bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20 h-9 text-xs`}
+                                >
+                                  <MapIcon className="w-3 h-3 mr-1.5" /> Mapa
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+
+                          {/* Right Side: Diagnostic Report (Only if expanded) */}
+                          {showExpandedCard && recommendationData?.diagnosis && (
+                            <div className="flex-1 bg-slate-950/30 p-4 relative overflow-hidden flex flex-col justify-center">
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl -z-10" />
+
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="bg-yellow-500/10 p-1.5 rounded-lg">
+                                  <Target className="w-4 h-4 text-yellow-500" />
+                                </div>
+                                <h4 className="font-bold text-slate-200 text-sm">Tu Diagnóstico Inicial</h4>
+                              </div>
+
+                              <p className="text-slate-400 text-xs mb-3 leading-relaxed">
+                                Identificamos estos temas clave para reforzar tu base:
+                              </p>
+
+                              {Array.isArray(recommendationData.diagnosis) ? (
+                                <div className="space-y-2 mb-4">
+                                  {recommendationData.diagnosis.slice(0, 3).map((item: any, idx: number) => (
+                                    item.status === 'danger' && (
+                                      <div key={idx} className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg">
+                                        <XCircle className="w-3 h-3 text-red-400 shrink-0" />
+                                        <span className="text-red-200 text-xs font-semibold truncate">{item.topic}</span>
+                                      </div>
+                                    )
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-slate-500 text-xs italic mb-4">
+                                  Revisa tus temas para ver el detalle.
+                                </p>
+                              )}
+
+                              <Button
+                                size="sm"
+                                className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs border border-slate-700 w-fit self-start"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCategorySelect(category);
+                                }}
+                              >
+                                <BookOpen className="w-3 h-3 mr-2" />
+                                Ver Plan de Estudio
+                              </Button>
+                            </div>
                           )}
 
-                          {/* Botón Entrenamiento */}
-                          <Link href={`/training/${category.id}`} className="w-full">
-                            <Button size="sm" className="w-full h-7 text-[10px] bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all duration-300">
-                              Entrenamiento
-                            </Button>
-                          </Link>
-
-                          {/* Botón Temas */}
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="w-full h-7 text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCategorySelect(category);
-                            }}
-                          >
-                            <ListChecks className="w-3 h-3 mr-1.5" /> Temas
-                          </Button>
-
-                          {/* Botón Mapa */}
-                          <Link href={`/category/${category.id}?view=roadmap`} className="w-full">
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              className="w-full h-7 text-[10px] bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20"
-                            >
-                              <MapIcon className="w-3 h-3 mr-1.5" /> Mapa
-                            </Button>
-                          </Link>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </ScrollArea>
             </div>
@@ -1111,56 +1257,63 @@ export default function UserDashboard() {
               />
             </div>
 
-            {/* Promo Banners */}
-            <div onClick={(e) => { e.preventDefault(); setShowSocialDialog(true); }} className="cursor-pointer">
-              <PromoBanner
-                title="Síguenos en nuestras redes"
-                subtitle="@alanmath.ias"
-                icon={Instagram}
-                colorClass="bg-gradient-to-br from-purple-600 to-pink-500 text-white"
-                href="#"
-                buttonText="Ver redes"
-                compact={true}
-              />
-            </div>
-
-            <PromoBanner
-              title="eBook Exclusivo"
-              subtitle="Movimiento Parabólico"
-              icon={ShoppingBag}
-              colorClass="bg-gradient-to-br from-[#8B4513] to-[#A0522D] text-white shadow-lg shadow-orange-900/40"
-              href="https://alanmatiasvilla1000.hotmart.host/el-fascinante-movimiento-parabolico-guia-practica-de-alanmath-f1416e10-f1d2-49ac-aa29-2e8318b2fea4"
-              buttonText="Ver eBook"
-              compact={true}
-            />
-
-            <PromoBanner
-              title="Sitio Web"
-              subtitle="alanmath.com"
-              icon={Globe}
-              colorClass="bg-gradient-to-br from-blue-600 to-cyan-600 text-white"
-              href="https://alanmath.com/"
-              buttonText="Visitar"
-              compact={true}
-            />
-
-            {/* Rest Zone Card */}
-            <div className="rounded-3xl bg-gradient-to-br from-teal-500 to-emerald-600 p-6 text-white shadow-lg shadow-teal-900/40 cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => setShowRestZone(true)}>
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
-                  <Gamepad2 className="w-6 h-6 text-white" />
-                </div>
+            {/* Sidebar Extras Container for Tour */}
+            <div id="tour-sidebar-extras" className="space-y-4">
+              {/* Promo Banners */}
+              <div id="tour-promo-social" onClick={(e) => { e.preventDefault(); setShowSocialDialog(true); }} className="cursor-pointer">
+                <PromoBanner
+                  title="Síguenos en nuestras redes"
+                  subtitle="@alanmath.ias"
+                  icon={Instagram}
+                  colorClass="bg-gradient-to-br from-purple-600 to-pink-500 text-white"
+                  href="#"
+                  buttonText="Ver redes"
+                  compact={true}
+                />
               </div>
-              <h3 className="text-xl font-bold mb-2">Zona de Descanso</h3>
-              <p className="text-teal-100 text-sm mb-6">
-                ¿Necesitas un respiro? Relájate con nuestra selección de juegos y puzzles.
-              </p>
-              <button
-                className="flex items-center text-sm font-semibold hover:text-teal-100 transition-colors group"
-              >
-                Entrar
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </button>
+
+              <div id="tour-promo-ebook">
+                <PromoBanner
+                  title="eBook Exclusivo"
+                  subtitle="Movimiento Parabólico"
+                  icon={ShoppingBag}
+                  colorClass="bg-gradient-to-br from-[#8B4513] to-[#A0522D] text-white shadow-lg shadow-orange-900/40"
+                  href="https://alanmatiasvilla1000.hotmart.host/el-fascinante-movimiento-parabolico-guia-practica-de-alanmath-f1416e10-f1d2-49ac-aa29-2e8318b2fea4"
+                  buttonText="Ver eBook"
+                  compact={true}
+                />
+              </div>
+
+              <div id="tour-promo-website">
+                <PromoBanner
+                  title="Sitio Web"
+                  subtitle="alanmath.com"
+                  icon={Globe}
+                  colorClass="bg-gradient-to-br from-blue-600 to-cyan-600 text-white"
+                  href="https://alanmath.com/"
+                  buttonText="Visitar"
+                  compact={true}
+                />
+              </div>
+
+              {/* Rest Zone Card */}
+              <div id="tour-rest-zone" className="rounded-3xl bg-gradient-to-br from-teal-500 to-emerald-600 p-6 text-white shadow-lg shadow-teal-900/40 cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => setShowRestZone(true)}>
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
+                    <Gamepad2 className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold mb-2">Zona de Descanso</h3>
+                <p className="text-teal-100 text-sm mb-6">
+                  ¿Necesitas un respiro? Relájate con nuestra selección de juegos y puzzles.
+                </p>
+                <button
+                  className="flex items-center text-sm font-semibold hover:text-teal-100 transition-colors group"
+                >
+                  Entrar
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1416,14 +1569,73 @@ export default function UserDashboard() {
             </DialogHeader>
 
             {!selectedSubcategory && (
-              <div className="relative my-2">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                <Input
-                  placeholder="Buscar tema o cuestionario..."
-                  value={categorySearchQuery}
-                  onChange={(e) => setCategorySearchQuery(e.target.value)}
-                  className="pl-9 bg-slate-950/50 border-slate-800 text-slate-200 placeholder:text-slate-600 focus:ring-blue-500/50"
-                />
+              <div className="space-y-4">
+                {/* Recommendation Alert inside Dialog */}
+                {(() => {
+                  const rec = localStorage.getItem('pendingRecommendations');
+                  if (rec) {
+                    try {
+                      const parsed = JSON.parse(rec);
+                      // Verify matches category
+                      if (parsed.categoryId === selectedCategoryForDetails?.id && parsed.diagnosis) {
+                        return (
+                          <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 border border-purple-500/30 rounded-xl p-4 mb-4 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-3 opacity-10">
+                              <Sparkles className="w-16 h-16 text-purple-400" />
+                            </div>
+                            <div className="relative z-10">
+                              <h4 className="flex items-center gap-2 text-purple-300 font-bold text-lg mb-2">
+                                <Sparkles className="w-5 h-5" /> Recomendación Personalizada
+                              </h4>
+                              <p className="text-slate-300 text-sm mb-3">
+                                Basado en tu diagnóstico, te sugerimos enfocar tu estudio en estos temas:
+                              </p>
+
+                              {Array.isArray(parsed.diagnosis) && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                                  {parsed.diagnosis.map((item: any, idx: number) => (
+                                    item.status === 'danger' && (
+                                      <div key={idx} className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
+                                        <XCircle className="w-4 h-4 text-red-400" />
+                                        <span className="text-red-200 text-xs font-semibold">{item.topic}</span>
+                                      </div>
+                                    )
+                                  ))}
+                                </div>
+                              )}
+
+                              <div className="flex flex-col sm:flex-row gap-3 items-center mt-2">
+                                <p className="text-xs text-slate-400 italic flex-1">
+                                  ¿No sabes por dónde empezar? Pide ayuda a un profe.
+                                </p>
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white border-0 shadow-lg shadow-green-900/20 w-full sm:w-auto"
+                                  onClick={() => window.open(`https://wa.me/573208056799?text=${encodeURIComponent('Hola, vi mis recomendaciones de estudio y quisiera ayuda para empezar con mi plan personalizado.')}`, '_blank')}
+                                >
+                                  <FaWhatsapp className="mr-2 h-4 w-4" /> Solicitar Guía
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                    } catch (e) {
+                      console.error("Error parsing recommendation", e);
+                    }
+                  }
+                  return null;
+                })()}
+
+                <div className="relative my-2">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Input
+                    placeholder="Buscar tema o cuestionario..."
+                    value={categorySearchQuery}
+                    onChange={(e) => setCategorySearchQuery(e.target.value)}
+                    className="pl-9 bg-slate-950/50 border-slate-800 text-slate-200 placeholder:text-slate-600 focus:ring-blue-500/50"
+                  />
+                </div>
               </div>
             )}
 
@@ -1698,12 +1910,19 @@ export default function UserDashboard() {
         <RestZoneDialog open={showRestZone} onOpenChange={setShowRestZone} />
 
         <WelcomeDialog
-          open={showWelcomeDialog}
+          open={showWelcomeDialog && !showOnboarding}
           onOpenChange={setShowWelcomeDialog}
           username={currentUser?.username || 'Estudiante'}
           lastActivity={lastActivity}
         />
-      </div>
+        {currentUser && (
+          <OnboardingTour
+            isOpen={showOnboarding}
+            user={currentUser}
+            onComplete={() => setShowOnboarding(false)}
+          />
+        )}
+      </div >
       <FloatingWhatsApp
         message="Hola, me gustaría cotizar clases de refuerzo para mejorar mi rendimiento en matemáticas."
         tooltip="Cotizar Clases de Refuerzo"

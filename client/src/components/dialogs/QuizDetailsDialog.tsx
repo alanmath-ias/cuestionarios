@@ -53,7 +53,7 @@ export function QuizDetailsDialog({ open, onOpenChange, quiz }: QuizDetailsDialo
                         <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1">
                             <Trophy className="w-3 h-3 text-yellow-500" /> Puntaje
                         </div>
-                        <div className="text-3xl font-bold text-white">{quiz.score !== undefined ? quiz.score : 'N/A'}<span className="text-lg text-slate-500">/10</span></div>
+                        <div className="text-3xl font-bold text-white">{quiz.score !== undefined ? Number(quiz.score).toFixed(1) : 'N/A'}<span className="text-lg text-slate-500">/10</span></div>
                     </div>
                     <div className="bg-slate-800/50 border border-white/5 p-4 rounded-xl text-center">
                         <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-400 uppercase mb-1">

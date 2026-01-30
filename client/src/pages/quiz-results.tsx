@@ -361,14 +361,7 @@ function QuizResults() {
                         )}
                       </div>
 
-                      {(answer.answerDetails?.explanation || answer.correctAnswer?.explanation) && (
-                        <div className="mt-4 p-4 bg-blue-500/10 rounded-xl border border-blue-500/20 text-sm">
-                          <strong className="text-blue-400 block mb-1">Explicación:</strong>
-                          <span className="text-slate-300">
-                            {answer.answerDetails?.explanation || answer.correctAnswer?.explanation}
-                          </span>
-                        </div>
-                      )}
+
                     </div>
                   </div>
                 );

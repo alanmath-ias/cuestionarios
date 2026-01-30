@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { UserMenu } from '@/components/ui/user-menu';
 import { Menu as MenuIcon, X as CloseIcon, Youtube, Instagram, Globe, HelpCircle } from 'lucide-react';
@@ -13,6 +13,7 @@ interface User {
   username: string;
   email?: string;
   role?: string;
+  tourStatus?: Record<string, boolean>;
 }
 
 interface HeaderProps {
@@ -24,6 +25,10 @@ export function Header({ user, pendingCount }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [location] = useLocation();
   const isAdmin = user?.role === 'admin';
+  const [showTourHint, setShowTourHint] = useState(false);
+
+  // Show hint for new users only on dashboard
+
 
   const socialLinks = {
     youtube: 'https://www.youtube.com/@AlanMath',
@@ -32,6 +37,17 @@ export function Header({ user, pendingCount }: HeaderProps) {
     facebook: 'https://www.facebook.com/people/AlanMathias/61572215860800/?name=xhp_nt_',
     website: 'https://alanmath.com',
   };
+
+  useEffect(() => {
+    if (user && !user.tourStatus?.dashboard && location === '/dashboard') {
+      const timer = setTimeout(() => {
+        setShowTourHint(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowTourHint(false);
+    }
+  }, [user, location]);
 
   return (
     <header className="relative z-50 w-full border-b border-white/10 bg-slate-950 text-white">
@@ -94,13 +110,47 @@ export function Header({ user, pendingCount }: HeaderProps) {
 
           {/* Botón de Ayuda (Visible siempre excepto admin) */}
           {!isAdmin && (
-            <button
-              onClick={() => startTour(location)}
-              className="text-slate-400 hover:text-white transition-colors focus:outline-none"
-              title="Ayuda"
-            >
-              <HelpCircle size={20} />
-            </button>
+            <div className="relative">
+              <button
+                id="tour-trigger-button"
+                onClick={() => {
+                  setShowTourHint(false);
+                  startTour(location);
+                }}
+                className={`text-slate-400 hover:text-white transition-colors focus:outline-none ${showTourHint ? 'animate-pulse text-white' : ''}`}
+                title="Ayuda"
+              >
+                <HelpCircle size={20} />
+              </button>
+
+              {showTourHint && (
+                <div className="absolute top-10 right-0 w-64 bg-slate-900 border border-blue-500/30 shadow-2xl rounded-xl p-4 z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="absolute -top-2 right-2 w-4 h-4 bg-slate-900 border-t border-l border-blue-500/30 transform rotate-45" />
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowTourHint(false);
+                      }}
+                      className="absolute -top-2 -right-2 text-slate-500 hover:text-white"
+                    >
+                      <CloseIcon size={14} />
+                    </button>
+                    <p className="text-sm font-medium text-slate-200 mb-2">💡 ¿Dudas sobre cómo funciona?</p>
+                    <p className="text-xs text-slate-400 mb-3">Haz clic aquí para iniciar el tour guiado.</p>
+                    <button
+                      onClick={() => {
+                        setShowTourHint(false);
+                        startTour(location);
+                      }}
+                      className="w-full py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    >
+                      Comenzar Tour
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Buscador Global */}
