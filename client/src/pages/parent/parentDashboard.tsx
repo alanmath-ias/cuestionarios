@@ -224,11 +224,11 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback; onClick: (qui
     <div
       onClick={() => onClick(quiz)}
       className={`group flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:shadow-[0_0_15px_-3px_rgba(16,185,129,0.15)] ${hasFeedback
-        ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20"
+        ? "bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20"
         : "bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-emerald-500/30"
         }`}
     >
-      <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hasFeedback ? "bg-blue-500/20 text-blue-400" : "bg-green-500/20 text-green-400"
+      <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hasFeedback ? "bg-emerald-500/20 text-emerald-400" : "bg-green-500/20 text-green-400"
         }`}>
         <CheckCircle2 className="h-5 w-5" />
       </div>
@@ -244,7 +244,7 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback; onClick: (qui
         </div>
       </div>
       {(quiz.reviewed || hasFeedback) && (
-        <div className="bg-blue-500/20 px-2 py-1 rounded text-[10px] text-blue-300 border border-blue-500/30">
+        <div className="bg-emerald-500/20 px-2 py-1 rounded text-[10px] text-emerald-300 border border-emerald-500/30">
           Feedback
         </div>
       )}
@@ -558,10 +558,10 @@ export default function ParentDashboard() {
                 {categories?.map((category) => (
                   <div
                     key={category.id + "-cat"}
-                    className="group relative overflow-hidden rounded-xl border transition-all duration-300 bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-rose-500/30 hover:shadow-[0_0_15px_-3px_rgba(244,63,94,0.15)]"
+                    className="group relative overflow-hidden rounded-xl border transition-all duration-300 bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-rose-500/30 hover:shadow-[0_0_15px_-3px_rgba(244,63,94,0.15)] max-w-full"
                   >
                     <div className="flex flex-col md:flex-row md:items-center p-3 gap-3">
-                      <div className="flex items-center gap-4 flex-1">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
                         <div className="h-12 w-12 rounded-xl flex items-center justify-center shadow-lg shrink-0 transition-transform group-hover:scale-105 bg-rose-500/10 text-rose-400">
                           <BookOpen className="h-6 w-6" />
                         </div>
@@ -572,7 +572,7 @@ export default function ParentDashboard() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 mt-2 md:mt-0 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
+                      <div className="flex items-center gap-2 mt-2 md:mt-0 overflow-x-auto pb-1 md:pb-0 no-scrollbar max-w-full">
                         {category.youtubeLink && (
                           <button
                             onClick={() => handleCreateVideo(category.youtubeLink!)}
@@ -674,7 +674,7 @@ export default function ParentDashboard() {
 
       {/* Pending Activities Dialog */}
       <Dialog open={isPendingDialogOpen} onOpenChange={setIsPendingDialogOpen}>
-        <DialogContent className="sm:max-w-lg bg-slate-900 border-white/10 text-slate-200">
+        <DialogContent className="sm:max-w-lg bg-slate-900 border-white/10 text-slate-200" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-yellow-500">
               <PlayCircle className="w-6 h-6" />
@@ -721,7 +721,7 @@ export default function ParentDashboard() {
 
       {/* Recent Activity Dialog */}
       <Dialog open={isRecentDialogOpen} onOpenChange={setIsRecentDialogOpen}>
-        <DialogContent className="sm:max-w-lg bg-slate-900 border-white/10 text-slate-200">
+        <DialogContent className="sm:max-w-lg bg-slate-900 border-white/10 text-slate-200" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-400">
               <ListChecks className="w-6 h-6" />
@@ -761,7 +761,7 @@ export default function ParentDashboard() {
           handleCategorySelect(null);
         }
       }}>
-        <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col bg-slate-900 border-white/10 text-slate-200 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col bg-slate-900 border-white/10 text-slate-200 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()} tabIndex={-1}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl text-blue-400">
               {selectedSubcategory ? (
