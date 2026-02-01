@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { RoadmapView } from '@/components/roadmap/RoadmapView';
 import { SkillTreeView } from '@/components/roadmap/SkillTreeView';
 import { arithmeticMapNodes, ArithmeticNode } from '@/data/arithmetic-map-data';
+import { algebraMapNodes } from '@/data/algebra-map-data';
+import { calculusMapNodes } from '@/data/calculus-map-data';
 import { useToast } from "@/hooks/use-toast";
 
 interface Category {
@@ -58,6 +60,11 @@ function QuizList() {
   const { categoryId } = useParams<{ categoryId: string }>();
   const [location, setLocation] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
+
+  // Determine which map nodes to use
+  const currentMapNodes = categoryId === '2' ? algebraMapNodes :
+    categoryId === '4' ? calculusMapNodes :
+      arithmeticMapNodes;
   const initialViewMode = searchParams.get('view') as 'roadmap' | 'grid' | null;
   const { toast } = useToast();
 
@@ -314,16 +321,21 @@ function QuizList() {
       ) : (
         <>
           {viewMode === 'roadmap' ? (
-            categoryId === '1' ? (
+            (categoryId === '1' || categoryId === '2' || categoryId === '4') ? (
               <SkillTreeView
-                nodes={arithmeticMapNodes}
+                nodes={currentMapNodes}
                 title={`Mapa de Habilidades: ${category?.name}`}
-                description="Un árbol de conocimiento diseñado para dominar la aritmética paso a paso."
+                description={(() => {
+                  if (categoryId === '1') return "Un árbol de conocimiento diseñado para dominar la aritmética paso a paso.";
+                  if (categoryId === '2') return "Explora el álgebra desde sus fundamentos hasta el dominio de funciones.";
+                  if (categoryId === '4') return "Domina el cálculo diferencial: límites, derivadas y sus aplicaciones.";
+                  return "";
+                })()}
                 progressMap={(() => {
                   const map: Record<string, 'locked' | 'available' | 'completed' | 'in_progress'> = {};
 
                   // Pass 1: Intrinsic Status
-                  arithmeticMapNodes.forEach(node => {
+                  currentMapNodes.forEach(node => {
                     const filteredQuizzes = getFilteredQuizzesForNode(node);
                     if (filteredQuizzes.length > 0) {
                       const pct = calculateNodeProgress(node);
@@ -337,7 +349,7 @@ function QuizList() {
 
                   // Pass 2: Unlock Logic (Top-Down Propagation)
                   // Sort by level to ensure parents processed first
-                  const sortedNodes = [...arithmeticMapNodes].sort((a, b) => a.level - b.level);
+                  const sortedNodes = [...currentMapNodes].sort((a, b) => a.level - b.level);
 
                   sortedNodes.forEach(node => {
                     if (map[node.id] === 'completed' || map[node.id] === 'in_progress') return;
@@ -361,11 +373,11 @@ function QuizList() {
 
                   // Pass 3: Container Aggregation (Bottom-Up Logic)
                   // If container, check children. If all children green -> parent green.
-                  arithmeticMapNodes.filter(n => n.behavior === 'container').forEach(container => {
+                  currentMapNodes.filter(n => n.behavior === 'container').forEach(container => {
                     // Note: We intentionally do NOT check if container is locked here. 
                     // If it has active children, it should UNLOCK and show Play.
 
-                    const children = arithmeticMapNodes.filter(n => n.requires.includes(container.id));
+                    const children = currentMapNodes.filter(n => n.requires.includes(container.id));
                     const hasContent = getFilteredQuizzesForNode(container).length > 0;
 
                     // Intrinsic Status
