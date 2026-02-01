@@ -116,6 +116,22 @@ function PublicActiveQuiz() {
           return ageGroup === 'child'
             ? data.filter((q: Question) => !q.content.includes('alcohol'))
             : data;
+
+        }
+
+        if (res.status === 401 && !PUBLIC_QUIZ_IDS.includes(numericQuizId)) {
+          try {
+            toast({
+              title: "Conexión inestable",
+              description: "Detectamos problemas con tu servicio de internet. Te redirigiremos al inicio...",
+              variant: "destructive",
+            });
+          } catch (e) { console.error(e); }
+
+          setTimeout(() => {
+            window.location.href = "/auth";
+          }, 4000);
+          return [];
         }
 
         if (!res.ok) throw new Error('Error fetching questions');
@@ -421,7 +437,18 @@ function PublicActiveQuiz() {
         description: `¡Aquí tienes una ayuda! (${hintsUsedCount + 1}/2 pistas usadas)`,
       });
       setIsHintDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.res?.status === 401 || (error.message && error.message.includes('401'))) {
+        toast({
+          title: "Conexión inestable",
+          description: "Detectamos problemas con tu servicio de internet. Te redirigiremos al inicio...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/auth";
+        }, 4000);
+        return;
+      }
       console.error(error);
       toast({
         title: 'Error',

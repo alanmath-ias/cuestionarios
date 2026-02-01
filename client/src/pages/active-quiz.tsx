@@ -299,7 +299,18 @@ const ActiveQuiz = () => {
       await submitAnswerMutation.mutateAsync(studentAnswer);
       setStudentAnswers([...studentAnswers, studentAnswer]);
       setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message?.includes("401")) {
+        toast({
+          title: "Conexión inestable",
+          description: "Detectamos problemas con tu sesión. Te redirigiremos al inicio...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/auth";
+        }, 3000);
+        return;
+      }
       toast({
         title: 'Error',
         description: 'No se pudo guardar tu respuesta.',
@@ -345,7 +356,18 @@ const ActiveQuiz = () => {
         }
         await handleFinishQuiz();
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message?.includes("401")) {
+        toast({
+          title: "Conexión inestable",
+          description: "Detectamos problemas con tu sesión. Te redirigiremos al inicio...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/auth";
+        }, 3000);
+        return;
+      }
       toast({
         title: 'Error',
         description: 'Ocurrió un error al avanzar',

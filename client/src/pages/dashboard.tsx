@@ -1552,62 +1552,7 @@ export default function UserDashboard() {
 
             {!selectedSubcategory && (
               <div className="space-y-4">
-                {/* Recommendation Alert inside Dialog */}
-                {(() => {
-                  const rec = localStorage.getItem('pendingRecommendations');
-                  if (rec) {
-                    try {
-                      const parsed = JSON.parse(rec);
-                      // Verify matches category
-                      if (parsed.categoryId === selectedCategoryForDetails?.id && parsed.diagnosis) {
-                        return (
-                          <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 border border-purple-500/30 rounded-xl p-4 mb-4 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-3 opacity-10">
-                              <Sparkles className="w-16 h-16 text-purple-400" />
-                            </div>
-                            <div className="relative z-10">
-                              <h4 className="flex items-center gap-2 text-purple-300 font-bold text-lg mb-2">
-                                <Sparkles className="w-5 h-5" /> Recomendación Personalizada
-                              </h4>
-                              <p className="text-slate-300 text-sm mb-3">
-                                Basado en tu diagnóstico, te sugerimos enfocar tu estudio en estos temas:
-                              </p>
 
-                              {Array.isArray(parsed.diagnosis) && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-                                  {parsed.diagnosis.map((item: any, idx: number) => (
-                                    item.status === 'danger' && (
-                                      <div key={idx} className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
-                                        <XCircle className="w-4 h-4 text-red-400" />
-                                        <span className="text-red-200 text-xs font-semibold">{item.topic}</span>
-                                      </div>
-                                    )
-                                  ))}
-                                </div>
-                              )}
-
-                              <div className="flex flex-col sm:flex-row gap-3 items-center mt-2">
-                                <p className="text-xs text-slate-400 italic flex-1">
-                                  ¿No sabes por dónde empezar? Pide ayuda a un profe.
-                                </p>
-                                <Button
-                                  size="sm"
-                                  className="bg-green-600 hover:bg-green-700 text-white border-0 shadow-lg shadow-green-900/20 w-full sm:w-auto"
-                                  onClick={() => window.open(`https://wa.me/573208056799?text=${encodeURIComponent('Hola, vi mis recomendaciones de estudio y quisiera ayuda para empezar con mi plan personalizado.')}`, '_blank')}
-                                >
-                                  <FaWhatsapp className="mr-2 h-4 w-4" /> Solicitar Guía
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                    } catch (e) {
-                      console.error("Error parsing recommendation", e);
-                    }
-                  }
-                  return null;
-                })()}
 
                 <div className="relative my-2">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -1719,6 +1664,63 @@ export default function UserDashboard() {
               ) : (
                 // VIEW: List of Subcategories
                 <div className="space-y-3 pb-4">
+                  {/* Recommendation Alert inside Dialog */}
+                  {(() => {
+                    const rec = localStorage.getItem('pendingRecommendations');
+                    if (rec) {
+                      try {
+                        const parsed = JSON.parse(rec);
+                        // Verify matches category
+                        if (parsed.categoryId === selectedCategoryForDetails?.id && parsed.diagnosis) {
+                          return (
+                            <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 border border-purple-500/30 rounded-xl p-4 mb-4 relative overflow-hidden">
+                              <div className="absolute top-0 right-0 p-3 opacity-10">
+                                <Sparkles className="w-16 h-16 text-purple-400" />
+                              </div>
+                              <div className="relative z-10">
+                                <h4 className="flex items-center gap-2 text-purple-300 font-bold text-lg mb-2">
+                                  <Sparkles className="w-5 h-5" /> Recomendación Personalizada
+                                </h4>
+                                <p className="text-slate-300 text-sm mb-3">
+                                  Basado en tu diagnóstico, te sugerimos enfocar tu estudio en estos temas:
+                                </p>
+
+                                {Array.isArray(parsed.diagnosis) && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                                    {parsed.diagnosis.map((item: any, idx: number) => (
+                                      item.status === 'danger' && (
+                                        <div key={idx} className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
+                                          <XCircle className="w-4 h-4 text-red-400" />
+                                          <span className="text-red-200 text-xs font-semibold">{item.topic}</span>
+                                        </div>
+                                      )
+                                    ))}
+                                  </div>
+                                )}
+
+                                <div className="flex flex-col sm:flex-row gap-3 items-center mt-2">
+                                  <p className="text-xs text-slate-400 italic flex-1">
+                                    ¿No sabes por dónde empezar? Pide ayuda a un profe.
+                                  </p>
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white border-0 shadow-lg shadow-green-900/20 w-full sm:w-auto"
+                                    onClick={() => window.open(`https://wa.me/573208056799?text=${encodeURIComponent('Hola, vi mis recomendaciones de estudio y quisiera ayuda para empezar con mi plan personalizado.')}`, '_blank')}
+                                  >
+                                    <FaWhatsapp className="mr-2 h-4 w-4" /> Solicitar Guía
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                      } catch (e) {
+                        console.error("Error parsing recommendation", e);
+                      }
+                    }
+                    return null;
+                  })()}
+
                   {(() => {
                     const filteredSubs = categorySubcategories?.filter(sub => {
                       const matchesSub = sub.name.toLowerCase().includes(categorySearchQuery.toLowerCase());
