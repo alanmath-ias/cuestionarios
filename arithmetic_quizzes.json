@@ -1,0 +1,302 @@
+[
+  {
+    "id": 1,
+    "title": "Problemas con números enteros",
+    "subcategoryId": 1,
+    "subcategoryName": "Operaciones con Enteros"
+  },
+  {
+    "id": 6,
+    "title": "Divisiones entre dos cifras",
+    "subcategoryId": 1,
+    "subcategoryName": "Operaciones con Enteros"
+  },
+  {
+    "id": 5,
+    "title": "División entre una cifra",
+    "subcategoryId": 1,
+    "subcategoryName": "Operaciones con Enteros"
+  },
+  {
+    "id": 2,
+    "title": "Problemas con Números Decimales",
+    "subcategoryId": 2,
+    "subcategoryName": "Operaciones con Decimales"
+  },
+  {
+    "id": 44,
+    "title": "Productos de Fracciones",
+    "subcategoryId": 3,
+    "subcategoryName": "Operaciones con fracciones"
+  },
+  {
+    "id": 24,
+    "title": "Suma y Resta de Fracciones Heterogéneas",
+    "subcategoryId": 3,
+    "subcategoryName": "Operaciones con fracciones"
+  },
+  {
+    "id": 7,
+    "title": "Problemas con fracciones",
+    "subcategoryId": 3,
+    "subcategoryName": "Operaciones con fracciones"
+  },
+  {
+    "id": 8,
+    "title": "Fracciones Equivalentes",
+    "subcategoryId": 3,
+    "subcategoryName": "Operaciones con fracciones"
+  },
+  {
+    "id": 3,
+    "title": "Descomposición Factorial",
+    "subcategoryId": 4,
+    "subcategoryName": "Descomposición Factorial"
+  },
+  {
+    "id": 4,
+    "title": "Problemas de aplicación mínimo común múltiplo",
+    "subcategoryId": 4,
+    "subcategoryName": "Descomposición Factorial"
+  },
+  {
+    "id": 17,
+    "title": "Uso de Paréntesis en Operaciones +, -, *, / de números enteros",
+    "subcategoryId": 5,
+    "subcategoryName": "Paréntesis en Matemáticas"
+  },
+  {
+    "id": 14,
+    "title": "Paréntesis en Matemáticas",
+    "subcategoryId": 5,
+    "subcategoryName": "Paréntesis en Matemáticas"
+  },
+  {
+    "id": 15,
+    "title": "Paréntesis en Matemáticas, Productos y Divisiones",
+    "subcategoryId": 5,
+    "subcategoryName": "Paréntesis en Matemáticas"
+  },
+  {
+    "id": 9,
+    "title": "Simplificación de Radicales Básico (Raíces Cuadradas)",
+    "subcategoryId": 7,
+    "subcategoryName": "Radicales"
+  },
+  {
+    "id": 12,
+    "title": "Racionalización Básico",
+    "subcategoryId": 7,
+    "subcategoryName": "Radicales"
+  },
+  {
+    "id": 11,
+    "title": "Simplificación sumas y restas de radicales",
+    "subcategoryId": 7,
+    "subcategoryName": "Radicales"
+  },
+  {
+    "id": 10,
+    "title": "Unión y transformación de raíces",
+    "subcategoryId": 7,
+    "subcategoryName": "Radicales"
+  },
+  {
+    "id": 13,
+    "title": "Racionalización Conjugado",
+    "subcategoryId": 7,
+    "subcategoryName": "Radicales"
+  },
+  {
+    "id": 43,
+    "title": "Potencias de Potencias, productos y fracciones",
+    "subcategoryId": 8,
+    "subcategoryName": "Potenciación"
+  },
+  {
+    "id": 16,
+    "title": "Potencias",
+    "subcategoryId": 8,
+    "subcategoryName": "Potenciación"
+  },
+  {
+    "id": 25,
+    "title": "Transformaciones Rígidas en el Plano Cartesiano",
+    "subcategoryId": 11,
+    "subcategoryName": "Plano Cartesiano - Transformaciones Rígidas"
+  },
+  {
+    "id": 45,
+    "title": "Simplificación de fracciones algebraicas polinómicas en numerador y/o denominador",
+    "subcategoryId": 13,
+    "subcategoryName": "Fracciones Algebraicas"
+  },
+  {
+    "id": 46,
+    "title": "Sumas y Restas de Fracciones Algebraicas (denominadores monomios)",
+    "subcategoryId": 13,
+    "subcategoryName": "Fracciones Algebraicas"
+  },
+  {
+    "id": 48,
+    "title": "Producto de Fracciones Algebraicas",
+    "subcategoryId": 13,
+    "subcategoryName": "Fracciones Algebraicas"
+  },
+  {
+    "id": 47,
+    "title": "Sumas y Restas de Fracciones Algebraicas (denominadores polinomios)",
+    "subcategoryId": 13,
+    "subcategoryName": "Fracciones Algebraicas"
+  },
+  {
+    "id": 49,
+    "title": "Simplificacion de fracciones algebraicas complejas",
+    "subcategoryId": 13,
+    "subcategoryName": "Fracciones Algebraicas"
+  },
+  {
+    "id": 50,
+    "title": "Ecuaciones lineales de una sola variable",
+    "subcategoryId": 14,
+    "subcategoryName": "Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 51,
+    "title": "Solución de Ecuaciones Lineales de una Variable, eliminación previa de paréntesis",
+    "subcategoryId": 14,
+    "subcategoryName": "Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 52,
+    "title": "Solución de Ecuaciones Lineales de una Variable con Paréntesis que indican PRODUCTO",
+    "subcategoryId": 14,
+    "subcategoryName": "Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 54,
+    "title": "Problemas que se resuelven usando ecuaciones lineales de una sola variable (quiz 2)",
+    "subcategoryId": 15,
+    "subcategoryName": "Problemas sobre Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 56,
+    "title": "Problemas que se resuelven usando ecuaciones lineales de una sola variable (quiz 4)",
+    "subcategoryId": 15,
+    "subcategoryName": "Problemas sobre Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 57,
+    "title": "Problemas que se resuelven usando ecuaciones lineales de una sola variable (quiz 5)",
+    "subcategoryId": 15,
+    "subcategoryName": "Problemas sobre Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 59,
+    "title": "Problemas que se resuelven usando ecuaciones lineales de una sola variable (MISCELÁNEA1)",
+    "subcategoryId": 15,
+    "subcategoryName": "Problemas sobre Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 60,
+    "title": "Problemas que se resuelven usando ecuaciones lineales de una sola variable (MISCELÁNEA2)",
+    "subcategoryId": 15,
+    "subcategoryName": "Problemas sobre Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 58,
+    "title": "Problemas que se resuelven usando ecuaciones lineales de una sola variable (quiz 6)",
+    "subcategoryId": 15,
+    "subcategoryName": "Problemas sobre Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 61,
+    "title": "Problemas que se resuelven usando ecuaciones lineales de una sola variable que pueden incluir FRACCIONES (MISCELÁNEA1)",
+    "subcategoryId": 15,
+    "subcategoryName": "Problemas sobre Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 53,
+    "title": "Problemas que se resuelven usando ecuaciones lineales de una sola variable",
+    "subcategoryId": 15,
+    "subcategoryName": "Problemas sobre Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 64,
+    "title": "Problemas de MÓVILES que se resuelven usando ecuaciones lineales",
+    "subcategoryId": 15,
+    "subcategoryName": "Problemas sobre Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 62,
+    "title": "Problemas que se resuelven usando ecuaciones lineales de una sola variable que pueden incluir FRACCIONES (MISCELÁNEA2)",
+    "subcategoryId": 15,
+    "subcategoryName": "Problemas sobre Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 63,
+    "title": "Problemas que se resuelven usando ecuaciones lineales de una sola variable que pueden incluir FRACCIONES (MISCELÁNEA3)",
+    "subcategoryId": 15,
+    "subcategoryName": "Problemas sobre Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 55,
+    "title": "Problemas que se resuelven usando ecuaciones lineales de una sola variable (quiz 3)",
+    "subcategoryId": 15,
+    "subcategoryName": "Problemas sobre Ecuaciones Lineales de una sola variable"
+  },
+  {
+    "id": 66,
+    "title": "Halla la solución del ejercicio usando la fórmula indicada",
+    "subcategoryId": 16,
+    "subcategoryName": "FÓRMULAS"
+  },
+  {
+    "id": 65,
+    "title": "Hallar la FÓRMULA a partir de la descripción matemática del problema",
+    "subcategoryId": 16,
+    "subcategoryName": "FÓRMULAS"
+  },
+  {
+    "id": 67,
+    "title": "Despejar una variable de una fórmula",
+    "subcategoryId": 16,
+    "subcategoryName": "FÓRMULAS"
+  },
+  {
+    "id": 69,
+    "title": "Test Lenguaje Adolescentes",
+    "subcategoryId": 17,
+    "subcategoryName": "TEST LENGUAJE"
+  },
+  {
+    "id": 68,
+    "title": "Test Lenguaje Menores de 12",
+    "subcategoryId": 17,
+    "subcategoryName": "TEST LENGUAJE"
+  },
+  {
+    "id": 71,
+    "title": "Test Lógica Matemática Adolescentes",
+    "subcategoryId": 18,
+    "subcategoryName": "TEST LÓGICA MATEMÁTICA"
+  },
+  {
+    "id": 70,
+    "title": "Test Lógica Matemática",
+    "subcategoryId": 18,
+    "subcategoryName": "TEST LÓGICA MATEMÁTICA"
+  },
+  {
+    "id": 72,
+    "title": "Test Lógica Matemática Adolescentes 2",
+    "subcategoryId": 18,
+    "subcategoryName": "TEST LÓGICA MATEMÁTICA"
+  },
+  {
+    "id": 73,
+    "title": "Test Lógica Matemática Niños 2",
+    "subcategoryId": 18,
+    "subcategoryName": "TEST LÓGICA MATEMÁTICA"
+  }
+]

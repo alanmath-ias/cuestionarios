@@ -13,6 +13,9 @@ import VideoEmbed from './VideoEmbed';
 import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { RoadmapView } from '@/components/roadmap/RoadmapView';
+import { SkillTreeView } from '@/components/roadmap/SkillTreeView';
+import { arithmeticMapNodes, ArithmeticNode } from '@/data/arithmetic-map-data';
+import { useToast } from "@/hooks/use-toast";
 
 interface Category {
   id: number;
@@ -56,11 +59,13 @@ function QuizList() {
   const [location, setLocation] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
   const initialViewMode = searchParams.get('view') as 'roadmap' | 'grid' | null;
+  const { toast } = useToast();
 
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [miniQuizId, setMiniQuizId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'roadmap' | 'grid'>(initialViewMode || 'roadmap');
   const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
+  const [selectedNode, setSelectedNode] = useState<ArithmeticNode | null>(null);
   const [quizSearchQuery, setQuizSearchQuery] = useState("");
   const videoSectionRef = useRef<HTMLDivElement>(null);
 
@@ -150,6 +155,44 @@ function QuizList() {
   const getQuizProgress = (quizId: number) => {
     if (!progress) return null;
     return progress.find(p => p.quizId === quizId);
+  };
+
+  const calculateNodeProgress = (node: ArithmeticNode) => {
+    if (!node.subcategoryId) return 0;
+
+    // Get all quizzes in the subcategory
+    let contextQuizzes = quizzes?.filter(q => q.subcategoryId === node.subcategoryId) || [];
+
+    // Filter by keywords if they exist on the node
+    if (node.filterKeywords && node.filterKeywords.length > 0) {
+      const keywords = node.filterKeywords.map(k => k.toLowerCase());
+      contextQuizzes = contextQuizzes.filter(q =>
+        keywords.some(k => q.title.toLowerCase().includes(k))
+      );
+    }
+
+    if (contextQuizzes.length === 0) return 0; // If no quizzes match filter, technically 0% complete or maybe 100? Let's say 0 but 'available' status handles visual.
+
+    const completed = progress?.filter(p =>
+      contextQuizzes.some(q => q.id === p.quizId) && p.status === 'completed'
+    ).length || 0;
+
+    return (completed / contextQuizzes.length) * 100;
+    return (completed / contextQuizzes.length) * 100;
+  };
+
+  const getFilteredQuizzesForNode = (node: ArithmeticNode) => {
+    let contextQuizzes = quizzes?.filter(q => q.subcategoryId === node.subcategoryId) || [];
+    if (node.filterKeywords && node.filterKeywords.length > 0) {
+      const keywords = node.filterKeywords.map(k => k.toLowerCase());
+      contextQuizzes = contextQuizzes.filter(q =>
+        keywords.some(k => q.title.toLowerCase().includes(k))
+      );
+    }
+    // Also include subcategory-less nodes if we ever map them differently? 
+    // For now, map data relies on subcategoryId. If missing, it's empty.
+    if (!node.subcategoryId) return [];
+    return contextQuizzes;
   };
 
   const calculateSubcategoryProgress = (subcategoryId: number) => {
@@ -271,11 +314,111 @@ function QuizList() {
       ) : (
         <>
           {viewMode === 'roadmap' ? (
-            <RoadmapView
-              nodes={roadmapNodes}
-              title={`Camino al Éxito: ${category?.name}`}
-              description="Cada paso que das te acerca más a dominar la materia. ¡Sigue avanzando, completa los desafíos y construye tu conocimiento paso a paso!"
-            />
+            categoryId === '1' ? (
+              <SkillTreeView
+                nodes={arithmeticMapNodes}
+                title={`Mapa de Habilidades: ${category?.name}`}
+                description="Un árbol de conocimiento diseñado para dominar la aritmética paso a paso."
+                progressMap={(() => {
+                  const map: Record<string, 'locked' | 'available' | 'completed' | 'in_progress'> = {};
+
+                  // Pass 1: Intrinsic Status
+                  arithmeticMapNodes.forEach(node => {
+                    const filteredQuizzes = getFilteredQuizzesForNode(node);
+                    if (filteredQuizzes.length > 0) {
+                      const pct = calculateNodeProgress(node);
+                      if (pct === 100) map[node.id] = 'completed';
+                      else if (pct > 0) map[node.id] = 'in_progress';
+                      else map[node.id] = 'locked'; // Content exists but 0% progress
+                    } else if (node.behavior !== 'container') {
+                      map[node.id] = 'locked'; // Empty content -> locked
+                    }
+                  });
+
+                  // Pass 2: Unlock Logic (Top-Down Propagation)
+                  // Sort by level to ensure parents processed first
+                  const sortedNodes = [...arithmeticMapNodes].sort((a, b) => a.level - b.level);
+
+                  sortedNodes.forEach(node => {
+                    if (map[node.id] === 'completed' || map[node.id] === 'in_progress') return;
+
+                    const reqsMet = node.requires.length === 0 || node.requires.every(reqId => {
+                      const s = map[reqId];
+                      return s && s !== 'locked'; // Parent is active/available
+                    });
+
+                    if (reqsMet) {
+                      const hasContent = getFilteredQuizzesForNode(node).length > 0;
+                      if (node.behavior === 'container') {
+                        map[node.id] = 'available'; // Containers default to available if unlocked
+                      } else {
+                        map[node.id] = hasContent ? 'available' : 'locked';
+                      }
+                    } else {
+                      map[node.id] = 'locked';
+                    }
+                  });
+
+                  // Pass 3: Container Aggregation (Bottom-Up Logic)
+                  // If container, check children. If all children green -> parent green.
+                  arithmeticMapNodes.filter(n => n.behavior === 'container').forEach(container => {
+                    // Note: We intentionally do NOT check if container is locked here. 
+                    // If it has active children, it should UNLOCK and show Play.
+
+                    const children = arithmeticMapNodes.filter(n => n.requires.includes(container.id));
+                    const hasContent = getFilteredQuizzesForNode(container).length > 0;
+
+                    // Intrinsic Status
+                    const intrinsicDone = hasContent ? map[container.id] === 'completed' : true;
+
+                    if (children.length === 0) {
+                      if (!hasContent) map[container.id] = 'locked'; // Empty container
+                      return;
+                    }
+
+                    const allChildrenCompleted = children.every(c => map[c.id] === 'completed');
+                    const anyChildActive = children.some(c => map[c.id] !== 'locked');
+
+                    if (allChildrenCompleted && intrinsicDone) {
+                      map[container.id] = 'completed';
+                    } else if (anyChildActive || (hasContent && map[container.id] !== 'locked')) {
+                      map[container.id] = 'available'; // Play icon
+                    } else {
+                      map[container.id] = 'locked';
+                    }
+                  });
+
+                  return map;
+                })()}
+                onNodeClick={(node) => {
+                  if (node.subcategoryId) {
+                    // Find the actual subcategory object
+                    const sub = quizzesBySubcategory.find(s => s.id === node.subcategoryId);
+                    if (sub) {
+                      setSelectedSubcategory(sub);
+                      setSelectedNode(node);
+                    } else {
+                      toast({
+                        title: "Sección no disponible",
+                        description: "Esta sección aún no tiene contenido vinculado.",
+                        variant: "destructive"
+                      });
+                    }
+                  } else {
+                    toast({
+                      title: "Próximamente",
+                      description: "Estamos trabajando en el contenido para este módulo.",
+                    });
+                  }
+                }}
+              />
+            ) : (
+              <RoadmapView
+                nodes={roadmapNodes}
+                title={`Camino al Éxito: ${category?.name}`}
+                description="Cada paso que das te acerca más a dominar la materia. ¡Sigue avanzando, completa los desafíos y construye tu conocimiento paso a paso!"
+              />
+            )
           ) : (
             <div className="space-y-10">
               {quizzesBySubcategory.length > 0 && (
@@ -428,8 +571,13 @@ function QuizList() {
         </>
       )}
 
-      {/* Subcategory Details Dialog */}
-      <Dialog open={!!selectedSubcategory} onOpenChange={(open) => !open && setSelectedSubcategory(null)}>
+      {/* Subcategory/Node Details Dialog */}
+      <Dialog open={!!selectedSubcategory} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedSubcategory(null);
+          setSelectedNode(null);
+        }
+      }}>
         <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
             <div className="flex items-center gap-3 mb-2">
@@ -437,11 +585,11 @@ function QuizList() {
                 <ListChecks className="h-6 w-6 text-blue-400" />
               </div>
               <DialogTitle className="text-xl font-bold text-white">
-                {selectedSubcategory?.name}
+                {selectedNode ? selectedNode.label : selectedSubcategory?.name}
               </DialogTitle>
             </div>
             <DialogDescription className="text-slate-400">
-              {selectedSubcategory?.description}
+              {selectedNode ? selectedNode.description : selectedSubcategory?.description}
             </DialogDescription>
           </DialogHeader>
 
@@ -459,9 +607,20 @@ function QuizList() {
                 </div>
 
                 {(() => {
-                  const quizzesForSub = selectedSubcategory.quizzes?.filter((q: Quiz) =>
+                  let quizzesForSub = selectedSubcategory.quizzes || [];
+
+                  // Apply Node-based Keyword Filtering if available
+                  if (selectedNode && selectedNode.filterKeywords && selectedNode.filterKeywords.length > 0) {
+                    const keywords = selectedNode.filterKeywords.map((k: string) => k.toLowerCase());
+                    quizzesForSub = quizzesForSub.filter((q: Quiz) =>
+                      keywords.some((k: string) => q.title.toLowerCase().includes(k))
+                    );
+                  }
+
+                  // Apply standard search filter
+                  quizzesForSub = quizzesForSub.filter((q: Quiz) =>
                     q.title.toLowerCase().includes(quizSearchQuery.toLowerCase())
-                  ) || [];
+                  );
 
                   if (quizzesForSub.length === 0) {
                     return (
