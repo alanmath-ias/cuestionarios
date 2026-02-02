@@ -97,11 +97,18 @@ export interface Subcategory {
 
 
 export interface RoadmapNode {
-  id: number;
+  id: string | number;
   title: string;
   description: string;
   status: 'locked' | 'available' | 'completed';
-  type: 'subcategory' | 'quiz';
+  type: 'subcategory' | 'quiz'; // This 'type' field is existing. I should rename the new one or reuse?
+  // User's map data has 'type' as difficulty/category ('basic' | 'critical').
+  // RoadmapNode has 'type' as 'subcategory' | 'quiz'.
+  // I will add mapType and mapBehavior to avoid conflict, or check usage.
+  // The existing 'type' in RoadmapNode seems unused in logic? 
+  // Let's add specific props for the visual style.
+  nodeType?: 'basic' | 'critical' | 'evaluation' | 'applied';
+  behavior?: 'container' | 'quiz_list';
   progress?: number;
   onClick: () => void;
 }

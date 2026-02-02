@@ -64,6 +64,10 @@ import { getRandomQuote } from "@/lib/motivational-quotes";
 import { HorizontalRoadmap } from "@/components/roadmap/HorizontalRoadmap";
 import { RoadmapNode } from "@/types/types";
 import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
+import { arithmeticMapNodes, ArithmeticNode } from "@/data/arithmetic-map-data";
+import { algebraMapNodes } from "@/data/algebra-map-data";
+import { calculusMapNodes } from "@/data/calculus-map-data";
+
 
 interface QuizWithFeedback extends UserQuiz {
   progressId?: string;
@@ -371,6 +375,16 @@ export default function UserDashboard() {
   const [expandedRoadmapCategoryId, setExpandedRoadmapCategoryId] = useState<number | null>(null);
   const activeCategoryId = expandedRoadmapCategoryId;
 
+  // Helper to get map nodes based on category
+  const getMapNodes = (catId: number | null) => {
+    switch (catId) {
+      case 1: return arithmeticMapNodes;
+      case 2: return algebraMapNodes;
+      case 4: return calculusMapNodes;
+      default: return [];
+    }
+  };
+
   const { data: activeCategorySubcategories } = useQuery<any[]>({
     queryKey: ["category-subcategories-roadmap", activeCategoryId],
     queryFn: async () => {
@@ -390,57 +404,119 @@ export default function UserDashboard() {
   });
 
   // Calculate Roadmap Nodes
-  const roadmapNodes: RoadmapNode[] = (activeCategorySubcategories || []).map((sub, index) => {
-    const subQuizzes = activeCategoryQuizzes?.filter(q => q.subcategoryId === sub.id) || [];
+  // Calculate Roadmap Nodes based on MAP DATA (Visual Order)
+  const roadmapNodes: RoadmapNode[] = ((activeCategoryId ? getMapNodes(activeCategoryId) : []) as ArithmeticNode[]).map((node) => {
+    // 1. Find Quizzes for this Node
+    const categoryQuizzes = activeCategoryQuizzes || [];
+    let nodeQuizzes = categoryQuizzes.filter(q => q.subcategoryId == node.subcategoryId) || [];
 
-    // Calculate progress
-    let progressPercent = 0;
-    if (subQuizzes.length > 0 && quizzes) {
-      const completedCount = subQuizzes.filter(q =>
-        quizzes.some(uq => uq.id === q.id && uq.status === 'completed')
-      ).length;
-      progressPercent = (completedCount / subQuizzes.length) * 100;
+    // Filter by keywords if defined or if no subcategory mapping
+    if (node.filterKeywords && node.filterKeywords.length > 0) {
+      const keywords = node.filterKeywords.map(k => k.toLowerCase());
+      nodeQuizzes = nodeQuizzes.filter(q => {
+        const titleLower = q.title.toLowerCase();
+        // If subcategory matched, we keep it. If NOT, we rely on keywords? 
+        // Logic: specific node might refine subcategory quizzes.
+        // If subcategoryId is set, we start with those. Then we might FILTER further?
+        // Or if subcategoryId NOT set, we search all? 
+        // Admin logic: `categoryQuizzes.filter...` then keyword filter.
+        // If node has subcategoryId, we usually scope to that.
+
+        // Let's replicate strict Admin Logic to be safe:
+        if (node.subcategoryId) {
+          // Already filtered by subcategoryId above.
+          // Just apply inclusion/exclusion.
+          if (!keywords.some(k => titleLower.includes(k))) return false;
+        } else {
+          // If no subcategory, we search ALL category quizzes? 
+          // Admin view does: `const nodeQuizzes = categoryQuizzes.filter...` 
+          // Admin view logic is:
+          /*
+             let nodeQuizzes = categoryQuizzes.filter(q => q.subcategoryId == selectedNode.subcategoryId) || [];
+             if (selectedNode.filterKeywords...) { ... }
+          */
+          // So it requires subcategory match FIRST.
+          // But some nodes in Map Data don't have subcategoryId? (e.g. n0-0-sentido has 1).
+          // Let's assume most have it.
+          if (!keywords.some(k => titleLower.includes(k))) return false;
+        }
+
+        if (node.excludeKeywords && node.excludeKeywords.length > 0) {
+          const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
+          if (excludeKeys.some(k => titleLower.includes(k))) return false;
+        }
+        return true;
+      });
     }
 
-    // Determine status
-    let status: 'locked' | 'available' | 'completed' = 'locked';
-    if (progressPercent >= 100) {
-      status = 'completed';
-    } else {
-      // Check previous node
-      const prevSub = activeCategorySubcategories![index - 1];
-      if (!prevSub) {
-        status = 'available'; // First node is always available
-      } else {
-        // Calculate prev progress
-        const prevQuizzes = activeCategoryQuizzes?.filter(q => q.subcategoryId === prevSub.id) || [];
-        const prevCompletedCount = prevQuizzes.filter(q =>
-          quizzes?.some(uq => uq.id === q.id && uq.status === 'completed')
-        ).length;
-        const prevProgress = prevQuizzes.length > 0 ? (prevCompletedCount / prevQuizzes.length) * 100 : 100;
+    // 2. Calculate Progress for this Node
+    let progressPercent = 0;
+    if (nodeQuizzes.length > 0 && quizzes) {
+      const completedCount = nodeQuizzes.filter(q =>
+        quizzes.some(uq => uq.id === q.id && uq.status === 'completed')
+      ).length;
+      progressPercent = (completedCount / nodeQuizzes.length) * 100;
+    }
 
-        if (prevProgress >= 100) {
-          status = 'available';
+    // 3. Determine Status (Locked / Available / Completed)
+    let status: 'locked' | 'available' | 'completed' = 'locked';
+
+    // Rule 1: Empty Content -> Always Locked (Gray)
+    if (nodeQuizzes.length === 0) {
+      status = 'locked';
+    }
+    // Rule 2: 100% Progress -> Completed
+    else if (progressPercent >= 100) {
+      status = 'completed';
+    }
+    // Rule 3: Check Prerequisites
+    else {
+      const prereqsMet = node.requires.length === 0 || node.requires.every(reqId => {
+        const reqNode = getMapNodes(activeCategoryId).find(n => n.id === reqId) as ArithmeticNode;
+        if (!reqNode) return true;
+
+        let reqQuizzes = categoryQuizzes.filter(q => q.subcategoryId == reqNode.subcategoryId);
+        if (reqNode.filterKeywords && reqNode.filterKeywords.length > 0) {
+          const kws = reqNode.filterKeywords.map(k => k.toLowerCase());
+          reqQuizzes = reqQuizzes.filter(q => {
+            const t = q.title.toLowerCase();
+            return kws.some(k => t.includes(k));
+          });
         }
+
+        if (reqQuizzes.length === 0) return false; // Prereq empty -> blocked
+
+        const reqDoneCount = reqQuizzes.filter(q => quizzes?.some(uq => uq.id === q.id && uq.status === 'completed')).length;
+        return reqDoneCount === reqQuizzes.length && reqQuizzes.length > 0;
+      });
+
+      if (prereqsMet) {
+        status = 'available';
       }
     }
 
-    // If started but not finished, it's available (and overrides locked if logic above failed)
-    if (progressPercent > 0 && progressPercent < 100) {
+    // Rule 4: In Progress Override
+    if (nodeQuizzes.length > 0 && progressPercent > 0 && progressPercent < 100) {
       status = 'available';
     }
 
     return {
-      id: sub.id,
-      title: sub.name,
-      description: sub.description,
+      id: node.id,
+      title: node.label,
+      description: node.description || '',
       status,
       type: 'subcategory',
+      nodeType: node.type,
+      behavior: node.behavior,
       progress: progressPercent,
       onClick: () => {
-        const category = categories?.find(c => c.id === activeCategoryId);
-        if (category) {
-          handleCategorySelect(category, sub);
+        if (node.subcategoryId && activeCategorySubcategories) {
+          const sub = activeCategorySubcategories.find(s => s.id === node.subcategoryId);
+          if (sub) {
+            handleSubcategorySelect(sub);
+            const element = document.getElementById('tour-quiz-list');
+            if (element) element.scrollIntoView({ behavior: 'smooth' });
+          }
         }
       }
     };
