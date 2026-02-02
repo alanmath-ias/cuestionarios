@@ -31,7 +31,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Search } from "lucide-react";
+import { Search, Map as MapIcon, CheckCircle2, AlertTriangle, Ban } from "lucide-react";
+import { SkillTreeView } from "@/components/roadmap/SkillTreeView";
+import { arithmeticMapNodes, ArithmeticNode } from "@/data/arithmetic-map-data";
+import { algebraMapNodes } from "@/data/algebra-map-data";
+import { calculusMapNodes } from "@/data/calculus-map-data";
 
 const difficultyOptions = [
   { value: "básico", label: "Básico" },
@@ -63,6 +67,19 @@ export default function QuizzesAdmin() {
 
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [activeMapCategory, setActiveMapCategory] = useState<number | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
+  const [selectedNode, setSelectedNode] = useState<ArithmeticNode | null>(null);
+
+
+  const getMapData = (catId: number) => {
+    switch (catId) {
+      case 1: return { nodes: arithmeticMapNodes, title: "Mapa de Aritmética" };
+      case 2: return { nodes: algebraMapNodes, title: "Mapa de Álgebra" };
+      case 4: return { nodes: calculusMapNodes, title: "Mapa de Cálculo" };
+      default: return null;
+    }
+  };
 
   // Queries
   const { data: categories, isLoading: loadingCategories } = useQuery<Category[]>({
@@ -732,12 +749,29 @@ export default function QuizzesAdmin() {
                     {/* 1. Categorías con subcategorías */}
                     {filteredHierarchicalData.map((category: any) => (
                       <AccordionItem key={category.id} value={`cat-${category.id}`} className="border border-white/10 rounded-md bg-slate-800/30 overflow-hidden">
-                        <AccordionTrigger className="hover:no-underline px-4 py-3 bg-slate-800/50 hover:bg-slate-800 text-slate-200">
-                          <div className="flex-1 text-left">
-                            <h3 className="text-lg font-medium">{category.name}</h3>
-                            <p className="text-sm text-slate-400">
-                              {category.subcategories.reduce((acc: number, sub: any) => acc + sub.quizzes.length, 0)} cuestionario(s)
-                            </p>
+                        <AccordionTrigger className="hover:no-underline px-4 py-3 bg-slate-800/50 hover:bg-slate-800 text-slate-200 group">
+                          <div className="flex-1 text-left flex items-center justify-between mr-4">
+                            <div>
+                              <h3 className="text-lg font-medium">{category.name}</h3>
+                              <p className="text-sm text-slate-400">
+                                {category.subcategories.reduce((acc: number, sub: any) => acc + sub.quizzes.length, 0)} cuestionario(s)
+                              </p>
+                            </div>
+
+                            {/* Map Button - Only for mapped categories */}
+                            {(category.id === 1 || category.id === 2 || category.id === 4) && (
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMapCategory(category.id);
+                                }}
+                                className="opacity-100 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all hover:scale-105"
+                              >
+                                <MapIcon className="h-4 w-4 mr-2" />
+                                Ver Mapa
+                              </Button>
+                            )}
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="px-4 pb-0 pt-2 bg-slate-900/50 border-t border-white/5">
@@ -1112,6 +1146,177 @@ export default function QuizzesAdmin() {
           </div>
         </div>
       </div>
+      {/* Map Viewer Dialog */}
+      <Dialog open={!!activeMapCategory} onOpenChange={(open) => !open && setActiveMapCategory(null)}>
+        <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0 bg-slate-950 border-slate-800 overflow-hidden">
+          <DialogHeader className="p-6 pb-2 shrink-0 bg-slate-900/50 border-b border-white/5">
+            <DialogTitle className="flex items-center gap-2">
+              <MapIcon className="h-5 w-5 text-blue-400" />
+              {activeMapCategory ? getMapData(activeMapCategory)?.title : "Mapa de Habilidades"}
+            </DialogTitle>
+            <DialogDescription>
+              Visualización del árbol de habilidades y cobertura de contenido.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto bg-slate-950 relative">
+            {activeMapCategory && getMapData(activeMapCategory) && (
+              <SkillTreeView
+                nodes={getMapData(activeMapCategory)!.nodes}
+                title=""
+                description=""
+                progressMap={(() => {
+                  const nodes = getMapData(activeMapCategory)!.nodes;
+                  const map: Record<string, 'locked' | 'available' | 'completed' | 'in_progress'> = {};
+
+                  // Filter quizzes for this category
+                  const categoryQuizzes = quizzes?.filter(q => q.categoryId === activeMapCategory) || [];
+
+                  // Helper to get quizzes for a node
+                  const getFilteredQuizzesForNode = (node: ArithmeticNode) => {
+                    let contextQuizzes = categoryQuizzes.filter(q => q.subcategoryId == node.subcategoryId) || [];
+
+                    if (node.filterKeywords && node.filterKeywords.length > 0) {
+                      const keywords = node.filterKeywords.map(k => k.toLowerCase());
+                      contextQuizzes = contextQuizzes.filter(q => {
+                        const titleLower = q.title.toLowerCase();
+                        if (!keywords.some(k => titleLower.includes(k))) return false;
+                        if (node.excludeKeywords && node.excludeKeywords.length > 0) {
+                          const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
+                          if (excludeKeys.some(k => titleLower.includes(k))) return false;
+                        }
+                        return true;
+                      });
+                    }
+                    return contextQuizzes;
+                  };
+
+                  // Pass 1: Intrinsic Status (Content vs Empty)
+                  nodes.forEach(node => {
+                    const hasContent = getFilteredQuizzesForNode(node).length > 0;
+                    if (node.behavior === 'container') {
+                      // Containers will be calculated in Pass 2
+                      map[node.id] = 'locked';
+                    } else {
+                      map[node.id] = hasContent ? 'available' : 'locked';
+                    }
+                  });
+
+                  // Pass 2: Container Aggregation (Simple: If any child has content, Container is available)
+                  nodes.filter(n => n.behavior === 'container').forEach(container => {
+                    const children = nodes.filter(n => n.requires.includes(container.id));
+                    const anyChildActive = children.some(c => map[c.id] === 'available');
+                    const hasContent = getFilteredQuizzesForNode(container).length > 0; // Containers can also have direct content sometimes
+
+                    if (anyChildActive || hasContent) {
+                      map[container.id] = 'available';
+                    } else {
+                      map[container.id] = 'locked';
+                    }
+                  });
+
+                  return map;
+                })()}
+                // Filter ALL quizzes to pass only this category's quizzes to the map
+                allQuizzes={quizzes?.filter(q => q.categoryId === activeMapCategory) || []}
+                onNodeClick={(node) => {
+                  // Find Subcategory logic
+                  // We need to find the name of the subcategory for the dialog
+                  // But we don't have the subcategories list mapped easily here by ID from the node.
+                  // We can fetch or deduce it. Since we are admin, we have `allQuizzes`.
+                  // We can just set the node and open the dialog.
+                  setSelectedNode(node);
+
+                  // Try to find a quiz that matches to get the subcategory info?
+                  // Or just use the node label as title.
+                  // User just wants to see the quizzes.
+                  // We will use a Dialog for the selected Node.
+                }}
+                isAdmin={true} // Keep true for solid lines
+              />
+            )}
+          </div>
+
+          {/* Node Details Dialog (Student-like View for Admin) */}
+          <Dialog open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
+            <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
+              <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <BookOpen className="h-6 w-6 text-blue-400" />
+                  </div>
+                  <DialogTitle className="text-xl font-bold text-white">
+                    {selectedNode?.label}
+                  </DialogTitle>
+                </div>
+                <DialogDescription className="text-slate-400">
+                  {selectedNode?.description || "Contenido del módulo"}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6 pt-2">
+                {selectedNode && (() => {
+                  const categoryQuizzes = quizzes?.filter(q => q.categoryId === activeMapCategory) || [];
+                  let nodeQuizzes = categoryQuizzes.filter(q => q.subcategoryId == selectedNode.subcategoryId) || [];
+
+                  if (selectedNode.filterKeywords && selectedNode.filterKeywords.length > 0) {
+                    const keywords = selectedNode.filterKeywords.map(k => k.toLowerCase());
+                    nodeQuizzes = nodeQuizzes.filter(q => {
+                      const titleLower = q.title.toLowerCase();
+                      if (!keywords.some(k => titleLower.includes(k))) return false;
+                      if (selectedNode.excludeKeywords && selectedNode.excludeKeywords.length > 0) {
+                        const excludeKeys = selectedNode.excludeKeywords.map(k => k.toLowerCase());
+                        if (excludeKeys.some(k => titleLower.includes(k))) return false;
+                      }
+                      return true;
+                    });
+                  }
+
+                  if (nodeQuizzes.length === 0) {
+                    return (
+                      <div className="text-center py-12 text-slate-500">
+                        <Ban className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                        <p>No hay cuestionarios vinculados a este nodo.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 gap-3">
+                      {nodeQuizzes.map(quiz => (
+                        <div key={quiz.id} className="flex flex-col gap-3 p-4 rounded-xl bg-slate-800/40 border border-white/5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 bg-blue-500/20 text-blue-400">
+                                <BookOpen className="h-5 w-5" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-sm text-slate-200 line-clamp-2">{quiz.title}</h4>
+                                <p className="text-xs text-slate-500 line-clamp-1">{quiz.description}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${quiz.difficulty === 'Fácil' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                              quiz.difficulty === 'Medio' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                                'bg-red-500/10 text-red-400 border border-red-500/20'
+                              }`}>
+                              {quiz.difficulty}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              ID: {quiz.id}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

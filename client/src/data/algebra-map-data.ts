@@ -128,6 +128,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         subcategoryId: 10,
         behavior: 'container'
     },
+    // Children of Productos Notables
     {
         id: 'a3-1-basicos',
         label: 'Básicos',
@@ -138,18 +139,6 @@ export const algebraMapNodes: ArithmeticNode[] = [
         xOffset: -50,
         subcategoryId: 10,
         filterKeywords: ['(x+y)^2', '(x-y)^2', '(x+y)(x-y)', 'forma (x+y)', 'forma (x-y)'],
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'a3-2-pascal',
-        label: 'Triángulo Pascal',
-        level: 7,
-        type: 'basic',
-        requires: ['a3-notables'],
-        description: 'Coeficientes binomiales.',
-        xOffset: 0,
-        subcategoryId: 10,
-        filterKeywords: ['pascal', 'cubo', '(x+y)^3'],
         behavior: 'quiz_list'
     },
     {
@@ -164,6 +153,19 @@ export const algebraMapNodes: ArithmeticNode[] = [
         filterKeywords: ['miscelanea', 'miscelánea', 'avanzado', 'forma (x+a)(x+b)', '(x+y+z)'],
         behavior: 'quiz_list'
     },
+    // Grandchild of Productos Notables (Empty content, educational structure)
+    {
+        id: 'a3-2-pascal',
+        label: 'Triángulo Pascal',
+        level: 8, // Grandchild level (6 -> 7 -> 8)
+        type: 'basic',
+        requires: ['a3-1-basicos'], // Parent is now Básicos to make it a grandchild of Notables
+        description: 'Coeficientes binomiales (Referencia).',
+        xOffset: 0,
+        subcategoryId: 10,
+        filterKeywords: ['DONOTMATCHANYTHING'], // Empty content requested
+        behavior: 'quiz_list'
+    },
 
     // ==========================================
     // NIVEL A4: DIVISIÓN ALGEBRAICA
@@ -171,7 +173,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a4-division',
         label: 'División Algebraica',
-        level: 8,
+        level: 9, // Shifted down
         type: 'basic',
         requires: ['a3-notables'],
         description: 'Algoritmos de división y Ruffini.',
@@ -181,7 +183,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a4-1-cocientes',
         label: 'Cocientes Notables',
-        level: 9,
+        level: 10,
         type: 'basic',
         requires: ['a4-division'],
         description: 'Divisiones exactas especiales.',
@@ -196,7 +198,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a5-factorizacion',
         label: 'Factorización',
-        level: 10,
+        level: 11,
         type: 'critical',
         requires: ['a4-1-cocientes', 'a3-notables'],
         description: 'El corazón del álgebra.',
@@ -204,64 +206,139 @@ export const algebraMapNodes: ArithmeticNode[] = [
         subcategoryId: 12,
         behavior: 'container'
     },
+
+    // CHILDREN (Level 12)
     {
         id: 'a5-1-mcd',
         label: 'Factor Común',
-        level: 11,
+        level: 12,
         type: 'basic',
         requires: ['a5-factorizacion'],
-        description: 'El primer paso siempre.',
-        xOffset: -60,
+        description: 'Monomio y Polinomio.',
+        xOffset: -75,
         subcategoryId: 12,
         filterKeywords: ['factor comun', 'factor común', 'agrupación'],
         behavior: 'quiz_list'
     },
     {
-        id: 'a5-2-casos',
-        label: 'Casos Especiales',
-        level: 11,
+        id: 'a5-2-diff',
+        label: 'Diferencia Cuadrados',
+        level: 12,
         type: 'basic',
         requires: ['a5-factorizacion'],
-        description: 'Binomios y Trinomios comunes.',
-        xOffset: 0,
+        description: 'a² - b².',
+        xOffset: -25,
         subcategoryId: 12,
-        filterKeywords: ['diferencia de cuadrados', 'trinomio cuadrado', 'cubo', 'forma ax^2', 'forma x^2'],
+        filterKeywords: ['diferencia de cuadrados'],
+        excludeKeywords: ['combinado', 'combinados', 'combiandos', 'combinada', 'combinación', 'combinacion', 'adicion', 'sustraccion', 'adición', 'sustracción'], // Robust exclusion
         behavior: 'quiz_list'
     },
     {
-        id: 'a5-3-combinada',
-        label: 'Combinada',
-        level: 11,
-        type: 'applied',
+        id: 'a5-3-tcp',
+        label: 'Trinomio Cuadrado',
+        level: 12,
+        type: 'basic',
         requires: ['a5-factorizacion'],
+        description: 'Perfecto (TCP).',
+        xOffset: 25,
+        subcategoryId: 12,
+        filterKeywords: ['trinomio cuadrado perfecto'],
+        excludeKeywords: ['combinado', 'combinados', 'combiandos', 'combinada', 'combinación', 'combinacion', 'adicion', 'sustraccion', 'adición', 'sustracción', 'quitar y poner'], // Robust exclusion
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a5-4-x2',
+        label: 'Forma x²+bx+c',
+        level: 12,
+        type: 'basic',
+        requires: ['a5-factorizacion'],
+        description: 'Trinomio simple.',
+        xOffset: 75,
+        subcategoryId: 12,
+        filterKeywords: ['forma x^2', 'forma x2'],
+        behavior: 'quiz_list'
+    },
+
+    // GRANDCHILDREN (Level 13) - Special Cases & Mixed
+    {
+        id: 'a5-5-combinada',
+        label: 'Combinada',
+        level: 13,
+        type: 'applied',
+        requires: ['a5-1-mcd', 'a5-2-diff', 'a5-3-tcp', 'a5-4-x2'], // Requires understanding of basics
         description: 'Estrategias mixtas.',
+        xOffset: -60,
+        subcategoryId: 12,
+        filterKeywords: ['combinada', 'combinado', 'combinación', 'combinacion', 'mixto', 'múltiple'], // Broad match
+        behavior: 'quiz_list'
+    },
+    // Special Cases Group (Listed individually as requested)
+    {
+        id: 'a5-6-ax2',
+        label: 'Forma ax²+bx+c',
+        level: 13,
+        type: 'basic',
+        requires: ['a5-4-x2'], // Extension of x^2
+        description: 'Coeficiente principal > 1.',
+        xOffset: -20,
+        subcategoryId: 12,
+        filterKeywords: ['forma ax^2', 'aspa simple', 'tijera'], // Keywords for ax^2
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a5-7-cubos',
+        label: 'Cubos Perfectos',
+        level: 13,
+        type: 'basic',
+        requires: ['a5-2-diff'], // Related to powers
+        description: 'Suma y diferencia de cubos.',
+        xOffset: 20,
+        subcategoryId: 12,
+        filterKeywords: ['cubo'],
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a5-8-adicion',
+        label: 'Adición/Sustracción',
+        level: 13,
+        type: 'basic',
+        requires: ['a5-3-tcp'], // Variation of TCP
+        description: 'Completar cuadrados.',
         xOffset: 60,
         subcategoryId: 12,
-        filterKeywords: ['combinada', 'múltiple', 'miscelánea', 'miscelanea'],
+        filterKeywords: ['adicion', 'adición', 'sustraccion', 'sustracción', 'quitar y poner'], // Removed "y" to match individual words if needed
         behavior: 'quiz_list'
     },
+
+    // MASTERY (Level 14)
     {
-        id: 'a5-4-evaluacion',
-        label: 'Maestría',
-        level: 12,
+        id: 'a5-mastery',
+        label: 'Maestría Final',
+        level: 14,
         type: 'evaluation',
-        requires: ['a5-1-mcd', 'a5-2-casos', 'a5-3-combinada'],
+        requires: ['a5-5-combinada', 'a5-6-ax2', 'a5-7-cubos', 'a5-8-adicion'],
         description: 'Prueba de factorización total.',
         xOffset: 0,
         subcategoryId: 12,
-        filterKeywords: ['evaluacion', 'examen', 'final'],
+        filterKeywords: ['miscelanea', 'miscelánea', 'evaluacion', 'examen'],
         behavior: 'quiz_list'
     },
 
     // ==========================================
     // NIVEL A6: FRACCIONES ALGEBRAICAS
     // ==========================================
+    // ==========================================
+    // NIVEL A6: FRACCIONES ALGEBRAICAS
+    // ==========================================
+    // ==========================================
+    // NIVEL A6: FRACCIONES ALGEBRAICAS
+    // ==========================================
     {
         id: 'a6-fracciones',
         label: 'Fracciones Alg.',
-        level: 13,
+        level: 15, // Shifted UP (14 gap 1)
         type: 'basic',
-        requires: ['a5-factorizacion'],
+        requires: ['a5-mastery'],
         description: 'Simplificación y operaciones racionales.',
         xOffset: 0,
         subcategoryId: 13,
@@ -270,7 +347,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a6-1-simple',
         label: 'Simplificación',
-        level: 14,
+        level: 16,
         type: 'basic',
         requires: ['a6-fracciones'],
         description: 'Reducción a mínima expresión.',
@@ -282,7 +359,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a6-2-ops',
         label: 'Operaciones',
-        level: 14,
+        level: 16,
         type: 'basic',
         requires: ['a6-fracciones'],
         description: 'Suma, resta, mult, div.',
@@ -298,18 +375,18 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a7-ecuaciones',
         label: 'Ecuaciones 1 Var',
-        level: 15,
+        level: 17, // Gap of 1 level (16 -> 17)
         type: 'basic',
         requires: ['a6-fracciones', 'a2-operaciones'],
         description: 'Hallando el valor de x.',
         xOffset: -50,
-        subcategoryId: 14, // Ecuaciones lineales 1 var
+        subcategoryId: 14,
         behavior: 'container'
     },
     {
         id: 'a7-1-teoria',
         label: 'Resolución',
-        level: 16,
+        level: 18,
         type: 'basic',
         requires: ['a7-ecuaciones'],
         description: 'Despeje y conjunto solución.',
@@ -321,185 +398,238 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a7-2-problemas',
         label: 'Problemas Verbales',
-        level: 16,
+        level: 18,
         type: 'applied',
         requires: ['a7-ecuaciones'],
         description: 'Planteamiento de ecuaciones.',
         xOffset: -30,
-        subcategoryId: 15, // Problemas sobre Ecuaciones... (Contains many mixed topics)
-        filterKeywords: ['problema', 'planteamiento', 'móvil'], // Specific to word problems
+        subcategoryId: 15,
+        filterKeywords: ['problema', 'planteamiento', 'móvil'],
+        excludeKeywords: ['fraccionario', 'fraccionaria', 'fraccionarios', 'fraccionarias', 'fracciones', 'fraccion', 'fracción'], // Explicit exclusion
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a9-ec-frac',
+        label: 'Ec. Fraccionarias',
+        level: 18,
+        type: 'critical',
+        requires: ['a7-ecuaciones', 'a6-fracciones'],
+        xOffset: 20,
+        description: 'Variables en denominador.',
+        subcategoryId: 15,
+        filterKeywords: ['fraccion', 'fracción'],
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // NIVEL A8: INECUACIONES
+    // NIVEL A9.5: ECUACIONES INDETERMINADAS (NEW)
+    // ==========================================
+    {
+        id: 'a9-5-indet',
+        label: 'Ec. Indeterminadas',
+        level: 19, // Shifted UP (Children 18 -> 19)
+        type: 'basic',
+        requires: ['a7-ecuaciones'], // Requires basic equations
+        description: 'Infinitas soluciones.',
+        xOffset: 0,
+        behavior: 'container'
+    },
+    {
+        id: 'a9-5-res',
+        label: 'Resolución',
+        level: 20,
+        type: 'basic',
+        requires: ['a9-5-indet'],
+        description: 'Identidades.',
+        xOffset: -40,
+        subcategoryId: 21,
+        filterKeywords: ['indeterminada'],
+        excludeKeywords: ['problema', 'problemas'], // Exclude word problems
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a9-5-prob',
+        label: 'Problemas',
+        level: 20,
+        type: 'applied',
+        requires: ['a9-5-indet'],
+        description: 'En contexto.',
+        xOffset: 40,
+        subcategoryId: 21,
+        filterKeywords: ['problema', 'indeterminada'], // Must satisfy logic separately handled or use restrictive filter
+        excludeKeywords: [], // Removed 'ecuaciones' exclusion to allow "Problemas sobre Ecuaciones..."
+        behavior: 'quiz_list'
+    },
+
+    // ==========================================
+    // NIVEL A8: INECUACIONES (Shifted Down)
     // ==========================================
     {
         id: 'a8-inecuaciones',
         label: 'Inecuaciones',
-        level: 15, // Parallel to Ecuaciones
+        level: 21, // Shifted UP (Children 20 -> 21)
         type: 'basic',
-        requires: ['a7-ecuaciones'],
-        description: 'Desigualdades y recta numérica.',
-        xOffset: 50,
-        subcategoryId: 19,
-        filterKeywords: ['inecuacion'],
-        behavior: 'quiz_list'
-    },
-
-    // ==========================================
-    // NIVEL A9: ECUACIONES FRACCIONARIAS
-    // ==========================================
-    {
-        id: 'a9-ec-frac',
-        label: 'Ec. Fraccionarias',
-        level: 17,
-        type: 'critical',
-        requires: ['a7-ecuaciones', 'a6-fracciones'],
+        requires: ['a2-operaciones'],
+        description: 'Desigualdades.',
         xOffset: 0,
-        description: 'Ecuaciones con variables en denominador.',
-        subcategoryId: 15, // Problemas sometimes has these
-        filterKeywords: ['fraccion', 'fracción'], // Mixed into Problemas subcategory
+        behavior: 'container'
+    },
+    {
+        id: 'a8-1-lineales',
+        label: 'Lineales',
+        level: 22,
+        type: 'basic',
+        requires: ['a8-inecuaciones'],
+        description: '1er grado > <',
+        xOffset: -65,
+        subcategoryId: 19,
+        filterKeywords: ['inecuacion lineal', 'inecuación lineal', 'inecuacion racional', 'inecuaciones lineales'], // Added plural
+        excludeKeywords: ['simultanea', 'simultánea', 'cuadratica', 'cuadrática'],
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a8-3-simultaneas',
+        label: 'Simultáneas',
+        level: 22,
+        type: 'applied',
+        requires: ['a8-inecuaciones'],
+        description: 'Sistemas desigualdades.',
+        xOffset: 0,
+        subcategoryId: 19,
+        filterKeywords: ['simultanea', 'simultánea'],
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a8-2-cuadraticas',
+        label: 'Cuadráticas',
+        level: 22,
+        type: 'basic',
+        requires: ['a8-inecuaciones'],
+        description: '2do grado.',
+        xOffset: 65,
+        subcategoryId: 19,
+        filterKeywords: ['inecuacion cuadratica', 'inecuación cuadrática'],
+        excludeKeywords: ['simultanea', 'simultánea'],
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // NIVEL A10: SISTEMAS DE ECUACIONES
+    // NIVEL A10: SISTEMAS DE ECUACIONES (Shifted Down)
     // ==========================================
     {
         id: 'a10-sistemas',
         label: 'Sistemas 2x2',
-        level: 18,
+        level: 23, // Shifted UP (Children 22 -> 23)
         type: 'critical',
-        requires: ['a7-ecuaciones'], // Depends on single var skills
+        requires: ['a7-ecuaciones'],
         description: 'Dos variables, dos condiciones.',
         xOffset: 0,
         behavior: 'container'
     },
-    // FUSION: Indeterminadas linked here
-    {
-        id: 'a10-0-indeterminadas',
-        label: 'Ec. Indeterminadas',
-        level: 18,
-        type: 'basic',
-        requires: ['a10-sistemas'],
-        description: 'Infinitas soluciones.',
-        xOffset: -60,
-        subcategoryId: 21, // Ecuaciones Indeterminadas
-        filterKeywords: ['indeterminada'],
-        behavior: 'quiz_list'
-    },
-
     {
         id: 'a10-1-teoria',
         label: 'Teoría Sistemas',
-        level: 19,
+        level: 24,
         type: 'basic',
         requires: ['a10-sistemas'],
         description: 'Compatible, Incompatible.',
-        xOffset: -60,
+        xOffset: -40,
         subcategoryId: 49,
-        filterKeywords: ['teoria', 'teoría', 'concepto'],
         behavior: 'quiz_list'
     },
     {
         id: 'a10-2-metodos',
         label: 'Métodos Alg.',
-        level: 19,
+        level: 24,
         type: 'basic',
         requires: ['a10-sistemas'],
         description: 'Sustitución, Igualación.',
-        xOffset: -20,
+        xOffset: 0,
         subcategoryId: 50,
-        filterKeywords: ['sustitucion', 'sustitución', 'igualacion', 'igualación', 'eliminacion', 'eliminación'],
         behavior: 'quiz_list'
     },
     {
         id: 'a10-3-grafico',
         label: 'Método Gráfico',
-        level: 19,
+        level: 24,
         type: 'applied',
         requires: ['a10-sistemas'],
         description: 'Intersección de rectas.',
-        xOffset: 20,
+        xOffset: 40,
         subcategoryId: 51,
-        filterKeywords: ['grafico', 'gráfico', 'grafica', 'gráfica'],
         behavior: 'quiz_list'
     },
     {
         id: 'a10-4-cramer',
         label: 'Cramer',
-        level: 19,
+        level: 24,
         type: 'critical',
         requires: ['a10-sistemas'],
         description: 'Determinantes.',
-        xOffset: 60,
+        xOffset: 80,
         subcategoryId: 52,
-        filterKeywords: ['cramer', 'determinante'],
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // NIVEL A11: ECUACIONES CUADRÁTICAS
+    // NIVEL A11: ECUACIONES CUADRÁTICAS (Shifted Down)
     // ==========================================
     {
         id: 'a11-cuadraticas',
         label: 'Ec. Cuadráticas',
-        level: 20,
+        level: 25, // Shifted UP (Children 24 -> 25)
         type: 'critical',
         requires: ['a10-sistemas', 'a5-factorizacion'],
         description: 'Segundo grado.',
         xOffset: -40,
-        // No specific subcategory in dump, generic placeholder
-        subcategoryId: 15, // Mapped to Problemas...
+        subcategoryId: 15,
         filterKeywords: ['cuadratica', 'cuadrática', 'segundo grado', 'ecuaciones y funciones cuadráticas'],
         behavior: 'container'
     },
     {
         id: 'a11-1-solucion',
         label: 'Resolución',
-        level: 21,
+        level: 26,
         type: 'basic',
         requires: ['a11-cuadraticas'],
         description: 'Fórmula general y factores.',
         xOffset: -40,
-
         subcategoryId: 15,
         filterKeywords: ['formula general', 'fórmula general', 'factorizacion', 'factorización'],
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // NIVEL A12: FUNCIONES
+    // NIVEL A12: FUNCIONES (Shifted Down)
     // ==========================================
     {
         id: 'a12-funciones',
         label: 'Funciones',
-        level: 20, // Parallel/Alternative to Quadratic
+        level: 25, // Parallel to Quadratic
         type: 'evaluation',
-        requires: ['a10-sistemas'], // Graphing requires systems/linear eq skills
+        requires: ['a10-sistemas'],
         description: 'Relaciones funcionales.',
         xOffset: 40,
-        subcategoryId: 15, // Also in Problemas...
+        subcategoryId: 15,
         filterKeywords: ['funcion', 'función', 'polinomio', 'modelado', 'tasa'],
         behavior: 'container'
     },
     {
         id: 'a12-1-lineal',
         label: 'Función Lineal',
-        level: 21,
+        level: 26,
         type: 'basic',
         requires: ['a12-funciones'],
         description: 'y = mx + b',
         xOffset: 20,
-        subcategoryId: 20, // Ecuaciones lineales 2 variables (Graphics)
+        subcategoryId: 20,
         filterKeywords: ['lineal', 'afin', 'grafica', 'gráfica'],
         behavior: 'quiz_list'
     },
     {
         id: 'a12-2-concepto',
         label: 'Conceptos',
-        level: 21,
+        level: 26,
         type: 'critical',
         requires: ['a12-funciones'],
         description: 'Dominio y rango.',

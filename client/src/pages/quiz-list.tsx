@@ -173,9 +173,18 @@ function QuizList() {
     // Filter by keywords if they exist on the node
     if (node.filterKeywords && node.filterKeywords.length > 0) {
       const keywords = node.filterKeywords.map(k => k.toLowerCase());
-      contextQuizzes = contextQuizzes.filter(q =>
-        keywords.some(k => q.title.toLowerCase().includes(k))
-      );
+      contextQuizzes = contextQuizzes.filter(q => {
+        const titleLower = q.title.toLowerCase();
+        const matchesInclude = keywords.some(k => titleLower.includes(k));
+
+        if (!matchesInclude) return false;
+
+        if (node.excludeKeywords && node.excludeKeywords.length > 0) {
+          const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
+          if (excludeKeys.some(k => titleLower.includes(k))) return false;
+        }
+        return true;
+      });
     }
 
     if (contextQuizzes.length === 0) return 0; // If no quizzes match filter, technically 0% complete or maybe 100? Let's say 0 but 'available' status handles visual.
@@ -189,12 +198,34 @@ function QuizList() {
   };
 
   const getFilteredQuizzesForNode = (node: ArithmeticNode) => {
-    let contextQuizzes = quizzes?.filter(q => q.subcategoryId === node.subcategoryId) || [];
+    // Debug: Check if quizzes exist
+    if (!quizzes) return [];
+
+    // Loose equality check for potential string/number mismatches
+    let contextQuizzes = quizzes.filter(q => q.subcategoryId == node.subcategoryId) || [];
+
+    // Debug logging for specific problematic nodes
+    if (node.id === 'c1-1-leyes' || node.id === 'c1-x-formal') {
+      console.log(`[DEBUG MAP] Node ${node.id} (Subcat ${node.subcategoryId}): Found ${contextQuizzes.length} matches in ${quizzes.length} total quizzes.`);
+    }
+
     if (node.filterKeywords && node.filterKeywords.length > 0) {
       const keywords = node.filterKeywords.map(k => k.toLowerCase());
-      contextQuizzes = contextQuizzes.filter(q =>
-        keywords.some(k => q.title.toLowerCase().includes(k))
-      );
+      contextQuizzes = contextQuizzes.filter(q => {
+        const titleLower = q.title.toLowerCase();
+        const matchesInclude = keywords.some(k => titleLower.includes(k));
+
+        if (!matchesInclude) return false;
+
+        // Check exclusions if they exist
+        if (node.excludeKeywords && node.excludeKeywords.length > 0) {
+          const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
+          const matchesExclude = excludeKeys.some(k => titleLower.includes(k));
+          if (matchesExclude) return false;
+        }
+
+        return true;
+      });
     }
     // Also include subcategory-less nodes if we ever map them differently? 
     // For now, map data relies on subcategoryId. If missing, it's empty.
@@ -203,7 +234,7 @@ function QuizList() {
   };
 
   const calculateSubcategoryProgress = (subcategoryId: number) => {
-    const subcategoryQuizzes = quizzes?.filter(q => q.subcategoryId === subcategoryId) || [];
+    const subcategoryQuizzes = quizzes?.filter(q => q.subcategoryId == subcategoryId) || [];
     if (subcategoryQuizzes.length === 0) return 0;
 
     const completed = progress?.filter(p =>
@@ -324,6 +355,7 @@ function QuizList() {
             (categoryId === '1' || categoryId === '2' || categoryId === '4') ? (
               <SkillTreeView
                 nodes={currentMapNodes}
+                allQuizzes={quizzes}
                 title={`Mapa de Habilidades: ${category?.name}`}
                 description={(() => {
                   if (categoryId === '1') return "Un árbol de conocimiento diseñado para dominar la aritmética paso a paso.";
@@ -347,27 +379,23 @@ function QuizList() {
                     }
                   });
 
-                  // Pass 2: Unlock Logic (Top-Down Propagation)
+                  // Pass 2: Unlock Logic (Explorative Mode: No blocking)
                   // Sort by level to ensure parents processed first
                   const sortedNodes = [...currentMapNodes].sort((a, b) => a.level - b.level);
 
                   sortedNodes.forEach(node => {
                     if (map[node.id] === 'completed' || map[node.id] === 'in_progress') return;
 
-                    const reqsMet = node.requires.length === 0 || node.requires.every(reqId => {
-                      const s = map[reqId];
-                      return s && s !== 'locked'; // Parent is active/available
-                    });
+                    // In Explorative Mode, we ignore prerequisites for access. 
+                    // We only check if content exists.
+                    const hasContent = getFilteredQuizzesForNode(node).length > 0;
 
-                    if (reqsMet) {
-                      const hasContent = getFilteredQuizzesForNode(node).length > 0;
-                      if (node.behavior === 'container') {
-                        map[node.id] = 'available'; // Containers default to available if unlocked
-                      } else {
-                        map[node.id] = hasContent ? 'available' : 'locked';
-                      }
+                    if (node.behavior === 'container') {
+                      // Container status is determined by children in Pass 3
+                      map[node.id] = 'available';
                     } else {
-                      map[node.id] = 'locked';
+                      // Content nodes are available if they have content, otherwise locked
+                      map[node.id] = hasContent ? 'available' : 'locked';
                     }
                   });
 
@@ -627,6 +655,14 @@ function QuizList() {
                     quizzesForSub = quizzesForSub.filter((q: Quiz) =>
                       keywords.some((k: string) => q.title.toLowerCase().includes(k))
                     );
+
+                    // Apply Node-based Exclusion Filtering if available
+                    if (selectedNode.excludeKeywords && selectedNode.excludeKeywords.length > 0) {
+                      const excludeKeys = selectedNode.excludeKeywords.map((k: string) => k.toLowerCase());
+                      quizzesForSub = quizzesForSub.filter((q: Quiz) =>
+                        !excludeKeys.some((k: string) => q.title.toLowerCase().includes(k))
+                      );
+                    }
                   }
 
                   // Apply standard search filter

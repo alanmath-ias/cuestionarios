@@ -9,6 +9,7 @@ export interface ArithmeticNode {
     description?: string;
     xOffset?: number; // Horizontal positioning adjustment (-100 to 100)
     filterKeywords?: string[]; // Keywords to filter quizzes by title
+    excludeKeywords?: string[]; // Keywords to EXCLUDE quizzes
     behavior?: 'container' | 'quiz_list';
 }
 
@@ -54,16 +55,6 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         filterKeywords: ['naturales'],
         behavior: 'container'
     },
-    {
-        id: 'n1-recta',
-        label: 'Recta Numérica',
-        level: 2,
-        type: 'basic',
-        requires: ['n1-naturales'],
-        description: 'Ubicación y orden en la línea.',
-        xOffset: 0,
-        behavior: 'quiz_list'
-    },
 
     // ==========================================
     // NIVEL 2: OPERACIONES BÁSICAS
@@ -94,55 +85,64 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL 3: PROPIEDADES
-    // ==========================================
-    {
-        id: 'n3-propiedades',
-        label: 'Propiedades',
-        level: 3,
-        type: 'basic',
-        requires: ['n2-suma', 'n2-multi'],
-        description: 'Conmutativa, Asociativa, Distributiva.',
-        xOffset: -40,
-        subcategoryId: 5,
-        filterKeywords: ['propiedad'],
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'n3-jerarquia',
-        label: 'Jerarquía',
-        level: 3,
-        type: 'basic',
-        requires: ['n2-multi'],
-        description: 'Orden correcto (PEMDAS).',
-        xOffset: 40,
-        subcategoryId: 6,
-        filterKeywords: ['jerarquía', 'combinada', 'orden'],
-        behavior: 'quiz_list'
-    },
-
-    // ==========================================
-    // NIVEL 4: ENTEROS
+    // NIVEL 3: ENTEROS (NUEVO PADRE DE PROPIEDADES)
     // ==========================================
     {
         id: 'n4-enteros',
         label: 'Números Enteros',
-        level: 4,
+        level: 3, // Moved up to Level 3 to replace the old "Propiedades" layer
         type: 'basic',
-        requires: ['n3-propiedades', 'n3-jerarquia'],
+        requires: ['n2-suma', 'n2-multi'],
         description: 'El mundo de los números negativos.',
         xOffset: 0,
         subcategoryId: 1,
         filterKeywords: ['entero'],
         behavior: 'container'
     },
-    // Children
+
+    // Children of Enteros (Reordered as requested)
+    {
+        id: 'n1-recta', // Moved from Naturales
+        label: 'Recta Numérica',
+        level: 4,
+        type: 'basic',
+        requires: ['n4-enteros'],
+        description: 'Ubicación y orden en la línea.',
+        xOffset: -60,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'n3-jerarquia', // Moved from Propiedades layer
+        label: 'Jerarquía',
+        level: 4,
+        type: 'basic',
+        requires: ['n4-enteros'],
+        description: 'Orden correcto (PEMDAS).',
+        xOffset: 0,
+        subcategoryId: 6,
+        filterKeywords: ['jerarquía', 'combinada', 'orden'],
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'n3-propiedades', // Moved from Propiedades layer
+        label: 'Propiedades',
+        level: 4,
+        type: 'basic',
+        requires: ['n4-enteros'],
+        description: 'Conmutativa, Asociativa, Distributiva.',
+        xOffset: 60,
+        subcategoryId: 5,
+        filterKeywords: ['propiedad'],
+        behavior: 'quiz_list'
+    },
+
+    // Standard Enteros Content (Shifted down/after)
     {
         id: 'n4-intro-neg',
         label: 'Intro a Negativos',
         level: 5,
         type: 'basic',
-        requires: ['n4-enteros'],
+        requires: ['n1-recta'], // Logical flow: Line -> Negatives
         description: 'Concepto de deuda y temperatura.',
         xOffset: -40,
         subcategoryId: 1,
@@ -154,7 +154,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         label: 'Operaciones Enteros',
         level: 5,
         type: 'basic',
-        requires: ['n4-enteros'],
+        requires: ['n3-propiedades'], // Logical flow: Properties -> Operations
         description: 'Suma, resta, mult y div con signos.',
         xOffset: 40,
         subcategoryId: 1,

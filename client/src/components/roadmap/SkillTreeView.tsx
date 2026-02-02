@@ -11,10 +11,77 @@ interface SkillTreeViewProps {
     onNodeClick: (node: ArithmeticNode) => void;
     title: string;
     description?: string;
+    allQuizzes?: any[]; // Passed from parent
+    isAdmin?: boolean;
 }
 
-export function SkillTreeView({ nodes, progressMap, onNodeClick, title, description }: SkillTreeViewProps) {
+export function SkillTreeView({ nodes, progressMap, onNodeClick, title, description, allQuizzes = [], isAdmin = false }: SkillTreeViewProps) {
     const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
+
+    // Calculate Total Visible Quizzes (Unique Count)
+    const totalVisibleQuizzes = React.useMemo(() => {
+        if (!allQuizzes || allQuizzes.length === 0) return 0;
+
+        const mappedQuizIds = new Set<number>();
+
+        // Iterate every node to find which quizzes it "captures"
+        nodes.forEach(node => {
+            if (!node.subcategoryId) return; // Skip purely structural nodes
+
+            // 1. Filter by Subcategory ID (strict match first)
+            let matchingQuizzes = allQuizzes.filter(q => q.subcategoryId === node.subcategoryId);
+
+            // 2. Apply Inclusion Keywords
+            if (node.filterKeywords && node.filterKeywords.length > 0) {
+                const keywords = node.filterKeywords.map(k => k.toLowerCase());
+                matchingQuizzes = matchingQuizzes.filter(q =>
+                    keywords.some((k: string) => q.title.toLowerCase().includes(k))
+                );
+            }
+
+            // 3. Apply Exclusion Keywords
+            if (node.excludeKeywords && node.excludeKeywords.length > 0) {
+                const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
+                matchingQuizzes = matchingQuizzes.filter(q =>
+                    !excludeKeys.some((k: string) => q.title.toLowerCase().includes(k))
+                );
+            }
+
+            // Add matched IDs to set
+            matchingQuizzes.forEach(q => mappedQuizIds.add(q.id));
+        });
+
+        return mappedQuizIds.size;
+    }, [nodes, allQuizzes]);
+
+    // Get highlighted nodes recursively (stops at next container)
+    const getHighlightedNodes = (rootId: string | null): Set<string> => {
+        if (!rootId) return new Set();
+
+        const highlighted = new Set<string>();
+        const queue = [rootId];
+
+        while (queue.length > 0) {
+            const currentId = queue.shift()!;
+            highlighted.add(currentId);
+
+            // Find direct children: nodes that require the currentId
+            const children = nodes.filter(n => n.requires.includes(currentId));
+
+            for (const child of children) {
+                // Traverse down IF:
+                // 1. It's not a container (stop at next section)
+                // 2. We haven't seen it yet
+                if (child.behavior !== 'container' && !highlighted.has(child.id) && !queue.includes(child.id)) {
+                    queue.push(child.id);
+                }
+            }
+        }
+
+        return highlighted;
+    };
+
+    const highlightedSet = React.useMemo(() => getHighlightedNodes(highlightedNodeId), [highlightedNodeId, nodes]);
 
     // Styles for custom shapes
     const styles = (
@@ -46,13 +113,15 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     const handleNodeInteraction = (e: React.MouseEvent, node: ArithmeticNode, isLocked: boolean) => {
         e.stopPropagation(); // Prevent background click from clearing highlight
 
-        // If container -> Toggle Highlight ALWAYS (even if locked, to show children)
+        // Highlight logic: toggle if same, otherwise set new
+        setHighlightedNodeId(prev => prev === node.id ? null : node.id);
+
+        // If container -> Just highlight (already handled above), no navigation logic needed explicitly here if pure container
         if (node.behavior === 'container') {
-            setHighlightedNodeId(node.id === highlightedNodeId ? null : node.id);
             return;
         }
 
-        // If locked content -> Do nothing
+        // If locked content -> Do nothing (Visual feedback handled by UI)
         if (isLocked) return;
 
         // Otherwise open functionality
@@ -113,6 +182,19 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                         </div>
                         <span>Crítico</span>
                     </div>
+
+                    {/* Total Counter */}
+                    {totalVisibleQuizzes > 0 && (
+                        <>
+                            <div className="h-px bg-slate-700 my-1" />
+                            <div className="flex items-center gap-2 text-indigo-300 font-medium">
+                                <div className="w-6 h-6 rounded-full border-2 border-indigo-500/50 flex items-center justify-center bg-indigo-500/10">
+                                    <BookOpen className="w-3 h-3" />
+                                </div>
+                                <span>Total: {totalVisibleQuizzes}</span>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -147,17 +229,19 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                             const cPos = getNodePos(node);
                             const midY = (pPos.y + cPos.y) / 2;
                             const isUnlocked = progressMap[parent.id] === 'completed';
-                            const isHighlighted = highlightedNodeId === parent.id;
+
+                            // Highlight connection if both parent and child are in the highlight set
+                            const isHighlighted = highlightedSet.has(parent.id) && highlightedSet.has(node.id);
 
                             return (
                                 <motion.path
                                     key={`${parent.id}-${node.id}`}
                                     d={`M ${pPos.x} ${pPos.y + 40} C ${pPos.x} ${midY}, ${cPos.x} ${midY}, ${cPos.x} ${cPos.y - 40}`}
                                     fill="none"
-                                    stroke={isHighlighted ? "#fbbf24" : isUnlocked ? "#3b82f6" : "rgba(71, 85, 105, 0.5)"} // Amber for highlight
+                                    stroke={isHighlighted ? "#fbbf24" : (isUnlocked || isAdmin) ? "#3b82f6" : "rgba(71, 85, 105, 0.5)"} // Amber for highlight
                                     strokeWidth={isHighlighted ? "5" : "3"}
                                     strokeLinecap="round"
-                                    strokeDasharray={isUnlocked || isHighlighted ? "none" : "6 4"}
+                                    strokeDasharray={(isUnlocked || isAdmin || isHighlighted) ? "none" : "6 4"}
                                     filter={isHighlighted ? "url(#glow)" : undefined}
                                     initial={{ pathLength: 0, opacity: 0 }}
                                     animate={{ pathLength: 1, opacity: 1 }}
@@ -171,7 +255,8 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                 {/* Nodes Layer */}
                 {nodes.map((node, index) => {
                     const pos = getNodePos(node);
-                    const status = progressMap[node.id] || 'locked';
+                    let status = progressMap[node.id] || 'locked';
+
                     const isAvailable = status === 'available';
                     const isCompleted = status === 'completed';
                     // Special Logic: If node is container and has children, check if it should be locked?
@@ -179,8 +264,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                     // Here we just render based on status map.
                     const isLocked = status === 'locked';
 
-                    const isParentHighlighted = node.requires.some(reqId => reqId === highlightedNodeId);
-                    const isHighlighted = (highlightedNodeId === node.id) || isParentHighlighted;
+                    const isHighlighted = highlightedSet.has(node.id);
 
                     let ShapeIcon = CheckCircle;
                     let shapeClass = "rounded-full";
@@ -218,33 +302,60 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                         whileTap={{ scale: 0.95 }}
                                         onClick={(e) => handleNodeInteraction(e, node, isLocked)}
                                         className={cn(
-                                            "relative w-20 h-20 flex items-center justify-center shadow-lg transition-all duration-300",
-                                            node.type === 'critical' ? 'hexagon-mask' : 'rounded-full',
+                                            "relative w-20 h-20 flex items-center justify-center shadow-lg transition-all duration-300 hover:brightness-125 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]",
+                                            // Handle Shapes:
+                                            // 1. Critical Parent -> Hexagon
+                                            // 2. Normal Parent -> Diamond
+                                            // 3. Child (Critical or Normal) -> Circle
+                                            (node.type === 'critical' && node.behavior === 'container') ? 'hexagon-mask' :
+                                                node.behavior === 'container' ? 'rotate-45 rounded-2xl' : 'rounded-full',
+
                                             isLocked && "grayscale opacity-70 cursor-not-allowed",
                                             !isLocked && "cursor-pointer",
-                                            // Dynamic Glow/Border based on Highlight
+
+                                            // Highlight (Amber) overrides everything
                                             isHighlighted ? "ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_40px_rgba(251,191,36,0.6)] scale-110" : "",
+
+                                            // Completion (Green)
                                             !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
-                                                !isHighlighted && isAvailable ? "shadow-[0_0_30px_#3b82f6]" : ""
+
+                                                // Available (Blue usually, but Red for Critical Quizzes)
+                                                !isHighlighted && isAvailable ? (
+                                                    node.type === 'critical' ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" : // Red shadow for critical quiz
+                                                        "shadow-[0_0_30px_#3b82f6]" // Blue for normal
+                                                ) : ""
                                         )}
                                         style={{
-                                            background: isHighlighted ? 'linear-gradient(135deg, #b45309, #f59e0b)' : // Amber gradient for highlight
+                                            background: isHighlighted ? 'linear-gradient(135deg, #b45309, #f59e0b)' : // Amber
                                                 isCompleted ? 'linear-gradient(135deg, #1f2937, #064e3b)' :
-                                                    isAvailable ? 'linear-gradient(135deg, #1e3a8a, #3b82f6)' :
-                                                        '#1e293b',
-                                            border: `3px solid ${isHighlighted ? '#fbbf24' : isCompleted ? '#4ade80' : isAvailable ? '#3b82f6' : '#475569'}`
+                                                    isAvailable ? (
+                                                        // Red gradient for Critical Quizzes, Blue for others
+                                                        node.type === 'critical' ? 'linear-gradient(135deg, #881337, #f43f5e)' :
+                                                            'linear-gradient(135deg, #1e3a8a, #3b82f6)'
+                                                    ) : '#1e293b',
+
+                                            border: `3px solid ${isHighlighted ? '#fbbf24' :
+                                                isCompleted ? '#4ade80' :
+                                                    isAvailable ? (node.type === 'critical' ? '#fb7185' : '#3b82f6') : // Rose border for critical
+                                                        '#475569'
+                                                }`
                                         }}
                                     >
-                                        {/* Icon Logic */}
-                                        {isCompleted ? (
-                                            <CheckCircle className="w-8 h-8 text-green-400" />
-                                        ) : isLocked ? (
-                                            <Lock className="w-6 h-6 text-slate-500" />
-                                        ) : (
-                                            node.type === 'critical' ? <Hexagon className="w-8 h-8 text-yellow-400 fill-yellow-400/20" /> :
-                                                node.type === 'evaluation' ? <Trophy className="w-8 h-8 text-purple-400 fill-purple-400/20" /> :
-                                                    <Play className="w-8 h-8 text-white fill-white" />
-                                        )}
+                                        {/* Icon Logic - Counter-rotate for diamond shape only if it is a container */}
+                                        <div className={cn("flex items-center justify-center", node.behavior === 'container' && !(node.type === 'critical' && node.behavior === 'container') && "-rotate-45")}>
+                                            {isCompleted ? (
+                                                <CheckCircle className="w-8 h-8 text-green-400" />
+                                            ) : isLocked ? (
+                                                <Lock className="w-6 h-6 text-slate-500" />
+                                            ) : (
+                                                // Icon Selection
+                                                (node.type === 'critical' && node.behavior === 'container') ? <Hexagon className="w-8 h-8 text-yellow-400 fill-yellow-400/20" /> :
+                                                    node.type === 'critical' ? <Star className="w-8 h-8 text-white fill-white/20" /> : // Star for Critical Quiz
+                                                        node.type === 'evaluation' ? <Trophy className="w-8 h-8 text-purple-400 fill-purple-400/20" /> :
+                                                            node.behavior === 'container' ? <BookOpen className="w-8 h-8 text-white fill-white/10" /> :
+                                                                <Play className="w-8 h-8 text-white fill-white" />
+                                            )}
+                                        </div>
                                     </motion.button>
 
                                     {/* Hover Tooltip for Locked Nodes */}

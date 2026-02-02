@@ -1,88 +1,91 @@
 
-import "dotenv/config";
-import { db } from "../server/db";
-import { quizzes, subcategories } from "../shared/schema";
-import { eq } from "drizzle-orm";
-// Assume local import works via tsx
-import { algebraMapNodes } from "../client/src/data/algebra-map-data";
+import { algebraMapNodes } from '../client/src/data/algebra-map-data';
 
-async function main() {
-    console.log("🔍 Starting Algebra Map Coverage Audit...");
-
-    // 1. Fetch Algebra Category Quizzes
-    // We use the same logic as previous script to get ALL Algebra-related quizzes
-    const algebraSubs = await db.select().from(subcategories).where(eq(subcategories.categoryId, 2));
-    const subIds = algebraSubs.map(s => s.id);
-    const allQuizzes = await db.select().from(quizzes);
-    const algebraQuizzes = allQuizzes.filter(q => q.subcategoryId && subIds.includes(q.subcategoryId));
-
-    console.log(`📚 Found ${algebraQuizzes.length} total Algebra quizzes in DB.`);
-    console.log(`🧩 Found ${algebraMapNodes.length} nodes in Algebra Map.\n`);
-
-    const orphans: any[] = [];
-    const coveredQuizzes = new Set<number>();
-    const nodesWithContent: Record<string, number> = {};
-
-    // 2. Simulation Logic
-    // For each quiz, try to find a home in the map nodes
-    for (const quiz of algebraQuizzes) {
-        if (!quiz.subcategoryId) continue;
-
-        let matchedNode = null;
-
-        // Iterate all nodes to find match
-        for (const node of algebraMapNodes) {
-            if (!node.subcategoryId) continue; // Node must map to data
-
-            // 1. Subcategory Match
-            if (node.subcategoryId === quiz.subcategoryId) {
-                // 2. Keyword Match (if keywords exist)
-                if (node.filterKeywords && node.filterKeywords.length > 0) {
-                    const keywords = node.filterKeywords.map(k => k.toLowerCase());
-                    const titleLower = quiz.title.toLowerCase();
-
-                    const hasMatch = keywords.some(k => titleLower.includes(k));
-                    if (hasMatch) {
-                        matchedNode = node;
-                        break; // Found a home (first match wins logic)
-                    }
-                } else {
-                    // No keywords = Catch-all for that subcategory
-                    matchedNode = node;
-                    break;
-                }
-            }
-        }
-
-        if (matchedNode) {
-            coveredQuizzes.add(quiz.id);
-            nodesWithContent[matchedNode.id] = (nodesWithContent[matchedNode.id] || 0) + 1;
-        } else {
-            orphans.push(quiz);
-        }
-    }
-
-    // 3. Report
-    console.log("✅ COVERAGE REPORT:");
-    console.log(`Mapped Quizzes: ${coveredQuizzes.size} / ${algebraQuizzes.length}`);
-    console.log(`Orphaned Quizzes: ${orphans.length}`);
-
-    if (orphans.length > 0) {
-        console.log("\n⚠️ ORPHANED QUIZZES (Not displayed in Map):");
-        orphans.forEach(q => {
-            const subName = algebraSubs.find(s => s.id === q.subcategoryId)?.name;
-            console.log(`[Q:${q.id}] "${q.title}" (Sub: ${q.subcategoryId} - ${subName})`);
-        });
-    } else {
-        console.log("\n🎉 ALL QUIZZES ARE MAPPED!");
-    }
-
-    console.log("\n📊 NODE DISTRIBUTION:");
-    Object.keys(nodesWithContent).forEach(nodeId => {
-        console.log(`Node ${nodeId}: ${nodesWithContent[nodeId]} quizzes`);
-    });
-
-    process.exit(0);
+// Mock types matching the frontend
+interface Quiz {
+    id: number;
+    title: string;
+    subcategoryId: number | null;
 }
 
-main().catch(console.error);
+async function auditAlgebraMap() {
+    const CATEGORY_ID = 2; // Algebra
+    const API_URL = 'http://127.0.0.1:5000/api/categories/2/quizzes'; // Use IP to avoid resolution issues
+
+    console.log(`Fetching quizzes for Category ${CATEGORY_ID}...`);
+
+    try {
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch quizzes: ${response.statusText}`);
+        }
+
+        const quizzes: Quiz[] = await response.json();
+        console.log(`Total Algebra Quizzes Found in DB: ${quizzes.length}`);
+
+        const mappedQuizIds = new Set<number>();
+        const nodeCoverage: Record<string, number> = {};
+
+        // initialize node counts
+        algebraMapNodes.forEach(node => {
+            nodeCoverage[node.id] = 0;
+        });
+
+        // Check mapping logic
+        quizzes.forEach(quiz => {
+            let isMapped = false;
+
+            // Strict mapping logic from quiz-list.tsx
+            algebraMapNodes.forEach(node => {
+                // Logic: Must match subcategory (if node has one) AND keywords (if node has them)
+                // If node has NO subcategory, it's strictly keyword based? 
+                // Wait, quiz-list logic:
+                // let contextQuizzes = quizzes?.filter(q => q.subcategoryId === node.subcategoryId) || [];
+                // ... filter by keywords ...
+
+                // If node has no subcategory, existing logic returns empty array! 
+                // "if (!node.subcategoryId) return [];"
+
+                if (node.subcategoryId) {
+                    if (quiz.subcategoryId === node.subcategoryId) {
+                        // Subcategory matches. Check keywords.
+                        let matchesKeywords = true;
+                        if (node.filterKeywords && node.filterKeywords.length > 0) {
+                            const keywords = node.filterKeywords.map(k => k.toLowerCase());
+                            matchesKeywords = keywords.some(k => quiz.title.toLowerCase().includes(k));
+                        }
+
+                        if (matchesKeywords) {
+                            mappedQuizIds.add(quiz.id);
+                            nodeCoverage[node.id]++;
+                            isMapped = true;
+                            // console.log(`  -> Mapped to ${node.id} (${node.label})`);
+                        }
+                    }
+                }
+            });
+
+            if (!isMapped) {
+                console.warn(`[ORPHAN] Quiz ID ${quiz.id}: "${quiz.title}" (Subcat: ${quiz.subcategoryId})`);
+            }
+        });
+
+        console.log("\n--- Node Coverage ---");
+        Object.entries(nodeCoverage).forEach(([nodeId, count]) => {
+            const node = algebraMapNodes.find(n => n.id === nodeId);
+            const label = node?.label || nodeId;
+            if (count === 0 && node?.behavior !== 'container') {
+                console.error(`[EMPTY NODE] ${label} (${nodeId}) - Subcat: ${node?.subcategoryId}, Keywords: ${node?.filterKeywords?.join(', ')}`);
+            } else if (count > 0) {
+                console.log(`[OK] ${label} (${nodeId}): ${count} quizzes`);
+            }
+        });
+
+        console.log(`\nTotal Mapped Quizzes: ${mappedQuizIds.size} / ${quizzes.length}`);
+
+    } catch (error) {
+        console.error("Error executing audit:", error);
+    }
+}
+
+auditAlgebraMap();

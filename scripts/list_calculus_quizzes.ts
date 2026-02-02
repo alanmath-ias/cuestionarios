@@ -22,11 +22,12 @@ async function main() {
 
     for (const sub of calculusSubs) {
         const subQuizzes = calculusQuizzes.filter(q => q.subcategoryId === sub.id);
-        console.log(`\n[${sub.id}] ${sub.name.toUpperCase()} (${subQuizzes.length} quizzes)`);
-
-        subQuizzes.forEach(q => {
-            console.log(`  - [Q:${q.id}] "${q.title}"`);
-        });
+        if (subQuizzes.length > 0) {
+            console.log(`\n[${sub.id}] ${sub.name.toUpperCase()} (${subQuizzes.length} quizzes)`);
+            subQuizzes.forEach(q => {
+                console.log(`  - [Q:${q.id}] "${q.title}"`);
+            });
+        }
     }
 
     process.exit(0);

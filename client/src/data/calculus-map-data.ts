@@ -87,37 +87,37 @@ export const calculusMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
     {
-        id: 'c1-1-leyes',
-        label: 'Leyes Límites',
-        level: 4,
-        type: 'basic',
-        requires: ['c1-limites-intro'],
-        description: 'Álgebra de límites.',
-        xOffset: -40,
-        subcategoryId: 106, // Leyes de los Límites
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'c1-2-continuidad',
-        label: 'Continuidad',
-        level: 4,
-        type: 'basic',
-        requires: ['c1-limites-intro'],
-        description: 'Sin saltos ni huecos.',
-        xOffset: 40,
-        subcategoryId: 107, // Continuidad
-        behavior: 'quiz_list'
-    },
-    // Added back as minor node to ensure coverage (Quiz 107)
-    {
         id: 'c1-x-formal',
         label: 'Def. Formal',
         level: 4,
         type: 'basic',
-        requires: ['c1-2-continuidad'],
-        description: 'Epsilon-Delta (Opcional).',
-        xOffset: 40,
+        requires: ['c1-limites-intro'],
+        description: 'Epsilon-Delta.',
+        xOffset: -60, // LEFT
         subcategoryId: 108, // Definición Precisa
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'c1-1-leyes',
+        label: 'Leyes Límites',
+        level: 4,
+        type: 'critical', // Pivotal node
+        requires: ['c1-limites-intro'],
+        description: 'Álgebra de límites.',
+        xOffset: 60, // RIGHT
+        subcategoryId: 106, // Leyes de los Límites
+        behavior: 'quiz_list'
+    },
+    // LEVEL 5: Advanced Limits / Special Cases
+    {
+        id: 'c1-4-lhopital',
+        label: 'L\'Hôpital',
+        level: 5,
+        type: 'evaluation',
+        requires: ['c1-1-leyes'],
+        description: 'Indeterminaciones.',
+        xOffset: -40, // Parallel Left
+        subcategoryId: 119,
         behavior: 'quiz_list'
     },
     {
@@ -126,13 +126,23 @@ export const calculusMapNodes: ArithmeticNode[] = [
         level: 5,
         type: 'applied',
         requires: ['c1-1-leyes'],
-        description: 'Asíntotas horizontales.',
-        xOffset: 0,
+        description: 'Asíntotas.',
+        xOffset: 40, // Parallel Right
         subcategoryId: 117, // Límites al Infinito y Asíntotas
         behavior: 'quiz_list'
     },
-
-    // Removed c2-formal as requested
+    // LEVEL 6: Bridge to Derivatives
+    {
+        id: 'c1-2-continuidad',
+        label: 'Continuidad',
+        level: 6,
+        type: 'critical', // Solitary Parent
+        requires: ['c1-3-infinito', 'c1-4-lhopital', 'c1-x-formal'], // Requires previous network
+        description: 'Puente a Derivadas.',
+        xOffset: 0, // CENTER
+        subcategoryId: 107, // Continuidad
+        behavior: 'quiz_list'
+    },
 
     // ==========================================
     // NIVEL C3: ORIGEN DE LA DERIVADA
@@ -140,9 +150,9 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c3-derivada-origen',
         label: 'Definición Derivada',
-        level: 6,
+        level: 7, // Pushed down
         type: 'critical',
-        requires: ['c1-2-continuidad'], // Connects from Continuity
+        requires: ['c1-2-continuidad'], // Connects from Continuity as requested
         description: 'Pendiente tangente.',
         xOffset: -30,
         subcategoryId: 109, // Definición de la Derivada
@@ -209,7 +219,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
         description: 'Sen, Cos, Tan...',
         xOffset: -20,
         subcategoryId: 111,
-        filterKeywords: ['trigonometricas', 'trigonométricas'], // Matches Q111
+        filterKeywords: ['trigonometricas', 'trigonométricas', 'seno', 'coseno'], // Matches Q111
         behavior: 'quiz_list'
     },
     {
@@ -233,7 +243,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
         description: 'Arcoseno, Arcocoseno...',
         xOffset: 60,
         subcategoryId: 111,
-        filterKeywords: ['inversas'], // Matches Q113 ("Funciones Inversas y Trigonométricas Inversas")
+        filterKeywords: ['inversa'], // Matches Q113 ("Funciones Inversas y Trigonométricas Inversas")
         behavior: 'quiz_list'
     },
     {
@@ -369,20 +379,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
         xOffset: 30,
         subcategoryId: 120,
         behavior: 'quiz_list'
-    },
-
-    // ==========================================
-    // NIVEL C8: CASOS ESPECIALES
-    // ==========================================
-    {
-        id: 'c8-lhopital',
-        label: 'L\'Hôpital',
-        level: 16,
-        type: 'evaluation',
-        requires: ['c7-1-tasas'],
-        description: 'Indeterminaciones.',
-        xOffset: 0,
-        subcategoryId: 119,
-        behavior: 'quiz_list'
     }
 ];
+
+
