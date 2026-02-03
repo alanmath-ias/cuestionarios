@@ -154,50 +154,72 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
             </div>
 
             {/* Legend */}
-            <div className="absolute top-4 right-4 z-50 bg-slate-900/80 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-xl max-w-[200px] pointer-events-auto">
-                <h4 className="text-slate-300 font-bold mb-3 text-sm uppercase tracking-wider border-b border-slate-700 pb-2">Leyenda</h4>
-                <div className="flex flex-col gap-3 text-xs text-slate-400">
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center">
-                            <CheckCircle className="w-3 h-3 text-green-400" />
+            <div className="absolute top-4 right-4 z-50 bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-xl min-w-[200px] pointer-events-auto">
+                <h4 className="text-slate-300 font-bold mb-3 text-xs uppercase tracking-wider border-b border-slate-700 pb-2">Leyenda</h4>
+                <div className="flex flex-col gap-3 text-[11px] text-slate-400 font-medium">
+                    {/* Parent Nodes */}
+                    <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-2xl rotate-45 border-2 border-slate-500 bg-slate-800 flex items-center justify-center">
+                            <BookOpen className="w-3.5 h-3.5 -rotate-45 text-slate-300" />
                         </div>
-                        <span>Dominado</span>
+                        <span>Temas Principales</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-slate-800 border-2 border-blue-500 flex items-center justify-center">
-                            <Play className="w-3 h-3 text-white fill-white" />
+
+                    {/* Blue Play - Not Started */}
+                    <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)] flex items-center justify-center">
+                            <Play className="w-3.5 h-3.5 text-white fill-white ml-0.5" />
                         </div>
-                        <span>Disponible</span>
+                        <span>Disponible sin iniciar</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center">
-                            <Lock className="w-3 h-3 text-slate-500" />
+
+                    {/* Soft Green Play - In Progress */}
+                    <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-[#5eead4] shadow-[0_0_10px_rgba(45,212,191,0.3)] flex items-center justify-center">
+                            <Play className="w-3.5 h-3.5 text-[#2dd4bf] fill-[#2dd4bf] ml-0.5" />
                         </div>
-                        <span>Próximamente</span>
+                        <span>Disponible iniciado</span>
                     </div>
-                    <div className="h-px bg-slate-700 my-1" />
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full border-2 border-slate-500 flex items-center justify-center">
-                            <div className="w-2 h-2 rounded-full bg-slate-400" />
+
+                    {/* Green Check - Completed */}
+                    <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)] flex items-center justify-center">
+                            <CheckCircle className="w-4 h-4 text-green-500" />
                         </div>
-                        <span>Básico</span>
+                        <span>Completado</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 hexagon-mask border-2 border-yellow-500 bg-yellow-900/20 flex items-center justify-center">
-                            <Hexagon className="w-3 h-3 text-yellow-500" />
+
+                    {/* Critical - Hexagon */}
+                    <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 hexagon-mask border-2 border-red-400 bg-red-900/20 flex items-center justify-center">
+                            <Hexagon className="w-3.5 h-3.5 text-red-400" />
                         </div>
                         <span>Crítico</span>
+                    </div>
+
+                    {/* Featured - Star */}
+                    <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-full bg-slate-800 border-2 border-yellow-400 flex items-center justify-center">
+                            <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400/20" />
+                        </div>
+                        <span>Destacado</span>
+                    </div>
+
+                    {/* Locked */}
+                    <div className="flex items-center gap-3 opacity-75">
+                        <div className="w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center">
+                            <Lock className="w-3.5 h-3.5 text-slate-500" />
+                        </div>
+                        <span>Próximamente</span>
                     </div>
 
                     {/* Total Counter */}
                     {totalVisibleQuizzes > 0 && (
                         <>
                             <div className="h-px bg-slate-700 my-1" />
-                            <div className="flex items-center gap-2 text-indigo-300 font-medium">
-                                <div className="w-6 h-6 rounded-full border-2 border-indigo-500/50 flex items-center justify-center bg-indigo-500/10">
-                                    <BookOpen className="w-3 h-3" />
-                                </div>
-                                <span>Total: {totalVisibleQuizzes}</span>
+                            <div className="flex items-center gap-2 text-indigo-300 font-medium justify-center pt-1">
+                                <BookOpen className="w-4 h-4" />
+                                <span>Total: {totalVisibleQuizzes} Cuestionarios</span>
                             </div>
                         </>
                     )}
@@ -265,6 +287,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
 
                     const isAvailable = status === 'available';
                     const isCompleted = status === 'completed';
+                    const isInProgress = status === 'in_progress';
                     // Special Logic: If node is container and has children, check if it should be locked?
                     // Implementation in quiz-list.tsx handles the status calculation. 
                     // Here we just render based on status map.
@@ -325,25 +348,30 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                             // Completion (Green)
                                             !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
 
-                                                // Available (Blue usually, but Red for Critical Quizzes)
-                                                !isHighlighted && isAvailable ? (
-                                                    node.type === 'critical' ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" : // Red shadow for critical quiz
-                                                        "shadow-[0_0_30px_#3b82f6]" // Blue for normal
-                                                ) : ""
+                                                // In Progress (Soft Green/Teal) - NEW
+                                                !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf]" :
+
+                                                    // Available (Blue usually, but Red for Critical Quizzes)
+                                                    !isHighlighted && isAvailable ? (
+                                                        node.type === 'critical' ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" : // Red shadow for critical quiz
+                                                            "shadow-[0_0_30px_#3b82f6]" // Blue for normal
+                                                    ) : ""
                                         )}
                                         style={{
                                             background: isHighlighted ? 'linear-gradient(135deg, #b45309, #f59e0b)' : // Amber
                                                 isCompleted ? 'linear-gradient(135deg, #1f2937, #064e3b)' :
-                                                    isAvailable ? (
-                                                        // Red gradient for Critical Quizzes, Blue for others
-                                                        node.type === 'critical' ? 'linear-gradient(135deg, #881337, #f43f5e)' :
-                                                            'linear-gradient(135deg, #1e3a8a, #3b82f6)'
-                                                    ) : '#1e293b',
+                                                    isInProgress ? 'linear-gradient(135deg, #134e4a, #2dd4bf)' : // Soft Green (Teal)
+                                                        isAvailable ? (
+                                                            // Red gradient for Critical Quizzes, Blue for others
+                                                            node.type === 'critical' ? 'linear-gradient(135deg, #881337, #f43f5e)' :
+                                                                'linear-gradient(135deg, #1e3a8a, #3b82f6)'
+                                                        ) : '#1e293b',
 
                                             border: `3px solid ${isHighlighted ? '#fbbf24' :
                                                 isCompleted ? '#4ade80' :
-                                                    isAvailable ? (node.type === 'critical' ? '#fb7185' : '#3b82f6') : // Rose border for critical
-                                                        '#475569'
+                                                    isInProgress ? '#5eead4' : // Teal-300
+                                                        isAvailable ? (node.type === 'critical' ? '#fb7185' : '#3b82f6') : // Rose border for critical
+                                                            '#475569'
                                                 }`
                                         }}
                                     >

@@ -26,7 +26,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
         description: 'Lineales, Cuadráticas, Racionales...',
         xOffset: -60,
         subcategoryId: 100, // Funciones (General) - FIXED
-        filterKeywords: ['lineal', 'cuadra', 'polinomio', 'polin', 'basica', 'básica', 'racional', 'traslacion'],
+        filterKeywords: ['lineal', 'cuadra', 'polinomio', 'polin', 'basica', 'básica', 'racional', 'traslacion', 'repaso', 'cuadráticas', 'cuadratica'],
         behavior: 'quiz_list'
     },
     {

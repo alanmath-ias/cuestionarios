@@ -1163,7 +1163,6 @@ export default function QuizzesAdmin() {
             {activeMapCategory && getMapData(activeMapCategory) && (
               <SkillTreeView
                 nodes={getMapData(activeMapCategory)!.nodes}
-                title=""
                 description=""
                 progressMap={(() => {
                   const nodes = getMapData(activeMapCategory)!.nodes;
@@ -1233,6 +1232,7 @@ export default function QuizzesAdmin() {
                   // We will use a Dialog for the selected Node.
                 }}
                 isAdmin={true} // Keep true for solid lines
+                title={getMapData(activeMapCategory)?.title || ""}
               />
             )}
           </div>
@@ -1257,7 +1257,10 @@ export default function QuizzesAdmin() {
               <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6 pt-2">
                 {selectedNode && (() => {
                   const categoryQuizzes = quizzes?.filter(q => q.categoryId === activeMapCategory) || [];
-                  let nodeQuizzes = categoryQuizzes.filter(q => q.subcategoryId == selectedNode.subcategoryId) || [];
+                  let nodeQuizzes = categoryQuizzes.filter(q =>
+                    q.subcategoryId == selectedNode.subcategoryId ||
+                    (selectedNode.additionalSubcategories && selectedNode.additionalSubcategories.includes(q.subcategoryId))
+                  ) || [];
 
                   if (selectedNode.filterKeywords && selectedNode.filterKeywords.length > 0) {
                     const keywords = selectedNode.filterKeywords.map(k => k.toLowerCase());

@@ -168,7 +168,11 @@ function QuizList() {
     if (!node.subcategoryId) return 0;
 
     // Get all quizzes in the subcategory
-    let contextQuizzes = quizzes?.filter(q => q.subcategoryId === node.subcategoryId) || [];
+    // Get all quizzes in the subcategory
+    let contextQuizzes = quizzes?.filter(q =>
+      q.subcategoryId === node.subcategoryId ||
+      (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId!))
+    ) || [];
 
     // Filter by keywords if they exist on the node
     if (node.filterKeywords && node.filterKeywords.length > 0) {
@@ -194,19 +198,27 @@ function QuizList() {
     ).length || 0;
 
     return (completed / contextQuizzes.length) * 100;
-    return (completed / contextQuizzes.length) * 100;
   };
 
   const getFilteredQuizzesForNode = (node: ArithmeticNode) => {
     // Debug: Check if quizzes exist
     if (!quizzes) return [];
 
-    // Loose equality check for potential string/number mismatches
-    let contextQuizzes = quizzes.filter(q => q.subcategoryId == node.subcategoryId) || [];
+    let contextQuizzes = quizzes.filter(q => {
+      // Primary subcategory match (loose equality for string/number safety)
+      const primaryMatch = node.subcategoryId && q.subcategoryId == node.subcategoryId;
 
-    // Debug logging for specific problematic nodes
-    if (node.id === 'c1-1-leyes' || node.id === 'c1-x-formal') {
-      console.log(`[DEBUG MAP] Node ${node.id} (Subcat ${node.subcategoryId}): Found ${contextQuizzes.length} matches in ${quizzes.length} total quizzes.`);
+      // Additional subcategories match
+      const additionalMatch = node.additionalSubcategories &&
+        q.subcategoryId &&
+        node.additionalSubcategories.includes(Number(q.subcategoryId));
+
+      return primaryMatch || additionalMatch;
+    }) || [];
+
+    // DEBUG: Log matches for problematic nodes
+    if (['c0-polinomicas', 'c0-explog', 'c0-trigo'].includes(node.id)) {
+      console.log(`[DEBUG NODE ${node.id}] Matches: ${contextQuizzes.length}. SubCat: ${node.subcategoryId}. Additional: ${node.additionalSubcategories?.join(',')}`);
     }
 
     if (node.filterKeywords && node.filterKeywords.length > 0) {
@@ -227,9 +239,10 @@ function QuizList() {
         return true;
       });
     }
-    // Also include subcategory-less nodes if we ever map them differently? 
-    // For now, map data relies on subcategoryId. If missing, it's empty.
-    if (!node.subcategoryId) return [];
+
+    // Fallback: If no subcategory rules exist, return empty (standard node behavior)
+    if (!node.subcategoryId && (!node.additionalSubcategories || node.additionalSubcategories.length === 0)) return [];
+
     return contextQuizzes;
   };
 
@@ -337,17 +350,16 @@ function QuizList() {
       )}
 
       {isLoading ? (
-        <div className="space-y-8">
-          {[1, 2, 3].map((_, index) => (
-            <div key={index} className="space-y-4">
-              <Skeleton className="h-8 w-1/3 rounded-lg bg-slate-800" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[1, 2].map(i => (
-                  <Skeleton key={i} className="h-40 rounded-lg bg-slate-800" />
-                ))}
-              </div>
-            </div>
-          ))}
+        <div className="flex flex-col items-center justify-center min-h-[500px] space-y-6">
+          <div className="relative w-20 h-20">
+            <div className="absolute inset-0 rounded-full border-4 border-blue-500/20 animate-pulse"></div>
+            <div className="absolute inset-0 rounded-full border-t-4 border-blue-500 animate-spin"></div>
+            <MapIcon className="absolute inset-0 m-auto h-8 w-8 text-blue-400 animate-bounce" />
+          </div>
+          <div className="text-center space-y-2">
+            <h3 className="text-xl font-bold text-white">Cargando Mapa...</h3>
+            <p className="text-slate-400">Preparando tu camino de aprendizaje</p>
+          </div>
         </div>
       ) : (
         <>
@@ -373,7 +385,7 @@ function QuizList() {
                       const pct = calculateNodeProgress(node);
                       if (pct === 100) map[node.id] = 'completed';
                       else if (pct > 0) map[node.id] = 'in_progress';
-                      else map[node.id] = 'locked'; // Content exists but 0% progress
+                      else map[node.id] = 'available'; // Content exists but 0% progress -> Available to play!
                     } else if (node.behavior !== 'container') {
                       map[node.id] = 'locked'; // Empty content -> locked
                     }
@@ -647,7 +659,16 @@ function QuizList() {
                 </div>
 
                 {(() => {
-                  let quizzesForSub = selectedSubcategory.quizzes || [];
+                  let quizzesForSub = [];
+
+                  if (selectedNode) {
+                    quizzesForSub = quizzes?.filter(q =>
+                      q.subcategoryId == selectedNode.subcategoryId ||
+                      (selectedNode.additionalSubcategories && selectedNode.additionalSubcategories.includes(q.subcategoryId!))
+                    ) || [];
+                  } else {
+                    quizzesForSub = selectedSubcategory.quizzes || [];
+                  }
 
                   // Apply Node-based Keyword Filtering if available
                   if (selectedNode && selectedNode.filterKeywords && selectedNode.filterKeywords.length > 0) {

@@ -242,7 +242,8 @@ export class DatabaseStorage implements IStorage {
         score: progress?.score,
         timeSpent: progress?.timeSpent,
         completedAt: progress?.completedAt,
-        progressId: progress?.id
+        progressId: progress?.id,
+        subcategoryId: quiz.subcategoryId // Added to support map filtering
       };
     });
   }
