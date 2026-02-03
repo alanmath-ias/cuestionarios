@@ -25,11 +25,15 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
         const mappedQuizIds = new Set<number>();
 
         // Iterate every node to find which quizzes it "captures"
+        // Iterate every node to find which quizzes it "captures"
         nodes.forEach(node => {
-            if (!node.subcategoryId) return; // Skip purely structural nodes
+            if (!node.subcategoryId && (!node.additionalSubcategories || node.additionalSubcategories.length === 0)) return; // Skip purely structural nodes
 
-            // 1. Filter by Subcategory ID (strict match first)
-            let matchingQuizzes = allQuizzes.filter(q => q.subcategoryId === node.subcategoryId);
+            // 1. Gather Candidate Quizzes (Primary + Additional Subcategories)
+            let matchingQuizzes = allQuizzes.filter(q =>
+                q.subcategoryId === node.subcategoryId ||
+                (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId))
+            );
 
             // 2. Apply Inclusion Keywords
             if (node.filterKeywords && node.filterKeywords.length > 0) {
@@ -70,9 +74,11 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
 
             for (const child of children) {
                 // Traverse down IF:
-                // 1. It's not a container (stop at next section)
+                // 1. It is NOT a Critical Node (Stop at major section boundaries like Continuity)
                 // 2. We haven't seen it yet
-                if (child.behavior !== 'container' && !highlighted.has(child.id) && !queue.includes(child.id)) {
+                const isBlockingNode = child.type === 'critical';
+
+                if (!isBlockingNode && !highlighted.has(child.id) && !queue.includes(child.id)) {
                     queue.push(child.id);
                 }
             }

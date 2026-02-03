@@ -6,6 +6,7 @@ export interface ArithmeticNode {
     type: 'basic' | 'critical' | 'evaluation' | 'applied';
     requires: string[];
     subcategoryId?: number; // Maps to existing database subcategory ID if available
+    additionalSubcategories?: number[]; // Additional subcategories to include content from
     description?: string;
     xOffset?: number; // Horizontal positioning adjustment (-100 to 100)
     filterKeywords?: string[]; // Keywords to filter quizzes by title

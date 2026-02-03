@@ -3,12 +3,11 @@ import { ArithmeticNode } from './arithmetic-map-data';
 
 export const calculusMapNodes: ArithmeticNode[] = [
     // ==========================================
-    // NIVEL C0: PRE-CÁLCULO FUNCIONAL
+    // NIVEL C0: FUNCIONES (Antiguo Pre-Cálculo)
     // ==========================================
-    // "Pre-Cálculo" parent node. All C0 nodes must behave as children of this block logically.
     {
-        id: 'c0-transicion',
-        label: 'Pre-Cálculo',
+        id: 'c0-funciones',
+        label: 'Funciones',
         level: 0,
         type: 'basic',
         requires: [],
@@ -16,370 +15,390 @@ export const calculusMapNodes: ArithmeticNode[] = [
         xOffset: 0,
         behavior: 'container'
     },
+
+    // HIJOS directos de Funciones: Polinómicas, Exp y Log, Trigonométricas
     {
-        id: 'c0-1-repaso',
-        label: 'Funciones',
+        id: 'c0-polinomicas',
+        label: 'Polinómicas',
         level: 1,
         type: 'basic',
-        requires: ['c0-transicion'],
-        description: 'Dominio, Rango y Gráficas.',
+        requires: ['c0-funciones'],
+        description: 'Lineales, Cuadráticas, Racionales...',
         xOffset: -60,
-        subcategoryId: 100, // Repaso de Funciones
+        subcategoryId: 100, // Funciones (General) - FIXED
+        filterKeywords: ['lineal', 'cuadra', 'polinomio', 'polin', 'basica', 'básica', 'racional', 'traslacion'],
         behavior: 'quiz_list'
     },
     {
-        id: 'c0-2-clases',
-        label: 'Clases Básicas',
+        id: 'c0-explog',
+        label: 'Exp y Log',
         level: 1,
         type: 'basic',
-        requires: ['c0-transicion'],
-        description: 'Polinómicas, Racionales.',
-        xOffset: -20,
-        subcategoryId: 101, // Clases Básicas
+        requires: ['c0-funciones'],
+        description: 'Crecimiento y logaritmos.',
+        xOffset: 0,
+        subcategoryId: 104,
+        additionalSubcategories: [100], // Search mainly in 104, but also check 100
         behavior: 'quiz_list'
     },
     {
-        id: 'c0-3-trigo',
-        label: 'Trigonometría',
+        id: 'c0-trigo',
+        label: 'Trigonométricas',
         level: 1,
         type: 'basic',
-        requires: ['c0-transicion'], // Direct child for highlighting
+        requires: ['c0-funciones'],
         description: 'Funciones circulares.',
-        xOffset: 20,
-        subcategoryId: 102, // Funciones Trigonométricas
+        xOffset: 60,
+        subcategoryId: 102,
+        additionalSubcategories: [100], // Search 102 + 100
+        behavior: 'quiz_list'
+    },
+
+    // NIETOS de Funciones: Inversas, Composición
+    {
+        id: 'c0-composicion',
+        label: 'Composición',
+        level: 2,
+        type: 'basic',
+        requires: ['c0-polinomicas', 'c0-explog'],
+        description: 'f(g(x))',
+        xOffset: -20,
+        subcategoryId: 100,
+        filterKeywords: ['composición', 'composicion'],
         behavior: 'quiz_list'
     },
     {
-        id: 'c0-4-inversas',
+        id: 'c0-inversas',
         label: 'Inversas',
         level: 2,
         type: 'basic',
-        requires: ['c0-transicion'], // Direct child for highlighting
-        description: 'Inyectividad y reflejos.',
-        xOffset: -40,
-        subcategoryId: 103, // Funciones Inversas
+        requires: ['c0-trigo'],
+        description: 'f^-1(x)',
+        xOffset: 40,
+        subcategoryId: 103, // Specific subcategory for Inverse Functions
+        additionalSubcategories: [100], // Search 103 + 100 for general review items
+        filterKeywords: ['inversa'],
         behavior: 'quiz_list'
     },
+
+    // BISNIETO: Dominio y Rango
     {
-        id: 'c0-5-explog',
-        label: 'Exp y Log',
-        level: 2,
-        type: 'basic',
-        requires: ['c0-transicion'], // Direct child for highlighting
-        description: 'Crecimiento y logaritmos.',
-        xOffset: 40,
-        subcategoryId: 104, // Exponenciales y Logarítmicas
+        id: 'c0-dom-rango',
+        label: 'Dominio y Rango',
+        level: 3,
+        type: 'critical', // Final step of C0
+        requires: ['c0-composicion', 'c0-inversas'], // Convergence
+        description: 'Análisis completo.',
+        xOffset: 0,
+        subcategoryId: 100,
+        filterKeywords: ['dominio', 'rango'],
         behavior: 'quiz_list'
     },
 
     // ==========================================
     // NIVEL C1: LÍMITES
     // ==========================================
+    // ==========================================
+    // NIVEL C1: LÍMITES
+    // ==========================================
     {
         id: 'c1-limites-intro',
         label: 'Límites',
-        level: 3,
-        type: 'critical',
-        requires: ['c0-4-inversas', 'c0-5-explog'], // Gatekeepers from C0
-        description: 'Comportamiento local.',
-        xOffset: 0,
-        subcategoryId: 105, // Introducción a los Límites
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'c1-x-formal',
-        label: 'Def. Formal',
         level: 4,
+        type: 'critical',
+        requires: ['c0-dom-rango'],
+        description: 'Fundamento del Cálculo.',
+        xOffset: 0,
+        subcategoryId: 105,
+        behavior: 'container'
+    },
+    // HIJOS DE LÍMITES
+    {
+        id: 'c1-def-formal',
+        label: 'Def. Formal',
+        level: 5,
         type: 'basic',
         requires: ['c1-limites-intro'],
         description: 'Epsilon-Delta.',
-        xOffset: -60, // LEFT
-        subcategoryId: 108, // Definición Precisa
+        xOffset: -60,
+        subcategoryId: 108,
+        filterKeywords: ['formal', 'definición', 'epsilon'],
         behavior: 'quiz_list'
     },
     {
-        id: 'c1-1-leyes',
-        label: 'Leyes Límites',
-        level: 4,
-        type: 'critical', // Pivotal node
+        id: 'c1-algebraico', // Previously 'c1-1-leyes'
+        label: 'Cálculo Algebraico',
+        level: 5,
+        type: 'basic',
         requires: ['c1-limites-intro'],
-        description: 'Álgebra de límites.',
-        xOffset: 60, // RIGHT
-        subcategoryId: 106, // Leyes de los Límites
-        behavior: 'quiz_list'
-    },
-    // LEVEL 5: Advanced Limits / Special Cases
-    {
-        id: 'c1-4-lhopital',
-        label: 'L\'Hôpital',
-        level: 5,
-        type: 'evaluation',
-        requires: ['c1-1-leyes'],
-        description: 'Indeterminaciones.',
-        xOffset: -40, // Parallel Left
-        subcategoryId: 119,
+        description: 'Leyes y técnicas.',
+        xOffset: 0,
+        subcategoryId: 106,
+        filterKeywords: ['algebraico', 'leyes', 'calculo'],
         behavior: 'quiz_list'
     },
     {
-        id: 'c1-3-infinito',
-        label: 'Al Infinito',
+        id: 'c1-infinitos',
+        label: 'Límites Infin/Asíntotas',
         level: 5,
-        type: 'applied',
-        requires: ['c1-1-leyes'],
+        type: 'basic',
+        requires: ['c1-limites-intro'],
         description: 'Asíntotas.',
-        xOffset: 40, // Parallel Right
-        subcategoryId: 117, // Límites al Infinito y Asíntotas
+        xOffset: 60,
+        subcategoryId: 117, // Fallback to 117 as 122 might be wrong
+        filterKeywords: ['infinito', 'asintota', 'asíntota'],
         behavior: 'quiz_list'
     },
-    // LEVEL 6: Bridge to Derivatives
+
+    // BRIDGE TO CONTINUITY (Now isolated)
     {
         id: 'c1-2-continuidad',
         label: 'Continuidad',
         level: 6,
-        type: 'critical', // Solitary Parent
-        requires: ['c1-3-infinito', 'c1-4-lhopital', 'c1-x-formal'], // Requires previous network
+        type: 'critical', // Must be critical to stop highlighting
+        requires: ['c1-def-formal', 'c1-algebraico', 'c1-infinitos'],
         description: 'Puente a Derivadas.',
-        xOffset: 0, // CENTER
-        subcategoryId: 107, // Continuidad
+        xOffset: 0,
+        subcategoryId: 107,
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // NIVEL C3: ORIGEN DE LA DERIVADA
+    // NIVEL C2: DERIVADAS (New Root)
     // ==========================================
     {
-        id: 'c3-derivada-origen',
-        label: 'Definición Derivada',
-        level: 7, // Pushed down
+        id: 'c2-derivadas',
+        label: 'Derivadas',
+        level: 7, // Reduced gap (was 8)
         type: 'critical',
-        requires: ['c1-2-continuidad'], // Connects from Continuity as requested
-        description: 'Pendiente tangente.',
-        xOffset: -30,
-        subcategoryId: 109, // Definición de la Derivada
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'c3-1-funcion',
-        label: 'Función Derivada',
-        level: 6,
-        type: 'basic',
-        requires: ['c1-3-infinito'],
-        description: 'f\'(x) como función.',
-        xOffset: 30,
-        subcategoryId: 110, // La Derivada como Función
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'c3-2-aprox',
-        label: 'Aproximación Lineal',
-        level: 7,
-        type: 'applied',
-        requires: ['c3-derivada-origen'],
-        description: 'Diferenciales.',
+        requires: [],
+        description: 'Cálculo Diferencial.',
         xOffset: 0,
-        subcategoryId: 113, // Aproximación Lineal
-        behavior: 'quiz_list'
-    },
-
-    // ==========================================
-    // NIVEL C4: DERIVADAS (Detailed Breakdown)
-    // ==========================================
-    {
-        id: 'c4-reglas',
-        label: 'Derivadas', // Renamed from Técnicas Derivación
-        level: 8,
-        type: 'critical',
-        requires: ['c3-1-funcion', 'c3-derivada-origen'],
-        description: 'Dominio de reglas.',
-        xOffset: 0,
-        // Removed subcategoryId: 111 to prevent this container from "stealing" the quizzes.
-        // The children below will capture them via specific keywords.
+        subcategoryId: 111, // Reverted to Cluster ID
         behavior: 'container'
     },
 
-    // BREAKDOWN OF SUBCATEGORY 111 (7 Quizzes)
+    // LEVEL 1: Derivada Origen, Nociones, Reglas
     {
-        id: 'c4-1-basicas',
+        id: 'c3-derivada-origen', // Kept ID for compatibility
+        label: 'Definición Derivada',
+        level: 8,
+        type: 'basic',
+        requires: ['c2-derivadas'],
+        description: 'Tasa Instantánea.',
+        xOffset: -50,
+        subcategoryId: 109, // Kept specific if it was working, or fallback to 111? Step 349 had 109 for Nociones. 
+        // Actually Step 349 had 'Definición Derivada' at 109. I will trust 109 is valid for this specific topic.
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'c2-nociones',
+        label: 'Nociones Básicas',
+        level: 8,
+        type: 'basic',
+        requires: ['c2-derivadas'],
+        description: 'Concepto.',
+        xOffset: 0,
+        subcategoryId: 109, // Reverted to 109
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'c2-reglas',
         label: 'Reglas Básicas',
-        level: 9,
+        level: 8,
         type: 'basic',
-        requires: ['c4-reglas'],
+        requires: ['c2-derivadas'],
         description: 'Potencia, Producto, Cociente.',
-        xOffset: -60,
-        subcategoryId: 111,
-        filterKeywords: ['potencia', 'producto', 'cociente'], // Matches Q110
+        xOffset: 50,
+        subcategoryId: 111, // Reverted to 111
+        filterKeywords: ['potencia', 'producto', 'cociente'],
         behavior: 'quiz_list'
     },
+
+    // LEVEL 2: NIETOS (Trigo, Cadena, Exp/Log)
     {
-        id: 'c4-2-trigo',
+        id: 'c2-trigo',
         label: 'Trigonométricas',
-        level: 9,
+        level: 9, // Reduced level
         type: 'basic',
-        requires: ['c4-reglas'],
+        requires: ['c2-reglas'],
         description: 'Sen, Cos, Tan...',
-        xOffset: -20,
-        subcategoryId: 111,
-        filterKeywords: ['trigonometricas', 'trigonométricas', 'seno', 'coseno'], // Matches Q111
+        xOffset: -60,
+        subcategoryId: 111, // Reverted to 111
+        // Removed 'inversa' related keywords to avoid capturing sub 113
+        filterKeywords: ['trigonometricas', 'trigonométrica', 'seno', 'coseno', 'tangente', 'secante', 'cosecante', 'cotangente', 'sen', 'cos', 'tan'],
         behavior: 'quiz_list'
     },
     {
-        id: 'c4-3-cadena',
+        id: 'c2-cadena',
         label: 'Regla Cadena',
         level: 9,
         type: 'critical',
-        requires: ['c4-reglas'],
+        requires: ['c2-reglas'],
         description: 'Composición f(g(x)).',
-        xOffset: 20,
-        subcategoryId: 111,
-        filterKeywords: ['cadena'], // Matches Q112
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'c4-4-inversas',
-        label: 'Inversas/Trig Inv',
-        level: 9,
-        type: 'applied',
-        requires: ['c4-reglas'],
-        description: 'Arcoseno, Arcocoseno...',
-        xOffset: 60,
-        subcategoryId: 111,
-        filterKeywords: ['inversa'], // Matches Q113 ("Funciones Inversas y Trigonométricas Inversas")
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'c4-5-implicita',
-        label: 'Implícita',
-        level: 10,
-        type: 'applied',
-        requires: ['c4-3-cadena'],
-        description: 'dy/dx en mezclas.',
-        xOffset: -40,
-        subcategoryId: 111,
-        filterKeywords: ['implicita', 'implícita'], // Matches Q114
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'c4-6-trans',
-        label: 'Exp y Log (Deriv)',
-        level: 10,
-        type: 'basic',
-        requires: ['c4-3-cadena'],
-        description: 'e^x, ln(x).',
         xOffset: 0,
-        subcategoryId: 111,
-        filterKeywords: ['exponenciales', 'logaritmicas', 'logarítmicas'], // Matches Q115
+        subcategoryId: 111, // Reverted to 111
+        filterKeywords: ['cadena', 'compuesta', 'composicion'],
         behavior: 'quiz_list'
     },
     {
-        id: 'c4-7-hiper',
+        id: 'c2-explog',
+        label: 'Exp y Log',
+        level: 9,
+        type: 'basic',
+        requires: ['c2-reglas'],
+        description: 'e^x, ln(x).',
+        xOffset: 60,
+        subcategoryId: 111, // Reverted to 111
+        filterKeywords: ['exponencial', 'logaritmica', 'logaritmo', 'euler', 'ln', 'exp'],
+        behavior: 'quiz_list'
+    },
+
+    // LEVEL 3: BISNIETOS (Inversas, Hiperbólicas)
+    {
+        id: 'c2-inversas',
+        label: 'Inv / Trig Inv',
+        level: 10,
+        type: 'applied',
+        requires: ['c2-trigo', 'c2-cadena'],
+        description: 'Arcoseno...',
+        xOffset: -40,
+        subcategoryId: 111, // Reverted to 111
+        filterKeywords: ['inversa', 'arc'],
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'c2-hiper',
         label: 'Hiperbólicas',
         level: 10,
         type: 'applied',
-        requires: ['c4-6-trans'],
+        requires: ['c2-explog', 'c2-cadena'],
         description: 'sinh, cosh.',
         xOffset: 40,
-        subcategoryId: 111,
-        filterKeywords: ['hiperbolicas', 'hiperbólicas'], // Matches Q116
+        subcategoryId: 111, // Reverted to 111
+        filterKeywords: ['hiperbolica', 'hiperbólica', 'sinh', 'cosh', 'tanh'],
         behavior: 'quiz_list'
     },
 
-    // ==========================================
-    // NIVEL C5: GRÁFICAS
-    // ==========================================
+    // STANDALONE
     {
-        id: 'c5-graficas',
-        label: 'Gráficas',
-        level: 11,
+        id: 'c2-implicita',
+        label: 'Dif. Implícita',
+        level: 10,
         type: 'applied',
-        requires: ['c4-5-implicita'],
-        description: 'Forma y Derivada.',
+        requires: ['c2-cadena'],
+        description: 'dy/dx.',
         xOffset: 0,
-        subcategoryId: 116,
+        subcategoryId: 111, // Reverted to 111
+        filterKeywords: ['implicita', 'implícita'],
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // NIVEL C6: APLICACIONES
+    // NIVEL C3: APLICACIONES (New Root)
     // ==========================================
     {
-        id: 'c6-aplicaciones',
+        id: 'c3-aplicaciones',
         label: 'Aplicaciones',
-        level: 12,
-        type: 'applied',
-        requires: ['c5-graficas'],
-        description: 'Uso real.',
+        level: 11, // Reduced gap (was 13)
+        type: 'critical',
+        requires: [],
+        description: 'Uso de la derivada.',
         xOffset: 0,
         behavior: 'container'
     },
+
+    // LEVEL 1: Tasas, Aprox
     {
-        id: 'c6-1-minmax',
-        label: 'Máx y Mín',
-        level: 13,
-        type: 'basic',
-        requires: ['c6-aplicaciones'],
-        description: 'Extremos.',
-        xOffset: -40,
-        subcategoryId: 114,
+        id: 'c3-tasas',
+        label: 'Tasas Relacionadas',
+        level: 12,
+        type: 'applied',
+        requires: ['c3-aplicaciones'],
+        description: 'Cambio temporal.',
+        xOffset: -50,
+        subcategoryId: 112, // Reverted to 112
         behavior: 'quiz_list'
     },
     {
-        id: 'c6-2-valor-medio',
+        id: 'c3-aprox',
+        label: 'Aprox Lineal',
+        level: 12,
+        type: 'applied',
+        requires: ['c3-aplicaciones'],
+        description: 'Diferenciales.',
+        xOffset: 50,
+        subcategoryId: 113, // Reverted to 113
+        behavior: 'quiz_list'
+    },
+
+    // LEVEL 2: MaxMin, Valor Medio, Criterios, Optimizacion
+    {
+        id: 'c3-maxmin',
+        label: 'Máximos y Mínimos',
+        level: 13,
+        type: 'basic',
+        requires: ['c3-aprox', 'c3-tasas'],
+        description: 'Extremos.',
+        xOffset: -75,
+        subcategoryId: 114, // Reverted to 114
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'c6-2-valor-medio', // Re-adding Valor Medio
         label: 'Valor Medio',
         level: 13,
         type: 'basic',
-        requires: ['c6-aplicaciones'],
+        requires: ['c3-aprox', 'c3-tasas'],
         description: 'Teorema Rolle.',
-        xOffset: 0,
-        subcategoryId: 115,
+        xOffset: -25,
+        subcategoryId: 115, // Reverted to 115
         behavior: 'quiz_list'
     },
     {
-        id: 'c6-3-optimizacion',
-        label: 'Optimización',
+        id: 'c3-criterios',
+        label: 'Criterios 1ra/2da',
         level: 13,
         type: 'critical',
-        requires: ['c6-aplicaciones'],
+        requires: ['c3-aprox', 'c3-tasas'],
+        description: 'Análisis gráfico.',
+        xOffset: 25,
+        subcategoryId: 116, // Reverted to 116
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'c3-optimizacion',
+        label: 'Optimización',
+        level: 13,
+        type: 'applied',
+        requires: ['c3-aprox', 'c3-tasas'],
         description: 'Problemas reales.',
-        xOffset: 40,
-        subcategoryId: 118,
+        xOffset: 75,
+        subcategoryId: 118, // Reverted to 118
         behavior: 'quiz_list'
     },
 
-    // ==========================================
-    // NIVEL C7: DINÁMICAS
-    // ==========================================
+    // LEVEL 3: L'Hopital, Newton
     {
-        id: 'c7-dinamicas',
-        label: 'Dinámicas',
+        id: 'c3-lhopital',
+        label: 'Regla L\'Hôpital',
         level: 14,
-        type: 'applied',
-        requires: ['c6-3-optimizacion'],
-        description: 'Cambio con tiempo.',
-        xOffset: 0,
-        behavior: 'container'
-    },
-    {
-        id: 'c7-1-tasas',
-        label: 'Tasas Relac.',
-        level: 15,
-        type: 'applied',
-        requires: ['c7-dinamicas'],
-        description: 'Variables conectadas.',
-        xOffset: -30,
-        subcategoryId: 112,
+        type: 'evaluation',
+        requires: ['c3-criterios'],
+        description: 'Indeterminaciones.',
+        xOffset: -40,
+        subcategoryId: 119, // Reverted to 119
         behavior: 'quiz_list'
     },
     {
-        id: 'c7-2-newton',
+        id: 'c3-newton',
         label: 'Método Newton',
-        level: 15,
+        level: 14,
         type: 'applied',
-        requires: ['c7-dinamicas'],
-        description: 'Raíces numéricas.',
-        xOffset: 30,
-        subcategoryId: 120,
+        requires: ['c3-optimizacion'],
+        description: 'Raíces.',
+        xOffset: 40,
+        subcategoryId: 120, // Reverted to 120
         behavior: 'quiz_list'
     }
 ];
-
-
