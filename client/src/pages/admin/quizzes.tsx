@@ -11,7 +11,8 @@ import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft } from "lucide-react";
+import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Category, Quiz, Subcategory, User } from "@/types/types";
@@ -36,6 +37,8 @@ import { SkillTreeView } from "@/components/roadmap/SkillTreeView";
 import { arithmeticMapNodes, ArithmeticNode } from "@/data/arithmetic-map-data";
 import { algebraMapNodes } from "@/data/algebra-map-data";
 import { calculusMapNodes } from "@/data/calculus-map-data";
+import { Reorder, AnimatePresence, useDragControls, motion } from "framer-motion";
+import { GripVertical } from "lucide-react";
 
 const difficultyOptions = [
   { value: "básico", label: "Básico" },
@@ -173,7 +176,7 @@ export default function QuizzesAdmin() {
   }, []);
 
   // Helper functions
-  const organizeQuizzesHierarchically = () => {
+  const hierarchicalData = React.useMemo(() => {
     if (!quizzes || !categories || !subcategoriesResponse) return [];
 
     const quizzesBySubcategory = quizzes.reduce((acc, quiz) => {
@@ -188,12 +191,38 @@ export default function QuizzesAdmin() {
     }, {} as Record<number, Quiz[]>);
 
     const result = categories.map(category => {
+      const mapData = getMapData(category.id);
+      const nodes = mapData?.nodes || [];
+
       const categorySubcategories = subcategoriesResponse
         .filter((sub: any) => sub.categoryId === category.id)
-        .map((sub: any) => ({
-          ...sub,
-          quizzes: quizzesBySubcategory[sub.id] || []
-        }));
+        .map((sub: any) => {
+          // Find if this subcategory matches any map node
+          const mapNode = nodes.find((n: any) =>
+            n.subcategoryId === sub.id ||
+            (n.additionalSubcategories && n.additionalSubcategories.includes(sub.id))
+          );
+
+          const level = mapNode ? (mapNode.level ?? 999) : 1000;
+
+          let subQuizzes = (quizzesBySubcategory[sub.id] || []).sort((a, b) => {
+            if ((a.sortOrder ?? 0) !== (b.sortOrder ?? 0)) {
+              return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+            }
+            return a.title.localeCompare(b.title);
+          });
+
+          return {
+            ...sub,
+            level,
+            quizzes: subQuizzes
+          };
+        })
+        .sort((a: any, b: any) => {
+          if ((a.sortOrder ?? 0) !== (b.sortOrder ?? 0)) return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+          if (a.level !== b.level) return a.level - b.level;
+          return a.name.localeCompare(b.name);
+        });
 
       return {
         ...category,
@@ -201,11 +230,130 @@ export default function QuizzesAdmin() {
       };
     });
 
-    return result;
-  };
+    return result.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }, [quizzes, categories, subcategoriesResponse]);
 
-  const hierarchicalData = organizeQuizzesHierarchically();
-  const quizzesWithoutClassification = quizzes?.filter(q => !q.categoryId || !q.subcategoryId) || [];
+  const quizzesWithoutClassification = React.useMemo(() =>
+    quizzes?.filter(q => !q.categoryId || !q.subcategoryId) || []
+    , [quizzes]);
+
+  const reorderQuizzesMutation = useMutation({
+    mutationFn: async ({ orders }: { orders: { id: number; sortOrder: number }[] }) => {
+      const res = await fetch("/api/admin/quizzes/reorder", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orders })
+      });
+      if (!res.ok) throw new Error("Failed to reorder quizzes");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quizzes"] });
+    }
+  });
+
+  const reorderSubcategoriesMutation = useMutation({
+    mutationFn: async ({ orders }: { orders: { id: number; sortOrder: number }[] }) => {
+      const res = await fetch("/api/admin/subcategories/reorder", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orders })
+      });
+      if (!res.ok) throw new Error("Failed to reorder subcategories");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/subcategories"] });
+    }
+  });
+
+  const reorderCategoriesMutation = useMutation({
+    mutationFn: async ({ orders }: { orders: { id: number; sortOrder: number }[] }) => {
+      const res = await fetch("/api/admin/categories/reorder", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orders })
+      });
+      if (!res.ok) throw new Error("Failed to reorder categories");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+    }
+  });
+
+  // Debouncing logic for reorders
+  const reorderTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const debouncedReorderQuizzes = React.useCallback((orders: { id: number; sortOrder: number }[]) => {
+    if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current);
+    reorderTimerRef.current = setTimeout(() => {
+      reorderQuizzesMutation.mutate({ orders });
+    }, 1000);
+  }, [reorderQuizzesMutation]);
+
+  const debouncedReorderSubcategories = React.useCallback((orders: { id: number; sortOrder: number }[]) => {
+    if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current);
+    reorderTimerRef.current = setTimeout(() => {
+      reorderSubcategoriesMutation.mutate({ orders });
+    }, 1000);
+  }, [reorderSubcategoriesMutation]);
+
+  const debouncedReorderCategories = React.useCallback((orders: { id: number; sortOrder: number }[]) => {
+    if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current);
+    reorderTimerRef.current = setTimeout(() => {
+      reorderCategoriesMutation.mutate({ orders });
+    }, 1000);
+  }, [reorderCategoriesMutation]);
+
+  // Helper for optimistic reorder
+  const updateQuizzesCache = React.useCallback((newOrder: Quiz[]) => {
+    queryClient.setQueryData(["/api/quizzes"], (old: Quiz[] | undefined) => {
+      if (!old) return old;
+      return old.map(q => {
+        const found = newOrder.find(item => item.id === q.id);
+        if (found) {
+          return { ...found, sortOrder: newOrder.indexOf(found) };
+        }
+        return q;
+      });
+    });
+
+    const orders = newOrder.map((q, index) => ({ id: q.id, sortOrder: index }));
+    debouncedReorderQuizzes(orders);
+  }, [queryClient, debouncedReorderQuizzes]);
+
+  const updateSubcategoriesCache = React.useCallback((newOrder: Subcategory[]) => {
+    queryClient.setQueryData(["/api/admin/subcategories"], (old: Subcategory[] | undefined) => {
+      if (!old) return old;
+      return old.map(s => {
+        const found = newOrder.find(item => item.id === s.id);
+        if (found) {
+          return { ...found, sortOrder: newOrder.indexOf(found) };
+        }
+        return s;
+      });
+    });
+
+    const orders = newOrder.map((s, index) => ({ id: s.id, sortOrder: index }));
+    debouncedReorderSubcategories(orders);
+  }, [queryClient, debouncedReorderSubcategories]);
+
+  const updateCategoriesCache = React.useCallback((newOrder: Category[]) => {
+    queryClient.setQueryData(["/api/categories"], (old: Category[] | undefined) => {
+      if (!old) return old;
+      return old.map(c => {
+        const found = newOrder.find(item => item.id === c.id);
+        if (found) {
+          return { ...found, sortOrder: newOrder.indexOf(found) };
+        }
+        return c;
+      });
+    });
+
+    const orders = newOrder.map((c, index) => ({ id: c.id, sortOrder: index }));
+    debouncedReorderCategories(orders);
+  }, [queryClient, debouncedReorderCategories]);
 
   // Filtered Data and Auto-Expansion
   // Filtered Data and Auto-Expansion
@@ -245,7 +393,7 @@ export default function QuizzesAdmin() {
     );
 
     return {
-      filteredHierarchicalData: filteredData,
+      filteredHierarchicalData: (filteredData as any[]).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
       filteredUnclassifiedQuizzes: filteredUnclassified
     };
   }, [hierarchicalData, quizzesWithoutClassification, quizSearchQuery]);
@@ -724,14 +872,16 @@ export default function QuizzesAdmin() {
                     Lista de todos los cuestionarios disponibles en el sistema
                   </CardDescription>
                 </div>
-                <div className="relative w-64">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Buscar cuestionario..."
-                    value={quizSearchQuery}
-                    onChange={(e) => setQuizSearchQuery(e.target.value)}
-                    className="pl-8 bg-slate-950 border-slate-800 text-slate-200 focus:ring-blue-500/50"
-                  />
+                <div className="flex gap-4 items-center">
+                  <div className="relative w-64">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Buscar cuestionario..."
+                      value={quizSearchQuery}
+                      onChange={(e) => setQuizSearchQuery(e.target.value)}
+                      className="pl-8 bg-slate-950 border-slate-800 text-slate-200 focus:ring-blue-500/50"
+                    />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
@@ -740,391 +890,104 @@ export default function QuizzesAdmin() {
                     <Spinner className="h-8 w-8 text-blue-500" />
                   </div>
                 ) : quizzes && quizzes.length > 0 ? (
-                  <Accordion
-                    type="multiple"
-                    className="space-y-4"
-                    value={expandedCategories}
-                    onValueChange={setExpandedCategories}
-                  >
-                    {/* 1. Categorías con subcategorías */}
-                    {filteredHierarchicalData.map((category: any) => (
-                      <AccordionItem key={category.id} value={`cat-${category.id}`} className="border border-white/10 rounded-md bg-slate-800/30 overflow-hidden">
-                        <AccordionTrigger className="hover:no-underline px-4 py-3 bg-slate-800/50 hover:bg-slate-800 text-slate-200 group">
-                          <div className="flex-1 text-left flex items-center justify-between mr-4">
-                            <div>
-                              <h3 className="text-lg font-medium">{category.name}</h3>
-                              <p className="text-sm text-slate-400">
-                                {category.subcategories.reduce((acc: number, sub: any) => acc + sub.quizzes.length, 0)} cuestionario(s)
-                              </p>
-                            </div>
-
-                            {/* Map Button - Only for mapped categories */}
-                            {(category.id === 1 || category.id === 2 || category.id === 4) && (
-                              <Button
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveMapCategory(category.id);
-                                }}
-                                className="opacity-100 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all hover:scale-105"
-                              >
-                                <MapIcon className="h-4 w-4 mr-2" />
-                                Ver Mapa
-                              </Button>
-                            )}
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="px-4 pb-0 pt-2 bg-slate-900/50 border-t border-white/5">
-                          <Accordion
-                            type="multiple"
-                            className="space-y-2 py-2"
-                            value={expandedSubcategories}
-                            onValueChange={setExpandedSubcategories}
-                          >
-                            {category.subcategories.map((subcategory: any) => (
-                              subcategory.quizzes.length > 0 && (
-                                <AccordionItem
-                                  key={subcategory.id}
-                                  value={`subcat-${subcategory.id}`}
-                                  className="border border-white/5 rounded-md bg-slate-950/30"
-                                >
-                                  <AccordionTrigger className="hover:no-underline px-4 py-2 text-slate-300 hover:text-white">
-                                    <div className="flex-1 text-left">
-                                      <h4 className="text-md font-medium">{subcategory.name}</h4>
-                                      <p className="text-xs text-slate-500">
-                                        {subcategory.quizzes.length} cuestionario(s)
-                                      </p>
-                                    </div>
-                                  </AccordionTrigger>
-                                  <AccordionContent className="px-4 pb-0 pt-2">
-                                    <div className="grid grid-cols-1 gap-3 pb-3">
-                                      {subcategory.quizzes.map((quiz: Quiz) => (
-                                        <Card key={quiz.id} className="overflow-hidden border border-white/5 bg-slate-900 hover:bg-slate-800 transition-all">
-                                          <CardContent className="p-6">
-                                            <div className="flex flex-col space-y-4">
-                                              <div className="flex justify-between items-start">
-                                                <div>
-                                                  <div className="flex items-center gap-2">
-                                                    <h3 className="text-lg font-semibold text-slate-200">{quiz.title}</h3>
-                                                    {quiz.isPublic && (
-                                                      <Badge variant="outline" className="ml-2 border-blue-500/30 text-blue-400 bg-blue-500/10">
-                                                        <LinkIcon className="h-3 w-3 mr-1" /> Público
-                                                      </Badge>
-                                                    )}
-                                                  </div>
-                                                  <p className="text-sm text-slate-400 mt-1">{quiz.description}</p>
-                                                </div>
-                                                <div className="flex space-x-2">
-                                                  <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleEdit(quiz)}
-                                                    className="bg-slate-950 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
-                                                  >
-                                                    Editar
-                                                  </Button>
-                                                  <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(quiz.id)}
-                                                    title="Eliminar cuestionario"
-                                                    className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
-                                                  >
-                                                    <Trash className="h-4 w-4" />
-                                                  </Button>
-                                                </div>
-                                              </div>
-
-                                              <Dialog>
-                                                <DialogTrigger asChild>
-                                                  <Button
-                                                    size="sm"
-                                                    variant="secondary"
-                                                    onClick={() => {
-                                                      setVisibleQuizId(quiz.id);
-                                                      fetchAssignedUsers(quiz.id);
-                                                      setSearchQuery(""); // Reset search on open
-                                                    }}
-                                                    className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
-                                                  >
-                                                    Asignar usuarios
-                                                  </Button>
-                                                </DialogTrigger>
-                                                <DialogContent className="bg-slate-950 border-slate-800 text-slate-200 max-h-[80vh] flex flex-col">
-                                                  <DialogHeader>
-                                                    <DialogTitle>Asignar Usuarios</DialogTitle>
-                                                    <DialogDescription className="text-slate-400">
-                                                      Selecciona los usuarios que tendrán acceso a: <span className="font-semibold text-slate-200">{quiz.title}</span>
-                                                    </DialogDescription>
-                                                  </DialogHeader>
-
-                                                  <div className="relative mb-4">
-                                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-500" />
-                                                    <Input
-                                                      placeholder="Buscar usuario por nombre o correo..."
-                                                      value={searchQuery}
-                                                      onChange={(e) => setSearchQuery(e.target.value)}
-                                                      className="pl-9 bg-slate-900 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50"
-                                                    />
-                                                  </div>
-
-                                                  <div className="flex-1 overflow-y-auto pr-2 space-y-1">
-                                                    {allUsers
-                                                      .filter(user =>
-                                                        user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                                        user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                                        user.username?.toLowerCase().includes(searchQuery.toLowerCase())
-                                                      )
-                                                      .sort((a, b) => (a.name || a.username).localeCompare(b.name || b.username))
-                                                      .map((user) => (
-                                                        <label key={user.id} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded cursor-pointer transition-colors">
-                                                          <div className="flex items-center h-5">
-                                                            <input
-                                                              type="checkbox"
-                                                              checked={assignedUsers.includes(user.id)}
-                                                              onChange={() =>
-                                                                toggleQuizAssignment(
-                                                                  quiz.id,
-                                                                  user.id,
-                                                                  assignedUsers.includes(user.id)
-                                                                )
-                                                              }
-                                                              className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-slate-950"
-                                                            />
-                                                          </div>
-                                                          <div className="flex flex-col">
-                                                            <span className="text-sm font-medium text-slate-200">{user.name || user.username}</span>
-                                                            <span className="text-xs text-slate-500">{user.email}</span>
-                                                          </div>
-                                                        </label>
-                                                      ))}
-                                                    {allUsers.filter(user =>
-                                                      user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                                      user.email?.toLowerCase().includes(searchQuery.toLowerCase())
-                                                    ).length === 0 && (
-                                                        <div className="text-center py-8 text-slate-500">
-                                                          No se encontraron usuarios
-                                                        </div>
-                                                      )}
-                                                  </div>
-                                                </DialogContent>
-                                              </Dialog>
-
-
-                                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
-                                                <div className="flex items-center text-slate-400">
-                                                  <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                                                  <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
-                                                </div>
-                                                <div>
-                                                  <Badge variant={
-                                                    quiz.difficulty === "básico" ? "default" :
-                                                      quiz.difficulty === "intermedio" ? "secondary" : "destructive"
-                                                  } className="bg-slate-800 text-slate-300 border-slate-700">
-                                                    {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
-                                                  </Badge>
-                                                </div>
-                                                <div>
-                                                  <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20">
-                                                    {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
-                                                  </Badge>
-                                                </div>
-                                              </div>
-
-                                              <Separator className="bg-white/10" />
-
-                                              <div className="flex justify-end">
-                                                <Button
-                                                  size="sm"
-                                                  onClick={() => handleManageQuestions(quiz.id)}
-                                                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                                                >
-                                                  Gestionar preguntas
-                                                </Button>
-                                              </div>
-                                            </div>
-                                          </CardContent>
-                                        </Card>
-                                      ))}
-                                    </div>
-                                  </AccordionContent>
-                                </AccordionItem>
-                              )
-                            ))}
-                          </Accordion>
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
+                  <div className="space-y-4">
+                    <Reorder.Group
+                      axis="y"
+                      values={filteredHierarchicalData}
+                      onReorder={quizSearchQuery ? (newOrder) => { } : updateCategoriesCache}
+                      className="space-y-4"
+                    >
+                      {filteredHierarchicalData.map((category: any) => (
+                        <DraggableCategoryItem
+                          key={category.id}
+                          category={category}
+                          setActiveMapCategory={setActiveMapCategory}
+                          updateSubcategoriesCache={updateSubcategoriesCache}
+                          updateQuizzesCache={updateQuizzesCache}
+                          handleEdit={handleEdit}
+                          handleDelete={handleDelete}
+                          handleManageQuestions={handleManageQuestions}
+                          visibleQuizId={visibleQuizId}
+                          setVisibleQuizId={setVisibleQuizId}
+                          fetchAssignedUsers={fetchAssignedUsers}
+                          searchQuery={searchQuery}
+                          setSearchQuery={setSearchQuery}
+                          allUsers={allUsers}
+                          assignedUsers={assignedUsers}
+                          toggleQuizAssignment={toggleQuizAssignment}
+                          isExpanded={expandedCategories.includes(`cat-${category.id}`)}
+                          onToggle={() => {
+                            setExpandedCategories(prev =>
+                              prev.includes(`cat-${category.id}`)
+                                ? prev.filter(id => id !== `cat-${category.id}`)
+                                : [...prev, `cat-${category.id}`]
+                            );
+                          }}
+                          expandedSubcategories={expandedSubcategories}
+                          setExpandedSubcategories={setExpandedSubcategories}
+                        />
+                      ))}
+                    </Reorder.Group>
 
                     {/* 2. Quizzes sin categoría/subcategoría */}
                     {filteredUnclassifiedQuizzes.length > 0 && (
-                      <AccordionItem value="uncategorized" className="border border-white/10 rounded-md bg-slate-800/30 overflow-hidden">
-                        <AccordionTrigger className="hover:no-underline px-4 py-3 bg-slate-800/50 hover:bg-slate-800 text-slate-200">
+                      <Card className="border border-white/10 rounded-md bg-slate-800/30 overflow-hidden mt-4">
+                        <div
+                          className="px-4 py-3 bg-slate-800/50 hover:bg-slate-800 text-slate-200 cursor-pointer flex justify-between items-center"
+                          onClick={() => {
+                            setExpandedCategories(prev =>
+                              prev.includes("uncategorized")
+                                ? prev.filter(id => id !== "uncategorized")
+                                : [...prev, "uncategorized"]
+                            );
+                          }}
+                        >
                           <div className="flex-1 text-left">
                             <h3 className="text-lg font-medium">Sin materia/tema</h3>
                             <p className="text-sm text-slate-400">
                               {filteredUnclassifiedQuizzes.length} cuestionario(s) no clasificado(s)
                             </p>
                           </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="px-4 pb-0 pt-2 bg-slate-900/50 border-t border-white/5">
-                          <div className="grid grid-cols-1 gap-3 py-3">
-                            {filteredUnclassifiedQuizzes.map((quiz) => (
-                              <Card key={quiz.id} className="overflow-hidden border border-white/5 bg-slate-900 hover:bg-slate-800 transition-all">
-                                <CardContent className="p-6">
-                                  <div className="flex flex-col space-y-4">
-                                    <div className="flex justify-between items-start">
-                                      <div>
-                                        <div className="flex items-center gap-2">
-                                          <h3 className="text-lg font-semibold text-slate-200">{quiz.title}</h3>
-                                          {quiz.isPublic && (
-                                            <Badge variant="outline" className="ml-2 border-blue-500/30 text-blue-400 bg-blue-500/10">
-                                              <LinkIcon className="h-3 w-3 mr-1" /> Público
-                                            </Badge>
-                                          )}
-                                        </div>
-                                        <p className="text-sm text-slate-400 mt-1">{quiz.description}</p>
-                                      </div>
-                                      <div className="flex space-x-2">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleEdit(quiz)}
-                                          className="bg-slate-950 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
-                                        >
-                                          Editar
-                                        </Button>
-                                        <Button
-                                          variant="destructive"
-                                          size="sm"
-                                          onClick={() => handleDelete(quiz.id)}
-                                          title="Eliminar cuestionario"
-                                          className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
-                                        >
-                                          <Trash className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    </div>
-
-                                    <Dialog>
-                                      <DialogTrigger asChild>
-                                        <Button
-                                          size="sm"
-                                          variant="secondary"
-                                          onClick={() => {
-                                            setVisibleQuizId(quiz.id);
-                                            fetchAssignedUsers(quiz.id);
-                                            setSearchQuery(""); // Reset search on open
-                                          }}
-                                          className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
-                                        >
-                                          Asignar usuarios
-                                        </Button>
-                                      </DialogTrigger>
-                                      <DialogContent className="bg-slate-950 border-slate-800 text-slate-200 max-h-[80vh] flex flex-col">
-                                        <DialogHeader>
-                                          <DialogTitle>Asignar Usuarios</DialogTitle>
-                                          <DialogDescription className="text-slate-400">
-                                            Selecciona los usuarios que tendrán acceso a: <span className="font-semibold text-slate-200">{quiz.title}</span>
-                                          </DialogDescription>
-                                        </DialogHeader>
-
-                                        <div className="relative mb-4">
-                                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-500" />
-                                          <Input
-                                            placeholder="Buscar usuario por nombre o correo..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="pl-9 bg-slate-900 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50"
-                                          />
-                                        </div>
-
-                                        <div className="flex-1 overflow-y-auto pr-2 space-y-1">
-                                          {allUsers
-                                            .filter(user =>
-                                              user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                              user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                              user.username?.toLowerCase().includes(searchQuery.toLowerCase())
-                                            )
-                                            .sort((a, b) => (a.name || a.username).localeCompare(b.name || b.username))
-                                            .map((user) => (
-                                              <label key={user.id} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded cursor-pointer transition-colors">
-                                                <div className="flex items-center h-5">
-                                                  <input
-                                                    type="checkbox"
-                                                    checked={assignedUsers.includes(user.id)}
-                                                    onChange={() =>
-                                                      toggleQuizAssignment(
-                                                        quiz.id,
-                                                        user.id,
-                                                        assignedUsers.includes(user.id)
-                                                      )
-                                                    }
-                                                    className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-slate-950"
-                                                  />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-sm font-medium text-slate-200">{user.name || user.username}</span>
-                                                  <span className="text-xs text-slate-500">{user.email}</span>
-                                                </div>
-                                              </label>
-                                            ))}
-                                          {allUsers.filter(user =>
-                                            user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                            user.email?.toLowerCase().includes(searchQuery.toLowerCase())
-                                          ).length === 0 && (
-                                              <div className="text-center py-8 text-slate-500">
-                                                No se encontraron usuarios
-                                              </div>
-                                            )}
-                                        </div>
-                                      </DialogContent>
-                                    </Dialog>
-
-
-
-
-
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 text-sm">
-                                      <div className="flex items-center text-slate-400">
-                                        <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                                        <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
-                                      </div>
-                                      <div>
-                                        <Badge variant={
-                                          quiz.difficulty === "básico" ? "default" :
-                                            quiz.difficulty === "intermedio" ? "secondary" : "destructive"
-                                        } className="bg-slate-800 text-slate-300 border-slate-700">
-                                          {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
-                                        </Badge>
-                                      </div>
-                                      <div>
-                                        <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20">
-                                          {quiz.totalQuestions} {quiz.totalQuestions === 1 ? "pregunta" : "preguntas"}
-                                        </Badge>
-                                      </div>
-                                    </div>
-
-                                    <Separator className="bg-white/10" />
-
-                                    <div className="flex justify-end">
-                                      <Button
-                                        size="sm"
-                                        onClick={() => handleManageQuestions(quiz.id)}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                                      >
-                                        Gestionar preguntas
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
+                          <ChevronDown className={cn("h-5 w-5 transition-transform", expandedCategories.includes("uncategorized") && "rotate-180")} />
+                        </div>
+                        <AnimatePresence>
+                          {expandedCategories.includes("uncategorized") && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden bg-slate-900/50 border-t border-white/5"
+                            >
+                              <div className="px-4 pb-3 pt-2">
+                                <div className="grid grid-cols-1 gap-3 py-3">
+                                  <AnimatePresence initial={false}>
+                                    {filteredUnclassifiedQuizzes.map((quiz) => (
+                                      <DraggableQuizItem
+                                        key={quiz.id}
+                                        quiz={quiz}
+                                        handleEdit={handleEdit}
+                                        handleDelete={handleDelete}
+                                        handleManageQuestions={handleManageQuestions}
+                                        visibleQuizId={visibleQuizId}
+                                        setVisibleQuizId={setVisibleQuizId}
+                                        fetchAssignedUsers={fetchAssignedUsers}
+                                        searchQuery={searchQuery}
+                                        setSearchQuery={setSearchQuery}
+                                        allUsers={allUsers}
+                                        assignedUsers={assignedUsers}
+                                        toggleQuizAssignment={toggleQuizAssignment}
+                                      />
+                                    ))}
+                                  </AnimatePresence>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </Card>
                     )}
-                  </Accordion>
+                  </div>
                 ) : (
                   <div className="text-center py-12 px-4">
                     <div className="mb-4 rounded-full bg-slate-800 h-12 w-12 flex items-center justify-center mx-auto">
@@ -1146,6 +1009,7 @@ export default function QuizzesAdmin() {
           </div>
         </div>
       </div>
+
       {/* Map Viewer Dialog */}
       <Dialog open={!!activeMapCategory} onOpenChange={(open) => !open && setActiveMapCategory(null)}>
         <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0 bg-slate-950 border-slate-800 overflow-hidden">
@@ -1173,7 +1037,10 @@ export default function QuizzesAdmin() {
 
                   // Helper to get quizzes for a node
                   const getFilteredQuizzesForNode = (node: ArithmeticNode) => {
-                    let contextQuizzes = categoryQuizzes.filter(q => q.subcategoryId == node.subcategoryId) || [];
+                    let contextQuizzes = categoryQuizzes.filter(q =>
+                      q.subcategoryId == node.subcategoryId ||
+                      (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId))
+                    ) || [];
 
                     if (node.filterKeywords && node.filterKeywords.length > 0) {
                       const keywords = node.filterKeywords.map(k => k.toLowerCase());
@@ -1190,137 +1057,562 @@ export default function QuizzesAdmin() {
                     return contextQuizzes;
                   };
 
-                  // Pass 1: Intrinsic Status (Content vs Empty)
                   nodes.forEach(node => {
                     const hasContent = getFilteredQuizzesForNode(node).length > 0;
                     if (node.behavior === 'container') {
-                      // Containers will be calculated in Pass 2
-                      map[node.id] = 'locked';
+                      const children = nodes.filter(n => n.requires.includes(node.id));
+                      const anyChildActive = children.some(c => getFilteredQuizzesForNode(c).length > 0);
+                      map[node.id] = (hasContent || anyChildActive) ? 'available' : 'locked';
                     } else {
                       map[node.id] = hasContent ? 'available' : 'locked';
                     }
                   });
 
-                  // Pass 2: Container Aggregation (Simple: If any child has content, Container is available)
-                  nodes.filter(n => n.behavior === 'container').forEach(container => {
-                    const children = nodes.filter(n => n.requires.includes(container.id));
-                    const anyChildActive = children.some(c => map[c.id] === 'available');
-                    const hasContent = getFilteredQuizzesForNode(container).length > 0; // Containers can also have direct content sometimes
-
-                    if (anyChildActive || hasContent) {
-                      map[container.id] = 'available';
-                    } else {
-                      map[container.id] = 'locked';
-                    }
-                  });
-
                   return map;
                 })()}
-                // Filter ALL quizzes to pass only this category's quizzes to the map
                 allQuizzes={quizzes?.filter(q => q.categoryId === activeMapCategory) || []}
-                onNodeClick={(node) => {
-                  // Find Subcategory logic
-                  // We need to find the name of the subcategory for the dialog
-                  // But we don't have the subcategories list mapped easily here by ID from the node.
-                  // We can fetch or deduce it. Since we are admin, we have `allQuizzes`.
-                  // We can just set the node and open the dialog.
-                  setSelectedNode(node);
-
-                  // Try to find a quiz that matches to get the subcategory info?
-                  // Or just use the node label as title.
-                  // User just wants to see the quizzes.
-                  // We will use a Dialog for the selected Node.
-                }}
-                isAdmin={true} // Keep true for solid lines
+                onNodeClick={(node) => setSelectedNode(node)}
+                isAdmin={true}
                 title={getMapData(activeMapCategory)?.title || ""}
                 subcategories={subcategoriesResponse || []}
               />
             )}
           </div>
+        </DialogContent>
+      </Dialog>
 
-          {/* Node Details Dialog (Student-like View for Admin) */}
-          <Dialog open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
-            <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
-              <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <BookOpen className="h-6 w-6 text-blue-400" />
+      {/* Node Details Dialog */}
+      <Dialog open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
+        <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <BookOpen className="h-6 w-6 text-blue-400" />
+              </div>
+              <DialogTitle className="text-xl font-bold text-white">
+                {selectedNode?.label}
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-slate-400">
+              {selectedNode?.description || "Contenido del módulo"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6 pt-2">
+            {selectedNode && (() => {
+              const node = selectedNode;
+              const categoryQuizzes = quizzes?.filter(q => q.categoryId === activeMapCategory) || [];
+              let nodeQuizzes = categoryQuizzes.filter(q =>
+                q.subcategoryId == node.subcategoryId ||
+                (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId))
+              ) || [];
+
+              if (node.filterKeywords && node.filterKeywords.length > 0) {
+                const keywords = node.filterKeywords.map(k => k.toLowerCase());
+                nodeQuizzes = nodeQuizzes.filter(q => {
+                  const titleLower = q.title.toLowerCase();
+                  if (!keywords.some(k => titleLower.includes(k))) return false;
+                  if (node.excludeKeywords && node.excludeKeywords.length > 0) {
+                    const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
+                    if (excludeKeys.some(k => titleLower.includes(k))) return false;
+                  }
+                  return true;
+                });
+              }
+
+              if (nodeQuizzes.length === 0) {
+                return (
+                  <div className="text-center py-12 text-slate-500">
+                    <Ban className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                    <p>No hay cuestionarios vinculados a este nodo.</p>
                   </div>
-                  <DialogTitle className="text-xl font-bold text-white">
-                    {selectedNode?.label}
-                  </DialogTitle>
-                </div>
-                <DialogDescription className="text-slate-400">
-                  {selectedNode?.description || "Contenido del módulo"}
-                </DialogDescription>
-              </DialogHeader>
+                );
+              }
 
-              <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6 pt-2">
-                {selectedNode && (() => {
-                  const categoryQuizzes = quizzes?.filter(q => q.categoryId === activeMapCategory) || [];
-                  let nodeQuizzes = categoryQuizzes.filter(q =>
-                    q.subcategoryId == selectedNode.subcategoryId ||
-                    (selectedNode.additionalSubcategories && selectedNode.additionalSubcategories.includes(q.subcategoryId))
-                  ) || [];
-
-                  if (selectedNode.filterKeywords && selectedNode.filterKeywords.length > 0) {
-                    const keywords = selectedNode.filterKeywords.map(k => k.toLowerCase());
-                    nodeQuizzes = nodeQuizzes.filter(q => {
-                      const titleLower = q.title.toLowerCase();
-                      if (!keywords.some(k => titleLower.includes(k))) return false;
-                      if (selectedNode.excludeKeywords && selectedNode.excludeKeywords.length > 0) {
-                        const excludeKeys = selectedNode.excludeKeywords.map(k => k.toLowerCase());
-                        if (excludeKeys.some(k => titleLower.includes(k))) return false;
-                      }
-                      return true;
-                    });
-                  }
-
-                  if (nodeQuizzes.length === 0) {
-                    return (
-                      <div className="text-center py-12 text-slate-500">
-                        <Ban className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                        <p>No hay cuestionarios vinculados a este nodo.</p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="grid grid-cols-1 gap-3">
-                      {nodeQuizzes.map(quiz => (
-                        <div key={quiz.id} className="flex flex-col gap-3 p-4 rounded-xl bg-slate-800/40 border border-white/5">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 bg-blue-500/20 text-blue-400">
-                                <BookOpen className="h-5 w-5" />
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-sm text-slate-200 line-clamp-2">{quiz.title}</h4>
-                                <p className="text-xs text-slate-500 line-clamp-1">{quiz.description}</p>
-                              </div>
-                            </div>
+              return (
+                <div className="grid grid-cols-1 gap-3">
+                  {nodeQuizzes.map(quiz => (
+                    <div key={quiz.id} className="flex flex-col gap-3 p-4 rounded-xl bg-slate-800/40 border border-white/5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 bg-blue-500/20 text-blue-400">
+                            <BookOpen className="h-5 w-5" />
                           </div>
-                          <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${quiz.difficulty === 'Fácil' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                              quiz.difficulty === 'Medio' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
-                                'bg-red-500/10 text-red-400 border border-red-500/20'
-                              }`}>
-                              {quiz.difficulty}
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              ID: {quiz.id}
-                            </span>
+                          <div>
+                            <h4 className="font-semibold text-sm text-slate-200 line-clamp-2">{quiz.title}</h4>
+                            <p className="text-xs text-slate-500 line-clamp-1">{quiz.description}</p>
                           </div>
                         </div>
-                      ))}
+                      </div>
+                      <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${quiz.difficulty === 'básico' || quiz.difficulty === 'Fácil' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                          quiz.difficulty === 'intermedio' || quiz.difficulty === 'Medio' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                            'bg-red-500/10 text-red-400 border border-red-500/20'
+                          }`}>
+                          {quiz.difficulty}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          ID: {quiz.id}
+                        </span>
+                      </div>
                     </div>
-                  );
-                })()}
-              </div>
-            </DialogContent>
-          </Dialog>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
+
+// --- Sub-components for Draggable Items ---
+
+const DraggableCategoryItem = React.memo(({
+  category,
+  setActiveMapCategory,
+  updateSubcategoriesCache,
+  updateQuizzesCache,
+  handleEdit,
+  handleDelete,
+  handleManageQuestions,
+  visibleQuizId,
+  setVisibleQuizId,
+  fetchAssignedUsers,
+  searchQuery,
+  setSearchQuery,
+  allUsers,
+  assignedUsers,
+  toggleQuizAssignment,
+  isExpanded,
+  onToggle,
+  expandedSubcategories,
+  setExpandedSubcategories
+}: any) => {
+  const controls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={category}
+      dragControls={controls}
+      dragListener={false}
+      layout
+      className="touch-none relative list-none"
+      whileDrag={{
+        scale: 1.02,
+        boxShadow: "0 25px 30px -5px rgb(0 0 0 / 0.6), 0 0 15px -3px rgba(59, 130, 246, 0.5)",
+        zIndex: 100,
+        backgroundColor: "rgba(15, 23, 42, 1)",
+        border: "2px solid rgba(59, 130, 246, 0.8)"
+      }}
+      onDragStart={() => {
+        document.body.classList.add('dragging-active');
+      }}
+      onDragEnd={() => {
+        document.body.classList.remove('dragging-active');
+      }}
+      transition={{
+        layout: { duration: 0.2, ease: "easeOut" }
+      }}
+    >
+      <Card className={cn(
+        "border border-white/10 rounded-md bg-slate-800/30 overflow-hidden mb-4 shadow-md transition-all duration-300",
+        isExpanded && "border-blue-500/50 ring-1 ring-blue-500/20"
+      )}>
+        <div
+          className={cn(
+            "px-2 py-3 text-slate-200 flex items-center justify-between cursor-pointer group transition-colors",
+            isExpanded ? "bg-slate-800" : "bg-slate-800/50 hover:bg-slate-800"
+          )}
+          onClick={onToggle}
+        >
+          <div className="flex-1 flex items-center justify-between mr-4">
+            <div className="flex items-center gap-1">
+              <div
+                className="cursor-grab active:cursor-grabbing text-slate-600 hover:text-slate-400 p-2 transition-colors relative z-10"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  controls.start(e);
+                }}
+              >
+                <GripVertical className="h-5 w-5" />
+              </div>
+              <div className={cn(
+                "flex items-center gap-3 border-l-2 pl-3 transition-all duration-300",
+                isExpanded ? "border-blue-500" : "border-transparent"
+              )}>
+                <div>
+                  <h3 className="text-lg font-medium">{category.name}</h3>
+                  <p className="text-sm text-slate-400">
+                    {category.subcategories.reduce((acc: number, sub: any) => acc + sub.quizzes.length, 0)} cuestionario(s)
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {(category.id === 1 || category.id === 2 || category.id === 4) && (
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveMapCategory(category.id);
+                }}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all hover:scale-105"
+              >
+                <MapIcon className="h-4 w-4 mr-2" />
+                Ver Mapa
+              </Button>
+            )}
+          </div>
+          <ChevronDown className={cn("h-5 w-5 text-slate-500 transition-transform duration-200", isExpanded && "rotate-180")} />
+        </div>
+
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="overflow-hidden bg-slate-900/50 border-t border-white/5"
+            >
+              <div className="px-4 pb-2 pt-2">
+                <Reorder.Group
+                  axis="y"
+                  values={category.subcategories}
+                  onReorder={searchQuery ? undefined : updateSubcategoriesCache}
+                  className="space-y-3 py-2"
+                >
+                  {category.subcategories
+                    .filter((s: any) => s.quizzes.length > 0)
+                    .map((subcategory: any) => (
+                      <DraggableSubcategoryItem
+                        key={subcategory.id}
+                        subcategory={subcategory}
+                        updateQuizzesCache={updateQuizzesCache}
+                        handleEdit={handleEdit}
+                        handleDelete={handleDelete}
+                        handleManageQuestions={handleManageQuestions}
+                        visibleQuizId={visibleQuizId}
+                        setVisibleQuizId={setVisibleQuizId}
+                        fetchAssignedUsers={fetchAssignedUsers}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                        allUsers={allUsers}
+                        assignedUsers={assignedUsers}
+                        toggleQuizAssignment={toggleQuizAssignment}
+                        isExpanded={expandedSubcategories.includes(`subcat-${subcategory.id}`)}
+                        onToggle={() => {
+                          setExpandedSubcategories((prev: string[]) =>
+                            prev.includes(`subcat-${subcategory.id}`)
+                              ? prev.filter(id => id !== `subcat-${subcategory.id}`)
+                              : [...prev, `subcat-${subcategory.id}`]
+                          );
+                        }}
+                      />
+                    ))}
+                </Reorder.Group>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Card>
+    </Reorder.Item>
+  );
+});
+DraggableCategoryItem.displayName = "DraggableCategoryItem";
+
+const DraggableSubcategoryItem = React.memo(({
+  subcategory,
+  updateQuizzesCache,
+  handleEdit,
+  handleDelete,
+  handleManageQuestions,
+  visibleQuizId,
+  setVisibleQuizId,
+  fetchAssignedUsers,
+  searchQuery,
+  setSearchQuery,
+  allUsers,
+  assignedUsers,
+  toggleQuizAssignment,
+  isExpanded,
+  onToggle
+}: any) => {
+  const controls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={subcategory}
+      dragControls={controls}
+      dragListener={false}
+      layout
+      className="touch-none relative list-none"
+      whileDrag={{
+        scale: 1.02,
+        boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.4), 0 0 10px -2px rgba(59, 130, 246, 0.4)",
+        zIndex: 110,
+        backgroundColor: "rgba(30, 41, 59, 1)",
+        border: "2px solid rgba(59, 130, 246, 0.8)"
+      }}
+      onDragStart={() => {
+        document.body.classList.add('dragging-active');
+      }}
+      onDragEnd={() => {
+        document.body.classList.remove('dragging-active');
+      }}
+      transition={{
+        layout: { duration: 0.2, ease: "easeOut" }
+      }}
+    >
+      <Card className={cn(
+        "border border-white/5 rounded-md bg-slate-950/30 overflow-hidden shadow-sm transition-all duration-300",
+        isExpanded && "border-blue-500/30 ring-1 ring-blue-500/10"
+      )}>
+        <div
+          className={cn(
+            "px-2 py-2 text-slate-300 hover:text-white cursor-pointer flex items-center justify-between group/subcat transition-colors",
+            isExpanded ? "bg-slate-900/50" : "hover:bg-slate-900/30"
+          )}
+          onClick={onToggle}
+        >
+          <div className="flex-1 flex items-center gap-1">
+            <div
+              className="cursor-grab active:cursor-grabbing text-slate-600 hover:text-slate-400 p-2 transition-colors relative z-10"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                controls.start(e);
+              }}
+            >
+              <GripVertical className="h-4 w-4" />
+            </div>
+            <div className={cn(
+              "flex-1 flex items-center gap-3 border-l pl-3 transition-all duration-300",
+              isExpanded ? "border-blue-500/50" : "border-transparent"
+            )}>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-md font-medium">{subcategory.name}</h4>
+                </div>
+                <p className="text-xs text-slate-500">
+                  {subcategory.quizzes.length} cuestionario(s)
+                </p>
+              </div>
+            </div>
+          </div>
+          <ChevronDown className={cn("h-4 w-4 text-slate-600 transition-transform duration-200", isExpanded && "rotate-180")} />
+        </div>
+
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="overflow-hidden bg-slate-900/40 border-t border-white/5"
+            >
+              <div className="px-4 pb-3 pt-2">
+                <Reorder.Group
+                  axis="y"
+                  values={subcategory.quizzes}
+                  onReorder={searchQuery ? undefined : updateQuizzesCache}
+                  className="grid grid-cols-1 gap-3"
+                >
+                  <AnimatePresence initial={false}>
+                    {subcategory.quizzes.map((quiz: Quiz) => (
+                      <DraggableQuizItem
+                        key={quiz.id}
+                        quiz={quiz}
+                        handleEdit={handleEdit}
+                        handleDelete={handleDelete}
+                        handleManageQuestions={handleManageQuestions}
+                        visibleQuizId={visibleQuizId}
+                        setVisibleQuizId={setVisibleQuizId}
+                        fetchAssignedUsers={fetchAssignedUsers}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                        allUsers={allUsers}
+                        assignedUsers={assignedUsers}
+                        toggleQuizAssignment={toggleQuizAssignment}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </Reorder.Group>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Card>
+    </Reorder.Item>
+  );
+});
+DraggableSubcategoryItem.displayName = "DraggableSubcategoryItem";
+
+const DraggableQuizItem = React.memo(({
+  quiz,
+  handleEdit,
+  handleDelete,
+  handleManageQuestions,
+  visibleQuizId,
+  setVisibleQuizId,
+  fetchAssignedUsers,
+  searchQuery,
+  setSearchQuery,
+  allUsers,
+  assignedUsers,
+  toggleQuizAssignment
+}: any) => {
+  const controls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={quiz}
+      dragControls={controls}
+      dragListener={false}
+      layout
+      whileDrag={{
+        scale: 1.03,
+        boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.5), 0 0 15px -3px rgba(59, 130, 246, 0.4)",
+        zIndex: 120,
+        backgroundColor: "rgba(15, 23, 42, 1)",
+        border: "2px solid rgba(59, 130, 246, 0.8)"
+      }}
+      onDragStart={() => {
+        document.body.classList.add('dragging-active');
+      }}
+      onDragEnd={() => {
+        document.body.classList.remove('dragging-active');
+      }}
+      transition={{
+        layout: { duration: 0.2, ease: "easeOut" }
+      }}
+      className="list-none"
+    >
+      <Card className="overflow-hidden border border-white/5 bg-slate-900 hover:bg-slate-800 transition-all group/quiz shadow-sm">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex flex-col space-y-4">
+            <div className="flex justify-between items-start">
+              <div className="flex items-start gap-3">
+                <div
+                  className="mt-1 cursor-grab active:cursor-grabbing text-slate-600 hover:text-slate-400 p-1"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    controls.start(e);
+                  }}
+                >
+                  <GripVertical className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-slate-200">{quiz.title}</h3>
+                    {quiz.isPublic && (
+                      <Badge variant="outline" className="ml-2 border-blue-500/30 text-blue-400 bg-blue-500/10">
+                        <LinkIcon className="h-3 w-3 mr-1" /> Público
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-slate-400 mt-1">{quiz.description}</p>
+                </div>
+              </div>
+              <div className="flex space-x-2 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEdit(quiz)}
+                  className="bg-slate-950 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                >
+                  Editar
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleDelete(quiz.id)}
+                  title="Eliminar cuestionario"
+                  className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex gap-4 text-sm">
+                <div className="flex items-center text-slate-400">
+                  <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                  <span>{Math.floor(quiz.timeLimit / 60)}:{(quiz.timeLimit % 60).toString().padStart(2, '0')}</span>
+                </div>
+                <Badge variant={quiz.difficulty === "básico" ? "default" : quiz.difficulty === "intermedio" ? "secondary" : "destructive"} className="bg-slate-800 text-slate-300 border-slate-700">
+                  {quiz.difficulty}
+                </Badge>
+              </div>
+
+              <div className="flex gap-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setVisibleQuizId(quiz.id);
+                        fetchAssignedUsers(quiz.id);
+                      }}
+                      className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+                    >
+                      Asignar
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-slate-950 border-slate-800 text-slate-200 max-h-[80vh] flex flex-col">
+                    <DialogHeader>
+                      <DialogTitle>Asignar Usuarios</DialogTitle>
+                      <DialogDescription className="text-slate-400">
+                        Acceso para: <span className="text-slate-200 font-medium">{quiz.title}</span>
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="relative mb-4">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-500" />
+                      <Input
+                        placeholder="Buscar..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 bg-slate-900 border-slate-700 text-slate-200"
+                      />
+                    </div>
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-1">
+                      {allUsers
+                        .filter((u: any) => u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || u.email?.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map((user: any) => (
+                          <label key={user.id} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={assignedUsers.includes(user.id)}
+                              onChange={() => toggleQuizAssignment(quiz.id, user.id, assignedUsers.includes(user.id))}
+                              className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-600"
+                            />
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium">{user.name || user.username}</span>
+                              <span className="text-xs text-slate-500">{user.email}</span>
+                            </div>
+                          </label>
+                        ))}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Button
+                  size="sm"
+                  onClick={() => handleManageQuestions(quiz.id)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Preguntas
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </Reorder.Item>
+  );
+});
+DraggableQuizItem.displayName = "DraggableQuizItem";

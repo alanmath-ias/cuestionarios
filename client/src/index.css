@@ -176,3 +176,19 @@
   animation: flash-highlight 2.5s ease-in-out;
   z-index: 50;
 }
+
+/* Drag and Drop UX Refinements */
+body.dragging-active {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  cursor: no-drop !important;
+}
+
+body.dragging-active [data-framer-motion-projections] {
+  cursor: grabbing !important;
+}
+
+/* Ensure the item being dragged shows grabbing cursor */
+[data-reorder-item-dragging="true"] {
+  cursor: grabbing !important;
+}

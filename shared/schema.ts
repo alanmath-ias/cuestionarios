@@ -33,6 +33,7 @@ export const categories = pgTable("categories", {
 	description: text().notNull(),
 	colorClass: text("color_class").notNull(),
 	youtubeLink: text("youtube_link"), // Columna sin valores predeterminados
+	sortOrder: integer("sort_order").default(0),
 });
 
 export const subcategories = pgTable("subcategories", {
@@ -42,6 +43,7 @@ export const subcategories = pgTable("subcategories", {
 	categoryId: integer("category_id").notNull(),
 	colorClass: text("color_class"),
 	youtube_sublink: text("youtube_sublink").default(sql`NULL`), // Usar sql para establecer NULL como valor predeterminado
+	sortOrder: integer("sort_order").default(0),
 }, (table) => [
 	foreignKey({
 		columns: [table.categoryId],
@@ -77,6 +79,7 @@ export const quizzes = pgTable("quizzes", {
 	isPublic: boolean("is_public").default(false),
 	subcategoryId: integer("subcategory_id"),
 	url: text("url"), // opcional, tipo texto
+	sortOrder: integer("sort_order").default(0),
 }, (table) => [
 	foreignKey({
 		columns: [table.subcategoryId],
@@ -233,6 +236,7 @@ export const insertCategorySchema = createInsertSchema(categories).pick({
 	description: true,
 	colorClass: true,
 	youtubeLink: true, // Incluye youtubeLink en el esquema
+	sortOrder: true,
 });
 
 
@@ -246,6 +250,7 @@ export const insertQuizSchema = createInsertSchema(quizzes).pick({
 	difficulty: true,
 	totalQuestions: true,
 	isPublic: true,
+	sortOrder: true,
 });
 
 
