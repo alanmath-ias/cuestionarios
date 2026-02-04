@@ -2,7 +2,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ArithmeticNode } from '../../data/arithmetic-map-data';
-import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown } from 'lucide-react';
+import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction } from 'lucide-react';
 import React, { useState } from 'react';
 
 interface SkillTreeViewProps {
@@ -19,16 +19,19 @@ interface SkillTreeViewProps {
 export function SkillTreeView({ nodes, progressMap, onNodeClick, title, description, allQuizzes = [], isAdmin = false, subcategories = [] }: SkillTreeViewProps) {
     const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
 
-    // Calculate Total Visible Quizzes (Unique Count)
-    const totalVisibleQuizzes = React.useMemo(() => {
-        if (!allQuizzes || allQuizzes.length === 0) return 0;
+    // Calculate Total Visible Quizzes and Node Progress
+    const { totalVisibleQuizzes, nodeProgress } = React.useMemo(() => {
+        if (!allQuizzes || allQuizzes.length === 0) return { totalVisibleQuizzes: 0, nodeProgress: {} };
 
         const mappedQuizIds = new Set<number>();
+        const progressMapLocal: Record<string, number> = {};
 
         // Iterate every node to find which quizzes it "captures"
-        // Iterate every node to find which quizzes it "captures"
         nodes.forEach(node => {
-            if (!node.subcategoryId && (!node.additionalSubcategories || node.additionalSubcategories.length === 0)) return; // Skip purely structural nodes
+            if (!node.subcategoryId && (!node.additionalSubcategories || node.additionalSubcategories.length === 0)) {
+                progressMapLocal[node.id] = 0;
+                return; // Skip purely structural nodes
+            }
 
             // 1. Gather Candidate Quizzes (Primary + Additional Subcategories)
             let matchingQuizzes = allQuizzes.filter(q =>
@@ -52,11 +55,22 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                 );
             }
 
-            // Add matched IDs to set
+            // Calculate progress for this node
+            if (matchingQuizzes.length > 0) {
+                const completedCount = matchingQuizzes.filter(q => q.status === 'completed').length;
+                progressMapLocal[node.id] = (completedCount / matchingQuizzes.length) * 100;
+            } else {
+                progressMapLocal[node.id] = 0;
+            }
+
+            // Add matched IDs to total count set
             matchingQuizzes.forEach(q => mappedQuizIds.add(q.id));
         });
 
-        return mappedQuizIds.size;
+        return {
+            totalVisibleQuizzes: mappedQuizIds.size,
+            nodeProgress: progressMapLocal
+        };
     }, [nodes, allQuizzes]);
 
     // Get highlighted nodes recursively (stops at next container)
@@ -244,10 +258,10 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                         <span>Destacado</span>
                     </div>
 
-                    {/* Locked */}
-                    <div className="flex items-center gap-3 opacity-75">
-                        <div className="w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center">
-                            <Lock className="w-3.5 h-3.5 text-slate-500" />
+                    {/* Locked - Under Construction */}
+                    <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)] flex items-center justify-center">
+                            <Construction className="w-3.5 h-3.5 text-amber-500" />
                         </div>
                         <span>Próximamente</span>
                     </div>
@@ -368,7 +382,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                 (node.type === 'critical' && node.behavior === 'container') ? 'hexagon-mask' :
                                                     node.behavior === 'container' ? 'rotate-45 rounded-2xl' : 'rounded-full',
 
-                                                isLocked && "grayscale opacity-70 cursor-not-allowed",
+                                                isLocked && "cursor-not-allowed shadow-[0_0_20px_rgba(245,158,11,0.3)]",
                                                 !isLocked && "cursor-pointer",
 
                                                 isHighlighted ? "ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_40px_rgba(251,191,36,0.6)] scale-110" : "",
@@ -386,13 +400,13 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                             isAvailable ? (
                                                                 node.type === 'critical' ? 'linear-gradient(135deg, #881337, #f43f5e)' :
                                                                     'linear-gradient(135deg, #1e3a8a, #3b82f6)'
-                                                            ) : '#1e293b',
+                                                            ) : isLocked ? 'linear-gradient(135deg, #1e293b, #451a03)' : '#1e293b',
 
                                                 border: `3px solid ${isHighlighted ? '#fbbf24' :
                                                     isCompleted ? '#4ade80' :
                                                         isInProgress ? '#5eead4' :
                                                             isAvailable ? (node.type === 'critical' ? '#fb7185' : '#3b82f6') :
-                                                                '#475569'
+                                                                isLocked ? '#f59e0b' : '#475569'
                                                     }`
                                             }}
                                         >
@@ -400,7 +414,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                 {isCompleted ? (
                                                     <CheckCircle className="w-8 h-8 text-green-400" />
                                                 ) : isLocked ? (
-                                                    <Lock className="w-6 h-6 text-slate-500" />
+                                                    <Construction className="w-8 h-8 text-amber-500" />
                                                 ) : (
                                                     (node.type === 'critical' && node.behavior === 'container') ? <Hexagon className="w-8 h-8 text-yellow-400 fill-yellow-400/20" /> :
                                                         node.type === 'critical' ? <Star className="w-8 h-8 text-white fill-white/20" /> :
@@ -438,6 +452,23 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                         )}
                                     </div>
 
+                                    {/* Progress Bar */}
+                                    {nodeProgress[node.id] > 0 && !isLocked && (
+                                        <div className="w-16 h-1.5 bg-slate-900/60 rounded-full mt-2 overflow-hidden border border-white/10 shadow-inner z-20">
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${nodeProgress[node.id]}%` }}
+                                                transition={{ duration: 1, ease: "easeOut" }}
+                                                className={cn(
+                                                    "h-full rounded-full",
+                                                    isCompleted ? "bg-gradient-to-r from-green-500 to-emerald-400" :
+                                                        isInProgress ? "bg-gradient-to-r from-teal-400 to-cyan-400" :
+                                                            "bg-gradient-to-r from-blue-500 to-indigo-500"
+                                                )}
+                                            />
+                                        </div>
+                                    )}
+
                                     {/* Label under node - Simple flow positioning */}
                                     <div className="mt-4 w-40 text-center pointer-events-none">
                                         <span className={cn(
@@ -445,7 +476,8 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                             isHighlighted ? "bg-yellow-950/50 border-yellow-500/50 text-yellow-200" :
                                                 isCompleted ? "bg-green-950/50 border-green-500/50 text-green-300" :
                                                     isAvailable ? "bg-blue-950/50 border-blue-500/50 text-blue-200" :
-                                                        "bg-slate-900/50 border-slate-700 text-slate-500"
+                                                        isLocked ? "bg-amber-950/50 border-amber-600/50 text-amber-400" :
+                                                            "bg-slate-900/50 border-slate-700 text-slate-500"
                                         )}>
                                             {node.label}
                                         </span>

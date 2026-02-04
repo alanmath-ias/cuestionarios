@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { CheckCircle, Lock, Play, Star } from 'lucide-react';
+import { CheckCircle, Lock, Play, Star, Construction } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -175,12 +175,12 @@ export function RoadmapView({ nodes, title, description }: RoadmapViewProps) {
                                                     "relative flex-shrink-0 w-20 h-20 rounded-full flex items-center justify-center border-4 shadow-2xl transition-all duration-300 z-20",
                                                     isCompleted && "bg-slate-900 border-green-500 shadow-[0_0_30px_rgba(34,197,94,0.5)]",
                                                     isAvailable && "bg-slate-900 border-blue-500 shadow-[0_0_40px_rgba(59,130,246,0.6)] animate-pulse-slow",
-                                                    isLocked && "bg-slate-900/80 border-slate-700 grayscale opacity-60 cursor-not-allowed"
+                                                    isLocked && "bg-slate-900/80 border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.4)] cursor-not-allowed"
                                                 )}
                                             >
                                                 {isCompleted && <CheckCircle className="w-10 h-10 text-green-500" />}
                                                 {isAvailable && <Play className="w-10 h-10 text-blue-400 fill-blue-400/20 ml-1" />}
-                                                {isLocked && <Lock className="w-8 h-8 text-slate-500" />}
+                                                {isLocked && <Construction className="w-8 h-8 text-amber-500" />}
 
                                                 {/* Ripple Effect for Available */}
                                                 {isAvailable && (
@@ -192,7 +192,7 @@ export function RoadmapView({ nodes, title, description }: RoadmapViewProps) {
                                             </motion.button>
                                         </TooltipTrigger>
                                         <TooltipContent side={isLeft ? "left" : "right"} className="bg-slate-900 border-slate-800 text-slate-200">
-                                            <p>{isLocked ? "Completa los anteriores para desbloquear" : "Click para ver cuestionarios"}</p>
+                                            <p>{isLocked ? "Próximamente" : "Click para ver cuestionarios"}</p>
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>

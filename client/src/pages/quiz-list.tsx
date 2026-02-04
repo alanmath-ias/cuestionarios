@@ -367,7 +367,10 @@ function QuizList() {
             (categoryId === '1' || categoryId === '2' || categoryId === '4') ? (
               <SkillTreeView
                 nodes={currentMapNodes}
-                allQuizzes={quizzes}
+                allQuizzes={quizzes?.map(q => ({
+                  ...q,
+                  status: progress?.find(p => p.quizId === q.id)?.status || 'not_started'
+                }))}
                 title={`Mapa de Habilidades: ${category?.name}`}
                 description={(() => {
                   if (categoryId === '1') return "Un árbol de conocimiento diseñado para dominar la aritmética paso a paso.";
@@ -630,7 +633,7 @@ function QuizList() {
           setSelectedNode(null);
         }
       }}>
-        <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()} tabIndex={-1}>
           <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-blue-500/10 rounded-lg">
@@ -769,7 +772,7 @@ function QuizList() {
       </Dialog>
 
       <Dialog open={!!miniQuizId} onOpenChange={(open) => !open && setMiniQuizId(null)}>
-        <DialogContent className="bg-slate-900 border-white/10 text-slate-200">
+        <DialogContent className="bg-slate-900 border-white/10 text-slate-200" onOpenAutoFocus={(e) => e.preventDefault()} tabIndex={-1}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-yellow-500">
               <AlertTriangle className="h-5 w-5" />

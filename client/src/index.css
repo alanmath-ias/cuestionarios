@@ -138,3 +138,41 @@
   scrollbar-width: none;
   /* Firefox */
 }
+
+/* Flash Highlight Animation */
+@keyframes flash-highlight {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+
+  20% {
+    transform: scale(1.02);
+    box-shadow: 0 0 30px 5px rgba(59, 130, 246, 0.5);
+    border-color: rgba(59, 130, 246, 0.8);
+  }
+
+  40% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+
+  60% {
+    transform: scale(1.02);
+    box-shadow: 0 0 30px 5px rgba(59, 130, 246, 0.5);
+    border-color: rgba(59, 130, 246, 0.8);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.animate-flash-highlight {
+  animation: flash-highlight 2.5s ease-in-out;
+  z-index: 50;
+}

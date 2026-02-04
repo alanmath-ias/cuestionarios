@@ -49,7 +49,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { startDashboardTour } from "@/lib/tour";
 import { Link, useLocation } from "wouter";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import VideoEmbed from './VideoEmbed';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -405,122 +405,133 @@ export default function UserDashboard() {
 
   // Calculate Roadmap Nodes
   // Calculate Roadmap Nodes based on MAP DATA (Visual Order)
-  const roadmapNodes: RoadmapNode[] = ((activeCategoryId ? getMapNodes(activeCategoryId) : []) as ArithmeticNode[]).map((node) => {
-    // 1. Find Quizzes for this Node
-    const categoryQuizzes = activeCategoryQuizzes || [];
-    let nodeQuizzes = categoryQuizzes.filter(q => q.subcategoryId == node.subcategoryId) || [];
+  const roadmapNodes: RoadmapNode[] = useMemo(() => {
+    const rawNodes = ((activeCategoryId ? getMapNodes(activeCategoryId) : []) as ArithmeticNode[]);
 
-    // Filter by keywords if defined or if no subcategory mapping
-    if (node.filterKeywords && node.filterKeywords.length > 0) {
-      const keywords = node.filterKeywords.map(k => k.toLowerCase());
-      nodeQuizzes = nodeQuizzes.filter(q => {
-        const titleLower = q.title.toLowerCase();
-        // If subcategory matched, we keep it. If NOT, we rely on keywords? 
-        // Logic: specific node might refine subcategory quizzes.
-        // If subcategoryId is set, we start with those. Then we might FILTER further?
-        // Or if subcategoryId NOT set, we search all? 
-        // Admin logic: `categoryQuizzes.filter...` then keyword filter.
-        // If node has subcategoryId, we usually scope to that.
+    // 1. First pass: Calculate individual node content and status
+    const processedNodes = rawNodes.map((node) => {
+      const categoryQuizzes = activeCategoryQuizzes || [];
+      let nodeQuizzes = categoryQuizzes.filter(q => q.subcategoryId == node.subcategoryId) || [];
 
-        // Let's replicate strict Admin Logic to be safe:
-        if (node.subcategoryId) {
-          // Already filtered by subcategoryId above.
-          // Just apply inclusion/exclusion.
+      if (node.filterKeywords && node.filterKeywords.length > 0) {
+        const keywords = node.filterKeywords.map(k => k.toLowerCase());
+        nodeQuizzes = nodeQuizzes.filter(q => {
+          const titleLower = q.title.toLowerCase();
           if (!keywords.some(k => titleLower.includes(k))) return false;
-        } else {
-          // If no subcategory, we search ALL category quizzes? 
-          // Admin view does: `const nodeQuizzes = categoryQuizzes.filter...` 
-          // Admin view logic is:
-          /*
-             let nodeQuizzes = categoryQuizzes.filter(q => q.subcategoryId == selectedNode.subcategoryId) || [];
-             if (selectedNode.filterKeywords...) { ... }
-          */
-          // So it requires subcategory match FIRST.
-          // But some nodes in Map Data don't have subcategoryId? (e.g. n0-0-sentido has 1).
-          // Let's assume most have it.
-          if (!keywords.some(k => titleLower.includes(k))) return false;
-        }
+          if (node.excludeKeywords && node.excludeKeywords.length > 0) {
+            const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
+            if (excludeKeys.some(k => titleLower.includes(k))) return false;
+          }
+          return true;
+        });
+      }
 
-        if (node.excludeKeywords && node.excludeKeywords.length > 0) {
-          const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
-          if (excludeKeys.some(k => titleLower.includes(k))) return false;
-        }
-        return true;
-      });
-    }
+      let progressPercent = 0;
+      if (nodeQuizzes.length > 0 && quizzes) {
+        const completedCount = nodeQuizzes.filter(q =>
+          quizzes.some(uq => uq.id === q.id && uq.status === 'completed')
+        ).length;
+        progressPercent = (completedCount / nodeQuizzes.length) * 100;
+      }
 
-    // 2. Calculate Progress for this Node
-    let progressPercent = 0;
-    if (nodeQuizzes.length > 0 && quizzes) {
-      const completedCount = nodeQuizzes.filter(q =>
-        quizzes.some(uq => uq.id === q.id && uq.status === 'completed')
-      ).length;
-      progressPercent = (completedCount / nodeQuizzes.length) * 100;
-    }
-
-    // 3. Determine Status (Locked / Available / Completed)
-    let status: 'locked' | 'available' | 'completed' = 'locked';
-
-    // Rule 1: Empty Content -> Always Locked (Gray)
-    if (nodeQuizzes.length === 0) {
-      status = 'locked';
-    }
-    // Rule 2: 100% Progress -> Completed
-    else if (progressPercent >= 100) {
-      status = 'completed';
-    }
-    // Rule 3: Check Prerequisites
-    else {
-      const prereqsMet = node.requires.length === 0 || node.requires.every(reqId => {
-        const reqNode = getMapNodes(activeCategoryId).find(n => n.id === reqId) as ArithmeticNode;
-        if (!reqNode) return true;
-
-        let reqQuizzes = categoryQuizzes.filter(q => q.subcategoryId == reqNode.subcategoryId);
-        if (reqNode.filterKeywords && reqNode.filterKeywords.length > 0) {
-          const kws = reqNode.filterKeywords.map(k => k.toLowerCase());
-          reqQuizzes = reqQuizzes.filter(q => {
-            const t = q.title.toLowerCase();
-            return kws.some(k => t.includes(k));
-          });
-        }
-
-        if (reqQuizzes.length === 0) return false; // Prereq empty -> blocked
-
-        const reqDoneCount = reqQuizzes.filter(q => quizzes?.some(uq => uq.id === q.id && uq.status === 'completed')).length;
-        return reqDoneCount === reqQuizzes.length && reqQuizzes.length > 0;
-      });
-
-      if (prereqsMet) {
+      // EXPLORATORY LOGIC: No prerequisites, only content-based
+      let status: 'locked' | 'available' | 'completed' | 'partial' = 'locked';
+      if (nodeQuizzes.length === 0) {
+        status = 'locked';
+      } else if (progressPercent >= 100) {
+        status = 'completed';
+      } else {
         status = 'available';
       }
-    }
 
-    // Rule 4: In Progress Override
-    if (nodeQuizzes.length > 0 && progressPercent > 0 && progressPercent < 100) {
-      status = 'available';
-    }
+      return {
+        ...node,
+        nodeQuizzes,
+        progressPercent,
+        calculatedStatus: status
+      };
+    });
 
-    return {
-      id: node.id,
-      title: node.label,
-      description: node.description || '',
-      status,
-      type: 'subcategory',
-      nodeType: node.type,
-      behavior: node.behavior,
-      progress: progressPercent,
-      onClick: () => {
-        if (node.subcategoryId && activeCategorySubcategories) {
-          const sub = activeCategorySubcategories.find(s => s.id === node.subcategoryId);
-          if (sub) {
-            handleSubcategorySelect(sub);
-            const element = document.getElementById('tour-quiz-list');
-            if (element) element.scrollIntoView({ behavior: 'smooth' });
+    // 2. Second pass: Grouping and Parent status aggregation
+    const groupNodes: Record<string | number, any[]> = {};
+    let currentParent: any = null;
+
+    processedNodes.forEach(node => {
+      const isParent = node.behavior === 'container' || node.type === 'critical';
+      if (isParent) {
+        currentParent = node;
+        groupNodes[node.id] = [];
+      } else if (currentParent) {
+        groupNodes[currentParent.id].push(node);
+      }
+    });
+
+    // 3. Third pass: Construct final RoadmapNode objects
+    return processedNodes.map((node) => {
+      const isParent = node.behavior === 'container' || node.type === 'critical';
+      let finalStatus = node.calculatedStatus;
+
+      if (isParent) {
+        const children = groupNodes[node.id] || [];
+        if (children.length > 0) {
+          const allLocked = children.every(c => c.calculatedStatus === 'locked');
+          const allCompleted = children.every(c => c.calculatedStatus === 'completed');
+          const anyAvailable = children.some(c => c.calculatedStatus === 'available');
+          const hasLockedChild = children.some(c => c.calculatedStatus === 'locked');
+          const hasCompletedChild = children.some(c => c.calculatedStatus === 'completed');
+
+          if (allLocked && node.calculatedStatus === 'locked') {
+            finalStatus = 'locked';
+          } else if (allCompleted) {
+            finalStatus = 'completed';
+          } else if (anyAvailable) {
+            finalStatus = 'available';
+          } else if (hasLockedChild && hasCompletedChild) {
+            // Mixed: Some completed, some locked -> Partial
+            finalStatus = 'partial';
           }
         }
       }
-    };
-  });
+
+      return {
+        id: node.id,
+        title: node.label,
+        description: node.description || '',
+        status: finalStatus,
+        type: 'subcategory',
+        nodeType: node.type,
+        behavior: node.behavior,
+        progress: node.progressPercent,
+        hasContent: node.nodeQuizzes.length > 0 || (isParent && (groupNodes[node.id] || []).some(c => c.nodeQuizzes.length > 0)),
+        onClick: () => {
+          if (isParent) {
+            const hasAnyContent = node.nodeQuizzes.length > 0 || (groupNodes[node.id] || []).some(c => c.nodeQuizzes.length > 0);
+            if (hasAnyContent) {
+              if (node.subcategoryId && activeCategorySubcategories) {
+                const sub = activeCategorySubcategories.find(s => s.id === node.subcategoryId);
+                if (sub) handleSubcategorySelect(sub);
+              }
+              const cat = categories?.find(c => c.id === activeCategoryId);
+              if (cat) setSelectedCategoryForDetails(cat);
+            }
+          } else {
+            if (finalStatus !== 'locked') {
+              const cat = categories?.find(c => c.id === activeCategoryId);
+              if (cat) {
+                setSelectedCategoryForDetails(cat);
+                setCategorySearchQuery(node.label);
+                setQuizSearchQuery(node.label);
+              }
+              if (node.subcategoryId && activeCategorySubcategories) {
+                const sub = activeCategorySubcategories.find(s => s.id === node.subcategoryId);
+                if (sub) handleSubcategorySelect(sub);
+              }
+            }
+          }
+        }
+      };
+    });
+  }, [activeCategoryId, activeCategoryQuizzes, activeCategorySubcategories, quizzes, categories]);
 
   const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
   const [quizSearchQuery, setQuizSearchQuery] = useState("");
@@ -1189,6 +1200,7 @@ export default function UserDashboard() {
                     return (
                       <div
                         key={category.id}
+                        id={`category-card-${category.id}`}
                         onClick={() => handleCategoryClick(category)}
                         className={`group relative overflow-hidden rounded-xl border transition-all duration-300 cursor-pointer max-w-full ${isRecommended
                           ? "bg-purple-900/10 border-purple-500/30 hover:border-purple-500/50"
@@ -1196,27 +1208,40 @@ export default function UserDashboard() {
                           }`}
                       >
                         <div className="flex flex-col md:flex-row md:items-center p-3 gap-3">
-                          {/* Left: Icon & Title */}
-                          <div className="flex items-center gap-4 flex-1 min-w-0">
-                            <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-lg shrink-0 transition-transform group-hover:scale-105 ${isRecommended ? "bg-purple-500/20 text-purple-400" : "bg-rose-500/10 text-rose-400"
-                              }`}>
-                              <BookOpen className="h-6 w-6" />
+                          {/* Top row for Mobile (Icon, Title, Training Button) / Left for Desktop */}
+                          <div className="flex items-center justify-between md:justify-start gap-4 flex-1 min-w-0">
+                            <div className="flex items-center gap-4 min-w-0 flex-1">
+                              <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-lg shrink-0 transition-transform group-hover:scale-105 ${isRecommended ? "bg-purple-500/20 text-purple-400" : "bg-rose-500/10 text-rose-400"}`}>
+                                <BookOpen className="h-6 w-6" />
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className={`font-bold text-base truncate ${isRecommended ? "text-purple-200" : "text-slate-200 group-hover:text-rose-200"}`}>
+                                  {category.name}
+                                </h4>
+                                {isRecommended && (
+                                  <p className="text-xs text-purple-400 font-medium flex items-center gap-1 animate-pulse">
+                                    <Sparkles className="w-3 h-3" /> Recomendado para ti
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <h4 className={`font-bold text-base truncate ${isRecommended ? "text-purple-200" : "text-slate-200 group-hover:text-rose-200"
-                                }`}>
-                                {category.name}
-                              </h4>
-                              {isRecommended && (
-                                <p className="text-xs text-purple-400 font-medium flex items-center gap-1 animate-pulse">
-                                  <Sparkles className="w-3 h-3" /> Recomendado para ti
-                                </p>
-                              )}
+
+                            {/* CTA Button moved to Top Right on Mobile only */}
+                            <div className="md:hidden" onClick={(e) => e.stopPropagation()}>
+                              <Link href={`/training/${category.id}`}>
+                                <Button
+                                  size="sm"
+                                  className="h-9 px-4 text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all whitespace-nowrap"
+                                >
+                                  <Gamepad2 className="w-3.5 h-3.5 mr-1.5" />
+                                  Entrenar
+                                </Button>
+                              </Link>
                             </div>
                           </div>
 
-                          {/* Right: Actions */}
-                          <div className="flex items-center gap-2 mt-2 md:mt-0 overflow-x-auto pb-1 md:pb-0 no-scrollbar max-w-full" onClick={(e) => e.stopPropagation()}>
+                          {/* Action Buttons row (Videos, Temas, Mapa) + Training Button for Desktop */}
+                          <div className="flex items-center gap-2 mt-1 md:mt-0 overflow-x-auto pb-1 md:pb-0 no-scrollbar max-w-full" onClick={(e) => e.stopPropagation()}>
                             {/* Video */}
                             {category.youtubeLink && (
                               <button
@@ -1228,7 +1253,7 @@ export default function UserDashboard() {
                                 title="Ver Videos"
                               >
                                 <Youtube className="w-3.5 h-3.5" />
-                                <span className="hidden lg:inline">Videos</span>
+                                <span className="">Videos</span>
                               </button>
                             )}
 
@@ -1261,16 +1286,18 @@ export default function UserDashboard() {
                               </Button>
                             </Link>
 
-                            {/* Entrenamiento (CTA) */}
-                            <Link href={`/training/${category.id}`}>
-                              <Button
-                                size="sm"
-                                className="h-8 px-4 text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all whitespace-nowrap"
-                              >
-                                <Gamepad2 className="w-3.5 h-3.5 mr-1.5" />
-                                Entrenar
-                              </Button>
-                            </Link>
+                            {/* Entrenamiento (CTA) - Hidden on Mobile because it's at the top */}
+                            <div className="hidden md:block">
+                              <Link href={`/training/${category.id}`}>
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-4 text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all whitespace-nowrap"
+                                >
+                                  <Gamepad2 className="w-3.5 h-3.5 mr-1.5" />
+                                  Entrenar
+                                </Button>
+                              </Link>
+                            </div>
                           </div>
                         </div>
 

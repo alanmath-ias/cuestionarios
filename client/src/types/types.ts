@@ -100,7 +100,7 @@ export interface RoadmapNode {
   id: string | number;
   title: string;
   description: string;
-  status: 'locked' | 'available' | 'completed';
+  status: 'locked' | 'available' | 'completed' | 'partial';
   type: 'subcategory' | 'quiz'; // This 'type' field is existing. I should rename the new one or reuse?
   // User's map data has 'type' as difficulty/category ('basic' | 'critical').
   // RoadmapNode has 'type' as 'subcategory' | 'quiz'.
@@ -110,5 +110,6 @@ export interface RoadmapNode {
   nodeType?: 'basic' | 'critical' | 'evaluation' | 'applied';
   behavior?: 'container' | 'quiz_list';
   progress?: number;
+  hasContent?: boolean;
   onClick: () => void;
 }
