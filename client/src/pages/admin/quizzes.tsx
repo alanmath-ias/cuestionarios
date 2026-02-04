@@ -1149,12 +1149,12 @@ export default function QuizzesAdmin() {
       {/* Map Viewer Dialog */}
       <Dialog open={!!activeMapCategory} onOpenChange={(open) => !open && setActiveMapCategory(null)}>
         <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0 bg-slate-950 border-slate-800 overflow-hidden">
-          <DialogHeader className="p-6 pb-2 shrink-0 bg-slate-900/50 border-b border-white/5">
-            <DialogTitle className="flex items-center gap-2">
-              <MapIcon className="h-5 w-5 text-blue-400" />
+          <DialogHeader className="p-6 pb-2 shrink-0 bg-slate-900 border-b border-white/10">
+            <DialogTitle className="flex items-center gap-2 text-slate-100 text-xl font-bold">
+              <MapIcon className="h-6 w-6 text-blue-400" />
               {activeMapCategory ? getMapData(activeMapCategory)?.title : "Mapa de Habilidades"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-slate-300 font-medium">
               Visualización del árbol de habilidades y cobertura de contenido.
             </DialogDescription>
           </DialogHeader>
@@ -1233,6 +1233,7 @@ export default function QuizzesAdmin() {
                 }}
                 isAdmin={true} // Keep true for solid lines
                 title={getMapData(activeMapCategory)?.title || ""}
+                subcategories={subcategoriesResponse || []}
               />
             )}
           </div>

@@ -62,7 +62,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['c0-polinomicas', 'c0-explog'],
         description: 'f(g(x))',
-        xOffset: -20,
+        xOffset: -30, // Perfect midpoint between -60 and 0
         subcategoryId: 100,
         filterKeywords: ['composición', 'composicion'],
         behavior: 'quiz_list'
@@ -74,7 +74,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['c0-trigo'],
         description: 'f^-1(x)',
-        xOffset: 40,
+        xOffset: 30, // Symmetrical to Composición
         subcategoryId: 103, // Specific subcategory for Inverse Functions
         additionalSubcategories: [100], // Search 103 + 100 for general review items
         filterKeywords: ['inversa'],
