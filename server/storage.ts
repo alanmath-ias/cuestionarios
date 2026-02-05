@@ -71,6 +71,9 @@ export interface IStorage {
   deleteSubcategory(id: number): Promise<void>;
   updateSubcategory(id: number, name: string, description?: string, youtube_sublink?: string | null): Promise<void>;
   getQuizzesBySubcategory(subcategoryId: number): Promise<Quiz[]>;
+  reorderQuizzes(orders: { id: number; sortOrder: number }[]): Promise<void>;
+  reorderSubcategories(orders: { id: number; sortOrder: number }[]): Promise<void>;
+  reorderCategories(orders: { id: number; sortOrder: number }[]): Promise<void>;
   getTrainingQuestionsByCategoryAndSubcategory(categoryId: number, subcategoryId: number): Promise<any[]>;
 
   // Parent/Child methods
@@ -180,6 +183,9 @@ export class MemStorage implements IStorage {
   async deleteSubcategory(id: number): Promise<void> { }
   async updateSubcategory(id: number, name: string): Promise<void> { }
   async getQuizzesBySubcategory(subcategoryId: number): Promise<Quiz[]> { return []; }
+  async reorderQuizzes(orders: { id: number; sortOrder: number }[]): Promise<void> { }
+  async reorderSubcategories(orders: { id: number; sortOrder: number }[]): Promise<void> { }
+  async reorderCategories(orders: { id: number; sortOrder: number }[]): Promise<void> { }
   async getTrainingQuestionsByCategoryAndSubcategory(categoryId: number, subcategoryId: number): Promise<any[]> { return []; }
 
   async registerParentWithChild(parent: any, child: any): Promise<any> { throw new Error("Not implemented"); }
@@ -501,7 +507,8 @@ export class MemStorage implements IStorage {
     const newCategory: Category = {
       ...category,
       id,
-      youtubeLink: category.youtubeLink ?? null
+      youtubeLink: category.youtubeLink ?? null,
+      sortOrder: category.sortOrder ?? 0
     };
     this.categories.set(id, newCategory);
     return newCategory;
@@ -538,7 +545,8 @@ export class MemStorage implements IStorage {
       categoryId,
       subcategoryId,
       isPublic: quiz.isPublic ?? null,
-      url: null
+      url: null,
+      sortOrder: quiz.sortOrder ?? 0
     };
 
     this.quizzes.set(id, newQuiz);

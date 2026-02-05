@@ -2476,6 +2476,48 @@ Ejemplo de formato:
     }
   });
 
+  apiRouter.patch("/admin/quizzes/reorder", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { orders } = req.body;
+      if (!Array.isArray(orders)) {
+        return res.status(400).json({ message: "Invalid data format. Expected an array of orders." });
+      }
+      await storage.reorderQuizzes(orders);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Quiz reorder error:", error);
+      res.status(500).json({ message: "Error reordering quizzes" });
+    }
+  });
+
+  apiRouter.patch("/admin/subcategories/reorder", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { orders } = req.body;
+      if (!Array.isArray(orders)) {
+        return res.status(400).json({ message: "Invalid data format. Expected an array of orders." });
+      }
+      await storage.reorderSubcategories(orders);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Subcategory reorder error:", error);
+      res.status(500).json({ message: "Error reordering subcategories" });
+    }
+  });
+
+  apiRouter.patch("/admin/categories/reorder", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { orders } = req.body;
+      if (!Array.isArray(orders)) {
+        return res.status(400).json({ message: "Invalid data format. Expected an array of orders." });
+      }
+      await storage.reorderCategories(orders);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Category reorder error:", error);
+      res.status(500).json({ message: "Error reordering categories" });
+    }
+  });
+
   apiRouter.get("/quizzes/by-subcategory/:subcategoryId", async (req, res) => {
     const subcategoryId = parseInt(req.params.subcategoryId);
     const quizzes = await storage.getQuizzesBySubcategory(subcategoryId);

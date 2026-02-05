@@ -19,6 +19,7 @@ export interface Category {
   description: string;
   colorClass?: string;
   youtubeLink?: string | null; // Opcional y puede ser null
+  sortOrder?: number;
 }
 
 export interface Quiz {
@@ -31,6 +32,7 @@ export interface Quiz {
   difficulty: string;
   totalQuestions: number;
   isPublic: boolean | null;
+  sortOrder?: number;
 }
 export interface Question {
   id: number;
@@ -93,6 +95,7 @@ export interface Subcategory {
   categoryId: number
   colorClass?: string | null
   youtube_sublink?: string | null
+  sortOrder?: number
 }
 
 

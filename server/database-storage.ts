@@ -12,7 +12,7 @@
 } from "../shared/schema.js";
 
 import { db, DbClient } from "./db.js";
-import { eq, and, desc, inArray, sql, ilike, or, isNotNull } from "drizzle-orm";
+import { eq, and, desc, asc, inArray, sql, ilike, or, isNotNull } from "drizzle-orm";
 import { IStorage } from "./storage.js";
 import { userQuizzes } from "../shared/schema.js";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -58,7 +58,8 @@ export class DatabaseStorage implements IStorage {
         name: subcategories.name,
         description: subcategories.description,
         categoryId: subcategories.categoryId,
-        youtube_sublink: subcategories.youtube_sublink, // Incluye el nuevo campo
+        youtube_sublink: subcategories.youtube_sublink,
+        sortOrder: subcategories.sortOrder,
       })
       .from(subcategories)
       .leftJoin(categories, eq(subcategories.categoryId, categories.id));
@@ -71,7 +72,8 @@ export class DatabaseStorage implements IStorage {
         name: subcategories.name,
         description: subcategories.description,
         categoryId: subcategories.categoryId,
-        youtube_sublink: subcategories.youtube_sublink, // Incluye el nuevo campo
+        youtube_sublink: subcategories.youtube_sublink,
+        sortOrder: subcategories.sortOrder,
       })
       .from(subcategories)
       .where(eq(subcategories.categoryId, categoryId));
@@ -80,8 +82,25 @@ export class DatabaseStorage implements IStorage {
   async createSubcategory({ name, categoryId, description, youtube_sublink }: { name: string; categoryId: number; description?: string; youtube_sublink?: string | null }) {
     return this.db
       .insert(subcategories)
-      .values({ name, categoryId, description, youtube_sublink }) // Incluye el nuevo campo
+      .values({ name, categoryId, description, youtube_sublink, sortOrder: 0 })
       .returning();
+  }
+
+  async createCategory(category: InsertCategory): Promise<Category> {
+    const result = await this.db.insert(categories).values({
+      ...category,
+      sortOrder: category.sortOrder ?? 0
+    }).returning();
+    return result[0];
+  }
+
+  async getCategories(): Promise<Category[]> {
+    return this.db.select().from(categories).orderBy(asc(categories.sortOrder));
+  }
+
+  async getCategory(id: number): Promise<Category | undefined> {
+    const result = await this.db.select().from(categories).where(eq(categories.id, id));
+    return result.length > 0 ? result[0] : undefined;
   }
 
 
@@ -92,7 +111,7 @@ export class DatabaseStorage implements IStorage {
   async updateSubcategory(id: number, name: string, description?: string, youtube_sublink?: string | null) {
     await this.db
       .update(subcategories)
-      .set({ name, description, youtube_sublink }) // Incluye el nuevo campo
+      .set({ name, description, youtube_sublink })
       .where(eq(subcategories.id, id));
   }
 
@@ -188,7 +207,8 @@ export class DatabaseStorage implements IStorage {
       isPublic: quizzes.isPublic,
       category: categories,
       subcategory: subcategories,
-      url: quizzes.url, // <-- agregado
+      url: quizzes.url,
+      sortOrder: quizzes.sortOrder,
     })
       .from(quizzes)
       .leftJoin(categories, eq(quizzes.categoryId, categories.id))
@@ -695,6 +715,7 @@ export class DatabaseStorage implements IStorage {
         isPublic: boolean | null;
         subcategoryId: number | null;
         url: string | null;
+        sortOrder: number | null;
       };
       answers: Array<{
         id: number;
@@ -742,7 +763,8 @@ export class DatabaseStorage implements IStorage {
             totalQuestions: true,
             isPublic: true,
             subcategoryId: true,
-            url: true
+            url: true,
+            sortOrder: true
           }
         },
         answers: {
@@ -1207,19 +1229,6 @@ export class DatabaseStorage implements IStorage {
     await this.db.delete(users).where(eq(users.id, id));
   }
 
-  async getCategories(): Promise<Category[]> {
-    return await this.db.select().from(categories);
-  }
-
-  async getCategory(id: number): Promise<Category | undefined> {
-    const result = await this.db.select().from(categories).where(eq(categories.id, id));
-    return result.length > 0 ? result[0] : undefined;
-  }
-
-  async createCategory(category: InsertCategory): Promise<Category> {
-    const result = await this.db.insert(categories).values(category).returning();
-    return result[0];
-  }
 
   async saveQuizSubmission(submission: { userId: number; quizId: number; score: number; progressId: number }): Promise<void> {
     // Check if submission already exists for this progressId
@@ -1449,5 +1458,38 @@ export class DatabaseStorage implements IStorage {
 
   async deletePasswordResetToken(token: string): Promise<void> {
     await this.db.delete(passwordResetTokens).where(eq(passwordResetTokens.token, token));
+  }
+
+  async reorderQuizzes(orders: { id: number; sortOrder: number }[]): Promise<void> {
+    const sortedOrders = [...orders].sort((a, b) => a.id - b.id);
+    await this.db.transaction(async (tx) => {
+      for (const order of sortedOrders) {
+        await tx.update(quizzes)
+          .set({ sortOrder: order.sortOrder })
+          .where(eq(quizzes.id, order.id));
+      }
+    });
+  }
+
+  async reorderSubcategories(orders: { id: number; sortOrder: number }[]): Promise<void> {
+    const sortedOrders = [...orders].sort((a, b) => a.id - b.id);
+    await this.db.transaction(async (tx) => {
+      for (const order of sortedOrders) {
+        await tx.update(subcategories)
+          .set({ sortOrder: order.sortOrder })
+          .where(eq(subcategories.id, order.id));
+      }
+    });
+  }
+
+  async reorderCategories(orders: { id: number; id_category?: number; sortOrder: number }[]): Promise<void> {
+    const sortedOrders = [...orders].sort((a, b) => a.id - b.id);
+    await this.db.transaction(async (tx) => {
+      for (const order of sortedOrders) {
+        await tx.update(categories)
+          .set({ sortOrder: order.sortOrder })
+          .where(eq(categories.id, order.id));
+      }
+    });
   }
 }
