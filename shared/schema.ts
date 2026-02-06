@@ -13,7 +13,7 @@ export const users = pgTable("users", {
 	username: text("username").notNull(),
 	password: text("password"), // Optional for Google Auth users
 	name: text("name").notNull(),
-	email: text("email"),
+	email: text("email").notNull(),
 	role: text("role").default('student').notNull(),
 	googleId: text("google_id").unique(), // Added for Google Auth
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
@@ -229,6 +229,9 @@ export const insertUserSchema = createInsertSchema(users).pick({
 	email: true,
 	role: true,
 	googleId: true,
+}).extend({
+	email: z.string().email("Correo electrónico inválido (ejemplo: usuario@dominio.com)").min(1, "El correo es obligatorio"),
+	username: z.string().min(3, "El nombre de usuario debe tener al menos 3 caracteres"),
 });
 
 export const insertCategorySchema = createInsertSchema(categories).pick({

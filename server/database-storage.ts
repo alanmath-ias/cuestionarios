@@ -1124,8 +1124,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async registerParentWithChild(
-    parent: { username: string, password: string, name: string, email?: string },
-    child: { username: string, password: string, name: string, email?: string }
+    parent: { username: string, password: string, name: string, email: string },
+    child: { username: string, password: string, name: string, email: string }
   ) {
     // Validar que los usernames no existan
     const [existingParent] = await this.db.select().from(users).where(eq(users.username, parent.username));

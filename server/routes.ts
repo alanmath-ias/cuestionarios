@@ -262,12 +262,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   Aquí encontrarás un espacio diseñado para potenciar tu aprendizaje de una manera divertida y efectiva.
                 </p>
 
-                <div style="background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                  <h3 style="color: #111827; margin-top: 0;">¿Qué puedes hacer aquí?</h3>
-                  <ul style="color: #4B5563; padding-left: 20px;">
-                    <li style="margin-bottom: 10px;">🧠 <strong>Ejercicios Adaptativos:</strong> Practica a tu propio ritmo.</li>
-                    <li style="margin-bottom: 10px;">📊 <strong>Sigue tu Progreso:</strong> Mira cómo mejoras día a día.</li>
-                    <li style="margin-bottom: 10px;">🏆 <strong>Supera Retos:</strong> Gana confianza en cada tema.</li>
+                <div style="background-color: #F3F4F6; padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #E5E7EB;">
+                  <h3 style="color: #111827; margin-top: 0; font-size: 18px;">Tu Aventura en AlanMath incluye:</h3>
+                  <ul style="color: #4B5563; padding-left: 20px; font-size: 15px;">
+                    <li style="margin-bottom: 12px;">🧠 <strong>Cuestionarios de Nivel:</strong> Practica con exámenes reales tipo universidad y colegio.</li>
+                    <li style="margin-bottom: 12px;">🤖 <strong>IA Personalizada:</strong> Crea tus propios cuestionarios justo de lo que necesitas. ¡Nuestra IA los genera para ti al instante! 🎯</li>
+                    <li style="margin-bottom: 12px;">✅ <strong>Aprende de tus Errores:</strong> No solo sabrás si fallaste; te daremos una <strong>explicación paso a paso</strong> para que domines el proceso.</li>
+                    <li style="margin-bottom: 12px;">💡 <strong>Pistas Inteligentes:</strong> El empujón exacto que necesitas cuando te atasques en un ejercicio.</li>
+                    <li style="margin-bottom: 12px;">🎓 <strong>Refuerzo por WhatsApp:</strong> Chat directo con expertos para resolver tus dudas más difíciles.</li>
+                    <li style="margin-bottom: 12px;">📺 <strong>Videoteca Exclusiva:</strong> Contenido en video para profundizar en cada tema matemático.</li>
                   </ul>
                 </div>
 
@@ -276,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 </p>
 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="https://app.alanmath.com/" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 10px;">Ir a la App</a>
+                  <a href="https://app.alanmath.com/auth" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 10px;">Ir a la App</a>
                   <a href="https://alanmath.com/" style="background-color: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Visitar Sitio Web</a>
                 </div>
 
@@ -614,8 +617,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "El nombre de usuario debe tener al menos 3 caracteres" });
     }
 
-    if (email && (typeof email !== 'string' || !email.includes('@'))) {
-      return res.status(400).json({ message: "El correo electrónico no es válido" });
+    if (email && (typeof email !== 'string' || !email.includes('@') || !email.includes('.'))) {
+      return res.status(400).json({ message: "El correo electrónico no es válido (debe contener '@' y un '.')" });
     }
 
     try {
@@ -3649,6 +3652,15 @@ Ejemplo de formato:
   //para la creacion de usuario  padre e hijo desde el admin:
   app.post('/api/auth/register-parent', requireAdmin, async (req, res) => {
     const { parent, child } = req.body;
+
+    if (!parent?.email || !child?.email) {
+      return res.status(400).json({ error: 'Auch! El correo electrónico es obligatorio para el padre y el hijo' });
+    }
+
+    if (!parent.email.includes('@') || !parent.email.includes('.') ||
+      !child.email.includes('@') || !child.email.includes('.')) {
+      return res.status(400).json({ error: 'Auch! parece que uno de los correos no quedó bien escrito, revisa el @ y el puntito' });
+    }
 
     try {
       const result = await storage.registerParentWithChild(parent, child);

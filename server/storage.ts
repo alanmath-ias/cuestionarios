@@ -77,7 +77,10 @@ export interface IStorage {
   getTrainingQuestionsByCategoryAndSubcategory(categoryId: number, subcategoryId: number): Promise<any[]>;
 
   // Parent/Child methods
-  registerParentWithChild(parent: any, child: any): Promise<any>;
+  registerParentWithChild(
+    parent: { username: string, password: string, name: string, email: string },
+    child: { username: string, password: string, name: string, email: string }
+  ): Promise<any>;
   getChildByParentId(parentId: number): Promise<Child | null>;
 
   // Dashboard/Admin methods
@@ -188,7 +191,10 @@ export class MemStorage implements IStorage {
   async reorderCategories(orders: { id: number; sortOrder: number }[]): Promise<void> { }
   async getTrainingQuestionsByCategoryAndSubcategory(categoryId: number, subcategoryId: number): Promise<any[]> { return []; }
 
-  async registerParentWithChild(parent: any, child: any): Promise<any> { throw new Error("Not implemented"); }
+  async registerParentWithChild(
+    parent: { username: string, password: string, name: string, email: string },
+    child: { username: string, password: string, name: string, email: string }
+  ): Promise<any> { throw new Error("Not implemented"); }
   async getChildByParentId(parentId: number): Promise<Child | null> { return null; }
 
   async getUserProgressSummary(): Promise<any[]> { return []; }

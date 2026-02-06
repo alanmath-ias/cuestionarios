@@ -54,8 +54,8 @@ export function OnboardingTour({ isOpen, user, onComplete }: OnboardingTourProps
                     {[
                         "Cuestionarios tipo examen de U. y Colegio",
                         "Calificación inmediata y precisa",
-                        "Explicación paso a paso de errores",
-                        "Crea cuestionarios a tu medida",
+                        "Aprende paso a paso de tus errores",
+                        "Crea tus propios cuestionarios con IA",
                         "Pistas inteligentes cuando te atasques"
                     ].map((item, i) => (
                         <div key={i} className="flex items-center gap-3 bg-white/5 p-2 rounded-lg border border-white/5">

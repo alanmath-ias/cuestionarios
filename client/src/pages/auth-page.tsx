@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { FaWhatsapp } from 'react-icons/fa';
 import {
@@ -35,6 +35,9 @@ export default function AuthPage() {
   const [showLoginForm, setShowLoginForm] = useState(initialMode !== 'register');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -102,6 +105,16 @@ export default function AuthPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (password !== confirmPassword) {
+      toast({
+        title: 'Error de validación',
+        description: 'Las contraseñas no coinciden.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -116,6 +129,7 @@ export default function AuthPage() {
       setRegisteredName(name);
       setUsername('');
       setPassword('');
+      setConfirmPassword('');
       setName('');
       setEmail('');
 
@@ -130,9 +144,19 @@ export default function AuthPage() {
 
     } catch (error) {
       console.error('Register error:', error);
+
+      let errorMessage = '¡Oh no! Algo no salió como esperábamos. ¿Podrías intentar registrarte de nuevo?';
+      const errorStr = error instanceof Error ? error.message : String(error);
+
+      if (errorStr.includes('Username already exists')) {
+        errorMessage = 'Ups! el nombre de usuario ya existe, por favor elige otro que te guste.';
+      } else if (errorStr.includes('email') || errorStr.includes('Correo electrónico')) {
+        errorMessage = 'Auch! parece que tu correo no quedó bien escrito, revisa el @ y el puntito';
+      }
+
       toast({
         title: 'Error de registro',
-        description: 'No se pudo crear la cuenta. Intente con otro nombre de usuario.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -209,15 +233,24 @@ export default function AuthPage() {
                 <label className="block text-slate-300 text-sm font-medium mb-2" htmlFor="password">
                   Contraseña
                 </label>
-                <input
-                  className="w-full bg-slate-950/50 border border-slate-800 rounded-lg py-2.5 px-4 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <input
+                    className="w-full bg-slate-950/50 border border-slate-800 rounded-lg py-2.5 px-4 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
               <div className="flex justify-end">
                 <Link href="/forgot-password">
@@ -269,27 +302,65 @@ export default function AuthPage() {
                   Email
                 </label>
                 <input
-                  className="w-full bg-slate-950/50 border border-slate-800 rounded-lg py-2.5 px-4 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-lg py-2.5 px-4 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all font-medium"
                   id="email"
                   type="email"
                   placeholder="tu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-slate-300 text-sm font-medium mb-2" htmlFor="register-password">
-                  Contraseña
-                </label>
-                <input
-                  className="w-full bg-slate-950/50 border border-slate-800 rounded-lg py-2.5 px-4 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
-                  id="register-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+                <p className="text-[10px] text-blue-400 mt-1 flex items-center gap-1">
+                  💡 Usa tu correo personal principal para recibir tus reportes.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-300 text-sm font-medium mb-2" htmlFor="register-password">
+                    Contraseña
+                  </label>
+                  <div className="relative">
+                    <input
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-lg py-2.5 px-4 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
+                      id="register-password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-slate-300 text-sm font-medium mb-2" htmlFor="confirm-password">
+                    Confirmar Contraseña
+                  </label>
+                  <div className="relative">
+                    <input
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-lg py-2.5 px-4 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
               </div>
               <Button
                 type="submit"
@@ -307,21 +378,29 @@ export default function AuthPage() {
                 <span className="w-full border-t border-slate-700" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-slate-900 px-2 text-slate-400">O continuar con</span>
+                <span className="bg-slate-900 px-2 text-slate-400">
+                  {showLoginForm ? "O continuar con" : "O regístrate más rápido con"}
+                </span>
               </div>
             </div>
 
             <Button
               variant="outline"
-              className="w-full mt-4 bg-white text-black hover:bg-slate-200 border-transparent font-medium"
+              className="w-full mt-4 bg-white text-black hover:bg-slate-200 border-transparent font-bold relative group overflow-hidden"
               onClick={() => {
                 const intent = showLoginForm ? 'login' : 'register';
                 window.location.href = `/auth/google?intent=${intent}`;
               }}
             >
-              <FcGoogle className="mr-2 h-5 w-5" />
-              Google
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <FcGoogle className="mr-2 h-5 w-5 z-10" />
+              <span className="z-10">Google</span>
             </Button>
+            {!showLoginForm && (
+              <p className="text-[10px] text-slate-500 text-center mt-2 italic">
+                ¡Acceso instantáneo y más seguro con Google!
+              </p>
+            )}
           </div>
 
           {/* Sección de ayuda */}

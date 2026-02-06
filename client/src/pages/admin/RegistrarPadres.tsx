@@ -49,9 +49,20 @@ export default function RegisterParentPage() {
       setChild(initialChildState);
 
     } catch (err) {
+      console.error('Register parent-child error:', err);
+
+      let errorMessage = 'Auch! No pudimos registrar las cuentas. Por favor, verifica los datos e intenta de nuevo.';
+      const errorStr = String(err);
+
+      if (errorStr.includes('already exists') || errorStr.includes('ya está en uso')) {
+        errorMessage = 'Ups! Uno de los nombres de usuario ya existe, por favor elige otros que te gusten.';
+      } else if (errorStr.includes('email') || errorStr.includes('correo') || errorStr.includes('Correo')) {
+        errorMessage = 'Auch! parece que uno de los correos no quedó bien escrito, revisa el @ y el puntito';
+      }
+
       toast({
-        title: 'Error',
-        description: 'No se pudo registrar la cuenta.',
+        title: 'Error de registro',
+        description: errorMessage,
         variant: 'destructive',
         duration: 5000
       });
@@ -137,7 +148,7 @@ export default function RegisterParentPage() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="parent-email" className="text-slate-400">Correo electrónico <span className="text-sm text-slate-600">(opcional)</span></Label>
+                  <Label htmlFor="parent-email" className="text-slate-400">Correo electrónico</Label>
                   <Input
                     id="parent-email"
                     name="email"
@@ -145,6 +156,7 @@ export default function RegisterParentPage() {
                     placeholder="Ej: juan@ejemplo.com"
                     value={parent.email}
                     onChange={handleParentChange}
+                    required
                     className="bg-slate-950/50 border-slate-800 text-slate-200 focus:ring-blue-500/50 placeholder:text-slate-600 focus:border-blue-500/50"
                   />
                 </div>
@@ -194,7 +206,7 @@ export default function RegisterParentPage() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="child-email" className="text-slate-400">Correo electrónico <span className="text-sm text-slate-600">(opcional)</span></Label>
+                  <Label htmlFor="child-email" className="text-slate-400">Correo electrónico</Label>
                   <Input
                     id="child-email"
                     name="email"
@@ -202,6 +214,7 @@ export default function RegisterParentPage() {
                     placeholder="Ej: ana@ejemplo.com"
                     value={child.email}
                     onChange={handleChildChange}
+                    required
                     className="bg-slate-950/50 border-slate-800 text-slate-200 focus:ring-green-500/50 placeholder:text-slate-600 focus:border-green-500/50"
                   />
                 </div>

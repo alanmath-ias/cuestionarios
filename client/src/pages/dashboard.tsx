@@ -199,7 +199,7 @@ function StatCard({
   progress?: number,
   total?: number,
   completed?: number,
-  breakdown?: Record<string, number>
+  breakdown?: Record<string, number> | Array<[string, number]>
 }) {
   return (
     <div className={`rounded-3xl p-5 flex flex-col h-full ${colorClass} relative overflow-hidden`}>
@@ -236,13 +236,13 @@ function StatCard({
         )}
       </div>
 
-      {breakdown && Object.keys(breakdown).length > 0 && (
+      {breakdown && (Array.isArray(breakdown) ? breakdown.length > 0 : Object.keys(breakdown).length > 0) && (
         <div className="relative z-10 mt-auto pt-4 border-t border-white/20">
           <p className="text-xs font-bold mb-2 opacity-90 flex items-center gap-1">
             <BarChart3 className="w-3 h-3" /> Por Área:
           </p>
           <div className="space-y-1.5">
-            {Object.entries(breakdown).slice(0, 4).map(([name, count]) => (
+            {(Array.isArray(breakdown) ? breakdown : Object.entries(breakdown)).slice(0, 4).map(([name, count]) => (
               <div key={name} className="flex justify-between items-center text-xs">
                 <span className="opacity-80 truncate max-w-[120px]">{name}</span>
                 <span className="font-bold bg-white/20 px-1.5 py-0.5 rounded text-[10px]">{count}</span>
@@ -371,6 +371,83 @@ export default function UserDashboard() {
     enabled: !!selectedCategoryForDetails,
   });
 
+  // Sort categories by ID for consistent display
+  const sortedCategories = useMemo(() => {
+    if (!categories) return [];
+    return [...categories].sort((a, b) => a.id - b.id);
+  }, [categories]);
+
+  // --- Data Preparation (Derived State) ---
+  const completedQuizzes = useMemo(() => quizzes?.filter((q) => q.status === "completed") || [], [quizzes]);
+
+  const allPendingQuizzes = useMemo(() => quizzes?.filter((q) => q.status !== "completed") || [], [quizzes]);
+
+  const pendingQuizzes = useMemo(() => {
+    return allPendingQuizzes.reduce((acc, current) => {
+      const x = acc.find(item => item.id === current.id);
+      if (!x) return acc.concat([current]);
+      return acc;
+    }, [] as QuizWithFeedback[]);
+  }, [allPendingQuizzes]);
+
+  const filteredPendingQuizzes = useMemo(() => {
+    return pendingQuizzes.filter(q =>
+      q.title.toLowerCase().includes(pendingSearchQuery.toLowerCase())
+    );
+  }, [pendingQuizzes, pendingSearchQuery]);
+
+  const progressPercentage = useMemo(() => {
+    if (!quizzes || quizzes.length === 0) return 0;
+    return (completedQuizzes.length / quizzes.length) * 100;
+  }, [completedQuizzes, quizzes]);
+
+  const sortedCompletedQuizzes = useMemo(() => {
+    return [...completedQuizzes].sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+  }, [completedQuizzes]);
+
+  const uniqueCompletedQuizzes = useMemo(() => {
+    return sortedCompletedQuizzes.reduce((acc, current) => {
+      const x = acc.find(item => item.id === current.id);
+      if (!x) return acc.concat([current]);
+      return acc;
+    }, [] as QuizWithFeedback[]);
+  }, [sortedCompletedQuizzes]);
+
+  const feedbackQuizzes = useMemo(() => {
+    return quizzes?.filter(q => q.feedback && q.feedback.length > 0 && !q.reviewed) || [];
+  }, [quizzes]);
+
+  const stats = useMemo(() => {
+    const avg = uniqueCompletedQuizzes.length > 0
+      ? Math.round(uniqueCompletedQuizzes.reduce((acc, curr) => acc + (curr.score || 0), 0) / uniqueCompletedQuizzes.length * 10)
+      : 0;
+    const totalTime = uniqueCompletedQuizzes.reduce((acc, curr) => acc + (curr.timeSpent || 0), 0);
+    return {
+      completedQuizzes: uniqueCompletedQuizzes.length,
+      averageScore: avg,
+      totalTime: totalTime
+    };
+  }, [uniqueCompletedQuizzes]);
+
+  const categoryBreakdown = useMemo(() => {
+    if (!quizzes || !sortedCategories) return [];
+    const breakdown: Record<string, number> = {};
+    completedQuizzes.forEach(quiz => {
+      const catName = sortedCategories.find(c => c.id === quiz.categoryId)?.name || 'Otros';
+      breakdown[catName] = (breakdown[catName] || 0) + 1;
+    });
+
+    return sortedCategories
+      .map(cat => [cat.name, breakdown[cat.name] || 0] as [string, number])
+      .filter(([_, count]) => count > 0);
+  }, [completedQuizzes, sortedCategories]);
+
+  const filteredCategoryQuizzes = useMemo(() => {
+    return categoryQuizzes?.filter(quiz =>
+      quiz.title.toLowerCase().includes(categorySearchQuery.toLowerCase())
+    ) || [];
+  }, [categoryQuizzes, categorySearchQuery]);
+
   // --- Roadmap Data Logic ---
   const [expandedRoadmapCategoryId, setExpandedRoadmapCategoryId] = useState<number | null>(null);
   const activeCategoryId = expandedRoadmapCategoryId;
@@ -469,7 +546,7 @@ export default function UserDashboard() {
     // 3. Third pass: Construct final RoadmapNode objects
     return processedNodes.map((node) => {
       const isParent = node.behavior === 'container' || node.type === 'critical';
-      let finalStatus = node.calculatedStatus;
+      let finalStatus: 'locked' | 'available' | 'completed' | 'partial' = node.calculatedStatus;
 
       if (isParent) {
         const children = groupNodes[node.id] || [];
@@ -494,8 +571,8 @@ export default function UserDashboard() {
       }
 
       return {
-        id: node.id,
-        title: node.label,
+        id: node.id || `node-${Math.random()}`,
+        title: node.label || 'Sin título',
         description: node.description || '',
         status: finalStatus,
         type: 'subcategory',
@@ -511,16 +588,16 @@ export default function UserDashboard() {
                 const sub = activeCategorySubcategories.find(s => s.id === node.subcategoryId);
                 if (sub) handleSubcategorySelect(sub);
               }
-              const cat = categories?.find(c => c.id === activeCategoryId);
+              const cat = sortedCategories.find(c => c.id === activeCategoryId);
               if (cat) setSelectedCategoryForDetails(cat);
             }
           } else {
             if (finalStatus !== 'locked') {
-              const cat = categories?.find(c => c.id === activeCategoryId);
+              const cat = sortedCategories.find(c => c.id === activeCategoryId);
               if (cat) {
                 setSelectedCategoryForDetails(cat);
-                setCategorySearchQuery(node.label);
-                setQuizSearchQuery(node.label);
+                setCategorySearchQuery(node.label || '');
+                setQuizSearchQuery(node.label || '');
               }
               if (node.subcategoryId && activeCategorySubcategories) {
                 const sub = activeCategorySubcategories.find(s => s.id === node.subcategoryId);
@@ -531,7 +608,7 @@ export default function UserDashboard() {
         }
       };
     });
-  }, [activeCategoryId, activeCategoryQuizzes, activeCategorySubcategories, quizzes, categories]);
+  }, [activeCategoryId, activeCategoryQuizzes, activeCategorySubcategories, quizzes, sortedCategories]);
 
   const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
   const [quizSearchQuery, setQuizSearchQuery] = useState("");
@@ -837,54 +914,6 @@ export default function UserDashboard() {
     return <div className="flex justify-center items-center min-h-screen bg-slate-950"><Spinner className="h-12 w-12 text-purple-500" /></div>;
   }
 
-  const completedQuizzes = quizzes?.filter((q) => q.status === "completed") || [];
-  const allPendingQuizzes = quizzes?.filter((q) => q.status !== "completed") || [];
-  const pendingQuizzes = allPendingQuizzes.reduce((acc, current) => {
-    const x = acc.find(item => item.id === current.id);
-    if (!x) return acc.concat([current]);
-    return acc;
-  }, [] as QuizWithFeedback[]);
-
-  const filteredPendingQuizzes = pendingQuizzes.filter(q =>
-    q.title.toLowerCase().includes(pendingSearchQuery.toLowerCase())
-  );
-
-  const progressPercentage = quizzes && quizzes.length > 0 ? (completedQuizzes.length / quizzes.length) * 100 : 0;
-  const sortedCompletedQuizzes = [...completedQuizzes].sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
-
-  // Filter out duplicates, keeping only the most recent one per quizId
-  const uniqueCompletedQuizzes = sortedCompletedQuizzes.reduce((acc, current) => {
-    const x = acc.find(item => item.id === current.id);
-    if (!x) {
-      return acc.concat([current]);
-    } else {
-      return acc;
-    }
-  }, [] as QuizWithFeedback[]);
-
-  // Filter quizzes with feedback
-  const feedbackQuizzes = quizzes?.filter(q => q.feedback && q.feedback.length > 0 && !q.reviewed) || [];
-
-  const stats = {
-    completedQuizzes: uniqueCompletedQuizzes.length,
-    averageScore: uniqueCompletedQuizzes.length > 0
-      ? Math.round(uniqueCompletedQuizzes.reduce((acc, curr) => acc + (curr.score || 0), 0) / uniqueCompletedQuizzes.length * 10)
-      : 0,
-    totalTime: uniqueCompletedQuizzes.reduce((acc, curr) => acc + (curr.timeSpent || 0), 0)
-  };
-
-  // Calculate breakdown by category
-  const categoryBreakdown = completedQuizzes.reduce((acc, quiz) => {
-    const catName = categories?.find(c => c.id === quiz.categoryId)?.name || 'Otros';
-    acc[catName] = (acc[catName] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Filter quizzes for category details
-  const filteredCategoryQuizzes = categoryQuizzes?.filter(quiz =>
-    quiz.title.toLowerCase().includes(categorySearchQuery.toLowerCase())
-  ) || [];
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 relative overflow-hidden">
       {/* Background Elements */}
@@ -975,7 +1004,7 @@ export default function UserDashboard() {
         <div className="mb-8 space-y-4">
           {/* Stars Navigation */}
           <div className="flex items-center justify-center gap-4 py-4 flex-wrap">
-            {categories?.map((category) => (
+            {sortedCategories.map((category) => (
               <TooltipProvider key={category.id}>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1027,7 +1056,8 @@ export default function UserDashboard() {
               >
                 <HorizontalRoadmap
                   nodes={roadmapNodes}
-                  title={categories?.find(c => c.id === expandedRoadmapCategoryId)?.name ? `Tu camino en ${categories.find(c => c.id === expandedRoadmapCategoryId)?.name}` : 'Tu Progreso'}
+                  categoryName={sortedCategories.find(c => c.id === expandedRoadmapCategoryId)?.name}
+                  title={sortedCategories.find(c => c.id === expandedRoadmapCategoryId)?.name ? `Tu camino en ${sortedCategories.find(c => c.id === expandedRoadmapCategoryId)?.name}` : 'Tu Progreso'}
                   className="bg-slate-900/50 border border-white/5 rounded-2xl shadow-2xl"
                   onClose={() => setExpandedRoadmapCategoryId(null)}
                 />
@@ -1178,7 +1208,7 @@ export default function UserDashboard() {
 
               <ScrollArea className="flex-1 -mr-3 pr-3">
                 <div className="space-y-3">
-                  {categories?.map((category) => {
+                  {sortedCategories.map((category) => {
                     const isRecommended = (() => {
                       const rec = localStorage.getItem('pendingRecommendations');
                       if (rec) {
