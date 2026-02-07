@@ -1747,7 +1747,7 @@ export default function UserDashboard() {
                                   </div>
                                   <div>
                                     <h4 className="font-semibold text-sm text-slate-200 line-clamp-2">{quiz.title}</h4>
-                                    <p className="text-xs text-slate-500 line-clamp-1">{quiz.description}</p>
+                                    <p className="text-xs text-slate-500 line-clamp-none">{quiz.description}</p>
                                   </div>
                                 </div>
                               </div>

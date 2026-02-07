@@ -2,8 +2,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ArithmeticNode } from '../../data/arithmetic-map-data';
-import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction } from 'lucide-react';
+import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import React, { useState } from 'react';
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { Button } from '@/components/ui/button';
 
 interface SkillTreeViewProps {
     nodes: ArithmeticNode[];
@@ -18,6 +20,7 @@ interface SkillTreeViewProps {
 
 export function SkillTreeView({ nodes, progressMap, onNodeClick, title, description, allQuizzes = [], isAdmin = false, subcategories = [] }: SkillTreeViewProps) {
     const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
+    const [isInteractive, setIsInteractive] = useState(false);
 
     // Calculate Total Visible Quizzes and Node Progress
     const { totalVisibleQuizzes, nodeProgress } = React.useMemo(() => {
@@ -105,29 +108,6 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
 
     const highlightedSet = React.useMemo(() => getHighlightedNodes(highlightedNodeId), [highlightedNodeId, nodes]);
 
-    // Ref for the scrollable container to auto-center on mobile
-    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
-
-    React.useLayoutEffect(() => {
-        const centerMap = () => {
-            if (scrollContainerRef.current) {
-                const container = scrollContainerRef.current;
-                const scrollWidth = container.scrollWidth;
-                const clientWidth = container.clientWidth;
-                if (scrollWidth > clientWidth) {
-                    container.scrollLeft = (scrollWidth - clientWidth) / 2;
-                }
-            }
-        };
-
-        // Execute after a short delay to ensure DOM layout is ready
-        const timer = setTimeout(() => {
-            requestAnimationFrame(centerMap);
-        }, 300); // Increased delay for stability
-
-        return () => clearTimeout(timer);
-    }, [title]); // Re-center if map changes or on mount
-
     // Styles for custom shapes
     const styles = (
         <style>
@@ -150,7 +130,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
             const w = window.innerWidth;
             if (w >= 1280) setLayout({ width: 1100, rowHeight: 180, spread: 4.5 });
             else if (w >= 768) setLayout({ width: 950, rowHeight: 170, spread: 4 });
-            else setLayout({ width: 800, rowHeight: 160, spread: 3 });
+            else setLayout({ width: 1000, rowHeight: 180, spread: 4 });
         };
         updateLayout();
         window.addEventListener('resize', updateLayout);
@@ -279,226 +259,309 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                 </div>
             </div>
 
-            <div
-                ref={scrollContainerRef}
-                className="w-full overflow-x-auto overflow-y-hidden pb-10"
-            >
-                <div
-                    className="relative mx-auto overflow-visible transition-all duration-500 ease-in-out"
-                    style={{ width: MAP_WIDTH, height: totalHeight }}
+            <div className="w-full relative">
+                <TransformWrapper
+                    initialScale={1}
+                    minScale={0.4}
+                    maxScale={2}
+                    centerOnInit={true}
+                    limitToBounds={false}
+                    wheel={{ step: 0.1, disabled: !isInteractive }}
+                    panning={{ disabled: !isInteractive }}
+                    doubleClick={{ disabled: !isInteractive }}
                 >
-
-                    {/* SVG Connections Layer */}
-                    <svg
-                        className="absolute top-0 left-0 w-full h-full pointer-events-none z-0 overflow-visible"
-                        viewBox={`0 0 ${MAP_WIDTH} ${totalHeight}`}
-                        preserveAspectRatio="xMidYMin meet"
-                    >
-                        <defs>
-                            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
-                                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.4" />
-                            </linearGradient>
-                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                                <feGaussianBlur stdDeviation="4" result="coloredBlur" />
-                                <feMerge>
-                                    <feMergeNode in="coloredBlur" />
-                                    <feMergeNode in="SourceGraphic" />
-                                </feMerge>
-                            </filter>
-                        </defs>
-
-                        {nodes.map(node => {
-                            return node.requires.map(reqId => {
-                                const parent = nodes.find(n => n.id === reqId);
-                                if (!parent) return null;
-
-                                const pPos = getNodePos(parent);
-                                const cPos = getNodePos(node);
-                                const midY = (pPos.y + cPos.y) / 2;
-                                const isUnlocked = progressMap[parent.id] === 'completed';
-
-                                // Highlight connection if both parent and child are in the highlight set
-                                const isHighlighted = highlightedSet.has(parent.id) && highlightedSet.has(node.id);
-
-                                return (
-                                    <motion.path
-                                        key={`${parent.id}-${node.id}`}
-                                        d={`M ${pPos.x} ${pPos.y} C ${pPos.x} ${midY}, ${cPos.x} ${midY}, ${cPos.x} ${cPos.y}`}
-                                        fill="none"
-                                        stroke={isHighlighted ? "#fbbf24" : (isUnlocked) ? "#3b82f6" : "rgba(71, 85, 105, 0.5)"} // Amber for highlight
-                                        strokeWidth={isHighlighted ? "5" : "3"}
-                                        strokeLinecap="round"
-                                        strokeDasharray={isHighlighted ? "none" : "6 4"}
-                                        filter={isHighlighted ? "url(#glow)" : undefined}
-                                        initial={{ pathLength: 0, opacity: 0 }}
-                                        animate={{ pathLength: 1, opacity: 1 }}
-                                        transition={{ duration: 1.5, ease: "easeInOut" }}
-                                    />
-                                );
-                            });
-                        })}
-                    </svg>
-
-                    {/* Nodes Layer */}
-                    {nodes.map((node, index) => {
-                        const pos = getNodePos(node);
-                        let status = progressMap[node.id] || 'locked';
-
-                        const isAvailable = status === 'available';
-                        const isCompleted = status === 'completed';
-                        const isInProgress = status === 'in_progress';
-                        const isLocked = status === 'locked';
-
-                        const isHighlighted = highlightedSet.has(node.id);
-
-                        return (
-                            <div
-                                key={node.id}
-                                style={{
-                                    position: 'absolute',
-                                    left: pos.x,
-                                    top: pos.y,
-                                    transform: 'translate(-50%, -50%)',
-                                    zIndex: isHighlighted ? 30 : 10
-                                }}
-                            >
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0, y: 20 }}
-                                    whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                                    viewport={{ once: true }}
-                                    transition={{ delay: index * 0.05, type: 'spring' }}
-                                    className="flex flex-col items-center justify-center p-4" // Use padding to avoid cropping shadows
-                                >
-                                    {/* Tooltip for Locked Items ("Próximamente") */}
-                                    <div className="relative group">
-                                        <motion.button
-                                            layoutId={`node-${node.id}`}
-                                            whileHover={{ scale: 1.15 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={(e) => handleNodeInteraction(e, node, isLocked)}
-                                            className={cn(
-                                                "relative w-20 h-20 flex items-center justify-center shadow-lg transition-all duration-300 hover:brightness-125 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]",
-                                                (node.type === 'critical' && node.behavior === 'container') ? 'hexagon-mask' :
-                                                    node.behavior === 'container' ? 'rotate-45 rounded-2xl' : 'rounded-full',
-
-                                                isLocked && "cursor-not-allowed shadow-[0_0_20px_rgba(245,158,11,0.3)]",
-                                                !isLocked && "cursor-pointer",
-
-                                                isHighlighted ? "ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_40px_rgba(251,191,36,0.6)] scale-110" : "",
-                                                !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
-                                                    !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf]" :
-                                                        !isHighlighted && isAvailable ? (
-                                                            node.type === 'critical' ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" :
-                                                                "shadow-[0_0_30px_#3b82f6]"
-                                                        ) : ""
-                                            )}
-                                            style={{
-                                                background: isHighlighted ? 'linear-gradient(135deg, #b45309, #f59e0b)' :
-                                                    isCompleted ? 'linear-gradient(135deg, #1f2937, #064e3b)' :
-                                                        isInProgress ? 'linear-gradient(135deg, #134e4a, #2dd4bf)' :
-                                                            isAvailable ? (
-                                                                node.type === 'critical' ? 'linear-gradient(135deg, #881337, #f43f5e)' :
-                                                                    'linear-gradient(135deg, #1e3a8a, #3b82f6)'
-                                                            ) : isLocked ? 'linear-gradient(135deg, #1e293b, #451a03)' : '#1e293b',
-
-                                                border: `3px solid ${isHighlighted ? '#fbbf24' :
-                                                    isCompleted ? '#4ade80' :
-                                                        isInProgress ? '#5eead4' :
-                                                            isAvailable ? (node.type === 'critical' ? '#fb7185' : '#3b82f6') :
-                                                                isLocked ? '#f59e0b' : '#475569'
-                                                    }`
-                                            }}
-                                        >
-                                            <div className={cn("flex items-center justify-center", node.behavior === 'container' && !(node.type === 'critical' && node.behavior === 'container') && "-rotate-45")}>
-                                                {isCompleted ? (
-                                                    <CheckCircle className="w-8 h-8 text-green-400" />
-                                                ) : isLocked ? (
-                                                    <Construction className="w-8 h-8 text-amber-500" />
-                                                ) : (
-                                                    (node.type === 'critical' && node.behavior === 'container') ? <Hexagon className="w-8 h-8 text-yellow-400 fill-yellow-400/20" /> :
-                                                        node.type === 'critical' ? <Star className="w-8 h-8 text-white fill-white/20" /> :
-                                                            node.type === 'evaluation' ? <Trophy className="w-8 h-8 text-purple-400 fill-purple-400/20" /> :
-                                                                node.behavior === 'container' ? <BookOpen className="w-8 h-8 text-white fill-white/10" /> :
-                                                                    <Play className="w-8 h-8 text-white fill-white" />
-                                                )}
-                                            </div>
-                                        </motion.button>
-
-                                        {isLocked && (
-                                            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-slate-400 text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none border border-slate-700 z-50">
-                                                Próximamente
-                                            </div>
-                                        )}
-
-                                        {/* Admin Subcategory Tooltip */}
-                                        {isAdmin && (node.subcategoryId || (node.additionalSubcategories && node.additionalSubcategories.length > 0)) && (
-                                            <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-900/95 text-white text-[10px] p-2 rounded-lg whitespace-nowrap pointer-events-none border border-blue-500/50 z-[100] shadow-xl backdrop-blur-sm">
-                                                <div className="font-bold border-b border-blue-400/30 mb-1 pb-1 flex items-center gap-1">
-                                                    <Shield className="w-3 h-3" /> Subcategorías Vinculadas
-                                                </div>
-                                                <div className="space-y-1">
-                                                    {[node.subcategoryId, ...(node.additionalSubcategories || [])].filter(Boolean).map(id => {
-                                                        const sub = subcategories.find(s => s.id === id);
-                                                        return (
-                                                            <div key={id} className="flex items-center gap-2">
-                                                                <span className="bg-blue-500/30 px-1 rounded text-[9px] font-mono">ID: {id}</span>
-                                                                <span className="text-blue-100">{sub?.name || 'Cargando...'}</span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Progress Bar */}
-                                    {nodeProgress[node.id] > 0 && !isLocked && (
-                                        <div className="w-16 h-1.5 bg-slate-900/60 rounded-full mt-2 overflow-hidden border border-white/10 shadow-inner z-20">
-                                            <motion.div
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${nodeProgress[node.id]}%` }}
-                                                transition={{ duration: 1, ease: "easeOut" }}
-                                                className={cn(
-                                                    "h-full rounded-full",
-                                                    isCompleted ? "bg-gradient-to-r from-green-500 to-emerald-400" :
-                                                        isInProgress ? "bg-gradient-to-r from-teal-400 to-cyan-400" :
-                                                            "bg-gradient-to-r from-blue-500 to-indigo-500"
-                                                )}
-                                            />
+                    {({ zoomIn, zoomOut, resetTransform }) => (
+                        <>
+                            {/* Floating Controls */}
+                            <div className="absolute bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-auto">
+                                <div className="flex items-center gap-3 justify-end group/hint">
+                                    {!isInteractive && (
+                                        <div className="hidden md:block bg-slate-900/90 text-blue-300 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-blue-500/30 shadow-xl backdrop-blur-sm animate-in fade-in slide-in-from-right-2 duration-500 pointer-events-none whitespace-nowrap">
+                                            Click derecho para interactuar ↗
                                         </div>
                                     )}
+                                    <Button
+                                        size="icon"
+                                        variant="secondary"
+                                        onClick={() => setIsInteractive(!isInteractive)}
+                                        className={cn(
+                                            "rounded-full border shadow-xl transition-all duration-300 shrink-0",
+                                            isInteractive
+                                                ? "bg-blue-600 border-blue-400 text-white hover:bg-blue-500"
+                                                : "bg-slate-900/80 border-slate-700 text-slate-400 hover:bg-slate-800"
+                                        )}
+                                        title={isInteractive ? "Desactivar Zoom/Pan (Usar Scroll página)" : "Activar Zoom/Pan Interactivo"}
+                                    >
+                                        {isInteractive ? <MousePointerClick className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+                                    </Button>
+                                </div>
 
-                                    {/* Label under node - Simple flow positioning */}
-                                    <div className="mt-4 w-40 text-center pointer-events-none">
-                                        <span className={cn(
-                                            "inline-block px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md shadow-sm transition-colors duration-300",
-                                            isHighlighted ? "bg-yellow-950/50 border-yellow-500/50 text-yellow-200" :
-                                                isCompleted ? "bg-green-950/50 border-green-500/50 text-green-300" :
-                                                    isAvailable ? "bg-blue-950/50 border-blue-500/50 text-blue-200" :
-                                                        isLocked ? "bg-amber-950/50 border-amber-600/50 text-amber-400" :
-                                                            "bg-slate-900/50 border-slate-700 text-slate-500"
-                                        )}>
-                                            {node.label}
-                                        </span>
-                                    </div>
-
-                                    {highlightedNodeId === node.id && node.behavior === 'container' && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="absolute -top-12 bg-yellow-900/80 text-yellow-200 text-[10px] px-2 py-1 rounded border border-yellow-700 whitespace-nowrap pointer-events-none"
-                                        >
-                                            Selecciona un tema abajo 👇
-                                        </motion.div>
-                                    )}
-                                </motion.div>
+                                <div className={cn(
+                                    "flex flex-col gap-2 transition-all duration-300",
+                                    !isInteractive && "opacity-0 pointer-events-none scale-90 translate-y-4"
+                                )}>
+                                    <Button
+                                        size="icon"
+                                        variant="secondary"
+                                        onClick={() => zoomIn()}
+                                        className="rounded-full bg-slate-900/80 border border-slate-700 text-white hover:bg-slate-800 shadow-xl"
+                                        title="Acercar"
+                                    >
+                                        <ZoomIn className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        size="icon"
+                                        variant="secondary"
+                                        onClick={() => zoomOut()}
+                                        className="rounded-full bg-slate-900/80 border border-slate-700 text-white hover:bg-slate-800 shadow-xl"
+                                        title="Alejar"
+                                    >
+                                        <ZoomOut className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        size="icon"
+                                        variant="secondary"
+                                        onClick={() => resetTransform()}
+                                        className="rounded-full bg-slate-900/80 border border-slate-700 text-white hover:bg-slate-800 shadow-xl"
+                                        title="Restablecer vista"
+                                    >
+                                        <RotateCcw className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </div>
-                        );
-                    })}
 
-                </div>
+                            <TransformComponent
+                                wrapperClass="!w-full !max-w-none !h-auto !min-h-[600px] cursor-grab active:cursor-grabbing"
+                                contentClass="!w-full flex justify-center"
+                            >
+                                <div
+                                    className={cn(
+                                        "relative overflow-visible pb-10 transition-all duration-300",
+                                        !isInteractive ? "opacity-90" : "opacity-100"
+                                    )}
+                                    style={{ width: MAP_WIDTH, height: totalHeight }}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        setIsInteractive(!isInteractive);
+                                    }}
+                                >
+
+                                    {/* SVG Connections Layer */}
+                                    <svg
+                                        width={MAP_WIDTH}
+                                        height={totalHeight}
+                                        className="absolute top-0 left-0 pointer-events-none z-0 overflow-visible"
+                                        viewBox={`0 0 ${MAP_WIDTH} ${totalHeight}`}
+                                    >
+                                        <defs>
+                                            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                                                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.4" />
+                                            </linearGradient>
+                                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                                <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+                                                <feMerge>
+                                                    <feMergeNode in="coloredBlur" />
+                                                    <feMergeNode in="SourceGraphic" />
+                                                </feMerge>
+                                            </filter>
+                                        </defs>
+
+                                        {nodes.map(node => {
+                                            return node.requires.map(reqId => {
+                                                const parent = nodes.find(n => n.id === reqId);
+                                                if (!parent) return null;
+
+                                                const pPos = getNodePos(parent);
+                                                const cPos = getNodePos(node);
+                                                const midY = (pPos.y + cPos.y) / 2;
+                                                const isUnlocked = progressMap[parent.id] === 'completed';
+
+                                                // Highlight connection if both parent and child are in the highlight set
+                                                const isHighlighted = highlightedSet.has(parent.id) && highlightedSet.has(node.id);
+
+                                                return (
+                                                    <motion.path
+                                                        key={`${parent.id}-${node.id}`}
+                                                        d={`M ${pPos.x} ${pPos.y} C ${pPos.x} ${midY}, ${cPos.x} ${midY}, ${cPos.x} ${cPos.y}`}
+                                                        fill="none"
+                                                        stroke={isHighlighted ? "#fbbf24" : (isUnlocked) ? "#3b82f6" : "rgba(71, 85, 105, 0.5)"} // Amber for highlight
+                                                        strokeWidth={isHighlighted ? "5" : "3"}
+                                                        strokeLinecap="round"
+                                                        strokeDasharray={isHighlighted ? "none" : "6 4"}
+                                                        filter={isHighlighted ? "url(#glow)" : undefined}
+                                                        initial={{ pathLength: 0, opacity: 0 }}
+                                                        animate={{ pathLength: 1, opacity: 1 }}
+                                                        transition={{ duration: 1.5, ease: "easeInOut" }}
+                                                    />
+                                                );
+                                            });
+                                        })}
+                                    </svg>
+
+                                    {/* Nodes Layer */}
+                                    {nodes.map((node, index) => {
+                                        const pos = getNodePos(node);
+                                        let status = progressMap[node.id] || 'locked';
+
+                                        const isAvailable = status === 'available';
+                                        const isCompleted = status === 'completed';
+                                        const isInProgress = status === 'in_progress';
+                                        const isLocked = status === 'locked';
+
+                                        const isHighlighted = highlightedSet.has(node.id);
+
+                                        return (
+                                            <div
+                                                key={node.id}
+                                                style={{
+                                                    position: 'absolute',
+                                                    left: pos.x,
+                                                    top: pos.y,
+                                                    transform: 'translate(-50%, -50%)',
+                                                    zIndex: isHighlighted ? 30 : 10
+                                                }}
+                                            >
+                                                <motion.div
+                                                    initial={{ opacity: 0, scale: 0, y: 20 }}
+                                                    whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                                                    viewport={{ once: true }}
+                                                    transition={{ delay: index * 0.05, type: 'spring' }}
+                                                    className="flex flex-col items-center justify-center p-4" // Use padding to avoid cropping shadows
+                                                >
+                                                    {/* Tooltip for Locked Items ("Próximamente") */}
+                                                    <div className="relative group">
+                                                        <motion.button
+                                                            layoutId={`node-${node.id}`}
+                                                            whileHover={{ scale: 1.15 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            onClick={(e) => handleNodeInteraction(e, node, isLocked)}
+                                                            className={cn(
+                                                                "relative w-20 h-20 flex items-center justify-center shadow-lg transition-all duration-300 hover:brightness-125 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]",
+                                                                (node.type === 'critical' && node.behavior === 'container') ? 'hexagon-mask' :
+                                                                    node.behavior === 'container' ? 'rotate-45 rounded-2xl' : 'rounded-full',
+
+                                                                isLocked && "cursor-not-allowed shadow-[0_0_20px_rgba(245,158,11,0.3)]",
+                                                                !isLocked && "cursor-pointer",
+
+                                                                isHighlighted ? "ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_40px_rgba(251,191,36,0.6)] scale-110" : "",
+                                                                !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
+                                                                    !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf]" :
+                                                                        !isHighlighted && isAvailable ? (
+                                                                            node.type === 'critical' ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" :
+                                                                                "shadow-[0_0_30px_#3b82f6]"
+                                                                        ) : ""
+                                                            )}
+                                                            style={{
+                                                                background: isHighlighted ? 'linear-gradient(135deg, #b45309, #f59e0b)' :
+                                                                    isCompleted ? 'linear-gradient(135deg, #1f2937, #064e3b)' :
+                                                                        isInProgress ? 'linear-gradient(135deg, #134e4a, #2dd4bf)' :
+                                                                            isAvailable ? (
+                                                                                node.type === 'critical' ? 'linear-gradient(135deg, #881337, #f43f5e)' :
+                                                                                    'linear-gradient(135deg, #1e3a8a, #3b82f6)'
+                                                                            ) : isLocked ? 'linear-gradient(135deg, #1e293b, #451a03)' : '#1e293b',
+
+                                                                border: `3px solid ${isHighlighted ? '#fbbf24' :
+                                                                    isCompleted ? '#4ade80' :
+                                                                        isInProgress ? '#5eead4' :
+                                                                            isAvailable ? (node.type === 'critical' ? '#fb7185' : '#3b82f6') :
+                                                                                isLocked ? '#f59e0b' : '#475569'
+                                                                    }`
+                                                            }}
+                                                        >
+                                                            <div className={cn("flex items-center justify-center", node.behavior === 'container' && !(node.type === 'critical' && node.behavior === 'container') && "-rotate-45")}>
+                                                                {isCompleted ? (
+                                                                    <CheckCircle className="w-8 h-8 text-green-400" />
+                                                                ) : isLocked ? (
+                                                                    <Construction className="w-8 h-8 text-amber-500" />
+                                                                ) : (
+                                                                    (node.type === 'critical' && node.behavior === 'container') ? <Hexagon className="w-8 h-8 text-yellow-400 fill-yellow-400/20" /> :
+                                                                        node.type === 'critical' ? <Star className="w-8 h-8 text-white fill-white/20" /> :
+                                                                            node.type === 'evaluation' ? <Trophy className="w-8 h-8 text-purple-400 fill-purple-400/20" /> :
+                                                                                node.behavior === 'container' ? <BookOpen className="w-8 h-8 text-white fill-white/10" /> :
+                                                                                    <Play className="w-8 h-8 text-white fill-white" />
+                                                                )}
+                                                            </div>
+                                                        </motion.button>
+
+                                                        {isLocked && (
+                                                            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-slate-400 text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none border border-slate-700 z-50">
+                                                                Próximamente
+                                                            </div>
+                                                        )}
+
+                                                        {/* Admin Subcategory Tooltip */}
+                                                        {isAdmin && (node.subcategoryId || (node.additionalSubcategories && node.additionalSubcategories.length > 0)) && (
+                                                            <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-900/95 text-white text-[10px] p-2 rounded-lg whitespace-nowrap pointer-events-none border border-blue-500/50 z-[100] shadow-xl backdrop-blur-sm">
+                                                                <div className="font-bold border-b border-blue-400/30 mb-1 pb-1 flex items-center gap-1">
+                                                                    <Shield className="w-3 h-3" /> Subcategorías Vinculadas
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    {[node.subcategoryId, ...(node.additionalSubcategories || [])].filter(Boolean).map(id => {
+                                                                        const sub = subcategories.find(s => s.id === id);
+                                                                        return (
+                                                                            <div key={id} className="flex items-center gap-2">
+                                                                                <span className="bg-blue-500/30 px-1 rounded text-[9px] font-mono">ID: {id}</span>
+                                                                                <span className="text-blue-100">{sub?.name || 'Cargando...'}</span>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Progress Bar */}
+                                                    {nodeProgress[node.id] > 0 && !isLocked && (
+                                                        <div className="w-16 h-1.5 bg-slate-900/60 rounded-full mt-2 overflow-hidden border border-white/10 shadow-inner z-20">
+                                                            <motion.div
+                                                                initial={{ width: 0 }}
+                                                                animate={{ width: `${nodeProgress[node.id]}%` }}
+                                                                transition={{ duration: 1, ease: "easeOut" }}
+                                                                className={cn(
+                                                                    "h-full rounded-full",
+                                                                    isCompleted ? "bg-gradient-to-r from-green-500 to-emerald-400" :
+                                                                        isInProgress ? "bg-gradient-to-r from-teal-400 to-cyan-400" :
+                                                                            "bg-gradient-to-r from-blue-500 to-indigo-500"
+                                                                )}
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {/* Label under node - Optimized for mobile density */}
+                                                    <div className="mt-4 w-32 md:w-40 text-center pointer-events-none">
+                                                        <span className={cn(
+                                                            "inline-block px-3 py-1 rounded-xl text-[10px] md:text-xs font-bold border backdrop-blur-md shadow-sm transition-colors duration-300 leading-tight",
+                                                            isHighlighted ? "bg-yellow-950/50 border-yellow-500/50 text-yellow-200" :
+                                                                isCompleted ? "bg-green-950/50 border-green-500/50 text-green-300" :
+                                                                    isAvailable ? "bg-blue-950/50 border-blue-500/50 text-blue-200" :
+                                                                        isLocked ? "bg-amber-950/50 border-amber-600/50 text-amber-400" :
+                                                                            "bg-slate-900/50 border-slate-700 text-slate-500"
+                                                        )}>
+                                                            {node.label}
+                                                        </span>
+                                                    </div>
+
+                                                    {highlightedNodeId === node.id && node.behavior === 'container' && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: -10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            className="absolute -top-12 bg-yellow-900/80 text-yellow-200 text-[10px] px-2 py-1 rounded border border-yellow-700 whitespace-nowrap pointer-events-none"
+                                                        >
+                                                            Selecciona un tema abajo 👇
+                                                        </motion.div>
+                                                    )}
+                                                </motion.div>
+                                            </div>
+                                        );
+                                    })}
+
+                                </div>
+                            </TransformComponent>
+                        </>
+                    )}
+                </TransformWrapper>
             </div>
-        </div>
+        </div >
     );
 }
