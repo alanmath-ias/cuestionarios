@@ -22,8 +22,8 @@ interface SkillTreeViewProps {
 export function SkillTreeView({ nodes, progressMap, onNodeClick, title, description, allQuizzes = [], isAdmin = false, subcategories = [] }: SkillTreeViewProps) {
     const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
     const [isInteractive, setIsInteractive] = useState(false);
-    const [hasInteracted, setHasInteracted] = useState(false);
-    const [showControls, setShowControls] = useState(false);
+    const [showReloadButton, setShowReloadButton] = useState(false);
+    const reloadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const transformRef = useRef<ReactZoomPanPinchRef>(null);
 
     // Calculate Total Visible Quizzes and Node Progress
@@ -126,33 +126,31 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
         </style>
     );
 
-    // Responsive Layout Config
-    const [layout, setLayout] = React.useState({
-        width: 1000,
-        rowHeight: 180,
-        spread: 4,
-        viewportWidth: typeof window !== 'undefined' ? window.innerWidth : 1000
-    });
+    // Responsive Layout Config Helper
+    const calculateLayout = () => {
+        if (typeof window === 'undefined') return { width: 1000, rowHeight: 180, spread: 4, viewportWidth: 1000, initialScale: 1 };
+
+        const w = window.innerWidth;
+        if (w >= 1280) return { width: 1100, rowHeight: 180, spread: 4.5, viewportWidth: w, initialScale: 1 };
+        if (w >= 768) return { width: 950, rowHeight: 170, spread: 4, viewportWidth: w, initialScale: 1 };
+
+        // Mobile: Use 0.7 scale to ensure visibility of first 3 nodes
+        return { width: 1000, rowHeight: 180, spread: 4, viewportWidth: w, initialScale: 0.7 };
+    };
+
+    const [layout, setLayout] = React.useState(calculateLayout);
 
     React.useEffect(() => {
-        const updateLayout = () => {
-            const w = window.innerWidth;
-            let config = { width: 1000, rowHeight: 180, spread: 4, viewportWidth: w };
-
-            if (w >= 1280) config = { width: 1100, rowHeight: 180, spread: 4.5, viewportWidth: w };
-            else if (w >= 768) config = { width: 950, rowHeight: 170, spread: 4, viewportWidth: w };
-
-            setLayout(config);
-        };
-        updateLayout();
-        window.addEventListener('resize', updateLayout);
-        return () => window.removeEventListener('resize', updateLayout);
+        const handleResize = () => setLayout(calculateLayout());
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    const { width: MAP_WIDTH, rowHeight: ROW_HEIGHT, spread: SPREAD, viewportWidth: VIEWPORT_WIDTH } = layout;
+    const { width: MAP_WIDTH, rowHeight: ROW_HEIGHT, spread: SPREAD, viewportWidth: VIEWPORT_WIDTH, initialScale: INITIAL_SCALE } = layout;
     const CENTER_X = MAP_WIDTH / 2;
     // Calculate exact offset to align map center with viewport center (Title midpoint)
-    const initialX = (VIEWPORT_WIDTH - MAP_WIDTH) / 2;
+    // Account for initialScale when calculating center offset
+    const initialX = (VIEWPORT_WIDTH - (MAP_WIDTH * INITIAL_SCALE)) / 2;
 
     // Helper to get coordinates
     const getNodePos = (node: ArithmeticNode) => ({
@@ -180,6 +178,20 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
         // Otherwise open functionality
         onNodeClick(node);
     };
+
+    const triggerReloadButton = () => {
+        setShowReloadButton(true);
+        if (reloadTimeoutRef.current) clearTimeout(reloadTimeoutRef.current);
+        reloadTimeoutRef.current = setTimeout(() => {
+            setShowReloadButton(false);
+        }, 4000);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (reloadTimeoutRef.current) clearTimeout(reloadTimeoutRef.current);
+        };
+    }, []);
 
     return (
         <div
@@ -275,49 +287,32 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
 
             <div
                 className="w-full relative"
-                onClick={() => hasInteracted && setShowControls(!showControls)}
             >
-                {/* Smart Safety Controls - Appear only when user has interacted AND taps */}
+                {/* Fixed Reload Button - Appears on interaction */}
                 <AnimatePresence>
-                    {hasInteracted && showControls && (
+                    {showReloadButton && (
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                            className="fixed bottom-24 left-1/2 -translate-x-1/2 md:bottom-auto md:top-24 md:left-8 md:translate-x-0 z-[110] flex flex-col md:flex-row gap-3 pointer-events-auto"
+                            initial={{ opacity: 0, x: -20, y: 0 }}
+                            animate={{ opacity: 1, x: 0, y: 0 }}
+                            exit={{ opacity: 0, x: -20, y: 0 }}
+                            className="fixed left-6 bottom-8 z-[110] pointer-events-auto"
                         >
-                            {/* Dashboard Button */}
-                            <Link href="/dashboard">
-                                <Button
-                                    variant="secondary"
-                                    className="h-12 px-6 rounded-2xl bg-slate-900/90 border border-blue-500/40 text-blue-100 font-bold shadow-[0_0_30px_rgba(59,130,246,0.4)] hover:bg-blue-600 hover:text-white transition-all backdrop-blur-xl flex items-center gap-3 group whitespace-nowrap"
-                                >
-                                    <LayoutDashboard className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                                    <span>Ir al Dashboard</span>
-                                </Button>
-                            </Link>
-
-                            {/* Reset View Button */}
                             <Button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    transformRef.current?.centerView(1, 500);
-                                    setHasInteracted(false);
-                                    setShowControls(false);
-                                }}
+                                onClick={() => window.location.reload()}
                                 variant="secondary"
-                                className="h-12 px-6 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-300 font-semibold hover:bg-slate-700 transition-all backdrop-blur-lg flex items-center gap-2 whitespace-nowrap shadow-xl"
+                                className="w-14 h-14 rounded-full bg-slate-900/90 border-2 border-blue-500/40 text-blue-100 shadow-[0_0_25px_rgba(59,130,246,0.5)] hover:bg-blue-600 hover:text-white transition-all backdrop-blur-xl flex items-center justify-center p-0 group"
+                                title="Recargar página"
                             >
-                                <RotateCcw className="w-4 h-4" />
-                                Recuperar Centro
+                                <RotateCcw className="w-7 h-7 group-hover:rotate-[-45deg] transition-transform duration-300" />
                             </Button>
                         </motion.div>
                     )}
                 </AnimatePresence>
 
                 <TransformWrapper
+                    key={`${INITIAL_SCALE}-${VIEWPORT_WIDTH}`} // Force re-init on layout change
                     ref={transformRef}
-                    initialScale={1}
+                    initialScale={INITIAL_SCALE}
                     initialPositionX={initialX}
                     initialPositionY={50}
                     minScale={0.4}
@@ -327,18 +322,8 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                     wheel={{ step: 0.1, disabled: !isInteractive }}
                     panning={{ disabled: !isInteractive }}
                     doubleClick={{ disabled: !isInteractive }}
-                    onPanning={() => {
-                        if (!hasInteracted) {
-                            setHasInteracted(true);
-                            setShowControls(true);
-                        }
-                    }}
-                    onZoom={() => {
-                        if (!hasInteracted) {
-                            setHasInteracted(true);
-                            setShowControls(true);
-                        }
-                    }}
+                    onPanning={triggerReloadButton}
+                    onZoom={triggerReloadButton}
                 >
                     {({ zoomIn, zoomOut, resetTransform }) => (
                         <>
