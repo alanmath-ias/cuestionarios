@@ -1242,7 +1242,7 @@ export default function UserDashboard() {
                           }`}
                       >
                         <div className="flex flex-col md:flex-row md:items-center p-3 gap-3">
-                          {/* Top row for Mobile (Icon, Title, Training Button) / Left for Desktop */}
+                          {/* Top row for Mobile (Icon, Title, Mapa Button) / Left for Desktop */}
                           <div className="flex items-center justify-between md:justify-start gap-2 md:gap-4 flex-1 min-w-0">
                             <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
                               <div className={`h-10 w-10 md:h-12 md:w-12 rounded-xl flex items-center justify-center shadow-lg shrink-0 transition-transform group-hover:scale-105 ${isRecommended ? "bg-purple-500/20 text-purple-400" : "bg-rose-500/10 text-rose-400"}`}>
@@ -1259,11 +1259,25 @@ export default function UserDashboard() {
                                 )}
                               </div>
                             </div>
+
+                            {/* Map Button moved to Top Right on Mobile only as it's smaller */}
+                            <div className="md:hidden" onClick={(e) => e.stopPropagation()}>
+                              <Link href={`/category/${category.id}?view=roadmap`}>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 px-3 text-[10px] font-bold bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all whitespace-nowrap"
+                                >
+                                  <MapIcon className="w-3.5 h-3.5 mr-1" />
+                                  Mapa
+                                </Button>
+                              </Link>
+                            </div>
                           </div>
 
-                          {/* Action Buttons row (Videos, Temas, Mapa) + Training Button for Desktop */}
-                          <div className="flex items-center gap-2 mt-1 md:mt-0 overflow-x-auto pb-1 md:pb-0 no-scrollbar max-w-full" onClick={(e) => e.stopPropagation()}>
-                            {/* Entrenamiento (CTA) - Mobile Visible ONLY (replaces the one at the top) */}
+                          {/* Action Buttons row (Entrenar, Videos, Temas) */}
+                          <div className="flex flex-wrap md:flex-nowrap items-center gap-2 mt-1 md:mt-0 max-w-full" onClick={(e) => e.stopPropagation()}>
+                            {/* Entrenamiento (CTA) - Mobile Visible ONLY */}
                             <div className="md:hidden">
                               <Link href={`/training/${category.id}`}>
                                 <Button
@@ -1308,19 +1322,21 @@ export default function UserDashboard() {
                               Temas
                             </Button>
 
-                            {/* Mapa */}
-                            <Link href={`/category/${category.id}?view=roadmap`}>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 px-3 text-xs font-medium bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all whitespace-nowrap"
-                              >
-                                <MapIcon className="w-3.5 h-3.5 mr-1.5" />
-                                Mapa
-                              </Button>
-                            </Link>
+                            {/* Mapa - Desktop only in this row */}
+                            <div className="hidden md:block">
+                              <Link href={`/category/${category.id}?view=roadmap`}>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 px-3 text-xs font-medium bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all whitespace-nowrap"
+                                >
+                                  <MapIcon className="w-3.5 h-3.5 mr-1.5" />
+                                  Mapa
+                                </Button>
+                              </Link>
+                            </div>
 
-                            {/* Entrenamiento (CTA) - Hidden on Mobile because it's at the top */}
+                            {/* Entrenamiento (CTA) - Desktop only in this row */}
                             <div className="hidden md:block">
                               <Link href={`/training/${category.id}`}>
                                 <Button
@@ -1435,17 +1451,18 @@ export default function UserDashboard() {
               </div>
             </div>
           </div>
-        </div>
+        </div >
 
         {/* Quiz Details Dialog */}
-        <QuizDetailsDialog
-          open={!!selectedQuiz}
+        < QuizDetailsDialog
+          open={!!selectedQuiz
+          }
           onOpenChange={(open) => !open && setSelectedQuiz(null)}
           quiz={selectedQuiz}
         />
 
         {/* Credits Info Dialog */}
-        <Dialog open={showCreditsInfo} onOpenChange={setShowCreditsInfo}>
+        < Dialog open={showCreditsInfo} onOpenChange={setShowCreditsInfo} >
           <DialogContent className="sm:max-w-md bg-slate-900 border-white/10 text-slate-200">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-yellow-400">
@@ -1481,10 +1498,10 @@ export default function UserDashboard() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </Dialog >
 
         {/* Pending Activities Dialog */}
-        <Dialog open={showPendingDialog} onOpenChange={setShowPendingDialog}>
+        < Dialog open={showPendingDialog} onOpenChange={setShowPendingDialog} >
           <DialogContent className="sm:max-w-lg bg-slate-900 border-white/10 text-slate-200" onOpenAutoFocus={(e) => e.preventDefault()} tabIndex={-1}>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-yellow-500">
@@ -1551,10 +1568,10 @@ export default function UserDashboard() {
               <Button variant="outline" onClick={() => setShowPendingDialog(false)} className="bg-slate-800 hover:bg-slate-700 text-white border-slate-600 hover:border-slate-500">Cerrar</Button>
             </div>
           </DialogContent>
-        </Dialog>
+        </Dialog >
 
         {/* Mini Quiz Confirmation Dialog */}
-        <Dialog open={!!miniQuizId} onOpenChange={(open) => !open && setMiniQuizId(null)}>
+        < Dialog open={!!miniQuizId} onOpenChange={(open) => !open && setMiniQuizId(null)}>
           <DialogContent className="bg-slate-900 border-white/10 text-slate-200">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-yellow-500">
@@ -1583,13 +1600,13 @@ export default function UserDashboard() {
               <Button onClick={confirmMiniStart} className="bg-yellow-600 hover:bg-yellow-700 text-white">Comenzar Mini Quiz</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </Dialog >
 
 
 
 
         {/* Credits Info Dialog */}
-        <Dialog open={showCreditsInfo} onOpenChange={setShowCreditsInfo}>
+        < Dialog open={showCreditsInfo} onOpenChange={setShowCreditsInfo} >
           <DialogContent className="sm:max-w-lg bg-slate-900 border-white/10 text-slate-200">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-blue-400 text-xl">
@@ -1660,10 +1677,10 @@ export default function UserDashboard() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </Dialog >
 
         {/* Category Details Dialog (TEMAS) */}
-        <Dialog open={!!selectedCategoryForDetails} onOpenChange={(open) => {
+        < Dialog open={!!selectedCategoryForDetails} onOpenChange={(open) => {
           if (!open) {
             handleCategorySelect(null);
           }
@@ -1912,10 +1929,10 @@ export default function UserDashboard() {
               )}
             </div>
           </DialogContent>
-        </Dialog>
+        </Dialog >
 
         {/* Social Media Dialog */}
-        <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
+        < Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog} >
           <DialogContent className="sm:max-w-md bg-slate-900 border-white/10 text-slate-200">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-pink-500">
@@ -1988,10 +2005,10 @@ export default function UserDashboard() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </Dialog >
 
         {/* Feedback Selection Dialog */}
-        <Dialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog}>
+        < Dialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog} >
           <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-lg">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold flex items-center gap-2">
@@ -2026,7 +2043,7 @@ export default function UserDashboard() {
               <Button variant="ghost" onClick={() => setShowFeedbackDialog(false)}>Cerrar</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </Dialog >
 
         <RestZoneDialog open={showRestZone} onOpenChange={setShowRestZone} />
 
@@ -2036,13 +2053,15 @@ export default function UserDashboard() {
           username={currentUser?.username || 'Estudiante'}
           lastActivity={lastActivity}
         />
-        {currentUser && (
-          <OnboardingTour
-            isOpen={showOnboarding}
-            user={currentUser}
-            onComplete={() => setShowOnboarding(false)}
-          />
-        )}
+        {
+          currentUser && (
+            <OnboardingTour
+              isOpen={showOnboarding}
+              user={currentUser}
+              onComplete={() => setShowOnboarding(false)}
+            />
+          )
+        }
       </div >
       <FloatingWhatsApp
         message="Hola, me gustaría cotizar clases de refuerzo para mejorar mi rendimiento en matemáticas."

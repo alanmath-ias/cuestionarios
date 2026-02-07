@@ -2,10 +2,11 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ArithmeticNode } from '../../data/arithmetic-map-data';
-import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import React, { useState } from 'react';
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw, LayoutDashboard } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { TransformWrapper, TransformComponent, ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { Button } from '@/components/ui/button';
+import { Link } from 'wouter';
 
 interface SkillTreeViewProps {
     nodes: ArithmeticNode[];
@@ -21,6 +22,9 @@ interface SkillTreeViewProps {
 export function SkillTreeView({ nodes, progressMap, onNodeClick, title, description, allQuizzes = [], isAdmin = false, subcategories = [] }: SkillTreeViewProps) {
     const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
     const [isInteractive, setIsInteractive] = useState(false);
+    const [hasInteracted, setHasInteracted] = useState(false);
+    const [showControls, setShowControls] = useState(false);
+    const transformRef = useRef<ReactZoomPanPinchRef>(null);
 
     // Calculate Total Visible Quizzes and Node Progress
     const { totalVisibleQuizzes, nodeProgress } = React.useMemo(() => {
@@ -123,22 +127,32 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     );
 
     // Responsive Layout Config
-    const [layout, setLayout] = React.useState({ width: 800, rowHeight: 160, spread: 3 });
+    const [layout, setLayout] = React.useState({
+        width: 1000,
+        rowHeight: 180,
+        spread: 4,
+        viewportWidth: typeof window !== 'undefined' ? window.innerWidth : 1000
+    });
 
     React.useEffect(() => {
         const updateLayout = () => {
             const w = window.innerWidth;
-            if (w >= 1280) setLayout({ width: 1100, rowHeight: 180, spread: 4.5 });
-            else if (w >= 768) setLayout({ width: 950, rowHeight: 170, spread: 4 });
-            else setLayout({ width: 1000, rowHeight: 180, spread: 4 });
+            let config = { width: 1000, rowHeight: 180, spread: 4, viewportWidth: w };
+
+            if (w >= 1280) config = { width: 1100, rowHeight: 180, spread: 4.5, viewportWidth: w };
+            else if (w >= 768) config = { width: 950, rowHeight: 170, spread: 4, viewportWidth: w };
+
+            setLayout(config);
         };
         updateLayout();
         window.addEventListener('resize', updateLayout);
         return () => window.removeEventListener('resize', updateLayout);
     }, []);
 
-    const { width: MAP_WIDTH, rowHeight: ROW_HEIGHT, spread: SPREAD } = layout;
+    const { width: MAP_WIDTH, rowHeight: ROW_HEIGHT, spread: SPREAD, viewportWidth: VIEWPORT_WIDTH } = layout;
     const CENTER_X = MAP_WIDTH / 2;
+    // Calculate exact offset to align map center with viewport center (Title midpoint)
+    const initialX = (VIEWPORT_WIDTH - MAP_WIDTH) / 2;
 
     // Helper to get coordinates
     const getNodePos = (node: ArithmeticNode) => ({
@@ -259,16 +273,72 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                 </div>
             </div>
 
-            <div className="w-full relative">
+            <div
+                className="w-full relative"
+                onClick={() => hasInteracted && setShowControls(!showControls)}
+            >
+                {/* Smart Safety Controls - Appear only when user has interacted AND taps */}
+                <AnimatePresence>
+                    {hasInteracted && showControls && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                            className="fixed bottom-24 left-1/2 -translate-x-1/2 md:bottom-auto md:top-24 md:left-8 md:translate-x-0 z-[110] flex flex-col md:flex-row gap-3 pointer-events-auto"
+                        >
+                            {/* Dashboard Button */}
+                            <Link href="/dashboard">
+                                <Button
+                                    variant="secondary"
+                                    className="h-12 px-6 rounded-2xl bg-slate-900/90 border border-blue-500/40 text-blue-100 font-bold shadow-[0_0_30px_rgba(59,130,246,0.4)] hover:bg-blue-600 hover:text-white transition-all backdrop-blur-xl flex items-center gap-3 group whitespace-nowrap"
+                                >
+                                    <LayoutDashboard className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                    <span>Ir al Dashboard</span>
+                                </Button>
+                            </Link>
+
+                            {/* Reset View Button */}
+                            <Button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    transformRef.current?.centerView(1, 500);
+                                    setHasInteracted(false);
+                                    setShowControls(false);
+                                }}
+                                variant="secondary"
+                                className="h-12 px-6 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-300 font-semibold hover:bg-slate-700 transition-all backdrop-blur-lg flex items-center gap-2 whitespace-nowrap shadow-xl"
+                            >
+                                <RotateCcw className="w-4 h-4" />
+                                Recuperar Centro
+                            </Button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 <TransformWrapper
+                    ref={transformRef}
                     initialScale={1}
+                    initialPositionX={initialX}
+                    initialPositionY={50}
                     minScale={0.4}
                     maxScale={2}
-                    centerOnInit={true}
+                    centerOnInit={false} // Disable auto-center to use our calculated initialX
                     limitToBounds={false}
                     wheel={{ step: 0.1, disabled: !isInteractive }}
                     panning={{ disabled: !isInteractive }}
                     doubleClick={{ disabled: !isInteractive }}
+                    onPanning={() => {
+                        if (!hasInteracted) {
+                            setHasInteracted(true);
+                            setShowControls(true);
+                        }
+                    }}
+                    onZoom={() => {
+                        if (!hasInteracted) {
+                            setHasInteracted(true);
+                            setShowControls(true);
+                        }
+                    }}
                 >
                     {({ zoomIn, zoomOut, resetTransform }) => (
                         <>
@@ -332,7 +402,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
 
                             <TransformComponent
                                 wrapperClass="!w-full !max-w-none !h-auto !min-h-[600px] cursor-grab active:cursor-grabbing"
-                                contentClass="!w-full flex justify-center"
+                                contentClass="!w-full min-w-full"
                             >
                                 <div
                                     className={cn(
