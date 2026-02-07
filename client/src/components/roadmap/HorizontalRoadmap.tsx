@@ -137,12 +137,12 @@ export function HorizontalRoadmap({ nodes, title, categoryName, className, onClo
                                 borderColor = "border-green-500";
                                 shadowColor = isActive ? "shadow-[0_0_20px_rgba(34,197,94,0.4)]" : "shadow-green-500/10";
                                 iconColor = "text-green-500";
-                            } else if (isPartial) {
-                                borderColor = "border-amber-500";
-                                shadowColor = isActive ? "shadow-[0_0_20px_rgba(245,158,11,0.4)]" : "shadow-amber-500/10";
-                                iconColor = "text-amber-500";
+                            } else if (isPartial || isLocked) {
+                                borderColor = isPartial ? "border-amber-500" : "border-amber-500/50";
+                                shadowColor = (isActive || isLocked) ? "shadow-[0_0_20px_rgba(245,158,11,0.3)]" : "shadow-amber-500/10";
+                                iconColor = isPartial ? "text-amber-500" : "text-amber-500/60";
                                 rippleColor = "border-amber-500/50";
-                            } else if (isAvailable || !isLocked) {
+                            } else if (isAvailable) {
                                 if (isCritical) {
                                     borderColor = "border-rose-500";
                                     shadowColor = isActive ? "shadow-[0_0_25px_rgba(244,63,94,0.5)]" : "shadow-rose-500/20";
@@ -188,30 +188,32 @@ export function HorizontalRoadmap({ nodes, title, categoryName, className, onClo
                                                         "relative w-14 h-14 flex items-center justify-center border-4 shadow-lg transition-all duration-500 bg-slate-950",
                                                         borderColor,
                                                         shadowColor,
-                                                        isLocked ? "grayscale opacity-50 cursor-default" : "cursor-pointer",
-                                                        (isAvailable || isActive || isPartial) && "scale-110",
+                                                        isLocked ? "opacity-80 cursor-default" : "cursor-pointer",
+                                                        (isAvailable || isActive || isPartial || isLocked) && "scale-110",
                                                         isActive && "border-opacity-100",
 
                                                         isCircle && "rounded-full",
                                                         isDiamond && "rounded-xl rotate-45",
                                                         isHexagon && "clip-hexagon"
                                                     )}
-                                                    style={isHexagon ? {
-                                                        clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
-                                                        borderRadius: 0,
-                                                        border: 'none',
-                                                    } : {}}
+                                                    style={{
+                                                        ...(isHexagon ? {
+                                                            clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
+                                                            borderRadius: 0,
+                                                            border: 'none',
+                                                        } : {}),
+                                                        background: isLocked ? 'linear-gradient(135deg, #0f172a, #451a03)' : undefined
+                                                    }}
                                                 >
                                                     <div className={cn(
                                                         "flex items-center justify-center w-full h-full",
                                                         isDiamond && "-rotate-45"
                                                     )}>
                                                         {isCompleted && <CheckCircle className={cn("w-6 h-6", iconColor)} />}
-                                                        {isPartial && <Construction className={cn("w-6 h-6", iconColor)} />}
+                                                        {(isPartial || isLocked) && <Construction className={cn("w-6 h-6", iconColor)} />}
                                                         {isAvailable && (
                                                             <Play className={cn("w-6 h-6 ml-1 fill-current opacity-80", iconColor)} />
                                                         )}
-                                                        {isLocked && <Lock className={cn("w-5 h-5", iconColor)} />}
                                                     </div>
 
                                                     {(isAvailable || isActive || isPartial) && !isLocked && (
@@ -243,7 +245,7 @@ export function HorizontalRoadmap({ nodes, title, categoryName, className, onClo
                                         <p className={cn(
                                             "text-[10px] font-bold truncate w-full mb-1 uppercase tracking-wider",
                                             isCompleted ? "text-green-400" :
-                                                isPartial ? "text-amber-400" :
+                                                (isPartial || isLocked) ? "text-amber-400" :
                                                     (isAvailable || isActive) ? (isCritical ? "text-rose-400" : "text-blue-300") : "text-slate-500"
                                         )}>
                                             {node.title}

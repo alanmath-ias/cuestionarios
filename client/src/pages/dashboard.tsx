@@ -67,6 +67,7 @@ import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
 import { arithmeticMapNodes, ArithmeticNode } from "@/data/arithmetic-map-data";
 import { algebraMapNodes } from "@/data/algebra-map-data";
 import { calculusMapNodes } from "@/data/calculus-map-data";
+import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
 
 
 interface QuizWithFeedback extends UserQuiz {
@@ -454,12 +455,15 @@ export default function UserDashboard() {
 
   // Helper to get map nodes based on category
   const getMapNodes = (catId: number | null) => {
-    switch (catId) {
-      case 1: return arithmeticMapNodes;
-      case 2: return algebraMapNodes;
-      case 4: return calculusMapNodes;
-      default: return [];
-    }
+    if (!catId) return [];
+    const category = sortedCategories.find(c => c.id === catId);
+    const name = category?.name.toLowerCase() || "";
+
+    if (catId === 1 || name.includes("aritmética")) return arithmeticMapNodes;
+    if (catId === 2 || name.includes("álgebra")) return algebraMapNodes;
+    if (catId === 4 || name.includes("diferencial")) return calculusMapNodes;
+    if (catId === 5 || name.includes("integral")) return integralCalculusMapNodes;
+    return [];
   };
 
   const { data: activeCategorySubcategories } = useQuery<any[]>({

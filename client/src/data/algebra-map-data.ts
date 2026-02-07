@@ -1,5 +1,5 @@
 
-import { ArithmeticNode } from './arithmetic-map-data';
+import { ArithmeticNode } from './arithmetic-map-data.js';
 
 // Reuse the interface, just distinct variable name
 export const algebraMapNodes: ArithmeticNode[] = [

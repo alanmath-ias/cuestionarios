@@ -17,6 +17,7 @@ import { SkillTreeView } from '@/components/roadmap/SkillTreeView';
 import { arithmeticMapNodes, ArithmeticNode } from '@/data/arithmetic-map-data';
 import { algebraMapNodes } from '@/data/algebra-map-data';
 import { calculusMapNodes } from '@/data/calculus-map-data';
+import { integralCalculusMapNodes } from '@/data/integral-calculus-map-data';
 import { useToast } from "@/hooks/use-toast";
 
 interface Category {
@@ -64,7 +65,8 @@ function QuizList() {
   // Determine which map nodes to use
   const currentMapNodes = categoryId === '2' ? algebraMapNodes :
     categoryId === '4' ? calculusMapNodes :
-      arithmeticMapNodes;
+      categoryId === '5' ? integralCalculusMapNodes :
+        arithmeticMapNodes;
   const initialViewMode = searchParams.get('view') as 'roadmap' | 'grid' | null;
   const { toast } = useToast();
 
@@ -364,7 +366,7 @@ function QuizList() {
       ) : (
         <>
           {viewMode === 'roadmap' ? (
-            (categoryId === '1' || categoryId === '2' || categoryId === '4') ? (
+            ['1', '2', '4', '5'].includes(categoryId) ? (
               <SkillTreeView
                 nodes={currentMapNodes}
                 allQuizzes={quizzes?.map(q => ({
@@ -376,6 +378,7 @@ function QuizList() {
                   if (categoryId === '1') return "Un árbol de conocimiento diseñado para dominar la aritmética paso a paso.";
                   if (categoryId === '2') return "Explora el álgebra desde sus fundamentos hasta el dominio de funciones.";
                   if (categoryId === '4') return "Domina el cálculo diferencial: límites, derivadas y sus aplicaciones.";
+                  if (categoryId === '5') return "Explora la integración: desde el área bajo la curva hasta las integrales impropias.";
                   return "";
                 })()}
                 progressMap={(() => {

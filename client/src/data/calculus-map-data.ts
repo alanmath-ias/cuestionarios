@@ -1,5 +1,5 @@
 
-import { ArithmeticNode } from './arithmetic-map-data';
+import { ArithmeticNode } from './arithmetic-map-data.js';
 
 export const calculusMapNodes: ArithmeticNode[] = [
     // ==========================================

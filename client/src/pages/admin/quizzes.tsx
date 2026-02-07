@@ -37,6 +37,7 @@ import { SkillTreeView } from "@/components/roadmap/SkillTreeView";
 import { arithmeticMapNodes, ArithmeticNode } from "@/data/arithmetic-map-data";
 import { algebraMapNodes } from "@/data/algebra-map-data";
 import { calculusMapNodes } from "@/data/calculus-map-data";
+import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
 import { Reorder, AnimatePresence, useDragControls, motion } from "framer-motion";
 import { GripVertical } from "lucide-react";
 
@@ -56,6 +57,17 @@ const formSchema = z.object({
   isPublic: z.boolean().default(false),
 });
 
+const getMapData = (catId: any, catName?: string) => {
+  const id = Number(catId);
+  const name = catName?.toLowerCase() || "";
+
+  if (id === 1 || name.includes("aritmética")) return { nodes: arithmeticMapNodes, title: "Mapa de Aritmética" };
+  if (id === 2 || name.includes("álgebra")) return { nodes: algebraMapNodes, title: "Mapa de Álgebra" };
+  if (id === 4 || name.includes("diferencial")) return { nodes: calculusMapNodes, title: "Mapa de Cálculo Diferencial" };
+  if (id === 5 || name.includes("integral")) return { nodes: integralCalculusMapNodes, title: "Mapa de Cálculo Integral" };
+  return null;
+};
+
 export default function QuizzesAdmin() {
   const [assignedUsers, setAssignedUsers] = useState<number[]>([]);
   const [visibleQuizId, setVisibleQuizId] = useState<number | null>(null);
@@ -74,15 +86,6 @@ export default function QuizzesAdmin() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
   const [selectedNode, setSelectedNode] = useState<ArithmeticNode | null>(null);
 
-
-  const getMapData = (catId: number) => {
-    switch (catId) {
-      case 1: return { nodes: arithmeticMapNodes, title: "Mapa de Aritmética" };
-      case 2: return { nodes: algebraMapNodes, title: "Mapa de Álgebra" };
-      case 4: return { nodes: calculusMapNodes, title: "Mapa de Cálculo" };
-      default: return null;
-    }
-  };
 
   // Queries
   const { data: categories, isLoading: loadingCategories } = useQuery<Category[]>({
@@ -1016,7 +1019,7 @@ export default function QuizzesAdmin() {
           <DialogHeader className="p-6 pb-2 shrink-0 bg-slate-900 border-b border-white/10">
             <DialogTitle className="flex items-center gap-2 text-slate-100 text-xl font-bold">
               <MapIcon className="h-6 w-6 text-blue-400" />
-              {activeMapCategory ? getMapData(activeMapCategory)?.title : "Mapa de Habilidades"}
+              {activeMapCategory ? getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name)?.title : "Mapa de Habilidades"}
             </DialogTitle>
             <DialogDescription className="text-slate-300 font-medium">
               Visualización del árbol de habilidades y cobertura de contenido.
@@ -1024,12 +1027,12 @@ export default function QuizzesAdmin() {
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto bg-slate-950 relative">
-            {activeMapCategory && getMapData(activeMapCategory) && (
+            {activeMapCategory && getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name) && (
               <SkillTreeView
-                nodes={getMapData(activeMapCategory)!.nodes}
+                nodes={getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name)!.nodes}
                 description=""
                 progressMap={(() => {
-                  const nodes = getMapData(activeMapCategory)!.nodes;
+                  const nodes = getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name)!.nodes;
                   const map: Record<string, 'locked' | 'available' | 'completed' | 'in_progress'> = {};
 
                   // Filter quizzes for this category
@@ -1073,7 +1076,7 @@ export default function QuizzesAdmin() {
                 allQuizzes={quizzes?.filter(q => q.categoryId === activeMapCategory) || []}
                 onNodeClick={(node) => setSelectedNode(node)}
                 isAdmin={true}
-                title={getMapData(activeMapCategory)?.title || ""}
+                title={activeMapCategory ? getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name)?.title || "" : ""}
                 subcategories={subcategoriesResponse || []}
               />
             )}
@@ -1251,7 +1254,7 @@ const DraggableCategoryItem = React.memo(({
               </div>
             </div>
 
-            {(category.id === 1 || category.id === 2 || category.id === 4) && (
+            {getMapData(category.id, category.name) && (
               <Button
                 size="sm"
                 onClick={(e) => {
