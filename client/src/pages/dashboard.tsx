@@ -1243,9 +1243,9 @@ export default function UserDashboard() {
                       >
                         <div className="flex flex-col md:flex-row md:items-center p-3 gap-3">
                           {/* Top row for Mobile (Icon, Title, Training Button) / Left for Desktop */}
-                          <div className="flex items-center justify-between md:justify-start gap-4 flex-1 min-w-0">
-                            <div className="flex items-center gap-4 min-w-0 flex-1">
-                              <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-lg shrink-0 transition-transform group-hover:scale-105 ${isRecommended ? "bg-purple-500/20 text-purple-400" : "bg-rose-500/10 text-rose-400"}`}>
+                          <div className="flex items-center justify-between md:justify-start gap-2 md:gap-4 flex-1 min-w-0">
+                            <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
+                              <div className={`h-10 w-10 md:h-12 md:w-12 rounded-xl flex items-center justify-center shadow-lg shrink-0 transition-transform group-hover:scale-105 ${isRecommended ? "bg-purple-500/20 text-purple-400" : "bg-rose-500/10 text-rose-400"}`}>
                                 <BookOpen className="h-6 w-6" />
                               </div>
                               <div className="min-w-0">
@@ -1259,23 +1259,23 @@ export default function UserDashboard() {
                                 )}
                               </div>
                             </div>
+                          </div>
 
-                            {/* CTA Button moved to Top Right on Mobile only */}
-                            <div className="md:hidden" onClick={(e) => e.stopPropagation()}>
+                          {/* Action Buttons row (Videos, Temas, Mapa) + Training Button for Desktop */}
+                          <div className="flex items-center gap-2 mt-1 md:mt-0 overflow-x-auto pb-1 md:pb-0 no-scrollbar max-w-full" onClick={(e) => e.stopPropagation()}>
+                            {/* Entrenamiento (CTA) - Mobile Visible ONLY (replaces the one at the top) */}
+                            <div className="md:hidden">
                               <Link href={`/training/${category.id}`}>
                                 <Button
                                   size="sm"
-                                  className="h-9 px-4 text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all whitespace-nowrap"
+                                  className="h-8 px-4 text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all whitespace-nowrap"
                                 >
                                   <Gamepad2 className="w-3.5 h-3.5 mr-1.5" />
                                   Entrenar
                                 </Button>
                               </Link>
                             </div>
-                          </div>
 
-                          {/* Action Buttons row (Videos, Temas, Mapa) + Training Button for Desktop */}
-                          <div className="flex items-center gap-2 mt-1 md:mt-0 overflow-x-auto pb-1 md:pb-0 no-scrollbar max-w-full" onClick={(e) => e.stopPropagation()}>
                             {/* Video */}
                             {category.youtubeLink && (
                               <button
@@ -1740,9 +1740,9 @@ export default function UserDashboard() {
                           const isCompleted = completedQuizzes.some(q => q.id === quiz.id);
                           return (
                             <div key={quiz.id} className="group flex flex-col gap-3 p-4 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-blue-500/30 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.15)]">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex items-center gap-3">
-                                  <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${isCompleted ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                              <div className="flex items-center justify-between gap-2 md:gap-4">
+                                <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+                                  <div className={`h-10 w-10 md:h-12 md:w-12 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${isCompleted ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'}`}>
                                     {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />}
                                   </div>
                                   <div>
