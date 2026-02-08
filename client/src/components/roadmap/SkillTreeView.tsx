@@ -25,6 +25,8 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     const [showReloadButton, setShowReloadButton] = useState(false);
     const reloadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const transformRef = useRef<ReactZoomPanPinchRef>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [containerWidth, setContainerWidth] = useState(1000);
 
     // Calculate Total Visible Quizzes and Node Progress
     const { totalVisibleQuizzes, nodeProgress } = React.useMemo(() => {
@@ -127,10 +129,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     );
 
     // Responsive Layout Config Helper
-    const calculateLayout = () => {
-        if (typeof window === 'undefined') return { width: 1000, rowHeight: 180, spread: 4, viewportWidth: 1000, initialScale: 1 };
-
-        const w = window.innerWidth;
+    const calculateLayout = (w: number) => {
         if (w >= 1280) return { width: 1100, rowHeight: 180, spread: 4.5, viewportWidth: w, initialScale: 1 };
         if (w >= 768) return { width: 950, rowHeight: 170, spread: 4, viewportWidth: w, initialScale: 1 };
 
@@ -138,19 +137,29 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
         return { width: 1000, rowHeight: 180, spread: 4, viewportWidth: w, initialScale: 0.7 };
     };
 
-    const [layout, setLayout] = React.useState(calculateLayout);
+    const [layout, setLayout] = React.useState(() => calculateLayout(typeof window !== 'undefined' ? window.innerWidth : 1000));
 
     React.useEffect(() => {
-        const handleResize = () => setLayout(calculateLayout());
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        if (!containerRef.current) return;
+
+        const observer = new ResizeObserver((entries) => {
+            const entry = entries[0];
+            if (entry) {
+                const newWidth = entry.contentRect.width;
+                setContainerWidth(newWidth);
+                setLayout(calculateLayout(newWidth));
+            }
+        });
+
+        observer.observe(containerRef.current);
+        return () => observer.disconnect();
     }, []);
 
     const { width: MAP_WIDTH, rowHeight: ROW_HEIGHT, spread: SPREAD, viewportWidth: VIEWPORT_WIDTH, initialScale: INITIAL_SCALE } = layout;
     const CENTER_X = MAP_WIDTH / 2;
-    // Calculate exact offset to align map center with viewport center (Title midpoint)
+    // Calculate exact offset to align map center with container center (Title midpoint)
     // Account for initialScale when calculating center offset
-    const initialX = (VIEWPORT_WIDTH - (MAP_WIDTH * INITIAL_SCALE)) / 2;
+    const initialX = (containerWidth - (MAP_WIDTH * INITIAL_SCALE)) / 2;
 
     // Helper to get coordinates
     const getNodePos = (node: ArithmeticNode) => ({
@@ -195,6 +204,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
 
     return (
         <div
+            ref={containerRef}
             className="relative w-full min-h-[600px] flex flex-col items-center bg-transparent py-8"
             onClick={() => setHighlightedNodeId(null)} // Click outside clears highlight
         >
@@ -310,7 +320,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                 </AnimatePresence>
 
                 <TransformWrapper
-                    key={`${INITIAL_SCALE}-${VIEWPORT_WIDTH}`} // Force re-init on layout change
+                    key={`${INITIAL_SCALE}-${containerWidth}`} // Force re-init on layout change
                     ref={transformRef}
                     initialScale={INITIAL_SCALE}
                     initialPositionX={initialX}
@@ -502,25 +512,28 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                                 isHighlighted ? "ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_40px_rgba(251,191,36,0.6)] scale-110" : "",
                                                                 !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
                                                                     !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf]" :
-                                                                        !isHighlighted && isAvailable ? (
-                                                                            node.type === 'critical' ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" :
-                                                                                "shadow-[0_0_30px_#3b82f6]"
-                                                                        ) : ""
+                                                                        node.level === 33 ? "shadow-[0_0_50px_rgba(192,38,211,0.8)] animate-pulse" :
+                                                                            !isHighlighted && isAvailable ? (
+                                                                                node.type === 'critical' ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" :
+                                                                                    "shadow-[0_0_30px_#3b82f6]"
+                                                                            ) : ""
                                                             )}
                                                             style={{
                                                                 background: isHighlighted ? 'linear-gradient(135deg, #b45309, #f59e0b)' :
-                                                                    isCompleted ? 'linear-gradient(135deg, #1f2937, #064e3b)' :
-                                                                        isInProgress ? 'linear-gradient(135deg, #134e4a, #2dd4bf)' :
-                                                                            isAvailable ? (
-                                                                                node.type === 'critical' ? 'linear-gradient(135deg, #881337, #f43f5e)' :
-                                                                                    'linear-gradient(135deg, #1e3a8a, #3b82f6)'
-                                                                            ) : isLocked ? 'linear-gradient(135deg, #1e293b, #451a03)' : '#1e293b',
+                                                                    node.level === 33 ? 'linear-gradient(135deg, #4c1d95, #701a75, #db2777)' :
+                                                                        isCompleted ? 'linear-gradient(135deg, #1f2937, #064e3b)' :
+                                                                            isInProgress ? 'linear-gradient(135deg, #134e4a, #2dd4bf)' :
+                                                                                isAvailable ? (
+                                                                                    node.type === 'critical' ? 'linear-gradient(135deg, #881337, #f43f5e)' :
+                                                                                        'linear-gradient(135deg, #1e3a8a, #3b82f6)'
+                                                                                ) : isLocked ? 'linear-gradient(135deg, #1e293b, #451a03)' : '#1e293b',
 
                                                                 border: `3px solid ${isHighlighted ? '#fbbf24' :
-                                                                    isCompleted ? '#4ade80' :
-                                                                        isInProgress ? '#5eead4' :
-                                                                            isAvailable ? (node.type === 'critical' ? '#fb7185' : '#3b82f6') :
-                                                                                isLocked ? '#f59e0b' : '#475569'
+                                                                    node.level === 33 ? '#fbbf24' :
+                                                                        isCompleted ? '#4ade80' :
+                                                                            isInProgress ? '#5eead4' :
+                                                                                isAvailable ? (node.type === 'critical' ? '#fb7185' : '#3b82f6') :
+                                                                                    isLocked ? '#f59e0b' : '#475569'
                                                                     }`
                                                             }}
                                                         >
@@ -532,9 +545,17 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                                 ) : (
                                                                     (node.type === 'critical' && node.behavior === 'container') ? <Hexagon className="w-8 h-8 text-yellow-400 fill-yellow-400/20" /> :
                                                                         node.type === 'critical' ? <Star className="w-8 h-8 text-white fill-white/20" /> :
-                                                                            node.type === 'evaluation' ? <Trophy className="w-8 h-8 text-purple-400 fill-purple-400/20" /> :
-                                                                                node.behavior === 'container' ? <BookOpen className="w-8 h-8 text-white fill-white/10" /> :
-                                                                                    <Play className="w-8 h-8 text-white fill-white" />
+                                                                            node.level === 33 ? (
+                                                                                <motion.div
+                                                                                    animate={{ rotate: [0, 10, -10, 0] }}
+                                                                                    transition={{ repeat: Infinity, duration: 2 }}
+                                                                                >
+                                                                                    <Crown className="w-10 h-10 text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
+                                                                                </motion.div>
+                                                                            ) :
+                                                                                node.type === 'evaluation' ? <Trophy className="w-8 h-8 text-purple-400 fill-purple-400/20" /> :
+                                                                                    node.behavior === 'container' ? <BookOpen className="w-8 h-8 text-white fill-white/10" /> :
+                                                                                        <Play className="w-8 h-8 text-white fill-white" />
                                                                 )}
                                                             </div>
                                                         </motion.button>
@@ -586,7 +607,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                     {/* Label under node - Optimized for mobile density */}
                                                     <div className="mt-4 w-32 md:w-40 text-center pointer-events-none">
                                                         <span className={cn(
-                                                            "inline-block px-3 py-1 rounded-xl text-[10px] md:text-xs font-bold border backdrop-blur-md shadow-sm transition-colors duration-300 leading-tight",
+                                                            "inline-block px-3 py-1 rounded-xl text-[10px] md:text-xs font-bold border backdrop-blur-md shadow-sm transition-colors duration-300 leading-tight whitespace-pre-line",
                                                             isHighlighted ? "bg-yellow-950/50 border-yellow-500/50 text-yellow-200" :
                                                                 isCompleted ? "bg-green-950/50 border-green-500/50 text-green-300" :
                                                                     isAvailable ? "bg-blue-950/50 border-blue-500/50 text-blue-200" :
