@@ -524,7 +524,12 @@ const ActiveQuiz = () => {
         console.error("Error saving progress on exit", e);
       }
     }
-    window.history.back();
+
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      setLocation(session?.role === 'admin' ? "/admin/quizzes" : "/dashboard");
+    }
   };
 
   if (loadingQuiz || loadingQuestions) {
@@ -575,7 +580,7 @@ const ActiveQuiz = () => {
                 onClick={handleExit}
               >
                 <ArrowLeft className="h-5 w-5 mr-1" />
-                Salir
+                Atrás
               </Button>
             </div>
             <h1 className="text-2xl font-bold flex items-center gap-2 text-white">

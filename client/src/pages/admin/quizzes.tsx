@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,7 +12,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown } from "lucide-react";
+import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -69,6 +70,7 @@ const getMapData = (catId: any, catName?: string) => {
 };
 
 export default function QuizzesAdmin() {
+  const [location, setLocation] = useLocation();
   const [assignedUsers, setAssignedUsers] = useState<number[]>([]);
   const [visibleQuizId, setVisibleQuizId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -82,10 +84,14 @@ export default function QuizzesAdmin() {
 
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [activeMapCategory, setActiveMapCategory] = useState<number | null>(null);
+  const [activeMapCategory, setActiveMapCategory] = useState<number | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const mapCat = params.get("mapCat");
+    return mapCat ? Number(mapCat) : null;
+  });
   const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
   const [selectedNode, setSelectedNode] = useState<ArithmeticNode | null>(null);
-
+  const [hasRestoredFromUrl, setHasRestoredFromUrl] = useState(false);
 
   // Queries
   const { data: categories, isLoading: loadingCategories } = useQuery<Category[]>({
@@ -106,6 +112,24 @@ export default function QuizzesAdmin() {
   });
 
   const isLoading = loadingCategories || loadingQuizzes || loadingSubcategoriesList;
+
+  // Effect to restore selectedNode once categories/mapData are available
+  useEffect(() => {
+    if (!hasRestoredFromUrl && activeMapCategory && !selectedNode && categories && categories.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const nodeId = params.get("nodeId");
+      if (nodeId) {
+        const mapData = getMapData(activeMapCategory, categories.find(c => c.id === activeMapCategory)?.name);
+        if (mapData) {
+          const node = mapData.nodes.find((n: any) => n.id === nodeId);
+          if (node) {
+            setSelectedNode(node);
+          }
+        }
+      }
+      setHasRestoredFromUrl(true);
+    }
+  }, [categories, activeMapCategory, selectedNode, hasRestoredFromUrl]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -177,6 +201,46 @@ export default function QuizzesAdmin() {
 
     loadUsers();
   }, []);
+
+
+
+  // Sync state to URL
+  useEffect(() => {
+    // Avoid running this before initial category load is done or if we haven't finished restoring
+    if (loadingCategories) return;
+
+    const params = new URLSearchParams(window.location.search);
+    let changed = false;
+
+    // Handle mapCat
+    if (activeMapCategory) {
+      if (params.get("mapCat") !== String(activeMapCategory)) {
+        params.set("mapCat", String(activeMapCategory));
+        changed = true;
+      }
+    } else if (params.has("mapCat")) {
+      params.delete("mapCat");
+      params.delete("nodeId");
+      changed = true;
+    }
+
+    // Handle nodeId
+    if (selectedNode) {
+      if (params.get("nodeId") !== selectedNode.id) {
+        params.set("nodeId", selectedNode.id);
+        changed = true;
+      }
+    } else if (params.has("nodeId")) {
+      params.delete("nodeId");
+      changed = true;
+    }
+
+    if (changed) {
+      const qs = params.toString();
+      const newUrl = `${window.location.pathname}${qs ? '?' + qs : ''}`;
+      window.history.replaceState({ path: newUrl }, '', newUrl);
+    }
+  }, [activeMapCategory, selectedNode, loadingCategories]);
 
   // Helper functions
   const hierarchicalData = React.useMemo(() => {
@@ -1039,25 +1103,11 @@ export default function QuizzesAdmin() {
                   const categoryQuizzes = quizzes?.filter(q => q.categoryId === activeMapCategory) || [];
 
                   // Helper to get quizzes for a node
-                  const getFilteredQuizzesForNode = (node: ArithmeticNode) => {
-                    let contextQuizzes = categoryQuizzes.filter(q =>
+                  const getFilteredQuizzesForNode = (node: any) => {
+                    return categoryQuizzes.filter(q =>
                       q.subcategoryId == node.subcategoryId ||
                       (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId))
                     ) || [];
-
-                    if (node.filterKeywords && node.filterKeywords.length > 0) {
-                      const keywords = node.filterKeywords.map(k => k.toLowerCase());
-                      contextQuizzes = contextQuizzes.filter(q => {
-                        const titleLower = q.title.toLowerCase();
-                        if (!keywords.some(k => titleLower.includes(k))) return false;
-                        if (node.excludeKeywords && node.excludeKeywords.length > 0) {
-                          const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
-                          if (excludeKeys.some(k => titleLower.includes(k))) return false;
-                        }
-                        return true;
-                      });
-                    }
-                    return contextQuizzes;
                   };
 
                   nodes.forEach(node => {
@@ -1105,23 +1155,10 @@ export default function QuizzesAdmin() {
             {selectedNode && (() => {
               const node = selectedNode;
               const categoryQuizzes = quizzes?.filter(q => q.categoryId === activeMapCategory) || [];
-              let nodeQuizzes = categoryQuizzes.filter(q =>
+              const nodeQuizzes = categoryQuizzes.filter(q =>
                 q.subcategoryId == node.subcategoryId ||
                 (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId))
               ) || [];
-
-              if (node.filterKeywords && node.filterKeywords.length > 0) {
-                const keywords = node.filterKeywords.map(k => k.toLowerCase());
-                nodeQuizzes = nodeQuizzes.filter(q => {
-                  const titleLower = q.title.toLowerCase();
-                  if (!keywords.some(k => titleLower.includes(k))) return false;
-                  if (node.excludeKeywords && node.excludeKeywords.length > 0) {
-                    const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
-                    if (excludeKeys.some(k => titleLower.includes(k))) return false;
-                  }
-                  return true;
-                });
-              }
 
               if (nodeQuizzes.length === 0) {
                 return (
@@ -1134,8 +1171,8 @@ export default function QuizzesAdmin() {
 
               return (
                 <div className="grid grid-cols-1 gap-3">
-                  {nodeQuizzes.map(quiz => (
-                    <div key={quiz.id} className="flex flex-col gap-3 p-4 rounded-xl bg-slate-800/40 border border-white/5">
+                  {nodeQuizzes.map((quiz) => (
+                    <div key={quiz.id} className="flex flex-col gap-3 p-4 rounded-xl bg-slate-800/40 border border-white/5 hover:border-blue-500/30 transition-colors">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 bg-blue-500/20 text-blue-400">
@@ -1143,18 +1180,46 @@ export default function QuizzesAdmin() {
                           </div>
                           <div>
                             <h4 className="font-semibold text-sm text-slate-200 line-clamp-2">{quiz.title}</h4>
-                            <p className="text-xs text-slate-500 line-clamp-1">{quiz.description}</p>
+                            <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">{quiz.description}</p>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${quiz.difficulty === 'básico' || quiz.difficulty === 'Fácil' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                          quiz.difficulty === 'intermedio' || quiz.difficulty === 'Medio' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
-                            'bg-red-500/10 text-red-400 border border-red-500/20'
-                          }`}>
-                          {quiz.difficulty}
-                        </span>
-                        <span className="text-xs text-slate-500">
+
+                      <div className="flex flex-wrap items-center justify-between gap-3 mt-auto pt-3 border-t border-white/5">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${quiz.difficulty === 'básico' || quiz.difficulty === 'Fácil'
+                            ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                            : quiz.difficulty === 'intermedio' || quiz.difficulty === 'Medio'
+                              ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            }`}>
+                            {quiz.difficulty}
+                          </span>
+
+                          <div className="flex items-center gap-1.5 ml-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 flex items-center gap-1.5"
+                              onClick={() => setLocation(`/quiz/${quiz.id}`)}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              Ver
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-white/5 flex items-center gap-1.5"
+                              onClick={() => handleManageQuestions(quiz.id)}
+                            >
+                              <ListChecks className="h-3.5 w-3.5" />
+                              Preguntas
+                            </Button>
+                          </div>
+                        </div>
+
+                        <span className="text-[11px] text-slate-500 font-mono">
                           ID: {quiz.id}
                         </span>
                       </div>
