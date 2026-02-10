@@ -9,8 +9,6 @@ export interface ArithmeticNode {
     additionalSubcategories?: number[]; // Additional subcategories to include content from
     description?: string;
     xOffset?: number; // Horizontal positioning adjustment (-100 to 100)
-    filterKeywords?: string[]; // Keywords to filter quizzes by title
-    excludeKeywords?: string[]; // Keywords to EXCLUDE quizzes
     behavior?: 'container' | 'quiz_list';
 }
 
@@ -26,6 +24,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: [],
         description: 'Mapa general de los conjuntos numéricos.',
         xOffset: 0,
+        subcategoryId: 299,
         behavior: 'container'
     },
 
@@ -40,8 +39,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n0-clasificacion'],
         description: 'Los bloques de construcción básicos del conteo.',
         xOffset: 0,
-        subcategoryId: 1,
-        filterKeywords: ['naturales'],
+        subcategoryId: 300,
         behavior: 'container'
     },
 
@@ -56,8 +54,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n1-naturales'],
         description: 'Adición y sustracción fundamental.',
         xOffset: 0,
-        subcategoryId: 1,
-        filterKeywords: ['suma', 'resta', 'adición', 'sustracción'],
+        subcategoryId: 301,
         behavior: 'quiz_list'
     },
     {
@@ -69,7 +66,6 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         description: 'Operaciones multiplicativas básicas.',
         xOffset: 60,
         subcategoryId: 1,
-        filterKeywords: ['multiplicación', 'división', 'division', 'divisiones', 'producto', 'cociente'],
         behavior: 'quiz_list'
     },
     {
@@ -80,6 +76,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n1-naturales'],
         description: 'Orden en los naturales.',
         xOffset: -60,
+        subcategoryId: 302,
         behavior: 'quiz_list'
     },
 
@@ -92,6 +89,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n2-suma', 'n2-multi', 'n0-recta'],
         description: 'Aplicación de operaciones básicas.',
         xOffset: 0,
+        subcategoryId: 303,
         behavior: 'quiz_list'
     },
 
@@ -106,8 +104,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n0-problemas'],
         description: 'El mundo de los números negativos.',
         xOffset: 0,
-        subcategoryId: 1,
-        filterKeywords: ['entero'],
+        subcategoryId: 304,
         behavior: 'container'
     },
 
@@ -120,6 +117,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n4-enteros'],
         description: 'Ubicación y orden en la línea.',
         xOffset: -60,
+        subcategoryId: 305,
         behavior: 'quiz_list'
     },
     {
@@ -131,7 +129,6 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         description: 'Orden correcto (PEMDAS) y leyes numéricas.',
         xOffset: 0,
         subcategoryId: 6,
-        filterKeywords: ['jerarquía', 'combinada', 'orden', 'propiedad'],
         behavior: 'quiz_list'
     },
     {
@@ -142,10 +139,8 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n4-enteros'],
         description: 'Suma, resta y mult con signos.',
         xOffset: 60,
-        subcategoryId: 1,
+        subcategoryId: 5,
         additionalSubcategories: [5],
-        filterKeywords: ['resta', 'suma', 'paréntesis'],
-        excludeKeywords: ['división', 'division', 'divisiones', 'problema', 'problemas'],
         behavior: 'quiz_list'
     },
 
@@ -158,6 +153,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n1-recta'],
         description: 'Distancia al origen.',
         xOffset: -40,
+        subcategoryId: 306,
         behavior: 'quiz_list'
     },
     {
@@ -168,8 +164,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n4-ops-enteros'],
         description: 'Ejercicios de aplicación con enteros.',
         xOffset: 40,
-        subcategoryId: 1,
-        filterKeywords: ['problema', 'problemas'],
+        subcategoryId: 307,
         behavior: 'quiz_list'
     },
 
@@ -184,6 +179,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n4-valor-absoluto', 'n4-problemas-enteros'],
         description: 'Propiedades de los números and descomposición.',
         xOffset: 0,
+        subcategoryId: 308,
         behavior: 'container'
     },
 
@@ -196,6 +192,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n5-divisibilidad'],
         description: 'Conceptos básicos de divisibilidad.',
         xOffset: -60,
+        subcategoryId: 309,
         behavior: 'quiz_list'
     },
     {
@@ -206,6 +203,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n5-divisibilidad'],
         description: 'Reglas para dividir rápidamente.',
         xOffset: 0,
+        subcategoryId: 310,
         behavior: 'quiz_list'
     },
     {
@@ -217,7 +215,6 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         description: 'Factores primos de un número.',
         xOffset: 60,
         subcategoryId: 4,
-        filterKeywords: ['descomposición', 'factorial', 'factorización'],
         behavior: 'quiz_list'
     },
 
@@ -230,9 +227,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n6-descomposicion'],
         description: 'Cálculo de múltiplos y divisores comunes.',
         xOffset: -40,
-        subcategoryId: 4,
-        filterKeywords: ['mcm', 'mcd'],
-        excludeKeywords: ['problemas', 'problema'],
+        subcategoryId: 311,
         behavior: 'quiz_list'
     },
     {
@@ -243,8 +238,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n6-descomposicion'],
         description: 'Problemas de MCM y MCD.',
         xOffset: 40,
-        subcategoryId: 4,
-        filterKeywords: ['problemas', 'problema'],
+        subcategoryId: 312,
         behavior: 'quiz_list'
     },
 
@@ -259,8 +253,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n7-mcd', 'n7-problemas-aplicacion'],
         description: 'Exponentes y radicales.',
         xOffset: 0,
-        subcategoryId: 8,
-        filterKeywords: ['potencia', 'radical'],
+        subcategoryId: 313,
         behavior: 'container'
     },
     {
@@ -272,7 +265,6 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         description: 'Leyes de exponentes.',
         xOffset: -40,
         subcategoryId: 8,
-        filterKeywords: ['potencia', 'exponente'],
         behavior: 'quiz_list'
     },
     {
@@ -284,7 +276,6 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         description: 'Raíces y racionalización.',
         xOffset: 40,
         subcategoryId: 7,
-        filterKeywords: ['radical', 'raíz', 'transformación', 'racionalización'],
         behavior: 'quiz_list'
     },
 
@@ -299,8 +290,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n9-potencias', 'n9-radicales'],
         description: 'Partes de un todo.',
         xOffset: 0,
-        subcategoryId: 3,
-        filterKeywords: ['fracci'],
+        subcategoryId: 314,
         behavior: 'container'
     },
     // Children of Fracciones (Level 12)
@@ -312,8 +302,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n5-fracciones'],
         description: 'Numerador y denominador.',
         xOffset: -50,
-        subcategoryId: 3,
-        filterKeywords: ['intro', 'concepto'],
+        subcategoryId: 315,
         behavior: 'quiz_list'
     },
     {
@@ -324,8 +313,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n5-fracciones'],
         description: 'Simplificación y amplificación.',
         xOffset: 0,
-        subcategoryId: 3,
-        filterKeywords: ['equivalente', 'simplific'],
+        subcategoryId: 316,
         behavior: 'quiz_list'
     },
     {
@@ -336,8 +324,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n5-fracciones'],
         description: 'Enteros y fracciones combinados.',
         xOffset: 50,
-        subcategoryId: 3,
-        filterKeywords: ['mixto'],
+        subcategoryId: 317,
         behavior: 'quiz_list'
     },
 
@@ -350,9 +337,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n5-concepto', 'n5-equiv', 'n5-mixtos'],
         description: 'Adición y sustracción de fracciones.',
         xOffset: -60,
-        subcategoryId: 3,
-        filterKeywords: ['suma', 'resta', 'heterogénea'],
-        excludeKeywords: ['producto', 'división', 'division'],
+        subcategoryId: 318,
         behavior: 'quiz_list'
     },
     {
@@ -363,9 +348,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n5-concepto', 'n5-equiv', 'n5-mixtos'],
         description: 'Multiplicación and división de fracciones.',
         xOffset: 0,
-        subcategoryId: 3,
-        filterKeywords: ['producto', 'multiplicación', 'división', 'division'],
-        excludeKeywords: ['suma', 'resta'],
+        subcategoryId: 319,
         behavior: 'quiz_list'
     },
     {
@@ -376,8 +359,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n5-concepto', 'n5-equiv', 'n5-mixtos'],
         description: 'Mezcla de sumas, productos y parentesis.',
         xOffset: 60,
-        subcategoryId: 3,
-        filterKeywords: ['combinada'],
+        subcategoryId: 320,
         behavior: 'quiz_list'
     },
 
@@ -391,7 +373,6 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         description: 'Ejercicios de aplicación con fracciones.',
         xOffset: 0,
         subcategoryId: 3,
-        filterKeywords: ['problema'],
         behavior: 'quiz_list'
     },
 
@@ -406,8 +387,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n13-problemas-frac'],
         description: 'Números con punto decimal.',
         xOffset: 0,
-        subcategoryId: 2,
-        filterKeywords: ['decimal'],
+        subcategoryId: 321,
         behavior: 'container'
     },
 
@@ -420,8 +400,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n6-decimales'],
         description: 'Orden, magnitud y redondeo decimal.',
         xOffset: -50,
-        subcategoryId: 2,
-        filterKeywords: ['comparación', 'orden', 'redondeo'],
+        subcategoryId: 322,
         behavior: 'quiz_list'
     },
     {
@@ -432,8 +411,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n6-decimales'],
         description: 'Adición and sustracción decimal.',
         xOffset: 0,
-        subcategoryId: 2,
-        filterKeywords: ['suma', 'resta'],
+        subcategoryId: 323,
         behavior: 'quiz_list'
     },
     {
@@ -444,8 +422,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n6-decimales'],
         description: 'Multiplicación and división decimal.',
         xOffset: 50,
-        subcategoryId: 2,
-        filterKeywords: ['producto', 'multiplicación', 'división', 'division'],
+        subcategoryId: 324,
         behavior: 'quiz_list'
     },
 
@@ -459,7 +436,6 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         description: 'Ejercicios reales con decimales.',
         xOffset: -40,
         subcategoryId: 2,
-        filterKeywords: ['problema', 'problemas'],
         behavior: 'quiz_list'
     },
     {
@@ -470,8 +446,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n6-prod-div'],
         description: 'Potencias de 10 para números grandes and pequeños.',
         xOffset: 40,
-        subcategoryId: 8,
-        filterKeywords: ['notación', 'científica', 'exponente'],
+        subcategoryId: 325,
         behavior: 'quiz_list'
     },
     {
@@ -482,6 +457,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n6-problemas', 'n6-notacion'],
         description: 'Conversión entre sistemas.',
         xOffset: 0,
+        subcategoryId: 326,
         behavior: 'quiz_list'
     },
 
@@ -496,6 +472,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n6-decimales-frac'],
         description: 'Coordenadas and el sistema cartesiano.',
         xOffset: 0,
+        subcategoryId: 327,
         behavior: 'container'
     },
     {
@@ -506,8 +483,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n10-plano-parent'],
         description: 'Ubicación de coordenadas (x, y).',
         xOffset: -40,
-        subcategoryId: 11,
-        filterKeywords: ['puntos', 'coordenadas', 'ubicación'],
+        subcategoryId: 328,
         behavior: 'quiz_list'
     },
     {
@@ -519,7 +495,6 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         description: 'Rotación, traslación and simetría.',
         xOffset: 40,
         subcategoryId: 11,
-        filterKeywords: ['rotación', 'traslación', 'simetría', 'rígida'],
         behavior: 'quiz_list'
     },
 
@@ -534,6 +509,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n10-puntos', 'n10-plano'],
         description: 'Relaciones de proporcionalidad.',
         xOffset: 0,
+        subcategoryId: 329,
         behavior: 'container'
     },
 
@@ -546,7 +522,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n7-regla-tres'],
         description: 'Comparación and escala.',
         xOffset: -60,
-        filterKeywords: ['razon', 'proporcion'],
+        subcategoryId: 330,
         behavior: 'quiz_list'
     },
     {
@@ -557,7 +533,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n7-regla-tres'],
         description: 'Proporcionalidad directa and inversa.',
         xOffset: 0,
-        filterKeywords: ['simple', 'tres'],
+        subcategoryId: 331,
         behavior: 'quiz_list'
     },
     {
@@ -568,7 +544,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n7-regla-tres'],
         description: 'Múltiples magnitudes relacionadas.',
         xOffset: 60,
-        filterKeywords: ['compuesta'],
+        subcategoryId: 332,
         behavior: 'quiz_list'
     },
 
@@ -581,7 +557,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n7-simple', 'n7-compuesta'],
         description: 'Aplicación de la regla de tres al %.',
         xOffset: 0,
-        filterKeywords: ['porcentaje'],
+        subcategoryId: 333,
         behavior: 'quiz_list'
     },
 
@@ -596,6 +572,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n7-porc-calc'],
         description: 'Medidas y sus transformaciones.',
         xOffset: 0,
+        subcategoryId: 334,
         behavior: 'container'
     },
     {
@@ -606,7 +583,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n11-conversion-parent'],
         description: 'Metros, kilómetros y más.',
         xOffset: -60,
-        filterKeywords: ['longitud', 'metro', 'distancia'],
+        subcategoryId: 335,
         behavior: 'quiz_list'
     },
     {
@@ -617,7 +594,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n11-conversion-parent'],
         description: 'Gramos, kilogramos y toneladas.',
         xOffset: 0,
-        filterKeywords: ['masa', 'gramo', 'peso'],
+        subcategoryId: 336,
         behavior: 'quiz_list'
     },
     {
@@ -628,7 +605,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n11-conversion-parent'],
         description: 'Litros, mililitros y capacidad.',
         xOffset: 60,
-        filterKeywords: ['volumen', 'litro', 'capacidad'],
+        subcategoryId: 337,
         behavior: 'quiz_list'
     },
     {
@@ -639,7 +616,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n11-longitud', 'n11-masa', 'n11-volumen'],
         description: 'Horas, minutos y segundos.',
         xOffset: 0,
-        filterKeywords: ['tiempo', 'hora', 'minuto', 'segundo'],
+        subcategoryId: 338,
         behavior: 'quiz_list'
     },
 
@@ -654,6 +631,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n11-tiempo'],
         description: 'Secuencias y regularidades numéricas.',
         xOffset: 0,
+        subcategoryId: 339,
         behavior: 'container'
     },
     {
@@ -664,7 +642,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n12-patrones-parent'],
         description: 'Sucesiones con diferencia constante.',
         xOffset: -40,
-        filterKeywords: ['progresión aritmética', 'sucesión aritmética'],
+        subcategoryId: 340,
         behavior: 'quiz_list'
     },
     {
@@ -675,7 +653,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n12-patrones-parent'],
         description: 'Sucesiones con razón constante.',
         xOffset: 40,
-        filterKeywords: ['progresión geométrica', 'sucesión geométrica'],
+        subcategoryId: 341,
         behavior: 'quiz_list'
     },
     {
@@ -686,7 +664,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n12-prog-arit', 'n12-prog-geom'],
         description: 'Aplicación de sucesiones.',
         xOffset: -30,
-        filterKeywords: ['problema', 'progresión'],
+        subcategoryId: 342,
         behavior: 'quiz_list'
     },
     {
@@ -697,8 +675,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n12-prog-arit', 'n12-prog-geom'],
         description: 'Media, mediana y moda descriptiva.',
         xOffset: 30,
-        subcategoryId: 11, // Analytics category
-        filterKeywords: ['promedio', 'media', 'mediana', 'moda'],
+        subcategoryId: 343,
         behavior: 'quiz_list'
     },
 
@@ -713,6 +690,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n12-problemas-prog', 'n12-promedios'],
         description: 'Matemáticas del dinero y el crecimiento.',
         xOffset: 0,
+        subcategoryId: 344,
         behavior: 'container'
     },
     {
@@ -723,7 +701,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n14-aplicaciones-parent'],
         description: 'Crecimiento lineal del capital.',
         xOffset: -40,
-        filterKeywords: ['interés simple', 'capital', 'tasa'],
+        subcategoryId: 345,
         behavior: 'quiz_list'
     },
     {
@@ -734,7 +712,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n14-aplicaciones-parent'],
         description: 'Interés sobre interés (crecimiento exponencial).',
         xOffset: 40,
-        filterKeywords: ['interés compuesto', 'exponencial', 'acumulado'],
+        subcategoryId: 346,
         behavior: 'quiz_list'
     },
 
@@ -747,7 +725,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n14-interes-simple', 'n14-interes-compuesto'],
         description: 'El desafío definitivo de todo el módulo.',
         xOffset: 0,
-        filterKeywords: ['examen', 'final', 'maestría', 'aritmetica'],
+        subcategoryId: 347,
         behavior: 'quiz_list'
     }
 ];
