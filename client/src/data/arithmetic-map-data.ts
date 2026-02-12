@@ -24,8 +24,8 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: [],
         description: 'Mapa general de los conjuntos numéricos.',
         xOffset: 0,
-        subcategoryId: 299,
-        behavior: 'container'
+        subcategoryId: 300,
+        behavior: 'quiz_list'
     },
 
     // ==========================================
@@ -39,7 +39,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n0-clasificacion'],
         description: 'Los bloques de construcción básicos del conteo.',
         xOffset: 0,
-        subcategoryId: 300,
+        // subcategoryId removed (parent)
         behavior: 'container'
     },
 
@@ -104,7 +104,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n0-problemas'],
         description: 'El mundo de los números negativos.',
         xOffset: 0,
-        subcategoryId: 304,
+        // subcategoryId removed (parent)
         behavior: 'container'
     },
 
@@ -179,7 +179,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n4-valor-absoluto', 'n4-problemas-enteros'],
         description: 'Propiedades de los números and descomposición.',
         xOffset: 0,
-        subcategoryId: 308,
+        // subcategoryId removed (parent)
         behavior: 'container'
     },
 
@@ -253,7 +253,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n7-mcd', 'n7-problemas-aplicacion'],
         description: 'Exponentes y radicales.',
         xOffset: 0,
-        subcategoryId: 313,
+        // subcategoryId removed (parent)
         behavior: 'container'
     },
     {
@@ -290,7 +290,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n9-potencias', 'n9-radicales'],
         description: 'Partes de un todo.',
         xOffset: 0,
-        subcategoryId: 314,
+        // subcategoryId removed (parent)
         behavior: 'container'
     },
     // Children of Fracciones (Level 12)
@@ -472,7 +472,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n6-decimales-frac'],
         description: 'Coordenadas and el sistema cartesiano.',
         xOffset: 0,
-        subcategoryId: 327,
+        // subcategoryId removed (parent)
         behavior: 'container'
     },
     {
@@ -509,7 +509,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n10-puntos', 'n10-plano'],
         description: 'Relaciones de proporcionalidad.',
         xOffset: 0,
-        subcategoryId: 329,
+        // subcategoryId removed (parent)
         behavior: 'container'
     },
 
@@ -572,7 +572,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n7-porc-calc'],
         description: 'Medidas y sus transformaciones.',
         xOffset: 0,
-        subcategoryId: 334,
+        // subcategoryId removed (parent)
         behavior: 'container'
     },
     {
@@ -631,7 +631,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n11-tiempo'],
         description: 'Secuencias y regularidades numéricas.',
         xOffset: 0,
-        subcategoryId: 339,
+        // subcategoryId removed (parent)
         behavior: 'container'
     },
     {
@@ -690,7 +690,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: ['n12-problemas-prog', 'n12-promedios'],
         description: 'Matemáticas del dinero y el crecimiento.',
         xOffset: 0,
-        subcategoryId: 344,
+        // subcategoryId removed (parent)
         behavior: 'container'
     },
     {
