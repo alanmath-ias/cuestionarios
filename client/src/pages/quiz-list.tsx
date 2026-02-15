@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle, Map as MapIcon, LayoutGrid, Search, CheckCircle2, Ban } from 'lucide-react';
 import { useParams, useLocation } from 'wouter';
 import { calculatePercentage } from '@/lib/mathUtils';
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -75,6 +76,7 @@ function QuizList() {
   const [viewMode, setViewMode] = useState<'roadmap' | 'grid'>(initialViewMode || 'roadmap');
   const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
   const [selectedNode, setSelectedNode] = useState<ArithmeticNode | null>(null);
+  const [highlightedQuizId, setHighlightedQuizId] = useState<number | null>(null);
   const [quizSearchQuery, setQuizSearchQuery] = useState("");
   const videoSectionRef = useRef<HTMLDivElement>(null);
 
@@ -448,13 +450,16 @@ function QuizList() {
 
                   return map;
                 })()}
-                onNodeClick={(node) => {
+                onNodeClick={(node, highlightedQuizId) => {
                   if (node.subcategoryId) {
                     // Find the actual subcategory object
                     const sub = quizzesBySubcategory.find(s => s.id === node.subcategoryId);
                     if (sub) {
                       setSelectedSubcategory(sub);
                       setSelectedNode(node);
+                      if (highlightedQuizId) {
+                        setHighlightedQuizId(highlightedQuizId);
+                      }
                     } else {
                       toast({
                         title: "Sección no disponible",
@@ -634,6 +639,7 @@ function QuizList() {
         if (!open) {
           setSelectedSubcategory(null);
           setSelectedNode(null);
+          setHighlightedQuizId(null);
         }
       }}>
         <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()} tabIndex={-1}>
@@ -711,16 +717,30 @@ function QuizList() {
                       {quizzesForSub.map((quiz: Quiz) => {
                         const quizProgress = getQuizProgress(quiz.id);
                         const isCompleted = quizProgress?.status === 'completed';
+                        const isHighlighted = quiz.id === highlightedQuizId;
 
                         return (
-                          <div key={quiz.id} className="group flex flex-col gap-3 p-4 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-blue-500/30 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.15)]">
+                          <div
+                            key={quiz.id}
+                            ref={(el) => {
+                              if (isHighlighted && el) {
+                                setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+                              }
+                            }}
+                            className={cn(
+                              "group flex flex-col gap-3 p-4 rounded-xl transition-all",
+                              isHighlighted
+                                ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.3)] ring-1 ring-blue-400"
+                                : "bg-slate-800/40 border border-white/5 hover:bg-slate-800/60 hover:border-blue-500/30 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.15)]"
+                            )}
+                          >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex items-center gap-3">
                                 <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${isCompleted ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'}`}>
                                   {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />}
                                 </div>
                                 <div>
-                                  <h4 className="font-semibold text-sm text-slate-200 line-clamp-2">{quiz.title}</h4>
+                                  <h4 className={cn("font-semibold text-sm line-clamp-2", isHighlighted ? "text-blue-100" : "text-slate-200")}>{quiz.title}</h4>
                                   <p className="text-xs text-slate-500 line-clamp-none">{quiz.description}</p>
                                 </div>
                               </div>

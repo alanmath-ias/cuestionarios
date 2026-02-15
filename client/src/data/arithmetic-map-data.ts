@@ -10,6 +10,8 @@ export interface ArithmeticNode {
     description?: string;
     xOffset?: number; // Horizontal positioning adjustment (-100 to 100)
     behavior?: 'container' | 'quiz_list';
+    filterKeywords?: string[];
+    excludeKeywords?: string[];
 }
 
 export const arithmeticMapNodes: ArithmeticNode[] = [

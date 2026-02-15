@@ -12,7 +12,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, ListChecks } from "lucide-react";
+import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, ListChecks, Folder, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -91,6 +91,7 @@ export default function QuizzesAdmin() {
   });
   const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
   const [selectedNode, setSelectedNode] = useState<ArithmeticNode | null>(null);
+  const [highlightedQuizId, setHighlightedQuizId] = useState<number | null>(null);
   const [hasRestoredFromUrl, setHasRestoredFromUrl] = useState(false);
 
   // Queries
@@ -243,62 +244,112 @@ export default function QuizzesAdmin() {
   }, [activeMapCategory, selectedNode, loadingCategories]);
 
   // Helper functions
+  // Helper to find the "Topic" (Container) for a given subcategory ID
+  const getTopicForSubcategory = React.useCallback((categoryId: number, subcategoryId: number, subcategoryName: string) => {
+    const mapData = getMapData(categoryId);
+    // If no map data, return the subcategory itself as the topic
+    if (!mapData) return { id: `sub-${subcategoryId}`, name: subcategoryName, level: 999 };
+
+    const nodes = mapData.nodes;
+    // Find the node corresponding to this subcategory
+    const node = nodes.find((n: any) =>
+      n.subcategoryId === subcategoryId ||
+      (n.additionalSubcategories && n.additionalSubcategories.includes(subcategoryId))
+    );
+
+    if (!node) return { id: `sub-${subcategoryId}`, name: subcategoryName, level: 999 };
+
+    // Traverse up to find a container
+    const visited = new Set<string>();
+    const queue = [...node.requires];
+
+    // If the node itself is a container/topic root (unlikely for specific subcat, but possible)
+    if (node.behavior === 'container') return { id: node.id, name: node.label, level: node.level };
+
+    // BFS to find ancestor container
+    while (queue.length > 0) {
+      const parentId = queue.shift()!;
+      if (visited.has(parentId)) continue;
+      visited.add(parentId);
+
+      const parent = nodes.find((n: any) => n.id === parentId);
+      if (!parent) continue;
+
+      if (parent.behavior === 'container') {
+        return { id: parent.id, name: parent.label, level: parent.level };
+      }
+
+      queue.push(...parent.requires);
+    }
+
+    // If no container found (e.g. root nodes like Classification), use the node itself or fall back
+    // For Classification (n0), it has no requires. We treat it as its own topic.
+    return { id: node.id, name: node.label, level: node.level };
+  }, []);
+
   const hierarchicalData = React.useMemo(() => {
     if (!quizzes || !categories || !subcategoriesResponse) return [];
 
-    const quizzesBySubcategory = quizzes.reduce((acc, quiz) => {
-      const subcatId = quiz.subcategoryId;
-      if (!subcatId) return acc;
+    // 1. Group Quizzes by Topic
+    // Structure: Record<CategoryId, Record<TopicId, { topicName: string, level: number, quizzes: Quiz[] }>>
+    const quizzesByCategoryAndTopic: Record<number, Record<string, { id: string, name: string, level: number, quizzes: Quiz[] }>> = {};
 
-      if (!acc[subcatId]) {
-        acc[subcatId] = [];
+    quizzes.forEach(quiz => {
+      if (!quiz.categoryId || !quiz.subcategoryId) return; // Handled by unclassified list
+
+      const category = categories.find(c => c.id === quiz.categoryId);
+      if (!category) return;
+
+      const subcategory = subcategoriesResponse.find((s: any) => s.id === quiz.subcategoryId);
+      const subName = subcategory ? subcategory.name : `Tema ${quiz.subcategoryId}`;
+
+      // Resolve Topic
+      const topic = getTopicForSubcategory(quiz.categoryId, quiz.subcategoryId, subName);
+
+      if (!quizzesByCategoryAndTopic[quiz.categoryId]) {
+        quizzesByCategoryAndTopic[quiz.categoryId] = {};
       }
-      acc[subcatId].push(quiz);
-      return acc;
-    }, {} as Record<number, Quiz[]>);
 
+      if (!quizzesByCategoryAndTopic[quiz.categoryId][topic.id]) {
+        quizzesByCategoryAndTopic[quiz.categoryId][topic.id] = {
+          id: topic.id,
+          name: topic.name, // The high-level topic name (e.g. "Números Naturales")
+          level: topic.level,
+          quizzes: []
+        };
+      }
+
+      quizzesByCategoryAndTopic[quiz.categoryId][topic.id].quizzes.push(quiz);
+    });
+
+    // 2. Build Result Array
     const result = categories.map(category => {
-      const mapData = getMapData(category.id);
-      const nodes = mapData?.nodes || [];
+      const categoryTopics = quizzesByCategoryAndTopic[category.id] || {};
 
-      const categorySubcategories = subcategoriesResponse
-        .filter((sub: any) => sub.categoryId === category.id)
-        .map((sub: any) => {
-          // Find if this subcategory matches any map node
-          const mapNode = nodes.find((n: any) =>
-            n.subcategoryId === sub.id ||
-            (n.additionalSubcategories && n.additionalSubcategories.includes(sub.id))
-          );
-
-          const level = mapNode ? (mapNode.level ?? 999) : 1000;
-
-          let subQuizzes = (quizzesBySubcategory[sub.id] || []).sort((a, b) => {
-            if ((a.sortOrder ?? 0) !== (b.sortOrder ?? 0)) {
-              return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
-            }
-            return a.title.localeCompare(b.title);
-          });
-
-          return {
-            ...sub,
-            level,
-            quizzes: subQuizzes
-          };
-        })
-        .sort((a: any, b: any) => {
+      // Convert to array and sort
+      const sortedTopics = Object.values(categoryTopics).map(topic => {
+        // Sort quizzes inside topic
+        const sortedQuizzes = topic.quizzes.sort((a, b) => {
           if ((a.sortOrder ?? 0) !== (b.sortOrder ?? 0)) return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
-          if (a.level !== b.level) return a.level - b.level;
-          return a.name.localeCompare(b.name);
+          return a.title.localeCompare(b.title);
         });
+
+        return {
+          id: topic.id, // Use string ID (node ID) for keying
+          name: topic.name,
+          quizzes: sortedQuizzes,
+          level: topic.level
+        };
+      }).sort((a, b) => a.level - b.level); // Sort topics by map level
 
       return {
         ...category,
-        subcategories: categorySubcategories
+        subcategories: sortedTopics // We use 'subcategories' prop name to keep compatibility with UI components
       };
     });
 
     return result.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  }, [quizzes, categories, subcategoriesResponse]);
+  }, [quizzes, categories, subcategoriesResponse, getTopicForSubcategory]);
 
   const quizzesWithoutClassification = React.useMemo(() =>
     quizzes?.filter(q => !q.categoryId || !q.subcategoryId) || []
@@ -1124,7 +1175,12 @@ export default function QuizzesAdmin() {
                   return map;
                 })()}
                 allQuizzes={quizzes?.filter(q => q.categoryId === activeMapCategory) || []}
-                onNodeClick={(node) => setSelectedNode(node)}
+                onNodeClick={(node, highlightedQuizId) => {
+                  setSelectedNode(node);
+                  if (highlightedQuizId) {
+                    setHighlightedQuizId(highlightedQuizId);
+                  }
+                }}
                 isAdmin={true}
                 title={activeMapCategory ? getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name)?.title || "" : ""}
                 subcategories={subcategoriesResponse || []}
@@ -1135,7 +1191,12 @@ export default function QuizzesAdmin() {
       </Dialog>
 
       {/* Node Details Dialog */}
-      <Dialog open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
+      <Dialog open={!!selectedNode} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedNode(null);
+          setHighlightedQuizId(null);
+        }
+      }}>
         <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
             <div className="flex items-center gap-3 mb-2">
@@ -1152,82 +1213,158 @@ export default function QuizzesAdmin() {
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6 pt-2">
-            {selectedNode && (() => {
-              const node = selectedNode;
-              const categoryQuizzes = quizzes?.filter(q => q.categoryId === activeMapCategory) || [];
-              const nodeQuizzes = categoryQuizzes.filter(q =>
-                q.subcategoryId == node.subcategoryId ||
-                (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId))
-              ) || [];
+            {selectedNode && (
+              (() => {
+                const node = selectedNode;
+                const categoryQuizzes = quizzes?.filter(q => q.categoryId === activeMapCategory) || [];
+                const nodeQuizzes = categoryQuizzes.filter(q =>
+                  q.subcategoryId == node.subcategoryId ||
+                  (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId))
+                ) || [];
 
-              if (nodeQuizzes.length === 0) {
+                if (nodeQuizzes.length === 0) {
+                  return (
+                    <div className="text-center py-12 text-slate-500">
+                      <Ban className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                      <p>No hay cuestionarios vinculados a este nodo.</p>
+                    </div>
+                  );
+                }
+
                 return (
-                  <div className="text-center py-12 text-slate-500">
-                    <Ban className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                    <p>No hay cuestionarios vinculados a este nodo.</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    {nodeQuizzes.map((quiz) => {
+                      const isHighlighted = quiz.id === highlightedQuizId;
+                      return (
+                        <div
+                          key={quiz.id}
+                          ref={(el) => {
+                            if (isHighlighted && el) {
+                              setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+                            }
+                          }}
+                          className={cn(
+                            "group flex flex-col gap-3 p-4 rounded-xl transition-all",
+                            isHighlighted
+                              ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.3)] ring-1 ring-blue-400"
+                              : "bg-slate-800/40 border border-white/5 hover:bg-slate-800/60 hover:border-blue-500/30 shadow-sm"
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className={cn(
+                                "h-10 w-10 rounded-full flex items-center justify-center shrink-0 transition-transform group-hover:scale-110",
+                                isHighlighted ? "bg-blue-400/20 text-blue-300" : "bg-blue-500/20 text-blue-400"
+                              )}>
+                                <BookOpen className="h-5 w-5" />
+                              </div>
+                              <div>
+                                <h4 className={cn("font-semibold text-sm line-clamp-2 transition-colors", isHighlighted ? "text-blue-100" : "text-slate-200")}>{quiz.title}</h4>
+                                <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">{quiz.description}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center justify-between gap-3 mt-auto pt-3 border-t border-white/5">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${quiz.difficulty === "básico" || quiz.difficulty === "Fácil"
+                                ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                                : quiz.difficulty === "intermedio" || quiz.difficulty === "Medio"
+                                  ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"
+                                  : "bg-red-500/10 text-red-400 border border-red-500/20"
+                                }`}>
+                                {quiz.difficulty}
+                              </span>
+
+                              <div className="flex items-center gap-1.5 ml-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 px-2.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 flex items-center gap-1.5"
+                                  onClick={() => setLocation(`/quiz/${quiz.id}`)}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                  Ver
+                                </Button>
+
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 px-2.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-white/5 flex items-center gap-1.5"
+                                  onClick={() => handleManageQuestions(quiz.id)}
+                                >
+                                  <ListChecks className="h-3.5 w-3.5" />
+                                  Preguntas
+                                </Button>
+
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 px-2.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-white/5 flex items-center gap-1.5"
+                                      onClick={() => {
+                                        setVisibleQuizId(quiz.id);
+                                        fetchAssignedUsers(quiz.id);
+                                      }}
+                                    >
+                                      <UserPlus className="h-3.5 w-3.5" />
+                                      Asignar
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="bg-slate-950 border-slate-800 text-slate-200 max-h-[80vh] flex flex-col z-[100]">
+                                    <DialogHeader>
+                                      <DialogTitle>Asignar Usuarios</DialogTitle>
+                                      <DialogDescription className="text-slate-400">
+                                        Acceso para: <span className="text-slate-200 font-medium">{quiz.title}</span>
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="relative mb-4">
+                                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-500" />
+                                      <Input
+                                        placeholder="Buscar..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="pl-9 bg-slate-900 border-slate-700 text-slate-200"
+                                      />
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto pr-2 space-y-1">
+                                      {(allUsers || [])
+                                        .filter((u: any) =>
+                                          (u.name || u.username || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                          (u.email || "").toLowerCase().includes(searchQuery.toLowerCase())
+                                        )
+                                        .map((user: any) => (
+                                          <label key={user.id} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded cursor-pointer">
+                                            <input
+                                              type="checkbox"
+                                              checked={assignedUsers.includes(user.id)}
+                                              onChange={() => toggleQuizAssignment(quiz.id, user.id, assignedUsers.includes(user.id))}
+                                              className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-600"
+                                            />
+                                            <div className="flex flex-col">
+                                              <span className="text-sm font-medium">{user.name || user.username}</span>
+                                              <span className="text-xs text-slate-500">{user.email}</span>
+                                            </div>
+                                          </label>
+                                        ))}
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              </div>
+                            </div>
+
+                            <span className="text-[11px] text-slate-500 font-mono">
+                              ID: {quiz.id}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
-              }
-
-              return (
-                <div className="grid grid-cols-1 gap-3">
-                  {nodeQuizzes.map((quiz) => (
-                    <div key={quiz.id} className="flex flex-col gap-3 p-4 rounded-xl bg-slate-800/40 border border-white/5 hover:border-blue-500/30 transition-colors">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 bg-blue-500/20 text-blue-400">
-                            <BookOpen className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-sm text-slate-200 line-clamp-2">{quiz.title}</h4>
-                            <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">{quiz.description}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center justify-between gap-3 mt-auto pt-3 border-t border-white/5">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${quiz.difficulty === 'básico' || quiz.difficulty === 'Fácil'
-                            ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                            : quiz.difficulty === 'intermedio' || quiz.difficulty === 'Medio'
-                              ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                            }`}>
-                            {quiz.difficulty}
-                          </span>
-
-                          <div className="flex items-center gap-1.5 ml-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 px-2.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 flex items-center gap-1.5"
-                              onClick={() => setLocation(`/quiz/${quiz.id}`)}
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                              Ver
-                            </Button>
-
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 px-2.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-white/5 flex items-center gap-1.5"
-                              onClick={() => handleManageQuestions(quiz.id)}
-                            >
-                              <ListChecks className="h-3.5 w-3.5" />
-                              Preguntas
-                            </Button>
-                          </div>
-                        </div>
-
-                        <span className="text-[11px] text-slate-500 font-mono">
-                          ID: {quiz.id}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
+              })()
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -1445,7 +1582,7 @@ const DraggableSubcategoryItem = React.memo(({
           )}
           onClick={onToggle}
         >
-          <div className="flex-1 flex items-center gap-1">
+          <div className="flex-1 flex items-center gap-2">
             <div
               className="cursor-grab active:cursor-grabbing text-slate-600 hover:text-slate-400 p-2 transition-colors relative z-10"
               onPointerDown={(e) => {
@@ -1455,15 +1592,21 @@ const DraggableSubcategoryItem = React.memo(({
             >
               <GripVertical className="h-4 w-4" />
             </div>
+
+            {/* Visual Indicator for Subcategory */}
             <div className={cn(
-              "flex-1 flex items-center gap-3 border-l pl-3 transition-all duration-300",
-              isExpanded ? "border-blue-500/50" : "border-transparent"
+              "flex-1 flex items-center gap-3 border-l-4 pl-3 transition-all duration-300 py-1",
+              isExpanded ? "border-blue-500 bg-blue-500/5" : "border-slate-700 hover:border-slate-600"
             )}>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-md font-medium">{subcategory.name}</h4>
+                  <Folder className={cn("h-4 w-4", isExpanded ? "text-blue-400" : "text-slate-500")} />
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mr-1">Tema:</span>
+                  <h4 className={cn("text-md font-medium", isExpanded ? "text-blue-200" : "text-slate-300")}>
+                    {subcategory.name}
+                  </h4>
                 </div>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 pl-6 mt-1">
                   {subcategory.quizzes.length} cuestionario(s)
                 </p>
               </div>
