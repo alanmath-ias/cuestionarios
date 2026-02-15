@@ -44,6 +44,8 @@ export default function AuthPage() {
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredName, setRegisteredName] = useState('');
   const [showNotFoundDialog, setShowNotFoundDialog] = useState(false);
+  const [isParent, setIsParent] = useState(false);
+  const [childName, setChildName] = useState('');
 
   const { data: user } = useQuery<User>({
     queryKey: ['/api/user'],
@@ -119,12 +121,16 @@ export default function AuthPage() {
 
     try {
       const normalizedUsername = username.toLowerCase();
-      await apiRequest('POST', '/api/auth/register', {
+      const res = await apiRequest('POST', '/api/auth/register', {
         username: normalizedUsername,
         password,
         name,
-        email
+        email,
+        isParent,
+        childName: isParent ? childName : undefined
       });
+
+      const newUser = await res.json();
 
       setRegisteredName(name);
       setUsername('');
@@ -132,6 +138,8 @@ export default function AuthPage() {
       setConfirmPassword('');
       setName('');
       setEmail('');
+      setChildName('');
+      setIsParent(false);
 
       toast({
         title: 'Registro exitoso',
@@ -139,7 +147,14 @@ export default function AuthPage() {
       });
 
       setRegistrationSuccess(true);
-      setLocation('/welcome');
+
+      // Redirect based on role
+      if (isParent || newUser.role === 'parent') {
+        setLocation('/parent-dashboard');
+      } else {
+        setLocation('/welcome');
+      }
+
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
 
     } catch (error) {
@@ -360,6 +375,49 @@ export default function AuthPage() {
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                </div>
+              </div>
+
+              {/* Opción para Padres */}
+              <div className="pt-2">
+                <div
+                  className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col gap-3 ${isParent
+                    ? 'bg-indigo-500/10 border-indigo-500/30'
+                    : 'bg-slate-950/30 border-slate-800 hover:border-slate-700'
+                    }`}
+                  onClick={() => setIsParent(!isParent)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg transition-colors ${isParent ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-200">¿Eres padre de familia?</p>
+                        <p className="text-xs text-slate-500">Activa esta opción para vincularte con tu hijo.</p>
+                      </div>
+                    </div>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isParent ? 'border-indigo-500 bg-indigo-500' : 'border-slate-700'}`}>
+                      {isParent && <div className="w-2 h-2 bg-white rounded-full" />}
+                    </div>
+                  </div>
+
+                  {isParent && (
+                    <div className="space-y-2 pt-2 border-t border-indigo-500/20" onClick={(e) => e.stopPropagation()}>
+                      <label className="text-xs font-medium text-indigo-300" htmlFor="child-name">
+                        Nombre completo de tu hijo/a
+                      </label>
+                      <input
+                        className="w-full bg-slate-950/80 border border-indigo-500/30 rounded-lg py-2 px-3 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
+                        id="child-name"
+                        type="text"
+                        placeholder="Ej: Alan Pérez"
+                        value={childName}
+                        onChange={(e) => setChildName(e.target.value)}
+                        required={isParent}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
               <Button

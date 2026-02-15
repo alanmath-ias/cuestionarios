@@ -1163,6 +1163,22 @@ export class DatabaseStorage implements IStorage {
     return { success: true, parentId: parentUser.id, childId: childUser.id };
   }
 
+  async createParent(parentData: { name: string, userId: number, childId?: number | null, requestedChildName?: string | null }): Promise<void> {
+    await this.db.insert(parents).values({
+      name: parentData.name,
+      userId: parentData.userId,
+      childId: parentData.childId,
+      requestedChildName: parentData.requestedChildName
+    });
+  }
+
+  async updateParentChild(parentId: number, childId: number): Promise<void> {
+    await this.db
+      .update(parents)
+      .set({ childId })
+      .where(eq(parents.userId, parentId));
+  }
+
   async getChildByParentId(parentId: number): Promise<Child | null> {
     try {
       const result = await this.db
@@ -1170,12 +1186,21 @@ export class DatabaseStorage implements IStorage {
           id: users.id,
           name: users.name,
           email: users.email,
+          requestedChildName: parents.requestedChildName,
         })
         .from(parents)
-        .innerJoin(users, eq(parents.childId, users.id))
+        .leftJoin(users, eq(parents.childId, users.id))
         .where(eq(parents.userId, parentId));
 
-      return result.length > 0 ? result[0] : null;
+      if (result.length === 0) return null;
+
+      const row = result[0];
+      return {
+        id: row.id || 0,
+        name: row.name || '',
+        email: row.email || '',
+        requestedChildName: row.requestedChildName
+      };
     } catch (error) {
       console.error('Error en getChildByParentId:', error);
       throw new Error('Failed to get child by parent ID');

@@ -311,7 +311,8 @@ export const parents = pgTable("parents", {
 	id: serial("id").primaryKey(),
 	name: varchar("name", { length: 100 }).notNull(), // Ej: Ximena
 	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-	childId: integer("child_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	childId: integer("child_id").references(() => users.id, { onDelete: "cascade" }),
+	requestedChildName: varchar("requested_child_name", { length: 100 }),
 });
 
 export const questionReports = pgTable("question_reports", {

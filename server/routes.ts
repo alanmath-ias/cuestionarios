@@ -40,6 +40,7 @@ import crypto from "crypto";
 import passport from "passport";
 import { setupAuth } from "./auth.js";
 import { User as DrizzleUser } from "../shared/schema.js";
+import { sendWelcomeEmail } from "./email-utils.js";
 
 declare global {
   namespace Express {
@@ -111,11 +112,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (err) { return next(err); }
 
           req.session.userId = user.id;
-          req.session.save((err) => {
+          req.session.save(async (err) => {
             if (err) console.error("Session save error:", err);
 
             // Redirect to welcome if new user, otherwise dashboard
             if (info && info.isNewUser) {
+              // Enviar correo de bienvenida a usuario de Google
+              if (user.email) {
+                sendWelcomeEmail(user.email, user.name || user.username);
+              }
               return res.redirect('/welcome');
             }
             return res.redirect('/dashboard');
@@ -188,6 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/auth/register", async (req: Request, res: Response) => {
     try {
+      const { isParent, childName } = req.body;
       const userData = insertUserSchema.parse(req.body);
 
       const existingUser = await storage.getUserByUsername(userData.username);
@@ -198,9 +204,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userCount = (await storage.getUsers()).length;
       const isFirstUser = userCount === 0;
 
-      const assignedRole = isFirstUser ? "admin" : (userData.role || "student");
+      // Determinamos el rol: admin si es el primero, parent si marcó la opción, de lo contrario student.
+      let assignedRole: string = "student";
+      if (isFirstUser) {
+        assignedRole = "admin";
+      } else if (isParent) {
+        assignedRole = "parent";
+      } else if (userData.role) {
+        assignedRole = userData.role;
+      }
 
-      const validRoles = ["admin", "user", "student"] as const;
+      const validRoles = ["admin", "user", "student", "parent"] as const;
       const safeRole = validRoles.includes(assignedRole as any)
         ? assignedRole as typeof validRoles[number]
         : "student";
@@ -211,6 +225,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const newUser = await storage.createUser(userWithRole);
+
+      // Si es padre, registrar en la tabla parents y notificar al admin
+      if (safeRole === 'parent') {
+        await storage.createParent({
+          name: newUser.name || newUser.username,
+          userId: newUser.id,
+          childId: null
+        });
+
+        // Notificar al admin por email
+        if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+          try {
+            const transporter = nodemailer.createTransport({
+              host: process.env.SMTP_HOST,
+              port: parseInt(process.env.SMTP_PORT || "587"),
+              secure: parseInt(process.env.SMTP_PORT || "587") === 465,
+              auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+              },
+            });
+
+            await transporter.sendMail({
+              from: `"AlanMath" <${process.env.SMTP_USER}>`,
+              to: process.env.SMTP_USER,
+              subject: "🔔 Nueva solicitud de registro de Padre (Email/Password)",
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+                  <h2 style="color: #4F46E5;">Nueva Solicitud de Registro (Manual)</h2>
+                  <p>Un usuario se ha registrado manualmente como padre y solicita vinculación:</p>
+                  <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                    <p><strong>Username:</strong> ${newUser.username}</p>
+                    <p><strong>Nombre del Padre:</strong> ${newUser.name}</p>
+                    <p><strong>Email del Padre:</strong> ${newUser.email}</p>
+                    <p><strong>Nombre del Hijo:</strong> ${childName || 'No especificado'}</p>
+                    <p><strong>Usuario ID:</strong> ${newUser.id}</p>
+                  </div>
+                  <p>Por favor, procede a vincular la cuenta en el panel de administración.</p>
+                </div>
+              `,
+            });
+          } catch (e) {
+            console.error("Error sending admin notification:", e);
+          }
+        }
+      }
 
       // Auto login con validación de rol
       req.session.userId = newUser.id;
@@ -229,71 +289,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { password: _, ...userWithoutPassword } = newUser;
 
-      // Enviar correo de bienvenida
-      if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS && newUser.email) {
-
-        try {
-          const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: parseInt(process.env.SMTP_PORT || "587"),
-            secure: parseInt(process.env.SMTP_PORT || "587") === 465,
-            auth: {
-              user: process.env.SMTP_USER,
-              pass: process.env.SMTP_PASS,
-            },
-          });
-
-          const bannerUrl = "https://imagenes.alanmath.com/nueva-actividad.jpg";
-
-          await transporter.sendMail({
-            from: `"AlanMath" <${process.env.SMTP_USER}>`,
-            to: newUser.email,
-            subject: "¡Bienvenido a la familia AlanMath! 🚀",
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="text-align: center; margin-bottom: 20px;">
-                  <img src="${bannerUrl}" alt="Bienvenido a AlanMath" style="max-width: 250px; height: auto; border-radius: 8px;">
-                </div>
-                
-                <h1 style="color: #4F46E5; text-align: center;">¡Hola ${newUser.name || newUser.username}!</h1>
-                
-                <p style="font-size: 16px; line-height: 1.5; color: #374151;">
-                  Estamos muy felices de que te hayas unido a <strong>AlanMath</strong>. 
-                  Aquí encontrarás un espacio diseñado para potenciar tu aprendizaje de una manera divertida y efectiva.
-                </p>
-
-                <div style="background-color: #F3F4F6; padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #E5E7EB;">
-                  <h3 style="color: #111827; margin-top: 0; font-size: 18px;">Tu Aventura en AlanMath incluye:</h3>
-                  <ul style="color: #4B5563; padding-left: 20px; font-size: 15px;">
-                    <li style="margin-bottom: 12px;">🧠 <strong>Cuestionarios de Nivel:</strong> Practica con exámenes reales tipo universidad y colegio.</li>
-                    <li style="margin-bottom: 12px;">🤖 <strong>IA Personalizada:</strong> Crea tus propios cuestionarios justo de lo que necesitas. ¡Nuestra IA los genera para ti al instante! 🎯</li>
-                    <li style="margin-bottom: 12px;">✅ <strong>Aprende de tus Errores:</strong> No solo sabrás si fallaste; te daremos una <strong>explicación paso a paso</strong> para que domines el proceso.</li>
-                    <li style="margin-bottom: 12px;">💡 <strong>Pistas Inteligentes:</strong> El empujón exacto que necesitas cuando te atasques en un ejercicio.</li>
-                    <li style="margin-bottom: 12px;">🎓 <strong>Refuerzo por WhatsApp:</strong> Chat directo con expertos para resolver tus dudas más difíciles.</li>
-                    <li style="margin-bottom: 12px;">📺 <strong>Videoteca Exclusiva:</strong> Contenido en video para profundizar en cada tema matemático.</li>
-                  </ul>
-                </div>
-
-                <p style="text-align: center; font-weight: bold; color: #4F46E5; font-size: 18px;">
-                  ¡Tu camino hacia el dominio de las matemáticas comienza hoy!
-                </p>
-
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="https://app.alanmath.com/auth" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 10px;">Ir a la App</a>
-                  <a href="https://alanmath.com/" style="background-color: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Visitar Sitio Web</a>
-                </div>
-
-                <p style="margin-top: 30px; font-size: 12px; color: #6B7280; text-align: center;">
-                  Este es un mensaje automático de bienvenida. ¡Nos vemos en clase!
-                </p>
-              </div>
-            `,
-          });
-          console.log(`📧 Welcome email sent to ${newUser.email}`);
-        } catch (emailError) {
-          console.error("Failed to send welcome email:", emailError);
-          // No fallamos el registro si el correo falla
-        }
+      // Enviar correo de bienvenida usando la utilidad centralizada
+      if (newUser.email) {
+        sendWelcomeEmail(newUser.email, newUser.name || newUser.username);
       }
 
       res.status(201).json(userWithoutPassword);
@@ -3684,16 +3682,103 @@ Ejemplo de formato:
       const child = await storage.getChildByParentId(parentId);
 
       if (!child) {
-        return res.status(404).json({ error: 'No se encontró un hijo asociado a este padre' });
+        return res.status(200).json({
+          child_id: null,
+          child_name: null,
+          requested_child_name: null,
+          is_pending: true
+        });
       }
 
       res.status(200).json({
         child_id: child.id,
-        child_name: child.name
+        child_name: child.name,
+        requested_child_name: child.requestedChildName,
+        is_pending: !child.id || child.id === 0
       });
     } catch (error) {
       console.error('Error al obtener hijo del padre:', error);
       res.status(500).json({ error: 'Error al obtener información del hijo' });
+    }
+  });
+
+  app.post('/api/parent/request-registration', requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) return res.status(401).json({ error: 'No autorizado' });
+
+      const { parentName, childName, username } = req.body;
+
+      if (!parentName || !childName || !username) {
+        return res.status(400).json({ error: 'El nombre del padre, del hijo y el nombre de usuario son obligatorios' });
+      }
+
+      // 1. Validar nombre de usuario si es diferente al actual
+      if (username !== req.user.username) {
+        const existing = await storage.getUserByUsername(username);
+        if (existing) {
+          return res.status(400).json({ error: 'Ese nombre de usuario ya existe' });
+        }
+      }
+
+      // 2. Actualizar el perfil del usuario (role, name, username)
+      await storage.updateUser(req.user.id, {
+        role: 'parent',
+        name: parentName,
+        username: username
+      });
+
+      // 3. Registrar en la tabla parents (childId es opcional ahora)
+      await storage.createParent({
+        name: parentName,
+        userId: req.user.id,
+        childId: null, // Se vinculará manualmente por el admin
+        requestedChildName: childName
+      });
+
+      // 2. Enviar notificación al administrador
+      if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+        try {
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT || "587"),
+            secure: parseInt(process.env.SMTP_PORT || "587") === 465,
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+            },
+          });
+
+          await transporter.sendMail({
+            from: `"AlanMath" <${process.env.SMTP_USER}>`,
+            to: process.env.SMTP_USER, // Notificar al admin principal
+            subject: "🔔 Nueva solicitud de registro de Padre",
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+                <h2 style="color: #4F46E5;">Nueva Solicitud de Vinculación</h2>
+                <p>Un usuario se ha registrado como padre y solicita vinculación:</p>
+                <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                  <p><strong>Username Elegido:</strong> ${username}</p>
+                  <p><strong>Nombre del Padre:</strong> ${parentName}</p>
+                  <p><strong>Nombre del Hijo:</strong> ${childName}</p>
+                  <p><strong>Email del Padre:</strong> ${req.user.email}</p>
+                  <p><strong>Usuario ID:</strong> ${req.user.id}</p>
+                </div>
+                <p>Por favor, procede a crear o vincular la cuenta del estudiante en el panel de administración.</p>
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+                <p style="font-size: 12px; color: #6b7280; text-align: center;">Este es un mensaje automático del sistema AlanMath.</p>
+              </div>
+            `,
+          });
+        } catch (emailError) {
+          console.error("Error al enviar notificación de registro de padre:", emailError);
+          // No fallar la petición si el email falla, el registro en DB es más importante
+        }
+      }
+
+      res.status(200).json({ success: true, message: 'Solicitud recibida correctamente' });
+    } catch (error) {
+      console.error('Error en request-registration:', error);
+      res.status(500).json({ error: 'Error al procesar la solicitud' });
     }
   });
 

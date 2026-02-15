@@ -28,5 +28,6 @@ export interface Child {
   id: number;
   name: string;
   email: string | null; // Permitir que sea null
+  requestedChildName?: string | null;
   // Agrega otros campos relevantes que necesites
 }

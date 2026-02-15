@@ -13,6 +13,7 @@ interface User {
     name: string;
     username: string;
     subscriptionStatus: string;
+    role: string;
 }
 
 export default function WelcomePage() {
@@ -39,6 +40,13 @@ export default function WelcomePage() {
             setLocation('/auth');
         }
     }, [isError, setLocation]);
+
+    // Redirect parents if they land here
+    useEffect(() => {
+        if (user && user.role === 'parent') {
+            setLocation('/parent-dashboard');
+        }
+    }, [user, setLocation]);
 
     const { data: categories } = useQuery<Category[]>({
         queryKey: ['/api/categories'],

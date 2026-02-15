@@ -81,7 +81,9 @@ export interface IStorage {
     parent: { username: string, password: string, name: string, email: string },
     child: { username: string, password: string, name: string, email: string }
   ): Promise<any>;
-  getChildByParentId(parentId: number): Promise<Child | null>;
+  createParent(parentData: { name: string, userId: number, childId?: number | null, requestedChildName?: string | null }): Promise<void>;
+  updateParentChild(parentId: number, childId: number): Promise<void>;
+  getChildByParentId(parentId: number): Promise<(Child & { requestedChildName?: string | null }) | null>;
 
   // Dashboard/Admin methods
   getUserProgressSummary(): Promise<any[]>;
@@ -195,6 +197,8 @@ export class MemStorage implements IStorage {
     parent: { username: string, password: string, name: string, email: string },
     child: { username: string, password: string, name: string, email: string }
   ): Promise<any> { throw new Error("Not implemented"); }
+  async createParent(parentData: { name: string, userId: number, childId?: number | null }): Promise<void> { }
+  async updateParentChild(parentId: number, childId: number): Promise<void> { }
   async getChildByParentId(parentId: number): Promise<Child | null> { return null; }
 
   async getUserProgressSummary(): Promise<any[]> { return []; }

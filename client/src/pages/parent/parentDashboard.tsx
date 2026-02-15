@@ -44,6 +44,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Link, useLocation, useParams } from "wouter";
 import { useEffect, useState, useRef, useMemo } from "react";
+import { useToast } from "@/hooks/use-toast";
 import VideoEmbed from "../VideoEmbed"; // Relative import since both are in src/pages (parent is subdir)
 import { QuizDetailsDialog } from "@/components/dialogs/QuizDetailsDialog";
 import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
@@ -266,6 +267,7 @@ export default function ParentDashboard() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [quizSearchQuery, setQuizSearchQuery] = useState("");
+  const { toast } = useToast();
 
   const queryOptions = {
     refetchOnWindowFocus: true,
@@ -394,9 +396,62 @@ export default function ParentDashboard() {
 
   if (!childId) {
     return (
-      <div className="container mx-auto py-8 text-center">
-        <h1 className="text-3xl font-bold mb-4">Hola {currentUser?.name}</h1>
-        <p className="text-muted-foreground">No se ha identificado un estudiante asociado a tu cuenta.</p>
+      <div className="container mx-auto py-12 px-4 text-center max-w-2xl">
+        <div className="bg-slate-900/50 border border-indigo-500/20 rounded-3xl p-8 backdrop-blur-sm shadow-2xl animate-in fade-in zoom-in duration-500">
+          <div className="h-20 w-20 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Clock className="w-10 h-10 text-indigo-400 animate-pulse" />
+          </div>
+          <h1 className="text-3xl font-bold mb-4 text-white">¡Hola {currentUser?.name || 'Padre'}!</h1>
+          <p className="text-xl text-slate-300 mb-6 leading-tight">
+            Tu solicitud de registro como padre ha sido recibida correctamente.
+          </p>
+          <div className="space-y-4 text-slate-400 mb-8 text-sm md:text-base leading-relaxed text-left max-w-md mx-auto">
+            <p className="flex items-start gap-4 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 group transition-all hover:bg-indigo-500/15">
+              <span className="h-7 w-7 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 text-sm font-bold shadow-sm shadow-indigo-900/20">1</span>
+              <span className="text-slate-200">
+                Actualmente un administrador está revisando tu solicitud para vincular tu cuenta con la de <span className="font-bold text-indigo-400 italic">{parentChild?.requested_child_name || 'tu hijo/a'}</span>.
+              </span>
+            </p>
+            <p className="flex items-start gap-4 p-4 rounded-2xl bg-indigo-500/5 group transition-all hover:bg-indigo-500/10">
+              <span className="h-7 w-7 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 text-sm font-bold opacity-80">2</span>
+              <span className="text-slate-300">
+                Una vez vinculado, podrás ver su progreso, calificaciones y actividades en tiempo real en este panel.
+              </span>
+            </p>
+            <div className="bg-indigo-500/5 p-4 rounded-xl border border-indigo-500/10 mt-6 italic text-slate-500 text-xs text-center">
+              <Sparkles className="w-3 h-3 inline-block mr-1 text-indigo-400 mb-0.5" />
+              Recibirás un correo cuando la vinculación sea exitosa.
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4 max-w-sm mx-auto">
+            <a
+              href={`https://wa.me/573208056799?text=${encodeURIComponent(`Hola AlanMath, acabo de registrarme como padre (${currentUser?.name}) y me gustaría agilizar la vinculación de mi hijo.`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full"
+            >
+              <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-6 rounded-2xl flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-green-900/20 border-none">
+                <MessageCircle className="w-6 h-6" />
+                Agilizar por WhatsApp
+              </Button>
+            </a>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                await queryClient.invalidateQueries({ queryKey: ["parent-child"] });
+                toast({
+                  title: "Estado de Solicitud",
+                  description: "Aún estamos revisando tu solicitud. ¡Gracias por tu paciencia! El administrador te vinculará pronto.",
+                  duration: 5000,
+                });
+              }}
+              className="w-full border-slate-700 bg-white text-slate-800 hover:bg-slate-100 font-bold rounded-2xl py-6 transition-all shadow-md active:scale-95"
+            >
+              Verificar estado ahora
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
