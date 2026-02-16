@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { ZoomableImage } from "@/components/ui/ZoomableImage";
 
 function AdminQuizReview() {
   const { progressId } = useParams<{ progressId: string }>();
@@ -230,11 +231,10 @@ function AdminQuizReview() {
                       <div className="p-4">
                         <div className="mb-3 text-slate-200">
                           {question?.imageUrl && (
-                            <div className="mb-3">
-                              <img
+                            <div className="mb-3 flex justify-center">
+                              <ZoomableImage
                                 src={question.imageUrl}
                                 alt="Imagen de la pregunta"
-                                className="max-h-40 object-contain rounded border border-white/10"
                               />
                             </div>
                           )}

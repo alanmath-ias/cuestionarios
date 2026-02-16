@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useRoute } from "wouter";
 import { ContentRenderer } from "@/components/ContentRenderer";
+import { ZoomableImage } from "@/components/ui/ZoomableImage";
 
 const questionTypeOptions = [
   { value: "multiple_choice", label: "Opción múltiple" },
@@ -809,6 +810,15 @@ export default function QuestionsAdmin() {
                                         </ul>
                                       ) : (
                                         <p className="text-sm text-slate-500 italic">No hay respuestas configuradas</p>
+                                      )}
+                                      {question.imageUrl && (
+                                        <div className="mt-2 flex justify-center border border-white/5 rounded-lg overflow-hidden bg-slate-900/50 p-2">
+                                          <ZoomableImage
+                                            src={question.imageUrl}
+                                            alt="Imagen de la pregunta"
+                                            className="max-h-32 object-contain rounded"
+                                          />
+                                        </div>
                                       )}
                                     </div>
                                   </HoverCardContent>

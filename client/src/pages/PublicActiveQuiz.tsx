@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { ContentRenderer } from '@/components/ContentRenderer';
 import { AIMarkdown } from '@/components/ui/ai-markdown';
 import { Textarea } from '@/components/ui/textarea';
+import { ZoomableImage } from "@/components/ui/ZoomableImage";
 import {
   Dialog,
   DialogContent,
@@ -571,11 +572,10 @@ function PublicActiveQuiz() {
             </h3>
 
             {currentQuestion.imageUrl && (
-              <div className="mb-6 flex justify-center bg-slate-900/50 p-4 rounded-xl border border-white/5">
-                <img
+              <div className="mb-6 flex justify-center">
+                <ZoomableImage
                   src={currentQuestion.imageUrl}
                   alt="Imagen de la pregunta"
-                  className="max-h-60 object-contain rounded"
                 />
               </div>
             )}

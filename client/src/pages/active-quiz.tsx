@@ -21,6 +21,7 @@ import {
 import { useSession } from "@/hooks/useSession";
 import { ContentRenderer } from "@/components/ContentRenderer";
 import { AIMarkdown } from "@/components/ui/ai-markdown";
+import { ZoomableImage } from "@/components/ui/ZoomableImage";
 
 const SURVEY_QUIZ_IDS = [68, 69, 73, 72];
 
@@ -669,11 +670,10 @@ const ActiveQuiz = () => {
             </h3>
 
             {currentQuestion.imageUrl && (
-              <div className="mb-6 flex justify-center bg-slate-900/50 p-4 rounded-xl border border-white/5">
-                <img
+              <div className="mb-6 flex justify-center">
+                <ZoomableImage
                   src={currentQuestion.imageUrl}
                   alt="Imagen de la pregunta"
-                  className="max-h-60 object-contain rounded"
                 />
               </div>
             )}
