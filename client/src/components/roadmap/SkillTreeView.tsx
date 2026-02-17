@@ -269,10 +269,10 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                 className="w-full relative"
             >
                 {/* Search Bar - Top Right above Legend */}
-                <div className="absolute top-[-100px] right-4 z-[90] flex flex-col items-end gap-2 pointer-events-auto">
+                <div className="md:absolute md:top-[-100px] md:right-4 relative mt-4 md:mt-0 mb-4 md:mb-0 z-[90] flex flex-col items-center md:items-end gap-2 pointer-events-auto px-4 w-full md:w-auto">
                     <div
                         ref={searchRef}
-                        className="relative w-full max-w-[250px] md:max-w-xs"
+                        className="relative w-full max-w-sm md:max-w-xs"
                     >
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -329,11 +329,16 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                             )}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <div className="text-sm font-semibold text-slate-200 group-hover:text-white truncate">
+                                                            <div className="text-sm font-semibold text-slate-200 group-hover:text-white leading-tight">
                                                                 {quiz.title}
                                                             </div>
+                                                            {quiz.description && (
+                                                                <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-2 italic">
+                                                                    {quiz.description}
+                                                                </div>
+                                                            )}
                                                             <div className={cn(
-                                                                "text-[10px] font-bold uppercase tracking-wider mt-0.5",
+                                                                "text-[10px] font-bold uppercase tracking-wider mt-1",
                                                                 isCompleted ? "text-green-500" : "text-blue-400"
                                                             )}>
                                                                 {isCompleted ? "Actividad Reciente" : "Actividad Pendiente"}
