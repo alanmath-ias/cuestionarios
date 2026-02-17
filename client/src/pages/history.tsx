@@ -105,7 +105,7 @@ export default function HistoryPage() {
                                                     {hasFeedback && (
                                                         <span className="flex items-center gap-1.5 text-blue-400 font-medium">
                                                             <MessageSquare className="w-3.5 h-3.5" />
-                                                            Feedback disponible
+                                                            Comentario disponible
                                                         </span>
                                                     )}
                                                 </div>

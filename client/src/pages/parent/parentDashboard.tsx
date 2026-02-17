@@ -246,7 +246,7 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback; onClick: (qui
       </div>
       {(quiz.reviewed || hasFeedback) && (
         <div className="bg-emerald-500/20 px-2 py-1 rounded text-[10px] text-emerald-300 border border-emerald-500/30">
-          Feedback
+          Comentario
         </div>
       )}
     </div>

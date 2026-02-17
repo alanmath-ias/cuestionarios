@@ -421,6 +421,7 @@ export class DatabaseStorage implements IStorage {
         difficulty: quizzes.difficulty,
         status: studentProgress.status,
         reviewed: quizSubmissions.reviewed,
+        readByStudent: quizSubmissions.readByStudent,
         progressId: studentProgress.id,
         completedQuestions: sql<number>`(SELECT COUNT(DISTINCT question_id) FROM student_answers WHERE student_answers.progress_id = ${studentProgress.id})`.mapWith(Number),
         score: studentProgress.score,
@@ -880,6 +881,13 @@ export class DatabaseStorage implements IStorage {
     await this.db
       .update(quizSubmissions)
       .set({ reviewed: true })
+      .where(eq(quizSubmissions.progressId, progressId));
+  }
+
+  async markSubmissionAsReadByStudent(progressId: number) {
+    await this.db
+      .update(quizSubmissions)
+      .set({ readByStudent: true })
       .where(eq(quizSubmissions.progressId, progressId));
   }
 

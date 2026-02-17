@@ -140,6 +140,7 @@ export const quizSubmissions = pgTable("quiz_submissions", {
 	score: real().notNull(),
 	feedback: text(),
 	reviewed: boolean().default(false),
+	readByStudent: boolean("read_by_student").default(false),
 	progressId: integer("progress_id"),
 }, (table) => [
 	foreignKey({

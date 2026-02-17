@@ -73,6 +73,7 @@ import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
 interface QuizWithFeedback extends UserQuiz {
   progressId?: string;
   reviewed?: boolean;
+  readByStudent?: boolean;
   completedAt?: string | Date;
   score?: number;
   timeSpent?: number;
@@ -262,22 +263,18 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback, onClick: (qui
   return (
     <div
       onClick={() => onClick(quiz)}
-      className={`group flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:shadow-[0_0_15px_-3px_rgba(16,185,129,0.15)] ${hasFeedback
-        ? "bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20"
-        : "bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-emerald-500/30"
-        }`}
+      className="group flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-slate-800/40 cursor-pointer transition-all hover:bg-slate-800/60"
     >
-      <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hasFeedback ? "bg-emerald-500/20 text-emerald-400" : "bg-green-500/20 text-green-400"
-        }`}>
-        {hasFeedback ? <MessageSquare className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
+      <div className="h-10 w-10 rounded-full bg-slate-900/50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+        {hasFeedback ? <MessageSquare className="h-5 w-5 text-emerald-400" /> : <CheckCircle2 className="h-5 w-5 text-green-400" />}
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className={`font-semibold text-sm transition-colors line-clamp-3 ${hasFeedback ? "text-emerald-200" : "text-slate-200"}`}>{quiz.title}</h4>
+        <h4 className="font-semibold text-sm text-slate-200 transition-colors line-clamp-3 group-hover:text-white">{quiz.title}</h4>
         <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
           <span className="truncate max-w-[120px]">{quiz.difficulty} • {new Date(quiz.completedAt || '').toLocaleDateString()}</span>
           {hasFeedback && (
             <span className="flex items-center gap-1 text-emerald-400 font-bold animate-pulse shrink-0">
-              <MessageSquare className="w-3 h-3" /> Feedback
+              <MessageSquare className="w-3 h-3" /> Comentario
             </span>
           )}
         </div>
@@ -294,6 +291,20 @@ export default function UserDashboard() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | null>(null);
+
+  const handleSelectQuiz = (quiz: QuizWithFeedback) => {
+    setSelectedQuiz(quiz);
+    if (quiz.progressId && quiz.feedback && !quiz.readByStudent) {
+      fetch(`/api/quiz-submissions/${quiz.progressId}/read`, {
+        method: 'PATCH',
+        credentials: 'include'
+      }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["user-quizzes"] });
+        queryClient.invalidateQueries({ queryKey: ["user-alerts"] });
+      }).catch(err => console.error('Error marking feedback as read:', err));
+    }
+  };
+
   const [showPendingDialog, setShowPendingDialog] = useState(false);
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [showSocialDialog, setShowSocialDialog] = useState(false); // New state for social dialog
@@ -415,7 +426,7 @@ export default function UserDashboard() {
   }, [sortedCompletedQuizzes]);
 
   const feedbackQuizzes = useMemo(() => {
-    return quizzes?.filter(q => q.feedback && q.feedback.length > 0 && !q.reviewed) || [];
+    return quizzes?.filter(q => q.feedback && q.feedback.length > 0 && !q.readByStudent) || [];
   }, [quizzes]);
 
   const stats = useMemo(() => {
@@ -984,8 +995,8 @@ export default function UserDashboard() {
               <div
                 onClick={() => {
                   if (feedbackQuizzes.length === 1) {
-                    // Navigate directly if only one
-                    window.location.href = `/results/${feedbackQuizzes[0].progressId}`;
+                    // Open summary dialog instead of direct navigation
+                    handleSelectQuiz(feedbackQuizzes[0]);
                   } else {
                     // Show dialog if multiple
                     setShowFeedbackDialog(true);
@@ -1076,12 +1087,12 @@ export default function UserDashboard() {
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
             {/* 1. Recent Activity */}
-            <div className="rounded-3xl bg-slate-900/50 border border-emerald-500/20 backdrop-blur-sm shadow-lg shadow-emerald-900/20 p-5 h-[320px] flex flex-col relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl -z-10 transition-all duration-700 group-hover:bg-emerald-500/20" />
+            <div className="rounded-3xl bg-slate-900/60 border border-white/5 shadow-2xl p-5 h-[320px] flex flex-col relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-3xl -z-10 transition-all duration-700" />
 
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-lg text-emerald-100 flex items-center gap-2">
-                  <ListChecks className="w-5 h-5 text-emerald-400" /> Actividad Reciente
+                  <ListChecks className="w-5 h-5 text-emerald-400" /> <span className="text-slate-100">Actividad Reciente</span>
                 </h3>
                 <Link href="/history">
                   <Button variant="ghost" size="sm" className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10">
@@ -1094,7 +1105,7 @@ export default function UserDashboard() {
                 <div className="space-y-2">
                   {uniqueCompletedQuizzes.length > 0 ? (
                     uniqueCompletedQuizzes.slice(0, 5).map((quiz) => (
-                      <ActivityItem key={quiz.id} quiz={quiz} onClick={setSelectedQuiz} />
+                      <ActivityItem key={quiz.id} quiz={quiz} onClick={handleSelectQuiz} />
                     ))
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500">
@@ -2013,7 +2024,7 @@ export default function UserDashboard() {
             <DialogHeader>
               <DialogTitle className="text-xl font-bold flex items-center gap-2">
                 <MessageSquare className="w-6 h-6 text-blue-400" />
-                Nuevos Feedbacks Recibidos
+                Nuevos Comentarios Recibidos
               </DialogTitle>
               <DialogDescription className="text-slate-400">
                 Has recibido comentarios en los siguientes cuestionarios. Selecciona uno para ver los detalles.
@@ -2023,7 +2034,10 @@ export default function UserDashboard() {
               {feedbackQuizzes.map((quiz) => (
                 <div
                   key={quiz.id}
-                  onClick={() => window.location.href = `/results/${quiz.progressId}`}
+                  onClick={() => {
+                    handleSelectQuiz(quiz);
+                    setShowFeedbackDialog(false);
+                  }}
                   className="flex items-center justify-between p-4 rounded-xl bg-slate-800/50 border border-white/5 cursor-pointer hover:bg-slate-800 hover:border-blue-500/30 transition-all group"
                 >
                   <div className="flex items-center gap-3">

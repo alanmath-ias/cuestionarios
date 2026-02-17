@@ -95,7 +95,7 @@ function AdminQuizReview() {
       refetchFeedback();
     },
     onError: (error) => {
-      toast.error('Error al enviar el feedback: ' + error.message);
+      toast.error('Error al enviar el comentario: ' + error.message);
     },
   });
 
@@ -103,7 +103,7 @@ function AdminQuizReview() {
 
   const handleSendFeedback = () => {
     if (!feedbackText.trim()) {
-      toast.warning('Escribe algo de feedback antes de enviarlo');
+      toast.warning('Escribe algo de comentario antes de enviarlo');
       return;
     }
     mutation.mutate();
@@ -276,7 +276,7 @@ function AdminQuizReview() {
 
               {existingFeedback?.feedback && (
                 <div className="mb-4 p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
-                  <h5 className="font-medium text-purple-400 mb-1">Feedback existente:</h5>
+                  <h5 className="font-medium text-purple-400 mb-1">Comentario existente:</h5>
                   <p className="text-purple-300 whitespace-pre-wrap">{existingFeedback.feedback}</p>
                 </div>
               )}
@@ -304,7 +304,7 @@ function AdminQuizReview() {
                 disabled={isLoading}
                 className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20"
               >
-                {isLoading ? 'Enviando...' : existingFeedback?.feedback ? 'Actualizar Feedback' : 'Enviar Feedback'}
+                {isLoading ? 'Enviando...' : existingFeedback?.feedback ? 'Actualizar Comentario' : 'Enviar Comentario'}
               </Button>
             </CardContent>
           </Card>

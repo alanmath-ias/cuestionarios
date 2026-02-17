@@ -3511,6 +3511,13 @@ Ejemplo de formato:
     res.json({ success: true });
   });
 
+  // Marcar como leído por el estudiante
+  app.patch('/api/quiz-submissions/:progressId/read', async (req: ExpressRequest, res: Response) => {
+    const progressId = Number(req.params.progressId);
+    await storage.markSubmissionAsReadByStudent(progressId);
+    res.json({ success: true });
+  });
+
 
   // DELETE /api/quiz-submissions/:progressId
   app.delete('/api/quiz-submissions/:progressId', async (req: ExpressRequest, res: Response) => {
@@ -3548,10 +3555,13 @@ Ejemplo de formato:
       const feedbacks = await db
         .select()
         .from(quizSubmissions)
-        .where(and(
-          eq(quizSubmissions.userId, userId),
-          isNotNull(quizSubmissions.feedback)
-        ));
+        .where(
+          and(
+            eq(quizSubmissions.userId, userId),
+            isNotNull(quizSubmissions.feedback),
+            eq(quizSubmissions.readByStudent, false)
+          )
+        );
 
       res.json({
         hasPendingTasks: pendingTasks.length > 0,

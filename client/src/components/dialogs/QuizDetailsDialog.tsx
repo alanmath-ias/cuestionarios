@@ -14,19 +14,41 @@ interface QuizDetailsDialogProps {
         timeSpent?: number;
         progressId?: string | number;
         feedback?: string;
+        readByStudent?: boolean;
     } | null;
     childId?: string;
 }
 
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+
 export function QuizDetailsDialog({ open, onOpenChange, quiz, childId }: QuizDetailsDialogProps) {
+    const queryClient = useQueryClient();
+
     const { data: feedbackData, isLoading: loadingFeedback } = useQuery<{ feedback: string }>({
         queryKey: ['/api/quiz-feedback', quiz?.progressId],
         enabled: !!quiz?.progressId && !quiz?.feedback,
     });
 
-    if (!quiz) return null;
+    const feedbackText = quiz?.feedback || feedbackData?.feedback;
 
-    const feedbackText = quiz.feedback || feedbackData?.feedback;
+    // Mark as read when student opens the dialog with unread feedback
+    useEffect(() => {
+        if (open && quiz?.progressId && feedbackText && !quiz?.readByStudent && !childId) {
+            fetch(`/api/quiz-submissions/${quiz.progressId}/read`, {
+                method: 'PATCH',
+                credentials: 'include'
+            })
+                .then(() => {
+                    // Invalidate queries to refresh dashboard alerts and quizzes
+                    queryClient.invalidateQueries({ queryKey: ["user-quizzes"] });
+                    queryClient.invalidateQueries({ queryKey: ["user-alerts"] });
+                })
+                .catch(err => console.error('Error marking feedback as read:', err));
+        }
+    }, [open, quiz?.progressId, !!feedbackText, quiz?.readByStudent, childId, queryClient]);
+
+    if (!quiz) return null;
     const isLoading = !quiz.feedback && loadingFeedback;
 
     const formatTime = (seconds: number | undefined) => {
@@ -69,13 +91,13 @@ export function QuizDetailsDialog({ open, onOpenChange, quiz, childId }: QuizDet
                 ) : feedbackText ? (
                     <div className="bg-purple-500/10 p-5 rounded-xl border border-purple-500/20">
                         <h4 className="text-sm font-bold text-purple-300 mb-2 flex items-center gap-2">
-                            <MessageCircle className="w-4 h-4" /> Feedback de AlanMath
+                            <MessageCircle className="w-4 h-4" /> Comentario de AlanMath
                         </h4>
                         <p className="text-sm text-purple-200/80 whitespace-pre-wrap leading-relaxed">{feedbackText}</p>
                     </div>
                 ) : (
                     <div className="text-center py-6 text-sm text-slate-500 italic bg-slate-800/30 rounded-xl border border-white/5">
-                        Sin feedback disponible aún.
+                        Sin comentarios disponibles aún.
                     </div>
                 )}
 

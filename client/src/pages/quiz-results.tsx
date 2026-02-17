@@ -86,6 +86,16 @@ function QuizResults() {
     }
   }, [isLoading, session]);
 
+  // Mark feedback as read when viewed by student
+  useEffect(() => {
+    if (results && feedback?.feedback && session?.userId && session.role === 'student' && !userId) {
+      fetch(`/api/quiz-submissions/${progressId}/read`, {
+        method: 'PATCH',
+        credentials: 'include'
+      }).catch(err => console.error('Error marking feedback as read:', err));
+    }
+  }, [results, feedback, session, progressId, userId]);
+
   const correctAnswers = results?.answers.filter((a) => a.isCorrect).length || 0;
   const totalQuestions = results?.answers.length || 0;
 
@@ -372,7 +382,7 @@ function QuizResults() {
             {!loadingFeedback && (
               <Card className="mt-8 border border-purple-500/30 bg-purple-500/5 backdrop-blur-sm">
                 <CardContent className="p-6">
-                  <h4 className="text-lg font-semibold mb-3 text-purple-400">Retroalimentación del profesor</h4>
+                  <h4 className="text-lg font-semibold mb-3 text-purple-400">Comentarios del profesor</h4>
                   {feedback?.feedback ? (
                     <div className="text-slate-300 whitespace-pre-wrap bg-purple-500/10 p-4 rounded-xl border border-purple-500/20">
                       {feedback.feedback}
