@@ -135,7 +135,7 @@ export function UsernameSetupDialog({ isOpen, user, onSuccess }: UsernameSetupDi
 
                 <div className="py-4 space-y-4">
                     {isParentMode ? (
-                        <div className="space-y-4">
+                        <div key="parent-mode-form" className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
                                     <UserIcon className="w-4 h-4 text-indigo-400" />
@@ -180,7 +180,7 @@ export function UsernameSetupDialog({ isOpen, user, onSuccess }: UsernameSetupDi
                             </div>
                         </div>
                     ) : (
-                        <div className="space-y-2">
+                        <div key="student-mode-form" className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
                                 <UserIcon className="w-4 h-4 text-blue-400" />
                                 Tu nombre de usuario

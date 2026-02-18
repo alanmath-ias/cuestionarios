@@ -132,8 +132,36 @@ function ProtectedRoute({ component: Component, ...rest }: { component: any, pat
     );
   }
 
-  if (!user && !PUBLIC_QUIZZES.includes(parseInt(rest.path.split('/quiz/')[1]))) {
-    return null;
+  // Si no está cargando y no hay usuario, y no es una ruta pública,
+  // mostrar la pantalla de carga MIENTRAS se ejecuta el redireccionamiento del useEffect
+  const isPublicQuiz = rest.path.startsWith('/quiz/') && PUBLIC_QUIZZES.includes(parseInt(rest.path.split('/quiz/')[1]));
+  if (!user && !isPublicQuiz) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-950">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold mb-4 text-white">Redirigiendo...</h2>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // En caso de roles incorrectos que están esperando el redireccionamiento del useEffect
+  // Usamos el mismo spinner para que el usuario sepa que la app está trabajando
+  if (user?.role === 'admin' && rest.path === '/') {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-950">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (user?.role === 'parent' && !['/parent-dashboard', '/quiz/', '/results/', '/category/', '/profile'].some(route => rest.path.startsWith(route))) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-950">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
   }
 
   return <PageLayout><Component {...rest} /></PageLayout>;
@@ -205,7 +233,13 @@ function RootRoute() {
     );
   }
 
-  if (user) return null;
+  if (user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-950">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return <LandingPage />;
 }
