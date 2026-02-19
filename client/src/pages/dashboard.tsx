@@ -41,7 +41,8 @@ import {
   Clock,
   Flame,
   Star,
-  Sparkles
+  Sparkles,
+  Zap
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -360,6 +361,16 @@ export default function UserDashboard() {
   const { data: quizzes, isLoading: loadingQuizzes } = useQuery<QuizWithFeedback[]>({
     queryKey: ["user-quizzes"],
     queryFn: fetchQuizzes,
+    ...queryOptions,
+  });
+
+  const { data: chiquiResults } = useQuery<any[]>({
+    queryKey: ["chiqui-results"],
+    queryFn: async () => {
+      const res = await fetch("/api/chiquitest/results");
+      if (!res.ok) return [];
+      return res.json();
+    },
     ...queryOptions,
   });
 
@@ -1019,44 +1030,104 @@ export default function UserDashboard() {
         <div className="mb-8 space-y-4">
           {/* Stars Navigation */}
           <div className="flex items-center justify-center gap-4 py-4 flex-wrap">
-            {sortedCategories.map((category) => (
-              <TooltipProvider key={category.id}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <motion.button
-                      whileHover={{ scale: 1.2, rotate: 15 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => setExpandedRoadmapCategoryId(expandedRoadmapCategoryId === category.id ? null : category.id)}
-                      className={cn(
-                        "relative p-3 rounded-full transition-all duration-300",
-                        expandedRoadmapCategoryId === category.id
-                          ? "bg-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.5)]"
-                          : "hover:bg-slate-800"
-                      )}
-                    >
-                      <Star
-                        className={cn(
-                          "w-8 h-8 transition-all duration-300",
-                          expandedRoadmapCategoryId === category.id
-                            ? "text-yellow-400 fill-yellow-400 animate-pulse"
-                            : "text-slate-600 hover:text-yellow-500 hover:fill-yellow-500/20"
-                        )}
-                      />
-                      {/* Active Indicator Dot */}
-                      {expandedRoadmapCategoryId === category.id && (
-                        <motion.div
-                          layoutId="activeStarDot"
-                          className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-yellow-500"
-                        />
-                      )}
-                    </motion.button>
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-slate-900 border-slate-800 text-yellow-200 font-bold">
-                    <p>Tu camino en {category.name}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ))}
+            {sortedCategories.map((category) => {
+              const categoryResult = chiquiResults?.find(r => r.categoryId === category.id);
+              const lastScore = categoryResult?.lastScore;
+              const lastDate = categoryResult?.lastDate;
+              const isDoneToday = lastDate ? new Date(lastDate).toDateString() === new Date().toDateString() : false;
+
+              return (
+                <div key={category.id} className="flex flex-col items-center gap-1">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <motion.button
+                          whileHover={{ scale: 1.2, rotate: 15 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => setExpandedRoadmapCategoryId(expandedRoadmapCategoryId === category.id ? null : category.id)}
+                          className={cn(
+                            "relative p-3 rounded-full transition-all duration-300 border shadow-sm",
+                            expandedRoadmapCategoryId === category.id
+                              ? "bg-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.5)] border-yellow-500/50"
+                              : "bg-blue-600/10 border-blue-500/20 hover:bg-slate-800 hover:border-blue-500/40 hover:shadow-blue-500/20"
+                          )}
+                        >
+                          <Star
+                            className={cn(
+                              "w-8 h-8 transition-all duration-300 drop-shadow-sm",
+                              expandedRoadmapCategoryId === category.id
+                                ? "text-yellow-400 fill-yellow-400 animate-pulse"
+                                : "text-blue-500 fill-blue-500/10 group-hover:text-yellow-500 group-hover:fill-yellow-500/20"
+                            )}
+                          />
+                          {/* Active Indicator Dot */}
+                          {expandedRoadmapCategoryId === category.id && (
+                            <motion.div
+                              layoutId="activeStarDot"
+                              className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-yellow-500"
+                            />
+                          )}
+                        </motion.button>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-slate-900 border-slate-800 text-yellow-200 font-bold">
+                        <p>Tu camino en {category.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {/* ChiquiTest (Repasito) Rayo Button */}
+                  <div className="flex flex-col items-center gap-1 group/repasito">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <motion.button
+                            initial={false}
+                            animate={!isDoneToday ? {
+                              scale: [1, 1.15, 1],
+                              opacity: [1, 0.7, 1],
+                              filter: ["drop-shadow(0 0 0px rgba(234,179,8,0))", "drop-shadow(0 0 12px rgba(234,179,8,0.8))", "drop-shadow(0 0 0px rgba(234,179,8,0))"]
+                            } : {}}
+                            transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                            onClick={() => setLocation(`/quiz/chiqui/${category.id}`)}
+                            className={cn(
+                              "w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all border",
+                              isDoneToday
+                                ? "bg-slate-800/80 text-yellow-500 border-yellow-500/20 shadow-none"
+                                : "bg-gradient-to-br from-yellow-400 via-orange-500 to-yellow-600 text-slate-950 border-white/20 shadow-yellow-500/40 hover:shadow-yellow-500/60"
+                            )}
+                          >
+                            <Zap className={cn("w-5 h-5", !isDoneToday && "fill-current animate-pulse")} />
+                          </motion.button>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-slate-900 border-slate-800 text-white font-medium p-3 rounded-xl shadow-2xl">
+                          <div className="space-y-1">
+                            <p className="font-bold text-yellow-400 flex items-center gap-1">
+                              <Zap className="w-3 h-3 fill-current" /> Repasito Diario
+                            </p>
+                            <p className="text-xs text-slate-300">5 preguntas de tus temas completados</p>
+                            {isDoneToday ? (
+                              <p className="text-[10px] text-emerald-400 font-bold mt-1">¡Completado hoy!</p>
+                            ) : (
+                              <p className="text-[10px] text-orange-400 font-bold mt-1">Pendiente</p>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    {/* Permanent Score Display */}
+                    <div className={cn(
+                      "text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border whitespace-nowrap",
+                      isDoneToday
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                        : "bg-slate-800 text-slate-500 border-white/5"
+                    )}>
+                      {lastScore !== undefined ? `${lastScore}/10` : "0/10"}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Expandable Roadmap */}

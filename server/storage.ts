@@ -132,6 +132,11 @@ export interface IStorage {
   createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
   getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
   deletePasswordResetToken(token: string): Promise<void>;
+
+  // ChiquiTest methods
+  getChiquiQuestions(userId: number, categoryId: number): Promise<any[]>;
+  saveChiquiResult(userId: number, categoryId: number, score: number, answers: any[]): Promise<void>;
+  getChiquiResults(userId: number): Promise<any[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -738,6 +743,11 @@ export class MemStorage implements IStorage {
 
   async countPendingReports(): Promise<number> { return 0; }
   async getStudentHistoryBySubcategory(userId: number, subcategoryId: number): Promise<any[]> { return []; }
+
+  // ChiquiTest methods
+  async getChiquiQuestions(userId: number, categoryId: number): Promise<any[]> { return []; }
+  async saveChiquiResult(userId: number, categoryId: number, score: number, answers: any[]): Promise<void> { }
+  async getChiquiResults(userId: number): Promise<any[]> { return []; }
 }
 
 import { DatabaseStorage } from "./database-storage.js";

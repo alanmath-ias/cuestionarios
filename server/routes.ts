@@ -1596,6 +1596,99 @@ Tono: Alentador, profesional y educativo.`;
     }
   });
 
+  // ChiquiTest endpoints
+  apiRouter.get("/chiquitest/questions/:categoryId", async (req: Request, res: Response) => {
+    let userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "No autenticado" });
+
+    // Allow parents or admins to query other users' questions
+    const targetUserId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
+    if (targetUserId && targetUserId !== userId) {
+      const currentUser = await storage.getUser(userId);
+      if (currentUser?.role === 'admin') {
+        userId = targetUserId;
+      } else if (currentUser?.role === 'parent') {
+        const child = await storage.getChildByParentId(userId);
+        if (child && child.id === targetUserId) {
+          userId = targetUserId;
+        } else {
+          return res.status(403).json({ message: "No tienes permiso para ver estas preguntas" });
+        }
+      } else {
+        return res.status(403).json({ message: "No tienes permiso para realizar esta acción" });
+      }
+    }
+
+    try {
+      const categoryId = parseInt(req.params.categoryId);
+      const questions = await storage.getChiquiQuestions(userId, categoryId);
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching chiquitest questions:", error);
+      res.status(500).json({ message: "Error al obtener preguntas del Repasito" });
+    }
+  });
+
+  apiRouter.post("/chiquitest/result", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "No autenticado" });
+    try {
+      const { categoryId, score, answers } = req.body;
+      await storage.saveChiquiResult(userId, categoryId, score, answers || []);
+      res.json({ message: "Resultado guardado correctamente" });
+    } catch (error) {
+      console.error("Error saving chiquitest result:", error);
+      res.status(500).json({ message: "Error al guardar resultado del Repasito" });
+    }
+  });
+
+  apiRouter.get("/chiquitest/results", async (req: Request, res: Response) => {
+    let userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "No autenticado" });
+
+    // Allow parents or admins to query other users' results
+    const targetUserId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
+    if (targetUserId && targetUserId !== userId) {
+      const currentUser = await storage.getUser(userId);
+      if (currentUser?.role === 'admin') {
+        userId = targetUserId;
+      } else if (currentUser?.role === 'parent') {
+        const child = await storage.getChildByParentId(userId);
+        if (child && child.id === targetUserId) {
+          userId = targetUserId;
+        } else {
+          return res.status(403).json({ message: "No tienes permiso para ver estos resultados" });
+        }
+      } else {
+        return res.status(403).json({ message: "No tienes permiso para realizar esta acción" });
+      }
+    }
+
+    try {
+      const results = await storage.getChiquiResults(userId);
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching chiquitest results:", error);
+      res.status(500).json({ message: "Error al obtener resultados del Repasito" });
+    }
+  });
+
+  apiRouter.get("/parent/child/chiquitest/results", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "No autenticado" });
+    try {
+      // Find parent record to get childId
+      const parentRecord = await storage.getChildByParentId(userId);
+      if (!parentRecord) return res.status(404).json({ message: "Hijo no encontrado" });
+
+      const results = await storage.getChiquiResults(parentRecord.id);
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching child chiquitest results:", error);
+      res.status(500).json({ message: "Error al obtener resultados del Repasito del hijo" });
+    }
+  });
+
   // Student progress endpoints
   apiRouter.get("/progress", async (req: Request, res: Response) => {
     const userId = req.session.userId;

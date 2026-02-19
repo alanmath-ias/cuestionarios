@@ -286,6 +286,9 @@ function Router() {
       <Route path="/quiz/:quizId">
         {(params) => <ProtectedRoute component={ActiveQuiz} path={`/quiz/${params.quizId}`} />}
       </Route>
+      <Route path="/quiz/chiqui/:categoryId">
+        {(params) => <ProtectedRoute component={ActiveQuiz} path={`/quiz/chiqui/${params.categoryId}`} />}
+      </Route>
       <Route path="/results/:progressId">
         {(params) => <ProtectedRoute component={QuizResults} path={`/results/${params.progressId}`} />}
       </Route>

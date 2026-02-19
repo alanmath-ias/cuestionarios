@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen } from "lucide-react";
 import { startActiveQuizTour } from "@/lib/tour";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -22,6 +22,8 @@ import { useSession } from "@/hooks/useSession";
 import { ContentRenderer } from "@/components/ContentRenderer";
 import { AIMarkdown } from "@/components/ui/ai-markdown";
 import { ZoomableImage } from "@/components/ui/ZoomableImage";
+import { ExplanationModal } from "./explicacion";
+import { MathDisplay } from "@/components/ui/math-display";
 
 const SURVEY_QUIZ_IDS = [68, 69, 73, 72];
 
@@ -68,7 +70,8 @@ const QuestionContent = ({ content }: { content: string }) => {
 };
 
 const ActiveQuiz = () => {
-  const { quizId } = useParams();
+  const { quizId, categoryId } = useParams();
+  const isChiqui = !!categoryId;
   const [location, setLocation] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
   const mode = searchParams.get('mode');
@@ -88,6 +91,14 @@ const ActiveQuiz = () => {
   const [requestingHint, setRequestingHint] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isIncompleteDialogOpen, setIsIncompleteDialogOpen] = useState(false);
+  const [showChiquiResult, setShowChiquiResult] = useState(false);
+  const [chiquiScore, setChiquiScore] = useState<number | null>(null);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [currentExplanation, setCurrentExplanation] = useState<{
+    questionId: number;
+    question: string;
+    correctAnswer: string;
+  } | null>(null);
 
   // New state for cumulative time
   const [previousTimeSpent, setPreviousTimeSpent] = useState<number>(0);
@@ -102,20 +113,38 @@ const ActiveQuiz = () => {
   // Queries
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${quizId}`],
+    enabled: !isChiqui && !!quizId,
   });
 
   const { data: questions, isLoading: loadingQuestions, error: errorQuestions } = useQuery<Question[]>({
-    queryKey: [`/api/quizzes/${quizId}/questions`, mode],
+    queryKey: isChiqui
+      ? [`/api/chiquitest/questions/${categoryId}`, searchParams.get('user_id')]
+      : [`/api/quizzes/${quizId}/questions`, mode],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/quizzes/${quizId}/questions${mode ? `?mode=${mode}` : ''}`);
+      const userIdStr = searchParams.get('user_id');
+      const url = isChiqui
+        ? `/api/chiquitest/questions/${categoryId}${userIdStr ? `?user_id=${userIdStr}` : ''}`
+        : `/api/quizzes/${quizId}/questions${mode ? `?mode=${mode}` : ''}`;
+      const res = await apiRequest("GET", url);
       return res.json();
     },
-    enabled: !!quizId,
+    enabled: !!quizId || !!categoryId,
   });
 
   const { data: progress } = useQuery<Progress>({
-    queryKey: [`/api/progress/${quizId}`],
-    enabled: !!quizId && !!session?.userId,
+    queryKey: isChiqui ? ["chiqui-progress-placeholder"] : [`/api/progress/${quizId}`],
+    enabled: !isChiqui && !!quizId && !!session?.userId,
+  });
+
+  const { data: chiquiResults } = useQuery<any[]>({
+    queryKey: ["chiqui-results", searchParams.get('user_id')],
+    queryFn: async () => {
+      const userIdStr = searchParams.get('user_id');
+      const url = userIdStr ? `/api/chiquitest/results?user_id=${userIdStr}` : "/api/chiquitest/results";
+      const res = await apiRequest("GET", url);
+      return res.json();
+    },
+    enabled: isChiqui && (!!session?.userId || !!searchParams.get('user_id')),
   });
 
   // Mutations
@@ -160,11 +189,11 @@ const ActiveQuiz = () => {
 
   // Handlers
   const handleReportSubmit = () => {
-    if (!quiz || !questions || !reportDescription.trim()) return;
+    if (!questions || !reportDescription.trim()) return;
     const currentQuestion = questions[currentQuestionIndex];
 
     reportErrorMutation.mutate({
-      quizId: quiz.id,
+      quizId: currentQuestion.quizId,
       questionId: currentQuestion.id,
       description: reportDescription,
     });
@@ -174,7 +203,7 @@ const ActiveQuiz = () => {
   // IMPORTANT: initialElapsedTime is set to 0 to restart the visual timer for this session.
   // The total time will be calculated as previousTimeSpent + elapsedTime.
   const { formattedTime, elapsedTime, start } = useTimer({
-    initialTime: quiz?.timeLimit || 0,
+    initialTime: isChiqui ? 1200 : (quiz?.timeLimit || 0),
     initialElapsedTime: 0,
     autoStart: session?.userId !== 1,
     onTimeUp: () => handleFinishQuiz()
@@ -231,12 +260,25 @@ const ActiveQuiz = () => {
           setAnsweredQuestions(answeredMap);
         }
         setIsInitialized(true);
+      } else if (isChiqui) {
+        // Check if there is already a result for today
+        const todayCategoryResult = chiquiResults?.find(r =>
+          r.categoryId === parseInt(categoryId!) &&
+          new Date(r.lastDate).toDateString() === new Date().toDateString()
+        );
+
+        if (todayCategoryResult) {
+          setChiquiScore(todayCategoryResult.lastScore);
+          setStudentAnswers(todayCategoryResult.lastAnswers || []);
+          setShowChiquiResult(true);
+        }
+        setIsInitialized(true);
       } else if (mode === 'readonly') {
         // If readonly and NO progress, just initialize empty state
         setIsInitialized(true);
       }
     }
-  }, [progress, questions, setLocation, isInitialized, mode]);
+  }, [progress, questions, setLocation, isInitialized, mode, isChiqui, chiquiResults, categoryId]);
 
   useEffect(() => {
     if (questions && questions[currentQuestionIndex]) {
@@ -251,7 +293,7 @@ const ActiveQuiz = () => {
   const isReadOnly = mode === 'readonly';
 
   useEffect(() => {
-    if (quiz && session?.userId && !progress && session.userId !== 1 && !isReadOnly) {
+    if (!isChiqui && quiz && session?.userId && !progress && session.userId !== 1 && !isReadOnly) {
       createProgressMutation.mutate({
         userId: session.userId,
         quizId: parseInt(quizId!),
@@ -261,7 +303,7 @@ const ActiveQuiz = () => {
         mode: mode || 'standard'
       });
     }
-  }, [quiz, session, progress, quizId, isReadOnly]);
+  }, [quiz, session, progress, quizId, isReadOnly, isChiqui]);
 
   useEffect(() => {
     if (!loadingQuiz && !loadingQuestions && session?.userId && !session.tourStatus?.activeQuiz) {
@@ -282,13 +324,13 @@ const ActiveQuiz = () => {
   };
 
   const submitCurrentAnswer = async () => {
-    if (!questions || !progress?.id || selectedAnswerId === null) return;
+    if (!questions || (!isChiqui && !progress?.id) || selectedAnswerId === null) return;
 
     const currentQuestion = questions[currentQuestionIndex];
     const selectedAnswer = currentQuestion.answers?.find((a: any) => a.id === selectedAnswerId);
 
     const studentAnswer: any = {
-      progressId: progress.id,
+      progressId: progress?.id || 0,
       questionId: currentQuestion.id,
       answerId: selectedAnswerId,
       isCorrect: selectedAnswer?.isCorrect || false,
@@ -297,7 +339,9 @@ const ActiveQuiz = () => {
     };
 
     try {
-      await submitAnswerMutation.mutateAsync(studentAnswer);
+      if (!isChiqui) {
+        await submitAnswerMutation.mutateAsync(studentAnswer);
+      }
       setStudentAnswers([...studentAnswers, studentAnswer]);
       setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
     } catch (error: any) {
@@ -322,7 +366,7 @@ const ActiveQuiz = () => {
   };
 
   const handleNextQuestion = async () => {
-    if (!questions || !progress) return;
+    if (!questions || (!isChiqui && !progress)) return;
 
     setIsNavigating(true);
     try {
@@ -338,11 +382,13 @@ const ActiveQuiz = () => {
 
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        await createProgressMutation.mutateAsync({
-          ...progress,
-          completedQuestions: Math.max(progress.completedQuestions ?? 0, currentQuestionIndex + 1),
-          timeSpent: getTotalTime(), // Save cumulative time
-        });
+        if (!isChiqui && progress) {
+          await createProgressMutation.mutateAsync({
+            ...progress,
+            completedQuestions: Math.max(progress.completedQuestions ?? 0, currentQuestionIndex + 1),
+            timeSpent: getTotalTime(), // Save cumulative time
+          });
+        }
 
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         setSelectedAnswerId(null);
@@ -386,13 +432,13 @@ const ActiveQuiz = () => {
   };
 
   const handleTextAnswerSubmit = async () => {
-    if (!questions || !progress?.id || !textAnswers[questions[currentQuestionIndex].id]) return;
+    if (!questions || (!isChiqui && !progress?.id) || !textAnswers[questions[currentQuestionIndex].id]) return;
 
     const currentQuestion = questions[currentQuestionIndex];
     const answerText = textAnswers[currentQuestion.id];
 
     const studentAnswer: any = {
-      progressId: progress.id,
+      progressId: progress?.id || 0,
       questionId: currentQuestion.id,
       answerId: null,
       textAnswer: answerText,
@@ -415,7 +461,7 @@ const ActiveQuiz = () => {
   };
 
   const handleRequestHint = async (type: 'regular' | 'super') => {
-    if (!questions || !progress?.id) return;
+    if (!questions || (!isChiqui && !progress?.id)) return;
 
     const currentQuestion = questions[currentQuestionIndex];
     const cost = type === 'regular' ? 1 : 2;
@@ -445,7 +491,7 @@ const ActiveQuiz = () => {
         questionId: currentQuestion.id,
         hintType: type,
         hintIndex: (hintsRevealed[currentQuestion.id] || []).length + 1,
-        progressId: progress.id
+        progressId: progress?.id || 0
       });
 
       const data = await res.json();
@@ -477,6 +523,34 @@ const ActiveQuiz = () => {
   };
 
   const handleFinishQuiz = async () => {
+    if (isChiqui) {
+      try {
+        const score = studentAnswers.length > 0 ? Number(((studentAnswers.filter(a => a.isCorrect).length / studentAnswers.length) * 10).toFixed(1)) : 0;
+
+        await apiRequest("POST", "/api/chiquitest/result", {
+          categoryId: parseInt(categoryId!),
+          score: score,
+          answers: studentAnswers
+        });
+
+        toast({
+          title: "¡Repasito completado!",
+          description: `Tu nota: ${score}/10. ¡Sigue así!`,
+        });
+
+        queryClient.invalidateQueries({ queryKey: ["chiqui-results"] });
+        setChiquiScore(score);
+        setShowChiquiResult(true);
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'No se pudo guardar el resultado del Repasito.',
+          variant: 'destructive',
+        });
+      }
+      return;
+    }
+
     if (!progress || !quiz) return;
 
     try {
@@ -533,7 +607,7 @@ const ActiveQuiz = () => {
     }
   };
 
-  if (loadingQuiz || loadingQuestions) {
+  if ((!isChiqui && loadingQuiz) || loadingQuestions) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-slate-950">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -563,6 +637,126 @@ const ActiveQuiz = () => {
     return acc;
   }, {}) || {};
 
+  if (showChiquiResult && isChiqui) {
+    const correctCount = studentAnswers.filter(a => a.isCorrect).length;
+    const totalCount = questions?.length || 0;
+    const failedAnswers = studentAnswers.filter(a => !a.isCorrect);
+
+    const handleRequestExplanation = (questionId: number, question: string, correctAnswer: string) => {
+      setCurrentExplanation({ questionId, question, correctAnswer });
+      setShowExplanation(true);
+    };
+
+    return (
+      <div className="min-h-screen bg-[#0a0b14] p-4 md:p-8 flex items-center justify-center">
+        <div className="max-w-3xl w-full">
+          <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-8 backdrop-blur-xl shadow-2xl text-center relative overflow-hidden">
+            {/* Background Glow */}
+            <div className="absolute -top-24 -left-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl" />
+            <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl" />
+
+            <div className="relative z-10 space-y-8 text-left">
+              <div className="flex flex-col items-center">
+                <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-5 rounded-3xl shadow-lg shadow-yellow-500/20 transform hover:scale-110 transition-transform duration-300 mb-6">
+                  <Trophy className="w-12 h-12 text-slate-900" />
+                </div>
+                <h2 className="text-3xl font-bold text-white mb-2">¡Repasito Completado!</h2>
+                <p className="text-slate-400">Has fortalecido tus conocimientos hoy</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-950/50 p-6 rounded-2xl border border-white/5 text-center">
+                  <div className="text-4xl font-black text-blue-400 mb-1">{chiquiScore}/10</div>
+                  <div className="text-xs uppercase tracking-wider font-bold text-slate-500">Nota Final</div>
+                </div>
+                <div className="bg-slate-950/50 p-6 rounded-2xl border border-white/5 text-center">
+                  <div className="text-4xl font-black text-emerald-400 mb-1">{correctCount}/{totalCount}</div>
+                  <div className="text-xs uppercase tracking-wider font-bold text-slate-500">Aciertos</div>
+                </div>
+              </div>
+
+              <div className="bg-slate-950/30 p-4 rounded-xl border border-white/5 flex items-center justify-center gap-3 text-slate-300">
+                <Clock className="w-4 h-4 text-purple-400" />
+                <span className="text-sm font-medium">Tiempo total: {formatTotalTime(getTotalTime())}</span>
+              </div>
+
+              {failedAnswers.length > 0 && (
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                  <h3 className="text-lg font-bold text-slate-200 flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                    Revisión de Errores ({failedAnswers.length})
+                  </h3>
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    {failedAnswers.map((answer, index) => {
+                      const question = questions.find(q => q.id === answer.questionId);
+                      if (!question) return null;
+                      const correctAnswer = question.answers?.find(a => a.isCorrect);
+
+                      return (
+                        <div key={index} className="bg-slate-950/40 border border-white/5 rounded-2xl p-5 space-y-4">
+                          <div className="text-sm text-slate-300 font-medium">
+                            <ContentRenderer content={question.content} />
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between pt-2 border-t border-white/5">
+                            <div className="bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-lg">
+                              <span className="text-[10px] text-green-400 font-bold uppercase tracking-wider block mb-0.5">Correcta:</span>
+                              <div className="text-xs text-white font-medium">
+                                <ContentRenderer content={correctAnswer?.content || ''} />
+                              </div>
+                            </div>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRequestExplanation(
+                                question.id,
+                                question.content,
+                                correctAnswer?.content || ''
+                              )}
+                              className="border-white/10 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white h-9 px-4 rounded-xl transition-all"
+                            >
+                              <BookOpen className="h-4 w-4 mr-2 text-blue-400" />
+                              Explicación
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4 pt-4">
+                <Button
+                  onClick={() => setLocation("/dashboard")}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white h-14 rounded-2xl text-lg font-bold shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98]"
+                >
+                  <Home className="mr-2 w-5 h-5" />
+                  Volver al Inicio
+                </Button>
+
+                <p className="text-slate-500 text-sm text-center">
+                  Tus resultados han sido guardados y se verán reflejados en tu tablero.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {showExplanation && currentExplanation && (
+          <ExplanationModal
+            questionId={currentExplanation.questionId}
+            question={currentExplanation.question}
+            correctAnswer={currentExplanation.correctAnswer}
+            quizTitle="Repasito Diario"
+            onClose={() => setShowExplanation(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 relative overflow-hidden">
       {/* Ambient Background */}
@@ -585,8 +779,8 @@ const ActiveQuiz = () => {
               </Button>
             </div>
             <h1 className="text-2xl font-bold flex items-center gap-2 text-white">
-              {quiz?.title}
-              {session?.userId === 1 && (
+              {isChiqui ? "⚡ Repasito Diario" : quiz?.title}
+              {session?.userId === 1 && !isChiqui && (
                 <Badge variant="outline" className="text-yellow-500 border-yellow-500/50 bg-yellow-500/10">
                   Modo Admin - Sin Guardar
                 </Badge>

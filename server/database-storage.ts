@@ -9,6 +9,7 @@
   type StudentAnswer, type InsertStudentAnswer,
   questionReports, type QuestionReport, type InsertQuestionReport,
   passwordResetTokens, type PasswordResetToken, type InsertPasswordResetToken,
+  chiquiResults
 } from "../shared/schema.js";
 
 import { db, DbClient } from "./db.js";
@@ -1524,5 +1525,95 @@ export class DatabaseStorage implements IStorage {
           .where(eq(categories.id, order.id));
       }
     });
+  }
+
+  // ChiquiTest methods
+  async getChiquiQuestions(userId: number, categoryId: number): Promise<any[]> {
+    // 1. Get all completed quiz IDs for this user
+    const completedProgress = await this.db.select({ quizId: studentProgress.quizId })
+      .from(studentProgress)
+      .where(and(eq(studentProgress.userId, userId), eq(studentProgress.status, 'completed')));
+
+    if (completedProgress.length === 0) return [];
+
+    const completedQuizIds = completedProgress.map(p => p.quizId);
+
+    // 2. Get questions from these quizzes that belong to the category
+    const categoryQuizzes = await this.db.select({ id: quizzes.id })
+      .from(quizzes)
+      .where(and(eq(quizzes.categoryId, categoryId), inArray(quizzes.id, completedQuizIds)));
+
+    if (categoryQuizzes.length === 0) return [];
+
+    const categoryQuizIds = categoryQuizzes.map(q => q.id);
+
+    const questionsList = await this.db.select()
+      .from(questions)
+      .where(inArray(questions.quizId, categoryQuizIds));
+
+    if (questionsList.length === 0) return [];
+
+    // 3. Deterministic shuffle
+    const today = new Date();
+    // Use manual date string to avoid timezone issues with toISOString().split('T')[0]
+    const dateSeed = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+    const seed = `${userId}-${categoryId}-${dateSeed}`;
+
+    // Sort by a hash of (question.id + seed)
+    const sortedQuestions = [...questionsList].sort((a, b) => {
+      const hashA = this.simpleHash(`${a.id}-${seed}`);
+      const hashB = this.simpleHash(`${b.id}-${seed}`);
+      return hashA - hashB;
+    });
+
+    const selectedQuestions = sortedQuestions.slice(0, 5);
+
+    // 4. Load options for each question
+    const questionIds = selectedQuestions.map(q => q.id);
+    const optionsRaw = await this.db.select()
+      .from(answers)
+      .where(inArray(answers.questionId, questionIds));
+
+    return selectedQuestions.map(q => ({
+      ...q,
+      answers: optionsRaw.filter(opt => opt.questionId === q.id).map(opt => ({
+        id: opt.id,
+        content: opt.content,
+        isCorrect: opt.isCorrect,
+      }))
+    }));
+  }
+
+  async saveChiquiResult(userId: number, categoryId: number, score: number, answers: any[]): Promise<void> {
+    await this.db.insert(chiquiResults)
+      .values({
+        userId,
+        categoryId,
+        lastScore: score,
+        lastDate: new Date(),
+        lastAnswers: answers
+      })
+      .onConflictDoUpdate({
+        target: [chiquiResults.userId, chiquiResults.categoryId],
+        set: {
+          lastScore: score,
+          lastDate: new Date(),
+          lastAnswers: answers
+        }
+      });
+  }
+
+  async getChiquiResults(userId: number): Promise<any[]> {
+    return this.db.select().from(chiquiResults).where(eq(chiquiResults.userId, userId));
+  }
+
+  private simpleHash(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
   }
 }

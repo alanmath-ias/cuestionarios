@@ -18,6 +18,7 @@ import {
   ClipboardList,
   PlayCircle,
   MessageCircle,
+  MessageSquare,
   AlertTriangle,
   Sparkles,
   Youtube,
@@ -39,14 +40,24 @@ import {
   Clock,
   Flame,
   Star,
-  Book
+  Book,
+  Zap
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation, useParams } from "wouter";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 import VideoEmbed from "../VideoEmbed"; // Relative import since both are in src/pages (parent is subdir)
 import { QuizDetailsDialog } from "@/components/dialogs/QuizDetailsDialog";
+import { HorizontalRoadmap } from "@/components/roadmap/HorizontalRoadmap";
+import { RoadmapNode } from "@/types/types";
+import { arithmeticMapNodes } from "@/data/arithmetic-map-data";
+import { algebraMapNodes } from "@/data/algebra-map-data";
+import { calculusMapNodes } from "@/data/calculus-map-data";
+import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
 import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
 import { startParentDashboardTour } from "@/lib/tour";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -57,6 +68,7 @@ interface QuizWithFeedback extends UserQuiz {
   reviewed?: boolean;
   completedAt?: string | Date;
   score?: number;
+  progress?: number;
   timeSpent?: number;
   feedback?: string;
   userStatus?: string;
@@ -79,6 +91,12 @@ async function fetchChildCategories(childId: string) {
 async function fetchChildQuizzes(childId: string) {
   const response = await fetch(`/api/user/quizzes?user_id=${childId}`, { credentials: "include" });
   if (!response.ok) throw new Error("Error al obtener cuestionarios del hijo");
+  return response.json();
+}
+
+async function fetchAllQuizzes() {
+  const response = await fetch("/api/quizzes", { credentials: "include" });
+  if (!response.ok) throw new Error("Error al obtener todos los cuestionarios");
   return response.json();
 }
 
@@ -219,36 +237,31 @@ function StatCard({
 }
 
 function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback; onClick: (quiz: QuizWithFeedback) => void }) {
-  const hasFeedback = !!quiz.reviewed || !!quiz.feedback;
+  const hasFeedback = (quiz.feedback && quiz.feedback.length > 0) || quiz.reviewed;
 
   return (
     <div
       onClick={() => onClick(quiz)}
-      className={`group flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:shadow-[0_0_15px_-3px_rgba(16,185,129,0.15)] ${hasFeedback
-        ? "bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20"
-        : "bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-emerald-500/30"
-        }`}
+      className="group flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-slate-800/40 cursor-pointer transition-all hover:bg-slate-800/60"
     >
-      <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${hasFeedback ? "bg-emerald-500/20 text-emerald-400" : "bg-green-500/20 text-green-400"
-        }`}>
-        <CheckCircle2 className="h-5 w-5" />
+      <div className="h-10 w-10 rounded-full bg-slate-900/50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+        {hasFeedback ? <MessageSquare className="h-5 w-5 text-emerald-400" /> : <CheckCircle2 className="h-5 w-5 text-green-400" />}
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-semibold text-sm text-slate-200 truncate">{quiz.title}</h4>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span>{quiz.difficulty}</span>
-          {quiz.score !== undefined && (
-            <span className={quiz.score >= 70 ? "text-green-400" : "text-yellow-400"}>
-              • {quiz.score !== undefined ? Number(quiz.score).toFixed(1) : '-'} / 10
+        <h4 className="font-semibold text-sm text-slate-200 transition-colors line-clamp-3 group-hover:text-white">{quiz.title}</h4>
+        <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+          <span className="truncate max-w-[120px]">{quiz.difficulty} • {new Date(quiz.completedAt || '').toLocaleDateString()}</span>
+          {hasFeedback && (
+            <span className="flex items-center gap-1 text-emerald-400 font-bold animate-pulse shrink-0">
+              <MessageSquare className="w-3 h-3" /> Comentario
             </span>
           )}
         </div>
       </div>
-      {(quiz.reviewed || hasFeedback) && (
-        <div className="bg-emerald-500/20 px-2 py-1 rounded text-[10px] text-emerald-300 border border-emerald-500/30">
-          Comentario
-        </div>
-      )}
+      <div className="text-right shrink-0 self-start mt-1">
+        <span className={`block text-sm font-bold ${hasFeedback ? "text-emerald-400" : "text-green-400"}`}>{Number(quiz.score || 0).toFixed(1)}/10</span>
+      </div>
+      <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-slate-400 shrink-0" />
     </div>
   );
 }
@@ -268,6 +281,21 @@ export default function ParentDashboard() {
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [quizSearchQuery, setQuizSearchQuery] = useState("");
   const { toast } = useToast();
+  const [expandedRoadmapCategoryId, setExpandedRoadmapCategoryId] = useState<number | null>(null);
+  const activeCategoryId = expandedRoadmapCategoryId;
+
+  // Helper to get map nodes based on category
+  const getMapNodes = (catId: number | null) => {
+    if (!catId) return [];
+    const category = categories?.find(c => c.id === catId);
+    const name = category?.name.toLowerCase() || "";
+
+    if (catId === 1 || name.includes("aritmética")) return arithmeticMapNodes;
+    if (catId === 2 || name.includes("álgebra")) return algebraMapNodes;
+    if (catId === 4 || name.includes("diferencial")) return calculusMapNodes;
+    if (catId === 5 || name.includes("integral")) return integralCalculusMapNodes;
+    return [];
+  };
 
   const queryOptions = {
     refetchOnWindowFocus: true,
@@ -295,16 +323,38 @@ export default function ParentDashboard() {
     enabled: !!childId,
   });
 
+  // Sort categories by ID for consistent display (mirroring Student Dashboard)
+  const sortedCategories = useMemo(() => {
+    if (!categories) return [];
+    return [...categories].sort((a, b) => a.id - b.id);
+  }, [categories]);
+
   const { data: quizzes, isLoading: loadingQuizzes } = useQuery<QuizWithFeedback[]>({
     queryKey: ["child-quizzes", childId],
     queryFn: () => fetchChildQuizzes(childId),
     enabled: !!childId,
   });
 
+  const { data: allQuizzes } = useQuery<any[]>({
+    queryKey: ["all-quizzes"],
+    queryFn: fetchAllQuizzes,
+  });
+
   const { data: alerts } = useQuery({
     queryKey: ["child-alerts", childId],
     queryFn: () => fetchChildAlerts(childId),
     enabled: !!childId,
+  });
+
+  const { data: chiquiResults } = useQuery<any[]>({
+    queryKey: ["child-chiquitest-results", childId],
+    queryFn: async () => {
+      const res = await fetch("/api/parent/child/chiquitest/results", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!childId,
+    ...queryOptions,
   });
 
   // Fetch Subcategories for selected category
@@ -320,11 +370,153 @@ export default function ParentDashboard() {
     enabled: !!selectedCategoryForDetails,
   });
 
-  // Filter quizzes for the selected category (using existing quizzes data)
-  const categoryQuizzes = useMemo<QuizWithFeedback[]>(() => {
-    if (!selectedCategoryForDetails || !quizzes) return [];
-    return quizzes.filter(q => Number(q.categoryId) === Number(selectedCategoryForDetails.id));
-  }, [selectedCategoryForDetails, quizzes]);
+  // Roadmap specific data (Calculated from allQuizzes and child progress)
+  const activeCategoryQuizzesRoadmap = useMemo(() => {
+    if (!activeCategoryId || !allQuizzes) return [];
+    return allQuizzes.filter(q => Number(q.categoryId) === Number(activeCategoryId));
+  }, [activeCategoryId, allQuizzes]);
+
+  const { data: activeCategorySubcategoriesRoadmap } = useQuery<any[]>({
+    queryKey: ["category-subcategories-roadmap", activeCategoryId],
+    queryFn: async () => {
+      if (!activeCategoryId) return [];
+      const res = await fetch(`/api/admin/subcategories/by-category/${activeCategoryId}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!activeCategoryId,
+  });
+
+  // Filter quizzes for the selected category (using allQuizzes for complete view)
+  const categoryQuizzes = useMemo(() => {
+    if (!selectedCategoryForDetails || !allQuizzes) return [];
+    const allCatQuizzes = allQuizzes.filter(q => Number(q.categoryId) === Number(selectedCategoryForDetails.id));
+
+    // Enrich with child's progress/status if available
+    return allCatQuizzes.map(q => {
+      const childVersion = quizzes?.find(cq => cq.id === q.id);
+      return {
+        ...q,
+        userStatus: childVersion?.userStatus || 'unassigned',
+        score: childVersion?.score,
+        completedAt: childVersion?.completedAt,
+        progress: childVersion?.progress,
+        progressId: childVersion?.progressId // childVersion.progressId IS correctly returned by getQuizzesByUserId
+      };
+    }) as QuizWithFeedback[];
+  }, [selectedCategoryForDetails, allQuizzes, quizzes]);
+
+  // Calculate Roadmap Nodes for Parent View (Read-Only)
+  const roadmapNodes: RoadmapNode[] = useMemo(() => {
+    const rawNodes = ((activeCategoryId ? getMapNodes(activeCategoryId) : []) as any[]);
+
+    // 1. First pass: Calculate individual node content and status
+    const processedNodes = rawNodes.map((node) => {
+      const categoryQuizzes = activeCategoryQuizzesRoadmap || [];
+      let nodeQuizzes = categoryQuizzes.filter(q => q.subcategoryId == node.subcategoryId) || [];
+
+      if (node.filterKeywords && node.filterKeywords.length > 0) {
+        const keywords = node.filterKeywords.map((k: string) => k.toLowerCase());
+        nodeQuizzes = nodeQuizzes.filter(q => {
+          const titleLower = q.title.toLowerCase();
+          if (!keywords.some((k: string) => titleLower.includes(k))) return false;
+          if (node.excludeKeywords && node.excludeKeywords.length > 0) {
+            const excludeKeys = node.excludeKeywords.map((k: string) => k.toLowerCase());
+            if (excludeKeys.some((k: string) => titleLower.includes(k))) return false;
+          }
+          return true;
+        });
+      }
+
+      let progressPercent = 0;
+      if (nodeQuizzes.length > 0 && quizzes) {
+        const completedCount = nodeQuizzes.filter(q =>
+          quizzes.some(uq => uq.id === q.id && uq.userStatus === 'completed')
+        ).length;
+        progressPercent = (completedCount / nodeQuizzes.length) * 100;
+      }
+
+      let status: 'locked' | 'available' | 'completed' = 'locked';
+      if (nodeQuizzes.length > 0) {
+        status = progressPercent >= 100 ? 'completed' : 'available';
+      }
+
+      return {
+        ...node,
+        nodeQuizzes,
+        progressPercent,
+        calculatedStatus: status
+      };
+    });
+
+    // 2. Second pass: Grouping and Parent status aggregation
+    const groupNodes: Record<string | number, any[]> = {};
+    let currentParent: any = null;
+
+    processedNodes.forEach(node => {
+      const isParent = node.behavior === 'container' || node.type === 'parent' || node.type === 'critical';
+      if (isParent) {
+        currentParent = node;
+        groupNodes[node.id] = [];
+      } else if (currentParent) {
+        if (currentParent && groupNodes[currentParent.id]) {
+          groupNodes[currentParent.id].push(node);
+        }
+      }
+    });
+
+    // 3. Third pass: Construct final RoadmapNode objects
+    return processedNodes.map((node) => {
+      const isParent = node.behavior === 'container' || node.type === 'parent' || node.type === 'critical';
+      let finalStatus: 'locked' | 'available' | 'completed' = node.calculatedStatus;
+
+      if (isParent) {
+        const children = groupNodes[node.id] || [];
+        if (children.length > 0) {
+          const allLocked = children.every(c => c.calculatedStatus === 'locked');
+          const allCompleted = children.every(c => c.calculatedStatus === 'completed');
+          const anyAvailable = children.some(c => c.calculatedStatus === 'available' || c.calculatedStatus === 'completed');
+
+          if (allLocked && node.calculatedStatus === 'locked') {
+            finalStatus = 'locked';
+          } else if (allCompleted) {
+            finalStatus = 'completed';
+          } else if (anyAvailable) {
+            finalStatus = 'available';
+          }
+        }
+      }
+
+      const hasContent = node.nodeQuizzes.length > 0 || isParent;
+
+      return {
+        id: node.id || `node-${Math.random()}`,
+        title: node.label || 'Sin título',
+        description: node.description || '',
+        status: finalStatus,
+        type: 'subcategory',
+        nodeType: node.type,
+        behavior: node.behavior,
+        progress: node.progressPercent,
+        hasContent: hasContent,
+        onClick: () => {
+          if (node.nodeQuizzes.length > 0) {
+            const cat = categories?.find(c => c.id === activeCategoryId);
+            if (cat) {
+              setSelectedCategoryForDetails(cat);
+              const sub = activeCategorySubcategoriesRoadmap?.find(s => s.id === node.subcategoryId);
+              if (sub) {
+                handleSubcategorySelect(sub);
+              } else {
+                setQuizSearchQuery(node.label || '');
+              }
+            }
+          }
+        }
+      };
+    });
+  }, [activeCategoryId, activeCategoryQuizzesRoadmap, activeCategorySubcategoriesRoadmap, quizzes, categories]);
 
   const handleCategorySelect = (category: Category | null) => {
     setSelectedCategoryForDetails(category);
@@ -479,13 +671,141 @@ export default function ParentDashboard() {
         )}
       </div>
 
+      {/* Stars Navigation & Roadmap */}
+      <div id="parent-roadmap-section" className="mb-8 space-y-4">
+        {/* Stars Navigation */}
+        <div className="flex items-center justify-center gap-4 py-4 flex-wrap">
+          {sortedCategories.map((category) => {
+            const categoryResult = chiquiResults?.find(r => r.categoryId === category.id);
+            const lastScore = categoryResult?.lastScore;
+            const lastDate = categoryResult?.lastDate;
+            const isDoneToday = lastDate ? new Date(lastDate).toDateString() === new Date().toDateString() : false;
+
+            return (
+              <div key={category.id} className="flex flex-col items-center gap-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <motion.button
+                        whileHover={{ scale: 1.2, rotate: 15 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setExpandedRoadmapCategoryId(expandedRoadmapCategoryId === category.id ? null : category.id)}
+                        className={cn(
+                          "relative p-3 rounded-full transition-all duration-300 border shadow-sm",
+                          expandedRoadmapCategoryId === category.id
+                            ? "bg-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.5)] border-yellow-500/50"
+                            : "bg-blue-600/10 border-blue-500/20 hover:bg-slate-800 hover:border-blue-500/40 hover:shadow-blue-500/20"
+                        )}
+                      >
+                        <Star
+                          className={cn(
+                            "w-8 h-8 transition-all duration-300 drop-shadow-sm",
+                            expandedRoadmapCategoryId === category.id
+                              ? "text-yellow-400 fill-yellow-400 animate-pulse"
+                              : "text-blue-500 fill-blue-500/10 group-hover:text-yellow-500 group-hover:fill-yellow-500/20"
+                          )}
+                        />
+                        {/* Active Indicator Dot */}
+                        {expandedRoadmapCategoryId === category.id && (
+                          <motion.div
+                            layoutId="activeStarDot"
+                            className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-yellow-500"
+                          />
+                        )}
+                      </motion.button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-slate-900 border-slate-800 text-yellow-200 font-bold">
+                      <p>Camino de {parentChild?.child_name || 'Hijo'} en {category.name}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                {/* ChiquiTest (Repasito) Rayo Button */}
+                <div className="flex flex-col items-center gap-1 group/repasito">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <motion.button
+                          onClick={() => {
+                            if (isDoneToday) {
+                              setLocation(`/quiz/chiqui/${category.id}?user_id=${childId}`);
+                            }
+                          }}
+                          className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all border",
+                            isDoneToday
+                              ? "bg-slate-800/80 text-yellow-500 border-yellow-500/20 shadow-none cursor-pointer"
+                              : "bg-slate-800/40 text-slate-500 border-slate-700 shadow-none cursor-default opacity-50"
+                          )}
+                        >
+                          <Zap className={cn("w-5 h-5", isDoneToday && "fill-current")} />
+                        </motion.button>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-slate-900 border-slate-800 text-white font-medium p-3 rounded-xl shadow-2xl">
+                        <div className="space-y-1">
+                          <p className="font-bold text-yellow-400 flex items-center gap-1">
+                            <Zap className="w-3 h-3 fill-current" /> Repasito Diario
+                          </p>
+                          <p className="text-xs text-slate-300">Progreso del Estudiante</p>
+                          {isDoneToday ? (
+                            <p className="text-[10px] text-emerald-400 font-bold mt-1">Ver resultados del día</p>
+                          ) : (
+                            <p className="text-[10px] text-slate-400 font-bold mt-1">lo siento, tu hijo no ha repasado hoy</p>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {/* Permanent Score Display */}
+                  <div className={cn(
+                    "text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border whitespace-nowrap",
+                    isDoneToday
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                      : "bg-slate-800 text-slate-500 border-white/5"
+                  )}>
+                    {lastScore !== undefined ? `${lastScore}/10` : "0/10"}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Roadmap Display Area */}
+        <AnimatePresence mode="wait">
+          {expandedRoadmapCategoryId && (
+            <motion.div
+              key={expandedRoadmapCategoryId}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden bg-slate-900/40 border border-blue-500/10 rounded-3xl backdrop-blur-md"
+            >
+              <HorizontalRoadmap
+                nodes={roadmapNodes}
+                title={`Progreso de ${parentChild?.child_name || 'Hijo'}`}
+                categoryName={categories?.find(c => c.id === expandedRoadmapCategoryId)?.name}
+                onClose={() => setExpandedRoadmapCategoryId(null)}
+              />
+              <div className="px-6 pb-6 text-center">
+                <p className="text-xs text-slate-500 italic flex items-center justify-center gap-2">
+                  <Star className="w-3 h-3 text-yellow-500" />
+                  Haz clic en los temas para ver los cuestionarios y resultados del estudiante (Solo lectura).
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         <div className="lg:col-span-2 space-y-6">
 
           {/* 1. Actividad Reciente */}
-          <div id="tour-parent-recent" className="rounded-3xl bg-slate-900/50 border border-emerald-500/20 backdrop-blur-sm shadow-lg shadow-emerald-900/20 p-5 h-[320px] flex flex-col relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl -z-10 transition-all duration-700 group-hover:bg-emerald-500/20" />
+          <div id="tour-parent-recent" className="rounded-3xl bg-slate-900/60 border border-white/5 shadow-2xl p-5 h-[320px] flex flex-col relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-3xl -z-10 transition-all duration-700 group-hover:bg-white/10" />
 
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg text-emerald-100 flex items-center gap-2">
@@ -610,7 +930,7 @@ export default function ParentDashboard() {
 
             <ScrollArea className="flex-1 -mr-3 pr-3">
               <div className="space-y-3">
-                {categories?.map((category) => (
+                {sortedCategories.map((category) => (
                   <div
                     key={category.id + "-cat"}
                     className="group relative overflow-hidden rounded-xl border transition-all duration-300 bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-rose-500/30 hover:shadow-[0_0_15px_-3px_rgba(244,63,94,0.15)] max-w-full"
@@ -647,16 +967,16 @@ export default function ParentDashboard() {
                           <ListChecks className="w-3.5 h-3.5 mr-1.5" />
                           Temas
                         </Button>
-                        <Link href={`/category/${category.id}?view=roadmap&user_id=${childId}`}>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 px-3 text-xs font-medium bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all whitespace-nowrap"
-                          >
-                            <MapIcon className="w-3.5 h-3.5 mr-1.5" />
-                            Mapa
-                          </Button>
-                        </Link>
+
+                        <Button
+                          size="sm"
+                          className="h-8 px-3 text-xs font-medium bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all whitespace-nowrap"
+                          onClick={() => setLocation(`/category/${category.id}?user_id=${childId}&view=roadmap`)}
+                          title="Ver mapa de progreso"
+                        >
+                          <MapIcon className="w-3.5 h-3.5 mr-1.5" />
+                          Mapa
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -679,7 +999,7 @@ export default function ParentDashboard() {
               total={quizzes?.length || 0}
               completed={completedQuizzes.length}
               breakdown={Object.fromEntries(
-                categories?.map((c: any) => [c.name, quizzes?.filter((q: any) => q.categoryId === c.id && q.userStatus === 'completed').length || 0]) || []
+                sortedCategories.map((c: any) => [c.name, quizzes?.filter((q: any) => q.categoryId === c.id && q.userStatus === 'completed').length || 0]) || []
               )}
             />
           </div>
@@ -958,10 +1278,15 @@ export default function ParentDashboard() {
                             <div className="flex items-center gap-2 shrink-0">
                               <Button
                                 size="sm"
-                                className="h-8 px-3 text-xs bg-slate-700 hover:bg-slate-600 text-white"
-                                onClick={() => setLocation(`/quiz/${quiz.id}?mode=readonly`)}
+                                className={cn(
+                                  "h-8 px-3 text-xs border-none shadow-sm transition-all",
+                                  isCompleted
+                                    ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    : "bg-slate-700 hover:bg-slate-600 text-white"
+                                )}
+                                onClick={() => isCompleted ? handleViewResults(quiz) : setLocation(`/quiz/${quiz.id}?mode=readonly`)}
                               >
-                                Ver (Solo Lectura)
+                                {isCompleted ? "Ver resultados" : "Ver (Solo Lectura)"}
                               </Button>
                             </div>
                           </div>

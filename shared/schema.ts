@@ -326,6 +326,17 @@ export const questionReports = pgTable("question_reports", {
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const chiquiResults = pgTable("chiqui_results", {
+	id: serial().primaryKey().notNull(),
+	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	categoryId: integer("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
+	lastScore: real().notNull(),
+	lastDate: timestamp("last_date").defaultNow().notNull(),
+	lastAnswers: jsonb("last_answers").$type<any[]>().default([]),
+}, (table) => [
+	unique("chiqui_userId_categoryId_unique").on(table.userId, table.categoryId),
+]);
+
 // Types exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
