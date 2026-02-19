@@ -62,8 +62,19 @@ interface Progress {
 
 // Componente para renderizar contenido con saltos de línea y matemáticas
 const QuestionContent = ({ content }: { content: string }) => {
+  // Helper to determine font size class based on question content length
+  const getQuestionSizeClass = (text: string) => {
+    // Remove LaTeX delimiters to estimate "visual" length more accurately
+    const cleanContent = text.replace(/\\frac|\\{|\\}|\$|¡/g, '');
+    const length = cleanContent.length;
+
+    if (length < 50) return "text-2xl md:text-3xl font-bold"; // Short questions (e.g. "Simplificar:")
+    if (length < 100) return "text-xl md:text-2xl"; // Medium questions
+    return "text-lg md:text-xl"; // Long questions (maintain readability)
+  };
+
   return (
-    <div className="text-lg md:text-xl mb-8 text-slate-200 leading-relaxed">
+    <div className={`mb-8 text-slate-200 leading-relaxed transition-all duration-300 ${getQuestionSizeClass(content)}`}>
       <ContentRenderer content={content} />
     </div>
   );
@@ -131,7 +142,7 @@ const ActiveQuiz = () => {
     enabled: !!quizId || !!categoryId,
   });
 
-  const { data: progress } = useQuery<Progress>({
+  const { data: progress, isLoading: loadingProgress } = useQuery<Progress>({
     queryKey: isChiqui ? ["chiqui-progress-placeholder"] : [`/api/progress/${quizId}`],
     enabled: !isChiqui && !!quizId && !!session?.userId,
   });
@@ -290,10 +301,22 @@ const ActiveQuiz = () => {
     }
   }, [questions, currentQuestionIndex]);
 
+  // Helper to determine font size class based on answer content length
+  const getAnswerSizeClass = (content: string) => {
+    // Remove LaTeX delimiters to estimate "visual" length more accurately
+    const cleanContent = content.replace(/\\frac|\\{|\\}|\$|¡/g, '');
+    const length = cleanContent.length;
+
+    if (length < 10) return "text-2xl md:text-3xl"; // Huge on desktop, Large on mobile
+    if (length < 40) return "text-xl md:text-2xl";  // Large on desktop, Medium on mobile
+    if (length < 70) return "text-lg md:text-xl";   // Medium on desktop, Normal+ on mobile
+    return "text-sm md:text-base";                  // Normal on desktop, Small on mobile (safe for long text)
+  };
+
   const isReadOnly = mode === 'readonly';
 
   useEffect(() => {
-    if (!isChiqui && quiz && session?.userId && !progress && session.userId !== 1 && !isReadOnly) {
+    if (!isChiqui && quiz && session?.userId && !loadingProgress && !progress && session.userId !== 1 && !isReadOnly) {
       createProgressMutation.mutate({
         userId: session.userId,
         quizId: parseInt(quizId!),
@@ -303,7 +326,7 @@ const ActiveQuiz = () => {
         mode: mode || 'standard'
       });
     }
-  }, [quiz, session, progress, quizId, isReadOnly, isChiqui]);
+  }, [quiz, session, progress, loadingProgress, quizId, isReadOnly, isChiqui]);
 
   useEffect(() => {
     if (!loadingQuiz && !loadingQuestions && session?.userId && !session.tourStatus?.activeQuiz) {
@@ -978,7 +1001,7 @@ const ActiveQuiz = () => {
                         `}>
                         {String.fromCharCode(65 + index)}
                       </div>
-                      <div className="text-base font-medium flex-1">
+                      <div className={`font-medium flex-1 ${getAnswerSizeClass(answer.content)}`}>
                         <ContentRenderer content={answer.content} />
                       </div>
                     </div>
