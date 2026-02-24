@@ -182,7 +182,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
         }
 
         // If locked content -> Do nothing (Visual feedback handled by UI)
-        if (isLocked) return;
+        if (isLocked && node.level !== 33) return;
 
         // Otherwise open functionality
         onNodeClick(node);
@@ -610,7 +610,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                             const isAvailable = status === 'available';
                                             const isCompleted = status === 'completed';
                                             const isInProgress = status === 'in_progress';
-                                            const isLocked = status === 'locked';
+                                            const isLocked = status === 'locked' && node.level !== 33;
 
                                             const isHighlighted = highlightedSet.has(node.id);
 
@@ -644,8 +644,8 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                                     (node.type === 'critical' && node.behavior === 'container') ? 'hexagon-mask' :
                                                                         node.behavior === 'container' ? 'rotate-45 rounded-2xl' : 'rounded-full',
 
-                                                                    isLocked && "cursor-not-allowed shadow-[0_0_20px_rgba(245,158,11,0.3)]",
-                                                                    !isLocked && "cursor-pointer",
+                                                                    (node.level !== 33 && isLocked) && "cursor-not-allowed shadow-[0_0_20px_rgba(245,158,11,0.3)]",
+                                                                    (node.level === 33 || !isLocked) && "cursor-pointer",
 
                                                                     isHighlighted ? "ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_40px_rgba(251,191,36,0.6)] scale-110" : "",
                                                                     !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
@@ -678,6 +678,13 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                                 <div className={cn("flex items-center justify-center", node.behavior === 'container' && !(node.type === 'critical' && node.behavior === 'container') && "-rotate-45")}>
                                                                     {isCompleted ? (
                                                                         <CheckCircle className="w-8 h-8 text-green-400" />
+                                                                    ) : node.level === 33 ? (
+                                                                        <motion.div
+                                                                            animate={{ rotate: [0, 10, -10, 0] }}
+                                                                            transition={{ repeat: Infinity, duration: 2 }}
+                                                                        >
+                                                                            <Crown className="w-10 h-10 text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
+                                                                        </motion.div>
                                                                     ) : isLocked ? (
                                                                         <Construction className="w-8 h-8 text-amber-500" />
                                                                     ) : (
@@ -698,7 +705,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                                 </div>
                                                             </motion.button>
 
-                                                            {isLocked && (
+                                                            {isLocked && node.level !== 33 && (
                                                                 <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-slate-400 text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none border border-slate-700 z-50">
                                                                     Próximamente
                                                                 </div>

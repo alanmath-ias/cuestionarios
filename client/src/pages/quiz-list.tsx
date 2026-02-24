@@ -1,7 +1,8 @@
+import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { QuizCard } from '@/components/dashboard/quiz-card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle, Map as MapIcon, LayoutGrid, Search, CheckCircle2, Ban } from 'lucide-react';
+import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle, Map as MapIcon, LayoutGrid, Search, CheckCircle2, Ban, Crown, Sparkles, Trophy, Gamepad2 } from 'lucide-react';
 import { useParams, useLocation } from 'wouter';
 import { calculatePercentage } from '@/lib/mathUtils';
 import { cn } from '@/lib/utils';
@@ -11,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import VideoEmbed from './VideoEmbed';
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { RoadmapView } from '@/components/roadmap/RoadmapView';
 import { SkillTreeView } from '@/components/roadmap/SkillTreeView';
@@ -78,6 +79,7 @@ function QuizList() {
   const [selectedNode, setSelectedNode] = useState<ArithmeticNode | null>(null);
   const [highlightedQuizId, setHighlightedQuizId] = useState<number | null>(null);
   const [quizSearchQuery, setQuizSearchQuery] = useState("");
+  const [showMasteryDialog, setShowMasteryDialog] = useState(false);
   const videoSectionRef = useRef<HTMLDivElement>(null);
 
   // Update view mode if URL changes (e.g. back button)
@@ -162,6 +164,14 @@ function QuizList() {
       quizzes: quizzes?.filter(quiz => quiz.subcategoryId === subcategory.id) || [],
     }))
     : [];
+
+  const totalCategoryProgress = useMemo(() => {
+    if (!quizzes || quizzes.length === 0) return 0;
+    const completedCount = quizzes.filter(q =>
+      progress?.some(p => p.quizId === q.id && p.status === 'completed')
+    ).length;
+    return (completedCount / quizzes.length) * 100;
+  }, [quizzes, progress]);
 
   const getQuizProgress = (quizId: number) => {
     if (!progress) return null;
@@ -451,6 +461,10 @@ function QuizList() {
                   return map;
                 })()}
                 onNodeClick={(node, highlightedQuizId) => {
+                  if (node.level === 33) {
+                    setShowMasteryDialog(true);
+                    return;
+                  }
                   if (node.subcategoryId) {
                     // Find the actual subcategory object
                     const sub = quizzesBySubcategory.find(s => s.id === node.subcategoryId);
@@ -826,6 +840,117 @@ function QuizList() {
               Sí, iniciar versión Mini
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mastery Congratulations Dialog */}
+      <Dialog open={showMasteryDialog} onOpenChange={setShowMasteryDialog}>
+        <DialogContent className="bg-slate-950 border-yellow-500/30 text-slate-200 max-w-md overflow-hidden p-0 rounded-3xl">
+          <div className="relative p-8 flex flex-col items-center text-center overflow-hidden">
+            {/* Celebratory Background Particles (Simplified) */}
+            <div className="absolute inset-0 pointer-events-none">
+              <motion.div
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.1, 0.3, 0.1],
+                }}
+                transition={{ duration: 4, repeat: Infinity }}
+                className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-gradient-to-br from-yellow-500/10 via-purple-500/10 to-blue-500/10 rounded-full blur-3xl"
+              />
+            </div>
+
+            <motion.div
+              initial={{ scale: 0, rotate: -20 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", damping: 12 }}
+              className="relative mb-6"
+            >
+              <div className="absolute inset-0 bg-yellow-400/20 blur-2xl rounded-full" />
+              <div className="relative w-24 h-24 bg-gradient-to-b from-yellow-300 to-yellow-600 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(234,179,8,0.4)] border-4 border-yellow-200/50">
+                <Crown className="w-12 h-12 text-white drop-shadow-lg" />
+              </div>
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                className="absolute -inset-2 border-2 border-dashed border-yellow-500/30 rounded-full"
+              />
+            </motion.div>
+
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-3xl font-black text-white mb-2 tracking-tight"
+            >
+              {totalCategoryProgress >= 100 ? '¡ERES UN MAESTRO!' : 'CAMINO A LA MAESTRÍA'}
+            </motion.h2>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-slate-300 mb-8 leading-relaxed"
+            >
+              {totalCategoryProgress >= 100 ? (
+                <>Has completado todo el camino de <span className="text-yellow-400 font-bold">{category?.name}</span>. Tu dedicación y esfuerzo te han llevado a la cima.</>
+              ) : (
+                <>
+                  Estás progresando en <span className="text-yellow-400 font-bold">{category?.name}</span>.
+                  {totalCategoryProgress < 50 ? (
+                    <div className="mt-2 bg-blue-500/10 border border-blue-500/20 p-3 rounded-xl text-blue-200 text-sm">
+                      <p>💡 <strong>Recomendación:</strong> Te falta más de la mitad del contenido. Sería ideal completar más cuestionarios antes de este entrenamiento avanzado.</p>
+                    </div>
+                  ) : (
+                    <div className="mt-2 bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-xl text-yellow-200 text-sm">
+                      <p>🏁 <strong>Sugerencia:</strong> ¡Ya te falta poco! Puedes entrenar ahora, pero te recomendamos terminar los temas pendientes para dominar la materia.</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </motion.p>
+
+            <div className="flex flex-col gap-3 w-full relative z-10">
+              <Button
+                className="w-full h-14 rounded-2xl bg-gradient-to-r from-yellow-500 via-orange-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-white font-bold text-lg shadow-[0_10px_30px_rgba(234,179,8,0.3)] border-0 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                onClick={() => {
+                  setShowMasteryDialog(false);
+                  setLocation(`/training/${categoryId}`);
+                }}
+              >
+                <Gamepad2 className="w-5 h-5 mr-3" />
+                Entrenamiento Maestro
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="w-full text-slate-400 hover:text-white hover:bg-white/5"
+                onClick={() => setShowMasteryDialog(false)}
+              >
+                Volver al mapa
+              </Button>
+            </div>
+
+            {/* Confetti-like icons */}
+            <motion.div
+              animate={{
+                y: [0, -20, 0],
+                opacity: [0.5, 1, 0.5],
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="absolute top-10 right-10 text-yellow-500"
+            >
+              <Sparkles className="w-6 h-6" />
+            </motion.div>
+            <motion.div
+              animate={{
+                y: [0, -15, 0],
+                opacity: [0.3, 0.8, 0.3],
+              }}
+              transition={{ duration: 4, repeat: Infinity, delay: 1 }}
+              className="absolute bottom-20 left-10 text-blue-400"
+            >
+              <Trophy className="w-5 h-5" />
+            </motion.div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

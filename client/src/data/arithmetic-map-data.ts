@@ -660,22 +660,22 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     },
     {
         id: 'n12-problemas-prog',
-        label: 'Problemas de Progresiones',
+        label: 'Funciones Lineales',
         level: 30,
         type: 'applied',
         requires: ['n12-prog-arit', 'n12-prog-geom'],
-        description: 'Aplicación de sucesiones.',
+        description: 'Explora el comportamiento de las funciones lineales y su relación con las progresiones.',
         xOffset: -30,
         subcategoryId: 342,
         behavior: 'quiz_list'
     },
     {
         id: 'n12-promedios',
-        label: 'Cálculo de Promedios',
+        label: 'Funciones Exponenciales',
         level: 30,
         type: 'basic',
         requires: ['n12-prog-arit', 'n12-prog-geom'],
-        description: 'Media, mediana y moda descriptiva.',
+        description: 'Domina las funciones exponenciales y su aplicación en problemas de crecimiento.',
         xOffset: 30,
         subcategoryId: 343,
         behavior: 'quiz_list'
