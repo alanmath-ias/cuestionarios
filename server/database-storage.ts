@@ -1556,7 +1556,7 @@ export class DatabaseStorage implements IStorage {
     // 3. Deterministic shuffle
     const today = new Date();
     // Use manual date string to avoid timezone issues with toISOString().split('T')[0]
-    const dateSeed = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+    const dateSeed = today.toISOString().split('T')[0];
     const seed = `${userId}-${categoryId}-${dateSeed}`;
 
     // Sort by a hash of (question.id + seed)

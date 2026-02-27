@@ -129,7 +129,7 @@ const ActiveQuiz = () => {
 
   const { data: questions, isLoading: loadingQuestions, error: errorQuestions } = useQuery<Question[]>({
     queryKey: isChiqui
-      ? [`/api/chiquitest/questions/${categoryId}`, searchParams.get('user_id')]
+      ? [`/api/chiquitest/questions/${categoryId}`, searchParams.get('user_id'), new Date().toISOString().split('T')[0]]
       : [`/api/quizzes/${quizId}/questions`, mode],
     queryFn: async () => {
       const userIdStr = searchParams.get('user_id');
@@ -213,7 +213,7 @@ const ActiveQuiz = () => {
   // Timer
   // IMPORTANT: initialElapsedTime is set to 0 to restart the visual timer for this session.
   // The total time will be calculated as previousTimeSpent + elapsedTime.
-  const { formattedTime, elapsedTime, start } = useTimer({
+  const { formattedTime, elapsedTime, start, pause } = useTimer({
     initialTime: isChiqui ? 1200 : (quiz?.timeLimit || 0),
     initialElapsedTime: 0,
     autoStart: session?.userId !== 1,
@@ -416,15 +416,31 @@ const ActiveQuiz = () => {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         setSelectedAnswerId(null);
       } else {
+        let finalAnswers = studentAnswers;
         if (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex]) {
-          await submitCurrentAnswer();
+          const currentQuestion = questions[currentQuestionIndex];
+          const selectedAnswer = currentQuestion.answers?.find((a: any) => a.id === selectedAnswerId);
+          const studentAnswer: any = {
+            progressId: progress?.id || 0,
+            questionId: currentQuestion.id,
+            answerId: selectedAnswerId,
+            isCorrect: selectedAnswer?.isCorrect || false,
+            variables: currentQuestion.variables,
+            timeSpent: elapsedTime,
+          };
+          if (!isChiqui) {
+            await submitAnswerMutation.mutateAsync(studentAnswer);
+          }
+          finalAnswers = [...studentAnswers, studentAnswer];
+          setStudentAnswers(finalAnswers);
+          setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
         }
         const answeredCount = Object.keys(answeredQuestions).length + (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex] ? 1 : 0);
         if (questions && answeredCount < questions.length) {
           setIsIncompleteDialogOpen(true);
           return;
         }
-        await handleFinishQuiz();
+        await handleFinishQuiz(finalAnswers);
       }
     } catch (error: any) {
       if (error.message?.includes("401")) {
@@ -545,20 +561,22 @@ const ActiveQuiz = () => {
     }
   };
 
-  const handleFinishQuiz = async () => {
+  const handleFinishQuiz = async (finalAnswers?: any[]) => {
+    pause();
+    const answersToUse = finalAnswers || studentAnswers;
     if (isChiqui) {
       try {
-        const score = studentAnswers.length > 0 ? Number(((studentAnswers.filter(a => a.isCorrect).length / studentAnswers.length) * 10).toFixed(1)) : 0;
+        const score = answersToUse.filter(a => a.isCorrect).length;
 
         await apiRequest("POST", "/api/chiquitest/result", {
           categoryId: parseInt(categoryId!),
           score: score,
-          answers: studentAnswers
+          answers: answersToUse
         });
 
         toast({
           title: "¡Repasito completado!",
-          description: `Tu nota: ${score}/10. ¡Sigue así!`,
+          description: `Has acertado ${score} de 5 preguntas. ¡Sigue así!`,
         });
 
         queryClient.invalidateQueries({ queryKey: ["chiqui-results"] });
@@ -687,21 +705,13 @@ const ActiveQuiz = () => {
                 <p className="text-slate-400">Has fortalecido tus conocimientos hoy</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-950/50 p-6 rounded-2xl border border-white/5 text-center">
-                  <div className="text-4xl font-black text-blue-400 mb-1">{chiquiScore}/10</div>
-                  <div className="text-xs uppercase tracking-wider font-bold text-slate-500">Nota Final</div>
-                </div>
-                <div className="bg-slate-950/50 p-6 rounded-2xl border border-white/5 text-center">
-                  <div className="text-4xl font-black text-emerald-400 mb-1">{correctCount}/{totalCount}</div>
+              <div className="flex justify-center">
+                <div className="bg-slate-950/50 p-6 rounded-2xl border border-white/5 text-center min-w-[200px]">
+                  <div className="text-4xl font-black text-emerald-400 mb-1">{chiquiScore}/5</div>
                   <div className="text-xs uppercase tracking-wider font-bold text-slate-500">Aciertos</div>
                 </div>
               </div>
 
-              <div className="bg-slate-950/30 p-4 rounded-xl border border-white/5 flex items-center justify-center gap-3 text-slate-300">
-                <Clock className="w-4 h-4 text-purple-400" />
-                <span className="text-sm font-medium">Tiempo total: {formatTotalTime(getTotalTime())}</span>
-              </div>
 
               {failedAnswers.length > 0 && (
                 <div className="space-y-4 pt-4 border-t border-white/5">

@@ -1117,12 +1117,21 @@ export default function UserDashboard() {
 
                     {/* Permanent Score Display */}
                     <div className={cn(
-                      "text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border whitespace-nowrap",
+                      "text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border whitespace-nowrap flex items-center gap-1",
                       isDoneToday
                         ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                        : "bg-slate-800 text-slate-500 border-white/5"
+                        : "bg-slate-800 text-slate-400 border-white/5 group-hover/repasito:bg-slate-700 group-hover/repasito:text-yellow-400 transition-colors"
                     )}>
-                      {lastScore !== undefined ? `${lastScore}/10` : "0/10"}
+                      {isDoneToday ? (
+                        <>
+                          {lastScore !== undefined ? `${lastScore}/5` : "0/5"}
+                        </>
+                      ) : (
+                        <>
+                          <PlayCircle className="w-3 h-3" />
+                          <span>¡VAMOS!</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
