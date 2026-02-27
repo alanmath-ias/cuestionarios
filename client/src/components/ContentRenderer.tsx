@@ -1,3 +1,4 @@
+import React from 'react';
 import { MathDisplay } from '@/components/ui/math-display';
 
 interface ContentRendererProps {
@@ -5,7 +6,7 @@ interface ContentRendererProps {
     className?: string;
 }
 
-export function ContentRenderer({ content, className }: ContentRendererProps) {
+export const ContentRenderer = React.memo(function ContentRenderer({ content, className }: ContentRendererProps) {
     // Split by ¡...¡, ¡¡...¡¡, $...$, or $$...$$ to handle math content
     const parts = content.split(/((?:¡+|\\?\$+).*?(?:¡+|\\?\$+))/g);
 
@@ -42,4 +43,4 @@ export function ContentRenderer({ content, className }: ContentRendererProps) {
             })}
         </div>
     );
-}
+});
