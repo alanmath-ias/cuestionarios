@@ -1673,6 +1673,37 @@ Tono: Alentador, profesional y educativo.`;
     }
   });
 
+  apiRouter.get("/chiquitest/history", async (req: Request, res: Response) => {
+    let userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "No autenticado" });
+
+    const targetUserId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
+    if (targetUserId && targetUserId !== userId) {
+      const currentUser = await storage.getUser(userId);
+      if (currentUser?.role === 'admin') {
+        userId = targetUserId;
+      } else if (currentUser?.role === 'parent') {
+        const child = await storage.getChildByParentId(userId);
+        if (child && child.id === targetUserId) {
+          userId = targetUserId;
+        } else {
+          return res.status(403).json({ message: "No tienes permiso para ver este historial" });
+        }
+      } else {
+        return res.status(403).json({ message: "No tienes permiso para realizar esta acción" });
+      }
+    }
+
+    try {
+      const categoryId = req.query.category_id ? parseInt(req.query.category_id as string) : undefined;
+      const history = await storage.getChiquiHistory(userId, categoryId);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching chiquitest history:", error);
+      res.status(500).json({ message: "Error al obtener historial del Repasito" });
+    }
+  });
+
   apiRouter.get("/parent/child/chiquitest/results", async (req: Request, res: Response) => {
     const userId = req.session.userId;
     if (!userId) return res.status(401).json({ message: "No autenticado" });
@@ -3586,9 +3617,14 @@ Ejemplo de formato:
   //mostrar el feedback a los usuarios
   app.get("/api/quiz-feedback/:progressId", async (req, res) => {
     const { progressId } = req.params;
+    const id = Number(progressId);
+
+    if (!progressId || isNaN(id)) {
+      return res.status(400).json({ error: "ID de progreso inválido" });
+    }
 
     try {
-      const feedback = await storage.getQuizFeedback(Number(progressId));
+      const feedback = await storage.getQuizFeedback(id);
       res.status(200).json(feedback);
     } catch (error) {
       console.error("Error obteniendo el feedback:", error);

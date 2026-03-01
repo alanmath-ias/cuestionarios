@@ -9,11 +9,11 @@
   type StudentAnswer, type InsertStudentAnswer,
   questionReports, type QuestionReport, type InsertQuestionReport,
   passwordResetTokens, type PasswordResetToken, type InsertPasswordResetToken,
-  chiquiResults
+  chiquiResults, chiquiHistory
 } from "../shared/schema.js";
 
 import { db, DbClient } from "./db.js";
-import { eq, and, desc, asc, inArray, sql, ilike, or, isNotNull } from "drizzle-orm";
+import { eq, and, desc, asc, inArray, sql, ilike, or, isNotNull, gte, lt } from "drizzle-orm";
 import { IStorage } from "./storage.js";
 import { userQuizzes } from "../shared/schema.js";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -1553,14 +1553,36 @@ export class DatabaseStorage implements IStorage {
 
     if (questionsList.length === 0) return [];
 
+    // 2.5 Find a previously failed question in this category
+    const failedAnswers = await this.db.select({ questionId: studentAnswers.questionId })
+      .from(studentAnswers)
+      .innerJoin(studentProgress, eq(studentAnswers.progressId, studentProgress.id))
+      .innerJoin(quizzes, eq(studentProgress.quizId, quizzes.id))
+      .where(and(
+        eq(studentProgress.userId, userId),
+        eq(quizzes.categoryId, categoryId),
+        eq(studentAnswers.isCorrect, false)
+      ))
+      .limit(10);
+
+    let smartQuestionId: number | null = null;
+    if (failedAnswers.length > 0) {
+      // Pick one failed question (could be random or deterministic)
+      const today = new Date();
+      const idx = this.simpleHash(today.toISOString().split('T')[0]) % failedAnswers.length;
+      smartQuestionId = failedAnswers[idx].questionId;
+    }
+
     // 3. Deterministic shuffle
     const today = new Date();
     // Use manual date string to avoid timezone issues with toISOString().split('T')[0]
     const dateSeed = today.toISOString().split('T')[0];
     const seed = `${userId}-${categoryId}-${dateSeed}`;
 
-    // Sort by a hash of (question.id + seed)
+    // Sort by a hash of (question.id + seed), but prioritize the smart question
     const sortedQuestions = [...questionsList].sort((a, b) => {
+      if (a.id === smartQuestionId) return -1;
+      if (b.id === smartQuestionId) return 1;
       const hashA = this.simpleHash(`${a.id}-${seed}`);
       const hashB = this.simpleHash(`${b.id}-${seed}`);
       return hashA - hashB;
@@ -1585,22 +1607,108 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveChiquiResult(userId: number, categoryId: number, score: number, answers: any[]): Promise<void> {
+    // 1. Upsert latest result
     await this.db.insert(chiquiResults)
-      .values({
-        userId,
-        categoryId,
-        lastScore: score,
-        lastDate: new Date(),
-        lastAnswers: answers
-      })
+      .values({ userId, categoryId, lastScore: score, lastDate: new Date(), lastAnswers: answers })
       .onConflictDoUpdate({
         target: [chiquiResults.userId, chiquiResults.categoryId],
-        set: {
-          lastScore: score,
-          lastDate: new Date(),
-          lastAnswers: answers
-        }
+        set: { lastScore: score, lastDate: new Date(), lastAnswers: answers }
       });
+
+    // 2. Insert history record (base reward = 1)
+    await this.db.insert(chiquiHistory)
+      .values({ userId, categoryId, score, earnedCredits: 1, date: new Date() });
+
+    // 3. Award base credit
+    await this.db.update(users)
+      .set({ hintCredits: sql`${users.hintCredits} + 1` })
+      .where(eq(users.id, userId));
+
+    // 4. Compute current streak using LOCAL dates (timezone-safe)
+    //    Fetch recent history for this user+category (enough to detect any streak)
+    const recentHistory = await this.db.select()
+      .from(chiquiHistory)
+      .where(and(
+        eq(chiquiHistory.userId, userId),
+        eq(chiquiHistory.categoryId, categoryId),
+        gte(chiquiHistory.date, new Date(Date.now() - 31 * 24 * 60 * 60 * 1000))
+      ))
+      .orderBy(desc(chiquiHistory.date));
+
+    // Convert each record to local date string and deduplicate
+    const toLocalDateStr = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    const uniqueDaysSet = new Set<string>();
+    for (const h of recentHistory) {
+      uniqueDaysSet.add(toLocalDateStr(new Date(h.date)));
+    }
+    const uniqueDays = [...uniqueDaysSet].sort().reverse(); // newest first
+
+    // Calculate consecutive streak from today backwards
+    let streak = 0;
+    const today = new Date();
+    for (let i = 0; i < 60; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      if (uniqueDays.includes(toLocalDateStr(d))) {
+        streak++;
+      } else {
+        break; // gap found, streak ends
+      }
+    }
+
+    // 5. Check if bonus already awarded today (avoid double payout on resubmission)
+    const todayStr = toLocalDateStr(new Date());
+    const bonusAlreadyAwarded = recentHistory.some(h =>
+      toLocalDateStr(new Date(h.date)) === todayStr && h.earnedCredits > 1
+    );
+
+    if (!bonusAlreadyAwarded) {
+      let bonusCredits = 0;
+      let bonusEarnedCredits = 1;
+
+      if (streak === 7) {
+        bonusCredits = 3;       // 7-day streak bonus
+        bonusEarnedCredits = 4; // 1 base + 3 bonus
+      } else if (streak === 3) {
+        bonusCredits = 1;       // 3-day streak bonus
+        bonusEarnedCredits = 2; // 1 base + 1 bonus
+      }
+
+      if (bonusCredits > 0) {
+        await this.db.update(users)
+          .set({ hintCredits: sql`${users.hintCredits} + ${bonusCredits}` })
+          .where(eq(users.id, userId));
+
+        // Mark today's history record with the total earned credits (for UI display)
+        await this.db.update(chiquiHistory)
+          .set({ earnedCredits: bonusEarnedCredits })
+          .where(and(
+            eq(chiquiHistory.userId, userId),
+            eq(chiquiHistory.categoryId, categoryId),
+            gte(chiquiHistory.date, new Date(Date.now() - 2 * 60 * 60 * 1000)) // last 2 hours
+          ));
+      }
+    }
+
+    // 6. Cleanup old history (keep 30 days)
+    await this.db.delete(chiquiHistory)
+      .where(lt(chiquiHistory.date, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)));
+  }
+
+  async getChiquiHistory(userId: number, categoryId?: number): Promise<any[]> {
+    return this.db.select()
+      .from(chiquiHistory)
+      .where(and(
+        eq(chiquiHistory.userId, userId),
+        ...(categoryId ? [eq(chiquiHistory.categoryId, categoryId)] : [])
+      ))
+      .orderBy(desc(chiquiHistory.date))
+      .limit(31);
   }
 
   async getChiquiResults(userId: number): Promise<any[]> {

@@ -102,7 +102,10 @@ const ActiveQuiz = () => {
   const [requestingHint, setRequestingHint] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isIncompleteDialogOpen, setIsIncompleteDialogOpen] = useState(false);
-  const [showChiquiResult, setShowChiquiResult] = useState(false);
+  const [showChiquiResult, setShowChiquiResult] = useState(() => {
+    // Skip the flash by immediately showing results if coming from 'Ver Detalles'
+    return new URLSearchParams(window.location.search).get('results') === '1';
+  });
   const [chiquiScore, setChiquiScore] = useState<number | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [currentExplanation, setCurrentExplanation] = useState<{
@@ -580,6 +583,8 @@ const ActiveQuiz = () => {
         });
 
         queryClient.invalidateQueries({ queryKey: ["chiqui-results"] });
+        queryClient.invalidateQueries({ queryKey: ["chiqui-history"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         setChiquiScore(score);
         setShowChiquiResult(true);
       } catch (error) {

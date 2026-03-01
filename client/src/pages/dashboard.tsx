@@ -71,15 +71,31 @@ import { calculusMapNodes } from "@/data/calculus-map-data";
 import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
 
 
-interface QuizWithFeedback extends UserQuiz {
-  progressId?: string;
+interface QuizWithFeedback {
+  id: number;
+  title: string;
+  categoryId?: number;
+  difficulty?: string;
+  status?: "not_started" | "in_progress" | "completed";
   reviewed?: boolean;
+  completedQuestions?: number;
+  progressId?: string;
   readByStudent?: boolean;
   completedAt?: string | Date;
   score?: number;
   timeSpent?: number;
   url?: string | null;
   feedback?: string;
+  isChiqui?: boolean;
+}
+
+// Synthetic type for Repasito dialogs (no real DB id needed)
+interface RepasistoQuiz {
+  title: string;
+  categoryId?: number;
+  isChiqui: true;
+  completedAt?: string | Date;
+  score?: number;
 }
 
 async function fetchCurrentUser() {
@@ -291,7 +307,7 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback, onClick: (qui
 export default function UserDashboard() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
-  const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | null>(null);
+  const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | RepasistoQuiz | null>(null);
 
   const handleSelectQuiz = (quiz: QuizWithFeedback) => {
     setSelectedQuiz(quiz);
@@ -321,7 +337,7 @@ export default function UserDashboard() {
 
   // Welcome Dialog State
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
-  const [lastActivity, setLastActivity] = useState<QuizWithFeedback | null>(null);
+  const [lastActivity, setLastActivity] = useState<UserQuiz | null>(null);
   const [motivationalMessage, setMotivationalMessage] = useState("");
 
   useEffect(() => {
@@ -869,7 +885,7 @@ export default function UserDashboard() {
         activity = completed[0];
       }
 
-      setLastActivity(activity);
+      setLastActivity(activity as UserQuiz | null);
 
       // New Onboarding Tour Logic
       // If user hasn't seen the onboarding tour, show it first.
@@ -1088,7 +1104,16 @@ export default function UserDashboard() {
                               filter: ["drop-shadow(0 0 0px rgba(234,179,8,0))", "drop-shadow(0 0 12px rgba(234,179,8,0.8))", "drop-shadow(0 0 0px rgba(234,179,8,0))"]
                             } : {}}
                             transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                            onClick={() => setLocation(`/quiz/chiqui/${category.id}`)}
+                            onClick={() => {
+                              const scoreNum = lastScore !== undefined ? lastScore : 0;
+                              setSelectedQuiz({
+                                title: `Repasito de ${category.name}`,
+                                completedAt: isDoneToday ? lastDate : undefined,
+                                score: isDoneToday ? scoreNum : undefined,
+                                isChiqui: true,
+                                categoryId: category.id
+                              });
+                            }}
                             className={cn(
                               "w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all border",
                               isDoneToday
@@ -1105,32 +1130,30 @@ export default function UserDashboard() {
                               <Zap className="w-3 h-3 fill-current" /> Repasito Diario
                             </p>
                             <p className="text-xs text-slate-300">5 preguntas de tus temas completados</p>
-                            {isDoneToday ? (
-                              <p className="text-[10px] text-emerald-400 font-bold mt-1">¡Completado hoy!</p>
-                            ) : (
-                              <p className="text-[10px] text-orange-400 font-bold mt-1">Pendiente</p>
-                            )}
+                            <p className="text-[10px] text-yellow-400/80 font-medium italic mt-1 underline">Haz clic para ver tu calendario y racha</p>
                           </div>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
 
-                    {/* Permanent Score Display */}
+                    {/* Static Score/Repasito Label */}
                     <div className={cn(
                       "text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border whitespace-nowrap flex items-center gap-1",
                       isDoneToday
                         ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                        : "bg-slate-800 text-slate-400 border-white/5 group-hover/repasito:bg-slate-700 group-hover/repasito:text-yellow-400 transition-colors"
+                        : "bg-slate-800 border-white/5"
                     )}>
                       {isDoneToday ? (
-                        <>
-                          {lastScore !== undefined ? `${lastScore}/5` : "0/5"}
-                        </>
+                        <span>{lastScore !== undefined ? `${lastScore}/5` : "0/5"}</span>
                       ) : (
-                        <>
-                          <PlayCircle className="w-3 h-3" />
-                          <span>¡VAMOS!</span>
-                        </>
+                        <motion.span
+                          animate={{ opacity: [1, 0.3, 1], color: ["#f59e0b", "#fb923c", "#f59e0b"] }}
+                          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                          className="flex items-center gap-0.5"
+                        >
+                          <Zap className="w-2.5 h-2.5 fill-current" />
+                          Repasito
+                        </motion.span>
                       )}
                     </div>
                   </div>
@@ -1264,7 +1287,7 @@ export default function UserDashboard() {
                               size="sm"
                               variant="outline"
                               className="h-7 px-2 text-xs bg-transparent border-slate-700 text-slate-400 hover:text-white hover:bg-white/10"
-                              onClick={(e) => handleMiniStart(e, quiz.id)}
+                              onClick={(e) => handleMiniStart(e, quiz.id!)}
                             >
                               Mini
                             </Button>
@@ -1631,7 +1654,7 @@ export default function UserDashboard() {
                           size="sm"
                           variant="outline"
                           className="h-7 px-2 text-xs bg-transparent border-slate-700 text-slate-400 hover:text-white hover:bg-white/10"
-                          onClick={(e) => handleMiniStart(e, quiz.id)}
+                          onClick={(e) => handleMiniStart(e, quiz.id!)}
                         >
                           Mini
                         </Button>

@@ -21,6 +21,7 @@ interface User {
   username: string;
   email?: string;
   role?: string;
+  hintCredits: number;
 }
 
 interface UserMenuProps {
@@ -92,7 +93,13 @@ export function UserMenu({ user }: UserMenuProps) {
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="flex items-center space-x-2 focus:outline-none">
-            <span className="hidden md:block">{user.name}</span>
+            <span className="hidden md:block font-medium">{user.name}</span>
+            {user.role !== 'admin' && (
+              <div className="bg-yellow-500/10 text-yellow-500 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-yellow-500/20 flex items-center gap-1">
+                <BrainCircuit className="w-3 h-3" />
+                {user.hintCredits}
+              </div>
+            )}
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-medium">
               <span>{getInitials(user.name)}</span>
             </div>

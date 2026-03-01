@@ -273,6 +273,9 @@ export default function ParentDashboard() {
   const [, setLocation] = useLocation();
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | null>(null);
+  const [selectedChiquiQuiz, setSelectedChiquiQuiz] = useState<{
+    title: string; categoryId?: number; isChiqui: true; completedAt?: string | Date; score?: number;
+  } | null>(null);
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const [isPendingDialogOpen, setIsPendingDialogOpen] = useState(false);
   const [isRecentDialogOpen, setIsRecentDialogOpen] = useState(false);
@@ -720,22 +723,26 @@ export default function ParentDashboard() {
                   </Tooltip>
                 </TooltipProvider>
 
-                {/* ChiquiTest (Repasito) Rayo Button */}
+                {/* ChiquiTest (Repasito) Rayo Button — opens calendar dialog */}
                 <div className="flex flex-col items-center gap-1 group/repasito">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <motion.button
                           onClick={() => {
-                            if (isDoneToday) {
-                              setLocation(`/quiz/chiqui/${category.id}?user_id=${childId}`);
-                            }
+                            setSelectedChiquiQuiz({
+                              title: `Repasito de ${category.name}`,
+                              completedAt: isDoneToday ? lastDate : undefined,
+                              score: isDoneToday ? lastScore : undefined,
+                              isChiqui: true,
+                              categoryId: category.id
+                            });
                           }}
                           className={cn(
                             "w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all border",
                             isDoneToday
-                              ? "bg-slate-800/80 text-yellow-500 border-yellow-500/20 shadow-none cursor-pointer"
-                              : "bg-slate-800/40 text-slate-500 border-slate-700 shadow-none cursor-default opacity-50"
+                              ? "bg-slate-800/80 text-yellow-500 border-yellow-500/20 shadow-none cursor-pointer hover:bg-slate-700"
+                              : "bg-slate-800/40 text-slate-500 border-slate-700 shadow-none cursor-pointer opacity-70 hover:opacity-100"
                           )}
                         >
                           <Zap className={cn("w-5 h-5", isDoneToday && "fill-current")} />
@@ -748,23 +755,23 @@ export default function ParentDashboard() {
                           </p>
                           <p className="text-xs text-slate-300">Progreso del Estudiante</p>
                           {isDoneToday ? (
-                            <p className="text-[10px] text-emerald-400 font-bold mt-1">Ver resultados del día</p>
+                            <p className="text-[10px] text-emerald-400 font-bold mt-1">Ver calendario y resultados</p>
                           ) : (
-                            <p className="text-[10px] text-slate-400 font-bold mt-1">lo siento, tu hijo no ha repasado hoy</p>
+                            <p className="text-[10px] text-slate-400 font-bold mt-1">Aún no ha completado el repasito de hoy</p>
                           )}
                         </div>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
 
-                  {/* Permanent Score Display */}
+                  {/* Static score label */}
                   <div className={cn(
                     "text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border whitespace-nowrap",
                     isDoneToday
                       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                       : "bg-slate-800 text-slate-500 border-white/5"
                   )}>
-                    {lastScore !== undefined ? `${lastScore}/10` : "0/10"}
+                    {isDoneToday && lastScore !== undefined ? `${lastScore}/5` : "–/5"}
                   </div>
                 </div>
               </div>
@@ -1044,6 +1051,14 @@ export default function ParentDashboard() {
         open={!!selectedQuiz}
         onOpenChange={(open) => !open && setSelectedQuiz(null)}
         quiz={selectedQuiz}
+        childId={childId}
+      />
+
+      {/* Repasito / Calendar Dialog for parent */}
+      <QuizDetailsDialog
+        open={!!selectedChiquiQuiz}
+        onOpenChange={(open) => !open && setSelectedChiquiQuiz(null)}
+        quiz={selectedChiquiQuiz}
         childId={childId}
       />
 

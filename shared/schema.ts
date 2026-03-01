@@ -337,6 +337,26 @@ export const chiquiResults = pgTable("chiqui_results", {
 	unique("chiqui_userId_categoryId_unique").on(table.userId, table.categoryId),
 ]);
 
+export const chiquiHistory = pgTable("chiqui_history", {
+	id: serial("id").primaryKey().notNull(),
+	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	categoryId: integer("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
+	score: integer("score").notNull(),
+	earnedCredits: integer("earned_credits").default(0).notNull(),
+	date: timestamp("date").defaultNow().notNull(),
+});
+
+export const insertChiquiHistorySchema = createInsertSchema(chiquiHistory).pick({
+	userId: true,
+	categoryId: true,
+	score: true,
+	earnedCredits: true,
+	date: true,
+});
+
+export type ChiquiHistory = typeof chiquiHistory.$inferSelect;
+export type InsertChiquiHistory = z.infer<typeof insertChiquiHistorySchema>;
+
 // Types exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
