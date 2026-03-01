@@ -12,7 +12,8 @@ import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, ListChecks, Folder, UserPlus } from "lucide-react";
+import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, ListChecks, Folder, UserPlus, Pencil, Save, X } from "lucide-react";
+import { DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -93,6 +94,17 @@ export default function QuizzesAdmin() {
   const [selectedNode, setSelectedNode] = useState<ArithmeticNode | null>(null);
   const [highlightedQuizId, setHighlightedQuizId] = useState<number | null>(null);
   const [hasRestoredFromUrl, setHasRestoredFromUrl] = useState(false);
+
+  // Quick-edit state
+  const [quickEditQuiz, setQuickEditQuiz] = useState<Quiz | null>(null);
+  const [qeTitle, setQeTitle] = useState("");
+  const [qeDescription, setQeDescription] = useState("");
+  const [qeCategoryId, setQeCategoryId] = useState("");
+  const [qeSubcategoryId, setQeSubcategoryId] = useState("");
+  const [qeTimeLimit, setQeTimeLimit] = useState("300");
+  const [qeDifficulty, setQeDifficulty] = useState("intermedio");
+  const [qeSubcategories, setQeSubcategories] = useState<any[]>([]);
+  const [qeSaving, setQeSaving] = useState(false);
 
   // Queries
   const { data: categories, isLoading: loadingCategories } = useQuery<Category[]>({
@@ -188,6 +200,52 @@ export default function QuizzesAdmin() {
 
     fetchSubcategories();
   }, [categoryId, editingId, form, toast]);
+
+  // Fetch subcategories for quick-edit dialog when its category changes
+  useEffect(() => {
+    if (!qeCategoryId) { setQeSubcategories([]); return; }
+    fetch(`/api/admin/subcategories/by-category/${qeCategoryId}`)
+      .then(r => r.json()).then(d => setQeSubcategories(Array.isArray(d) ? d : []))
+      .catch(() => setQeSubcategories([]));
+  }, [qeCategoryId]);
+
+  function openQuickEdit(quiz: Quiz) {
+    setQuickEditQuiz(quiz);
+    setQeTitle(quiz.title);
+    setQeDescription(quiz.description || "");
+    setQeCategoryId(String(quiz.categoryId || ""));
+    setQeSubcategoryId(String(quiz.subcategoryId || ""));
+    setQeTimeLimit(String(quiz.timeLimit || 300));
+    setQeDifficulty(quiz.difficulty || "intermedio");
+  }
+
+  async function handleQuickEditSave() {
+    if (!quickEditQuiz) return;
+    setQeSaving(true);
+    try {
+      const res = await fetch(`/api/admin/quizzes/${quickEditQuiz.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: qeTitle,
+          description: qeDescription,
+          categoryId: parseInt(qeCategoryId),
+          subcategoryId: parseInt(qeSubcategoryId),
+          timeLimit: parseInt(qeTimeLimit),
+          difficulty: qeDifficulty,
+          isPublic: quickEditQuiz.isPublic,
+        }),
+      });
+      if (!res.ok) throw new Error("Error al guardar");
+      queryClient.invalidateQueries({ queryKey: ["/api/quizzes"] });
+      toast({ title: "Guardado", description: `"${qeTitle}" actualizado correctamente.` });
+      setQuickEditQuiz(null);
+    } catch {
+      toast({ title: "Error", description: "No se pudo guardar el cuestionario.", variant: "destructive" });
+    } finally {
+      setQeSaving(false);
+    }
+  }
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -1190,6 +1248,114 @@ export default function QuizzesAdmin() {
         </DialogContent>
       </Dialog>
 
+      {/* Quick Edit Dialog */}
+      <Dialog open={!!quickEditQuiz} onOpenChange={(open) => !open && setQuickEditQuiz(null)}>
+        <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-white">
+              <Pencil className="w-4 h-4 text-blue-400" />
+              Editar cuestionario
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 text-xs">
+              Edita los campos del cuestionario directamente desde el mapa.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Prominent: title */}
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-slate-200">Título</label>
+              <Input
+                value={qeTitle}
+                onChange={e => setQeTitle(e.target.value)}
+                className="bg-slate-950 border-slate-700 text-slate-100 focus:ring-blue-500/50"
+                placeholder="Título del cuestionario"
+              />
+            </div>
+
+            {/* Prominent: description */}
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-slate-200">Descripción</label>
+              <Textarea
+                value={qeDescription}
+                onChange={e => setQeDescription(e.target.value)}
+                className="bg-slate-950 border-slate-700 text-slate-100 focus:ring-blue-500/50 min-h-[90px] resize-none"
+                placeholder="Descripción breve del cuestionario"
+              />
+            </div>
+
+            {/* Discreet secondary fields */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500 font-medium">Materia</label>
+                <Select value={qeCategoryId} onValueChange={v => { setQeCategoryId(v); setQeSubcategoryId(""); }}>
+                  <SelectTrigger className="bg-slate-950 border-slate-700 text-slate-300 h-8 text-xs">
+                    <SelectValue placeholder="Materia..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-slate-700">
+                    {categories?.map(c => (
+                      <SelectItem key={c.id} value={String(c.id)} className="text-slate-200">{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500 font-medium">Tema</label>
+                <Select value={qeSubcategoryId} onValueChange={setQeSubcategoryId} disabled={!qeCategoryId || qeSubcategories.length === 0}>
+                  <SelectTrigger className="bg-slate-950 border-slate-700 text-slate-300 h-8 text-xs">
+                    <SelectValue placeholder="Tema..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-slate-700">
+                    {qeSubcategories.map((s: any) => (
+                      <SelectItem key={s.id} value={String(s.id)} className="text-slate-200">{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500 font-medium">Tiempo límite (seg)</label>
+                <Input
+                  type="number"
+                  value={qeTimeLimit}
+                  onChange={e => setQeTimeLimit(e.target.value)}
+                  className="bg-slate-950 border-slate-700 text-slate-300 h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500 font-medium">Dificultad</label>
+                <Select value={qeDifficulty} onValueChange={setQeDifficulty}>
+                  <SelectTrigger className="bg-slate-950 border-slate-700 text-slate-300 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-slate-700">
+                    {difficultyOptions.map(o => (
+                      <SelectItem key={o.value} value={o.value} className="text-slate-200">{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setQuickEditQuiz(null)} className="text-slate-400 hover:text-slate-200">
+              <X className="w-4 h-4 mr-1" /> Cancelar
+            </Button>
+            <Button
+              onClick={handleQuickEditSave}
+              disabled={qeSaving || !qeTitle.trim() || !qeDescription.trim()}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {qeSaving ? <Spinner className="w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-1" />}
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Node Details Dialog */}
       <Dialog open={!!selectedNode} onOpenChange={(open) => {
         if (!open) {
@@ -1260,9 +1426,19 @@ export default function QuizzesAdmin() {
                               </div>
                               <div>
                                 <h4 className={cn("font-semibold text-sm line-clamp-2 transition-colors", isHighlighted ? "text-blue-100" : "text-slate-200")}>{quiz.title}</h4>
-                                <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">{quiz.description}</p>
+                                <p className="text-xs text-slate-400 line-clamp-none mt-0.5">{quiz.description}</p>
                               </div>
                             </div>
+                            {/* Quick-edit button */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="shrink-0 h-8 px-2.5 text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 flex items-center gap-1.5"
+                              onClick={() => openQuickEdit(quiz)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Editar
+                            </Button>
                           </div>
 
                           <div className="flex flex-wrap items-center justify-between gap-3 mt-auto pt-3 border-t border-white/5">
