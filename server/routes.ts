@@ -2003,6 +2003,39 @@ Tono: Alentador, profesional y educativo.`;
     }
   });
 
+  // Eliminar cuestionario de un usuario (asignación + progreso) desde admin Usuarios
+  // El frontend llama a DELETE /api/admin/users/quizzes con body { userId, quizId }
+  apiRouter.delete("/admin/users/quizzes", requireAdmin, async (req, res) => {
+    const { userId, quizId } = req.body;
+
+    if (!userId || !quizId) {
+      return res.status(400).json({ message: "userId y quizId son requeridos" });
+    }
+
+    const uid = parseInt(String(userId));
+    const qid = parseInt(String(quizId));
+
+    if (isNaN(uid) || isNaN(qid)) {
+      return res.status(400).json({ message: "userId y quizId deben ser números válidos" });
+    }
+
+    try {
+      // 1. Eliminar progreso si existe (incluye student_answers en cascada via deleteStudentProgress)
+      const progress = await storage.getStudentProgressByQuiz(uid, qid);
+      if (progress) {
+        await storage.deleteStudentProgress(progress.id);
+      }
+
+      // 2. Eliminar asignación de user_quizzes (si fue asignado por admin)
+      await storage.removeQuizFromUser(uid, qid);
+
+      res.status(204).end();
+    } catch (err) {
+      console.error("Error eliminando cuestionario de usuario:", err);
+      res.status(500).json({ message: "Error al eliminar el cuestionario del usuario" });
+    }
+  });
+
   // fin deep seek mejora active-quiz
 
   // DeepSeek API proxy endpoint

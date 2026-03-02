@@ -13,6 +13,7 @@ interface User {
   username: string;
   email?: string;
   role?: string;
+  hintCredits: number;
   tourStatus?: Record<string, boolean>;
 }
 
