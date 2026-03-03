@@ -1563,30 +1563,46 @@ export class DatabaseStorage implements IStorage {
         eq(quizzes.categoryId, categoryId),
         eq(studentAnswers.isCorrect, false)
       ))
-      .limit(10);
+      .limit(20);
 
+    // 3. Build a numeric seed from userId + categoryId + today's date
+    //    so questions are stable within one day but genuinely different across days.
+    const today = new Date();
+    const dateInt = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    let rngState = (userId * 73856093) ^ (categoryId * 19349663) ^ dateInt;
+
+    // LCG-style seeded random — produces values in [0, 1)
+    const seededRandom = (): number => {
+      rngState = Math.imul(rngState ^ (rngState >>> 16), 0x45d9f3b);
+      rngState = Math.imul(rngState ^ (rngState >>> 16), 0x45d9f3b);
+      rngState ^= rngState >>> 16;
+      return (rngState >>> 0) / 0x100000000;
+    };
+
+    // Pick a failed question if any (using seeded random so it varies day to day)
     let smartQuestionId: number | null = null;
     if (failedAnswers.length > 0) {
-      // Pick one failed question (could be random or deterministic)
-      const today = new Date();
-      const idx = this.simpleHash(today.toISOString().split('T')[0]) % failedAnswers.length;
+      const idx = Math.floor(seededRandom() * failedAnswers.length);
       smartQuestionId = failedAnswers[idx].questionId;
     }
 
-    // 3. Deterministic shuffle
-    const today = new Date();
-    // Use manual date string to avoid timezone issues with toISOString().split('T')[0]
-    const dateSeed = today.toISOString().split('T')[0];
-    const seed = `${userId}-${categoryId}-${dateSeed}`;
+    // Fisher-Yates shuffle using seeded random
+    const shuffled = [...questionsList];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(seededRandom() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
 
-    // Sort by a hash of (question.id + seed), but prioritize the smart question
-    const sortedQuestions = [...questionsList].sort((a, b) => {
-      if (a.id === smartQuestionId) return -1;
-      if (b.id === smartQuestionId) return 1;
-      const hashA = this.simpleHash(`${a.id}-${seed}`);
-      const hashB = this.simpleHash(`${b.id}-${seed}`);
-      return hashA - hashB;
-    });
+    // Prioritize the smart (failed) question at position 0 if present
+    if (smartQuestionId !== null) {
+      const smartIdx = shuffled.findIndex(q => q.id === smartQuestionId);
+      if (smartIdx > 0) {
+        const [smartQ] = shuffled.splice(smartIdx, 1);
+        shuffled.unshift(smartQ);
+      }
+    }
+
+    const sortedQuestions = shuffled;
 
     const selectedQuestions = sortedQuestions.slice(0, 5);
 
