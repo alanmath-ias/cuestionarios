@@ -20,6 +20,7 @@ import { arithmeticMapNodes, ArithmeticNode } from '@/data/arithmetic-map-data';
 import { algebraMapNodes } from '@/data/algebra-map-data';
 import { calculusMapNodes } from '@/data/calculus-map-data';
 import { integralCalculusMapNodes } from '@/data/integral-calculus-map-data';
+import { statisticsMapNodes } from '@/data/statistics-map-data';
 import { useToast } from "@/hooks/use-toast";
 
 interface Category {
@@ -68,7 +69,8 @@ function QuizList() {
   const currentMapNodes = categoryId === '2' ? algebraMapNodes :
     categoryId === '4' ? calculusMapNodes :
       categoryId === '5' ? integralCalculusMapNodes :
-        arithmeticMapNodes;
+        categoryId === '19' ? statisticsMapNodes :
+          arithmeticMapNodes;
   const initialViewMode = searchParams.get('view') as 'roadmap' | 'grid' | null;
   const { toast } = useToast();
 
@@ -378,7 +380,7 @@ function QuizList() {
       ) : (
         <>
           {viewMode === 'roadmap' ? (
-            ['1', '2', '4', '5'].includes(categoryId) ? (
+            ['1', '2', '4', '5', '19'].includes(categoryId) ? (
               <SkillTreeView
                 nodes={currentMapNodes}
                 allQuizzes={quizzes?.map(q => ({
@@ -391,6 +393,7 @@ function QuizList() {
                   if (categoryId === '2') return "Explora el álgebra desde sus fundamentos hasta el dominio de funciones.";
                   if (categoryId === '4') return "Domina el cálculo diferencial: límites, derivadas y sus aplicaciones.";
                   if (categoryId === '5') return "Explora la integración: desde el área bajo la curva hasta las integrales impropias.";
+                  if (categoryId === '19') return "Domina la estadística descriptiva, probabilidad y análisis de datos.";
                   return "";
                 })()}
                 progressMap={(() => {

@@ -24,8 +24,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a0-transicion'],
         description: 'Incógnitas y variables como números generalizados.',
         xOffset: -40,
-        subcategoryId: 16,
-        filterKeywords: ['formula', 'fórmula', 'solucion', 'solución'], // Captures FÓRMULAS quizzes
+        subcategoryId: 374,
         behavior: 'quiz_list'
     },
     {
@@ -36,8 +35,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a0-transicion'],
         description: 'Principio fundamental de la balanza.',
         xOffset: 40,
-        subcategoryId: 16,
-        filterKeywords: ['despeje', 'despejar', 'variable'], // Captures Despeje quizzes
+        subcategoryId: 375,
         behavior: 'quiz_list'
     },
 
@@ -63,7 +61,6 @@ export const algebraMapNodes: ArithmeticNode[] = [
         description: 'Coeficiente, variable y grado.',
         xOffset: -30,
         // No specific subcategory found, mapping generic or placeholder
-        filterKeywords: ['termino', 'término', 'coeficiente'],
         behavior: 'quiz_list'
     },
     {
@@ -74,7 +71,6 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a1-expresiones'],
         description: 'Monomios, binomios y clasificación.',
         xOffset: 30,
-        filterKeywords: ['polinomio', 'monomio', 'grado'],
         behavior: 'quiz_list'
     },
 
@@ -99,7 +95,6 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a2-operaciones'],
         description: 'Reducción de términos semejantes.',
         xOffset: -40,
-        filterKeywords: ['suma', 'resta', 'adicion', 'sustraccion'],
         behavior: 'quiz_list'
     },
     {
@@ -110,7 +105,6 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a2-operaciones'],
         description: 'Propiedad distributiva aplicada.',
         xOffset: 40,
-        filterKeywords: ['multiplicacion', 'producto'],
         behavior: 'quiz_list'
     },
 
@@ -125,7 +119,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a2-2-multi'],
         description: 'Patrones multiplicativos esenciales.',
         xOffset: 0,
-        subcategoryId: 10,
+        subcategoryId: 382,
         behavior: 'container'
     },
     // Children of Productos Notables
@@ -137,8 +131,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a3-notables'],
         description: 'Binomio al cuadrado y conjugados.',
         xOffset: -50,
-        subcategoryId: 10,
-        filterKeywords: ['(x+y)^2', '(x-y)^2', '(x+y)(x-y)', 'forma (x+y)', 'forma (x-y)'],
+        subcategoryId: 383,
         behavior: 'quiz_list'
     },
     {
@@ -149,8 +142,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a3-notables'],
         description: 'Identidades complejas.',
         xOffset: 50,
-        subcategoryId: 10,
-        filterKeywords: ['miscelanea', 'miscelánea', 'avanzado', 'forma (x+a)(x+b)', '(x+y+z)'],
+        subcategoryId: 384,
         behavior: 'quiz_list'
     },
     // Grandchild of Productos Notables (Empty content, educational structure)
@@ -162,8 +154,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a3-1-basicos'], // Parent is now Básicos to make it a grandchild of Notables
         description: 'Coeficientes binomiales (Referencia).',
         xOffset: 0,
-        subcategoryId: 10,
-        filterKeywords: ['DONOTMATCHANYTHING'], // Empty content requested
+        subcategoryId: 385,
         behavior: 'quiz_list'
     },
 
@@ -188,7 +179,6 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a4-division'],
         description: 'Divisiones exactas especiales.',
         xOffset: 0,
-        filterKeywords: ['cociente', 'division', 'residuo'],
         behavior: 'quiz_list'
     },
 
@@ -203,7 +193,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a4-1-cocientes', 'a3-notables'],
         description: 'El corazón del álgebra.',
         xOffset: 0,
-        subcategoryId: 12,
+        subcategoryId: 388,
         behavior: 'container'
     },
 
@@ -216,8 +206,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a5-factorizacion'],
         description: 'Monomio y Polinomio.',
         xOffset: -75,
-        subcategoryId: 12,
-        filterKeywords: ['factor comun', 'factor común', 'agrupación'],
+        subcategoryId: 389,
         behavior: 'quiz_list'
     },
     {
@@ -228,9 +217,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a5-factorizacion'],
         description: 'a² - b².',
         xOffset: -25,
-        subcategoryId: 12,
-        filterKeywords: ['diferencia de cuadrados'],
-        excludeKeywords: ['combinado', 'combinados', 'combiandos', 'combinada', 'combinación', 'combinacion', 'adicion', 'sustraccion', 'adición', 'sustracción'], // Robust exclusion
+        subcategoryId: 390,
         behavior: 'quiz_list'
     },
     {
@@ -241,9 +228,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a5-factorizacion'],
         description: 'Perfecto (TCP).',
         xOffset: 25,
-        subcategoryId: 12,
-        filterKeywords: ['trinomio cuadrado perfecto'],
-        excludeKeywords: ['combinado', 'combinados', 'combiandos', 'combinada', 'combinación', 'combinacion', 'adicion', 'sustraccion', 'adición', 'sustracción', 'quitar y poner'], // Robust exclusion
+        subcategoryId: 391,
         behavior: 'quiz_list'
     },
     {
@@ -254,8 +239,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a5-factorizacion'],
         description: 'Trinomio simple.',
         xOffset: 75,
-        subcategoryId: 12,
-        filterKeywords: ['forma x^2', 'forma x2'],
+        subcategoryId: 392,
         behavior: 'quiz_list'
     },
 
@@ -268,8 +252,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a5-1-mcd', 'a5-2-diff', 'a5-3-tcp', 'a5-4-x2'], // Requires understanding of basics
         description: 'Estrategias mixtas.',
         xOffset: -60,
-        subcategoryId: 12,
-        filterKeywords: ['combinada', 'combinado', 'combinación', 'combinacion', 'mixto', 'múltiple'], // Broad match
+        subcategoryId: 393,
         behavior: 'quiz_list'
     },
     // Special Cases Group (Listed individually as requested)
@@ -281,8 +264,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a5-4-x2'], // Extension of x^2
         description: 'Coeficiente principal > 1.',
         xOffset: -20,
-        subcategoryId: 12,
-        filterKeywords: ['forma ax^2', 'aspa simple', 'tijera'], // Keywords for ax^2
+        subcategoryId: 394,
         behavior: 'quiz_list'
     },
     {
@@ -293,8 +275,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a5-2-diff'], // Related to powers
         description: 'Suma y diferencia de cubos.',
         xOffset: 20,
-        subcategoryId: 12,
-        filterKeywords: ['cubo'],
+        subcategoryId: 395,
         behavior: 'quiz_list'
     },
     {
@@ -305,12 +286,23 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a5-3-tcp'], // Variation of TCP
         description: 'Completar cuadrados.',
         xOffset: 60,
-        subcategoryId: 12,
-        filterKeywords: ['adicion', 'adición', 'sustraccion', 'sustracción', 'quitar y poner'], // Removed "y" to match individual words if needed
+        subcategoryId: 396,
         behavior: 'quiz_list'
     },
 
     // MASTERY (Level 14)
+    {
+        id: 'a5-9-division',
+        label: 'Por División',
+        level: 14,
+        type: 'basic',
+        requires: ['a5-factorizacion'],
+        description: 'Método de Ruffini y residuos.',
+        xOffset: -30,
+        subcategoryId: 422,
+        behavior: 'quiz_list'
+    },
+
     {
         id: 'a5-mastery',
         label: 'Maestría Final',
@@ -318,9 +310,8 @@ export const algebraMapNodes: ArithmeticNode[] = [
         type: 'evaluation',
         requires: ['a5-5-combinada', 'a5-6-ax2', 'a5-7-cubos', 'a5-8-adicion'],
         description: 'Prueba de factorización total.',
-        xOffset: 0,
-        subcategoryId: 12,
-        filterKeywords: ['miscelanea', 'miscelánea', 'evaluacion', 'examen'],
+        xOffset: 30,
+        subcategoryId: 397,
         behavior: 'quiz_list'
     },
 
@@ -341,7 +332,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a5-mastery'],
         description: 'Simplificación y operaciones racionales.',
         xOffset: 0,
-        subcategoryId: 13,
+        subcategoryId: 398,
         behavior: 'container'
     },
     {
@@ -352,8 +343,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a6-fracciones'],
         description: 'Reducción a mínima expresión.',
         xOffset: -40,
-        subcategoryId: 13,
-        filterKeywords: ['simplificacion', 'simplificación'],
+        subcategoryId: 399,
         behavior: 'quiz_list'
     },
     {
@@ -364,8 +354,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a6-fracciones'],
         description: 'Suma, resta, mult, div.',
         xOffset: 40,
-        subcategoryId: 13,
-        filterKeywords: ['suma', 'resta', 'operacion'],
+        subcategoryId: 400,
         behavior: 'quiz_list'
     },
 
@@ -380,7 +369,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a6-fracciones', 'a2-operaciones'],
         description: 'Hallando el valor de x.',
         xOffset: -50,
-        subcategoryId: 14,
+        subcategoryId: 401,
         behavior: 'container'
     },
     {
@@ -391,8 +380,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a7-ecuaciones'],
         description: 'Despeje y conjunto solución.',
         xOffset: -70,
-        subcategoryId: 14,
-        filterKeywords: ['resolucion', 'solucion'],
+        subcategoryId: 402,
         behavior: 'quiz_list'
     },
     {
@@ -403,9 +391,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a7-ecuaciones'],
         description: 'Planteamiento de ecuaciones.',
         xOffset: -30,
-        subcategoryId: 15,
-        filterKeywords: ['problema', 'planteamiento', 'móvil'],
-        excludeKeywords: ['fraccionario', 'fraccionaria', 'fraccionarios', 'fraccionarias', 'fracciones', 'fraccion', 'fracción'], // Explicit exclusion
+        subcategoryId: 403,
         behavior: 'quiz_list'
     },
     {
@@ -416,8 +402,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a7-ecuaciones', 'a6-fracciones'],
         xOffset: 20,
         description: 'Variables en denominador.',
-        subcategoryId: 15,
-        filterKeywords: ['fraccion', 'fracción'],
+        subcategoryId: 404,
         behavior: 'quiz_list'
     },
 
@@ -442,9 +427,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a9-5-indet'],
         description: 'Identidades.',
         xOffset: -40,
-        subcategoryId: 21,
-        filterKeywords: ['indeterminada'],
-        excludeKeywords: ['problema', 'problemas'], // Exclude word problems
+        subcategoryId: 406,
         behavior: 'quiz_list'
     },
     {
@@ -455,9 +438,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a9-5-indet'],
         description: 'En contexto.',
         xOffset: 40,
-        subcategoryId: 21,
-        filterKeywords: ['problema', 'indeterminada'], // Must satisfy logic separately handled or use restrictive filter
-        excludeKeywords: [], // Removed 'ecuaciones' exclusion to allow "Problemas sobre Ecuaciones..."
+        subcategoryId: 407,
         behavior: 'quiz_list'
     },
 
@@ -482,9 +463,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a8-inecuaciones'],
         description: '1er grado > <',
         xOffset: -65,
-        subcategoryId: 19,
-        filterKeywords: ['inecuacion lineal', 'inecuación lineal', 'inecuacion racional', 'inecuaciones lineales'], // Added plural
-        excludeKeywords: ['simultanea', 'simultánea', 'cuadratica', 'cuadrática'],
+        subcategoryId: 409,
         behavior: 'quiz_list'
     },
     {
@@ -495,8 +474,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a8-inecuaciones'],
         description: 'Sistemas desigualdades.',
         xOffset: 0,
-        subcategoryId: 19,
-        filterKeywords: ['simultanea', 'simultánea'],
+        subcategoryId: 410,
         behavior: 'quiz_list'
     },
     {
@@ -507,9 +485,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a8-inecuaciones'],
         description: '2do grado.',
         xOffset: 65,
-        subcategoryId: 19,
-        filterKeywords: ['inecuacion cuadratica', 'inecuación cuadrática'],
-        excludeKeywords: ['simultanea', 'simultánea'],
+        subcategoryId: 411,
         behavior: 'quiz_list'
     },
 
@@ -534,7 +510,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a10-sistemas'],
         description: 'Compatible, Incompatible.',
         xOffset: -40,
-        subcategoryId: 49,
+        subcategoryId: 413,
         behavior: 'quiz_list'
     },
     {
@@ -545,7 +521,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a10-sistemas'],
         description: 'Sustitución, Igualación.',
         xOffset: 0,
-        subcategoryId: 50,
+        subcategoryId: 414,
         behavior: 'quiz_list'
     },
     {
@@ -556,7 +532,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a10-sistemas'],
         description: 'Intersección de rectas.',
         xOffset: 40,
-        subcategoryId: 51,
+        subcategoryId: 415,
         behavior: 'quiz_list'
     },
     {
@@ -567,7 +543,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a10-sistemas'],
         description: 'Determinantes.',
         xOffset: 80,
-        subcategoryId: 52,
+        subcategoryId: 416,
         behavior: 'quiz_list'
     },
 
@@ -582,8 +558,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a10-sistemas', 'a5-factorizacion'],
         description: 'Segundo grado.',
         xOffset: -40,
-        subcategoryId: 15,
-        filterKeywords: ['cuadratica', 'cuadrática', 'segundo grado', 'ecuaciones y funciones cuadráticas'],
+        subcategoryId: 417,
         behavior: 'container'
     },
     {
@@ -594,8 +569,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a11-cuadraticas'],
         description: 'Fórmula general y factores.',
         xOffset: -40,
-        subcategoryId: 15,
-        filterKeywords: ['formula general', 'fórmula general', 'factorizacion', 'factorización'],
+        subcategoryId: 418,
         behavior: 'quiz_list'
     },
 
@@ -610,8 +584,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a10-sistemas'],
         description: 'Relaciones funcionales.',
         xOffset: 40,
-        subcategoryId: 15,
-        filterKeywords: ['funcion', 'función', 'polinomio', 'modelado', 'tasa'],
+        subcategoryId: 419,
         behavior: 'container'
     },
     {
@@ -622,8 +595,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a12-funciones'],
         description: 'y = mx + b',
         xOffset: 20,
-        subcategoryId: 20,
-        filterKeywords: ['lineal', 'afin', 'grafica', 'gráfica'],
+        subcategoryId: 420,
         behavior: 'quiz_list'
     },
     {
@@ -634,8 +606,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a12-funciones'],
         description: 'Dominio y rango.',
         xOffset: 60,
-        subcategoryId: 15,
-        filterKeywords: ['dominio', 'rango', 'evaluacion', 'composición', 'inversa', 'racional'],
+        subcategoryId: 421,
         behavior: 'quiz_list'
     }
 ];

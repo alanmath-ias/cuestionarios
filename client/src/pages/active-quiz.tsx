@@ -306,14 +306,19 @@ const ActiveQuiz = () => {
 
   // Helper to determine font size class based on answer content length
   const getAnswerSizeClass = (content: string) => {
+    // Detect if it contains a fraction which adds height
+    const hasFraction = content.includes('\\frac');
+
     // Remove LaTeX delimiters to estimate "visual" length more accurately
     const cleanContent = content.replace(/\\frac|\\{|\\}|\$|¡/g, '');
     const length = cleanContent.length;
 
-    if (length < 10) return "text-2xl md:text-3xl"; // Huge on desktop, Large on mobile
-    if (length < 40) return "text-xl md:text-2xl";  // Large on desktop, Medium on mobile
-    if (length < 70) return "text-lg md:text-xl";   // Medium on desktop, Normal+ on mobile
-    return "text-sm md:text-base";                  // Normal on desktop, Small on mobile (safe for long text)
+    if (length < 10) {
+      return hasFraction ? "text-lg md:text-xl" : "text-2xl md:text-3xl";
+    }
+    if (length < 40) return "text-xl md:text-2xl";
+    if (length < 70) return "text-lg md:text-xl";
+    return "text-sm md:text-base";
   };
 
   const isReadOnly = mode === 'readonly';

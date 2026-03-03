@@ -40,6 +40,7 @@ import { arithmeticMapNodes, ArithmeticNode } from "@/data/arithmetic-map-data";
 import { algebraMapNodes } from "@/data/algebra-map-data";
 import { calculusMapNodes } from "@/data/calculus-map-data";
 import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
+import { statisticsMapNodes } from "@/data/statistics-map-data";
 import { Reorder, AnimatePresence, useDragControls, motion } from "framer-motion";
 import { GripVertical } from "lucide-react";
 
@@ -67,6 +68,7 @@ const getMapData = (catId: any, catName?: string) => {
   if (id === 2 || name.includes("álgebra")) return { nodes: algebraMapNodes, title: "Mapa de Álgebra" };
   if (id === 4 || name.includes("diferencial")) return { nodes: calculusMapNodes, title: "Mapa de Cálculo Diferencial" };
   if (id === 5 || name.includes("integral")) return { nodes: integralCalculusMapNodes, title: "Mapa de Cálculo Integral" };
+  if (id === 19 || name.includes("estadística") || name.includes("estadistica")) return { nodes: statisticsMapNodes, title: "Mapa de Estadística" };
   return null;
 };
 
@@ -1470,7 +1472,7 @@ export default function QuizzesAdmin() {
                                   onClick={() => handleManageQuestions(quiz.id)}
                                 >
                                   <ListChecks className="h-3.5 w-3.5" />
-                                  Preguntas
+                                  Preguntas ({quiz.totalQuestions})
                                 </Button>
 
                                 <Dialog>
@@ -1992,7 +1994,7 @@ const DraggableQuizItem = React.memo(({
                   onClick={() => handleManageQuestions(quiz.id)}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  Preguntas
+                  Preguntas ({quiz.totalQuestions})
                 </Button>
               </div>
             </div>

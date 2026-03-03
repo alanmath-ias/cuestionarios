@@ -6,7 +6,7 @@ import * as schema from "../shared/schema.js"; // Usar el esquema compartido
 const connectionString = process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/postgres";
 
 // Cliente de postgres
-const client = postgres(connectionString, { max: 10 });
+export const client = postgres(connectionString, { max: 10 });
 
 // Cliente de Drizzle
 export const db = drizzle(client, { schema });

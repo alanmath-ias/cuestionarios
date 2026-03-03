@@ -69,6 +69,7 @@ import { arithmeticMapNodes, ArithmeticNode } from "@/data/arithmetic-map-data";
 import { algebraMapNodes } from "@/data/algebra-map-data";
 import { calculusMapNodes } from "@/data/calculus-map-data";
 import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
+import { statisticsMapNodes } from "@/data/statistics-map-data";
 
 
 interface QuizWithFeedback {
@@ -501,6 +502,7 @@ export default function UserDashboard() {
     if (catId === 2 || name.includes("álgebra")) return algebraMapNodes;
     if (catId === 4 || name.includes("diferencial")) return calculusMapNodes;
     if (catId === 5 || name.includes("integral")) return integralCalculusMapNodes;
+    if (catId === 19 || name.includes("estadística") || name.includes("estadistica")) return statisticsMapNodes;
     return [];
   };
 
