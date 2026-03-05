@@ -1448,6 +1448,10 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async deleteQuestionReport(id: number): Promise<void> {
+    await this.db.delete(questionReports).where(eq(questionReports.id, id));
+  }
+
   async getQuestionReportDetails(id: number): Promise<any> {
     const report = await this.db.query.questionReports.findFirst({
       where: eq(questionReports.id, id),

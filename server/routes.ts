@@ -3480,9 +3480,9 @@ Ejemplo de formato:
     }
   });
 
-  apiRouter.patch("/admin/reports/:id", async (req: Request, res: Response) => {
+  apiRouter.patch("/admin/reports/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      if (!req.user || req.user.role !== "admin") return res.status(403).send("No autorizado");
+      if (req.user?.role !== "admin") return res.status(403).send("No autorizado");
 
       const reportId = parseInt(req.params.id);
       const { status } = req.body;
@@ -3495,13 +3495,22 @@ Ejemplo de formato:
     }
   });
 
-  apiRouter.get("/admin/reports/:id/details", async (req: Request, res: Response) => {
+  apiRouter.delete("/admin/reports/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = req.session.userId;
-      if (!userId) return res.status(401).send("No autenticado");
+      if (req.user?.role !== "admin") return res.status(403).send("No autorizado");
 
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== "admin") return res.status(403).send("No autorizado");
+      const reportId = parseInt(req.params.id);
+      await storage.deleteQuestionReport(reportId);
+      res.sendStatus(204);
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      res.status(500).send("Error al eliminar el reporte");
+    }
+  });
+
+  apiRouter.get("/admin/reports/:id/details", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (req.user?.role !== "admin") return res.status(403).send("No autorizado");
 
       const reportId = parseInt(req.params.id);
       const report = await storage.getQuestionReportDetails(reportId);
@@ -3515,13 +3524,9 @@ Ejemplo de formato:
     }
   });
 
-  apiRouter.post("/admin/reports/:id/solve-ai", async (req: Request, res: Response) => {
+  apiRouter.post("/admin/reports/:id/solve-ai", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = req.session.userId;
-      if (!userId) return res.status(401).send("No autenticado");
-
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== "admin") return res.status(403).send("No autorizado");
+      if (req.user?.role !== "admin") return res.status(403).send("No autorizado");
 
       const reportId = parseInt(req.params.id);
       const report = await storage.getQuestionReportDetails(reportId);

@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CheckCircle, Eye, Bot } from "lucide-react";
+import { Loader2, CheckCircle, Eye, Bot, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -117,6 +117,27 @@ export default function AdminReports() {
         },
     });
 
+    const deleteReportMutation = useMutation({
+        mutationFn: async (id: number) => {
+            const res = await apiRequest("DELETE", `/api/admin/reports/${id}`);
+            if (!res.ok) throw new Error("No se pudo eliminar el reporte");
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
+            toast({
+                title: "Reporte eliminado",
+                description: "El reporte ha sido eliminado correctamente.",
+            });
+        },
+        onError: (error: Error) => {
+            toast({
+                title: "Error",
+                description: error.message,
+                variant: "destructive",
+            });
+        },
+    });
+
     const handleCloseDialog = () => {
         setSelectedReportId(null);
         setAiResponse(null);
@@ -215,6 +236,19 @@ export default function AdminReports() {
                                                                 Marcar Resuelto
                                                             </Button>
                                                         )}
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                if (window.confirm("¿Estás seguro de que deseas eliminar este reporte?")) {
+                                                                    deleteReportMutation.mutate(report.id);
+                                                                }
+                                                            }}
+                                                            disabled={deleteReportMutation.isPending}
+                                                            className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20 hover:text-red-300"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
