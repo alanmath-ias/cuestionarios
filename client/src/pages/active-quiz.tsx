@@ -96,7 +96,7 @@ const ActiveQuiz = () => {
   const [answeredQuestions, setAnsweredQuestions] = useState<Record<number, boolean>>({});
   const [textAnswers, setTextAnswers] = useState<Record<number, string>>({});
   const [shuffledAnswers, setShuffledAnswers] = useState<any[]>([]);
-  const { session } = useSession();
+  const { session, loading: sessionLoading } = useSession();
   const [isHintDialogOpen, setIsHintDialogOpen] = useState(false);
   const [hintsRevealed, setHintsRevealed] = useState<Record<number, string[]>>({});
   const [requestingHint, setRequestingHint] = useState(false);
@@ -124,10 +124,10 @@ const ActiveQuiz = () => {
   // Track used hint types per question
   const [usedHintTypes, setUsedHintTypes] = useState<Record<number, ('regular' | 'super')[]>>({});
 
-  // Queries
+  // Queries — esperan a que la sesión esté confirmada para evitar 401 al iniciar
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${quizId}`],
-    enabled: !isChiqui && !!quizId,
+    enabled: !sessionLoading && !isChiqui && !!quizId,
   });
 
   const { data: questions, isLoading: loadingQuestions, error: errorQuestions } = useQuery<Question[]>({
@@ -139,10 +139,20 @@ const ActiveQuiz = () => {
       const url = isChiqui
         ? `/api/chiquitest/questions/${categoryId}${userIdStr ? `?user_id=${userIdStr}` : ''}`
         : `/api/quizzes/${quizId}/questions${mode ? `?mode=${mode}` : ''}`;
-      const res = await apiRequest("GET", url);
+      // Usar fetch directo para poder interceptar 401 antes del throw
+      const res = await fetch(url, { credentials: 'include' });
+      // Si la sesión todavía no estaba lista, reintentar una vez en silencio
+      if (res.status === 401) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const retry = await fetch(url, { credentials: 'include' });
+        if (!retry.ok) throw new Error(`${retry.status}: Error al cargar preguntas`);
+        return retry.json();
+      }
+      if (!res.ok) throw new Error(`${res.status}: Error al cargar preguntas`);
       return res.json();
     },
-    enabled: !!quizId || !!categoryId,
+    // Esperar a que la sesión esté confirmada antes de disparar el fetch
+    enabled: !sessionLoading && (!!quizId || !!categoryId),
   });
 
   const { data: progress, isLoading: loadingProgress } = useQuery<Progress>({
@@ -376,23 +386,16 @@ const ActiveQuiz = () => {
       setStudentAnswers([...studentAnswers, studentAnswer]);
       setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
     } catch (error: any) {
+      // Guardar localmente aunque falle el server — el progreso no se pierde
+      setStudentAnswers(prev => [...prev, studentAnswer]);
+      setAnsweredQuestions(prev => ({ ...prev, [currentQuestionIndex]: true }));
+      // Error de sesión: redirigir solo si es persistente (no en primer intento)
       if (error.message?.includes("401")) {
-        toast({
-          title: "Conexión inestable",
-          description: "Detectamos problemas con tu sesión. Te redirigiremos al inicio...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/auth";
-        }, 3000);
+        console.warn("[Quiz] Error 401 al guardar respuesta, manteniendo en estado local.");
         return;
       }
-      toast({
-        title: 'Error',
-        description: 'No se pudo guardar tu respuesta.',
-        variant: 'destructive',
-      });
-      throw error;
+      // Otros errores: logear pero no interrumpir al usuario
+      console.error("[Quiz] Error al guardar respuesta:", error);
     }
   };
 
@@ -452,9 +455,11 @@ const ActiveQuiz = () => {
       }
     } catch (error: any) {
       if (error.message?.includes("401")) {
+        // Sesión expirada — redirigir después de un breve aviso
+        console.warn("[Quiz] Sesión expirada al navegar preguntas.");
         toast({
-          title: "Conexión inestable",
-          description: "Detectamos problemas con tu sesión. Te redirigiremos al inicio...",
+          title: "Sesión expirada",
+          description: "Tu sesión ha caducado. Vuelve a iniciar sesión para continuar.",
           variant: "destructive",
         });
         setTimeout(() => {
@@ -462,11 +467,8 @@ const ActiveQuiz = () => {
         }, 3000);
         return;
       }
-      toast({
-        title: 'Error',
-        description: 'Ocurrió un error al avanzar',
-        variant: 'destructive',
-      });
+      // Errores de red o transitorios: no interrumpir, solo logear
+      console.error("[Quiz] Error al avanzar pregunta:", error);
     } finally {
       setIsNavigating(false);
     }
@@ -658,7 +660,7 @@ const ActiveQuiz = () => {
     }
   };
 
-  if ((!isChiqui && loadingQuiz) || loadingQuestions) {
+  if (sessionLoading || (!isChiqui && loadingQuiz) || loadingQuestions) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-slate-950">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />

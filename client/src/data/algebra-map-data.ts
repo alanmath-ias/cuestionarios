@@ -60,7 +60,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a1-expresiones'],
         description: 'Coeficiente, variable y grado.',
         xOffset: -30,
-        // No specific subcategory found, mapping generic or placeholder
+        subcategoryId: 423,
         behavior: 'quiz_list'
     },
     {
@@ -71,6 +71,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a1-expresiones'],
         description: 'Monomios, binomios y clasificación.',
         xOffset: 30,
+        subcategoryId: 424,
         behavior: 'quiz_list'
     },
 
@@ -94,7 +95,8 @@ export const algebraMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['a2-operaciones'],
         description: 'Reducción de términos semejantes.',
-        xOffset: -40,
+        xOffset: -60,
+        subcategoryId: 425,
         behavior: 'quiz_list'
     },
     {
@@ -104,7 +106,30 @@ export const algebraMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['a2-operaciones'],
         description: 'Propiedad distributiva aplicada.',
-        xOffset: 40,
+        xOffset: 0,
+        subcategoryId: 426,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a2-3-mcm-mcd',
+        label: 'mcm y MCD',
+        level: 5,
+        type: 'basic',
+        requires: ['a2-operaciones'],
+        description: 'mcm y MCD - Operaciones Polinomios.',
+        xOffset: 60,
+        subcategoryId: 432,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a2-4-problemas',
+        label: 'Problemas',
+        level: 6,
+        type: 'applied',
+        requires: ['a2-operaciones'],
+        description: 'Problemas - Operaciones Polinomios.',
+        xOffset: 0,
+        subcategoryId: 433,
         behavior: 'quiz_list'
     },
 
@@ -114,7 +139,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a3-notables',
         label: 'Productos Notables',
-        level: 6,
+        level: 7,
         type: 'critical',
         requires: ['a2-2-multi'],
         description: 'Patrones multiplicativos esenciales.',
@@ -126,7 +151,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a3-1-basicos',
         label: 'Básicos',
-        level: 7,
+        level: 8,
         type: 'basic',
         requires: ['a3-notables'],
         description: 'Binomio al cuadrado y conjugados.',
@@ -137,7 +162,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a3-3-avanzados',
         label: 'Avanzados',
-        level: 7,
+        level: 8,
         type: 'basic',
         requires: ['a3-notables'],
         description: 'Identidades complejas.',
@@ -149,12 +174,12 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a3-2-pascal',
         label: 'Triángulo Pascal',
-        level: 8, // Grandchild level (6 -> 7 -> 8)
+        level: 9, // Grandchild level (7 -> 8 -> 9)
         type: 'basic',
         requires: ['a3-1-basicos'], // Parent is now Básicos to make it a grandchild of Notables
         description: 'Coeficientes binomiales (Referencia).',
         xOffset: 0,
-        subcategoryId: 385,
+        subcategoryId: 427,
         behavior: 'quiz_list'
     },
 
@@ -164,7 +189,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a4-division',
         label: 'División Algebraica',
-        level: 9, // Shifted down
+        level: 10, // Shifted down
         type: 'basic',
         requires: ['a3-notables'],
         description: 'Algoritmos de división y Ruffini.',
@@ -174,11 +199,12 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a4-1-cocientes',
         label: 'Cocientes Notables',
-        level: 10,
+        level: 11,
         type: 'basic',
         requires: ['a4-division'],
         description: 'Divisiones exactas especiales.',
         xOffset: 0,
+        subcategoryId: 428,
         behavior: 'quiz_list'
     },
 
@@ -188,7 +214,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a5-factorizacion',
         label: 'Factorización',
-        level: 11,
+        level: 12,
         type: 'critical',
         requires: ['a4-1-cocientes', 'a3-notables'],
         description: 'El corazón del álgebra.',
@@ -197,11 +223,11 @@ export const algebraMapNodes: ArithmeticNode[] = [
         behavior: 'container'
     },
 
-    // CHILDREN (Level 12)
+    // CHILDREN (Level 13)
     {
         id: 'a5-1-mcd',
         label: 'Factor Común',
-        level: 12,
+        level: 13,
         type: 'basic',
         requires: ['a5-factorizacion'],
         description: 'Monomio y Polinomio.',
@@ -212,7 +238,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a5-2-diff',
         label: 'Diferencia Cuadrados',
-        level: 12,
+        level: 13,
         type: 'basic',
         requires: ['a5-factorizacion'],
         description: 'a² - b².',
@@ -223,7 +249,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a5-3-tcp',
         label: 'Trinomio Cuadrado',
-        level: 12,
+        level: 13,
         type: 'basic',
         requires: ['a5-factorizacion'],
         description: 'Perfecto (TCP).',
@@ -234,7 +260,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a5-4-x2',
         label: 'Forma x²+bx+c',
-        level: 12,
+        level: 13,
         type: 'basic',
         requires: ['a5-factorizacion'],
         description: 'Trinomio simple.',
@@ -243,11 +269,11 @@ export const algebraMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
 
-    // GRANDCHILDREN (Level 13) - Special Cases & Mixed
+    // GRANDCHILDREN (Level 14) - Special Cases & Mixed
     {
         id: 'a5-5-combinada',
         label: 'Combinada',
-        level: 13,
+        level: 14,
         type: 'applied',
         requires: ['a5-1-mcd', 'a5-2-diff', 'a5-3-tcp', 'a5-4-x2'], // Requires understanding of basics
         description: 'Estrategias mixtas.',
@@ -259,7 +285,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a5-6-ax2',
         label: 'Forma ax²+bx+c',
-        level: 13,
+        level: 14,
         type: 'basic',
         requires: ['a5-4-x2'], // Extension of x^2
         description: 'Coeficiente principal > 1.',
@@ -270,7 +296,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a5-7-cubos',
         label: 'Cubos Perfectos',
-        level: 13,
+        level: 14,
         type: 'basic',
         requires: ['a5-2-diff'], // Related to powers
         description: 'Suma y diferencia de cubos.',
@@ -281,7 +307,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a5-8-adicion',
         label: 'Adición/Sustracción',
-        level: 13,
+        level: 14,
         type: 'basic',
         requires: ['a5-3-tcp'], // Variation of TCP
         description: 'Completar cuadrados.',
@@ -290,11 +316,11 @@ export const algebraMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
 
-    // MASTERY (Level 14)
+    // MASTERY (Level 15)
     {
         id: 'a5-9-division',
         label: 'Por División',
-        level: 14,
+        level: 15,
         type: 'basic',
         requires: ['a5-factorizacion'],
         description: 'Método de Ruffini y residuos.',
@@ -306,7 +332,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a5-mastery',
         label: 'Maestría Final',
-        level: 14,
+        level: 15,
         type: 'evaluation',
         requires: ['a5-5-combinada', 'a5-6-ax2', 'a5-7-cubos', 'a5-8-adicion'],
         description: 'Prueba de factorización total.',
@@ -327,7 +353,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a6-fracciones',
         label: 'Fracciones Alg.',
-        level: 15, // Shifted UP (14 gap 1)
+        level: 16, // Shifted UP (15 gap 1)
         type: 'basic',
         requires: ['a5-mastery'],
         description: 'Simplificación y operaciones racionales.',
@@ -338,7 +364,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a6-1-simple',
         label: 'Simplificación',
-        level: 16,
+        level: 17,
         type: 'basic',
         requires: ['a6-fracciones'],
         description: 'Reducción a mínima expresión.',
@@ -349,7 +375,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a6-2-ops',
         label: 'Operaciones',
-        level: 16,
+        level: 17,
         type: 'basic',
         requires: ['a6-fracciones'],
         description: 'Suma, resta, mult, div.',
@@ -364,7 +390,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a7-ecuaciones',
         label: 'Ecuaciones 1 Var',
-        level: 17, // Gap of 1 level (16 -> 17)
+        level: 18, // Gap of 1 level (17 -> 18)
         type: 'basic',
         requires: ['a6-fracciones', 'a2-operaciones'],
         description: 'Hallando el valor de x.',
@@ -375,7 +401,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a7-1-teoria',
         label: 'Resolución',
-        level: 18,
+        level: 19,
         type: 'basic',
         requires: ['a7-ecuaciones'],
         description: 'Despeje y conjunto solución.',
@@ -386,7 +412,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a7-2-problemas',
         label: 'Problemas Verbales',
-        level: 18,
+        level: 19,
         type: 'applied',
         requires: ['a7-ecuaciones'],
         description: 'Planteamiento de ecuaciones.',
@@ -397,7 +423,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a9-ec-frac',
         label: 'Ec. Fraccionarias',
-        level: 18,
+        level: 19,
         type: 'critical',
         requires: ['a7-ecuaciones', 'a6-fracciones'],
         xOffset: 20,
@@ -412,7 +438,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a9-5-indet',
         label: 'Ec. Indeterminadas',
-        level: 19, // Shifted UP (Children 18 -> 19)
+        level: 20, // Shifted UP (Children 19 -> 20)
         type: 'basic',
         requires: ['a7-ecuaciones'], // Requires basic equations
         description: 'Infinitas soluciones.',
@@ -422,7 +448,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a9-5-res',
         label: 'Resolución',
-        level: 20,
+        level: 21,
         type: 'basic',
         requires: ['a9-5-indet'],
         description: 'Identidades.',
@@ -433,7 +459,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a9-5-prob',
         label: 'Problemas',
-        level: 20,
+        level: 21,
         type: 'applied',
         requires: ['a9-5-indet'],
         description: 'En contexto.',
@@ -448,7 +474,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a8-inecuaciones',
         label: 'Inecuaciones',
-        level: 21, // Shifted UP (Children 20 -> 21)
+        level: 22, // Shifted UP (Children 21 -> 22)
         type: 'basic',
         requires: ['a2-operaciones'],
         description: 'Desigualdades.',
@@ -458,7 +484,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a8-1-lineales',
         label: 'Lineales',
-        level: 22,
+        level: 23,
         type: 'basic',
         requires: ['a8-inecuaciones'],
         description: '1er grado > <',
@@ -469,7 +495,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a8-3-simultaneas',
         label: 'Simultáneas',
-        level: 22,
+        level: 23,
         type: 'applied',
         requires: ['a8-inecuaciones'],
         description: 'Sistemas desigualdades.',
@@ -480,12 +506,12 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a8-2-cuadraticas',
         label: 'Cuadráticas',
-        level: 22,
+        level: 23,
         type: 'basic',
         requires: ['a8-inecuaciones'],
         description: '2do grado.',
         xOffset: 65,
-        subcategoryId: 411,
+        subcategoryId: 429,
         behavior: 'quiz_list'
     },
 
@@ -495,7 +521,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-sistemas',
         label: 'Sistemas 2x2',
-        level: 23, // Shifted UP (Children 22 -> 23)
+        level: 24, // Shifted UP (Children 23 -> 24)
         type: 'critical',
         requires: ['a7-ecuaciones'],
         description: 'Dos variables, dos condiciones.',
@@ -505,7 +531,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-1-teoria',
         label: 'Teoría Sistemas',
-        level: 24,
+        level: 25,
         type: 'basic',
         requires: ['a10-sistemas'],
         description: 'Compatible, Incompatible.',
@@ -516,7 +542,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-2-metodos',
         label: 'Métodos Alg.',
-        level: 24,
+        level: 25,
         type: 'basic',
         requires: ['a10-sistemas'],
         description: 'Sustitución, Igualación.',
@@ -527,7 +553,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-3-grafico',
         label: 'Método Gráfico',
-        level: 24,
+        level: 25,
         type: 'applied',
         requires: ['a10-sistemas'],
         description: 'Intersección de rectas.',
@@ -538,7 +564,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-4-cramer',
         label: 'Cramer',
-        level: 24,
+        level: 25,
         type: 'critical',
         requires: ['a10-sistemas'],
         description: 'Determinantes.',
@@ -553,7 +579,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a11-cuadraticas',
         label: 'Ec. Cuadráticas',
-        level: 25, // Shifted UP (Children 24 -> 25)
+        level: 26, // Shifted UP (Children 25 -> 26)
         type: 'critical',
         requires: ['a10-sistemas', 'a5-factorizacion'],
         description: 'Segundo grado.',
@@ -564,12 +590,12 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a11-1-solucion',
         label: 'Resolución',
-        level: 26,
+        level: 27,
         type: 'basic',
         requires: ['a11-cuadraticas'],
         description: 'Fórmula general y factores.',
         xOffset: -40,
-        subcategoryId: 418,
+        subcategoryId: 430,
         behavior: 'quiz_list'
     },
 
@@ -579,7 +605,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a12-funciones',
         label: 'Funciones',
-        level: 25, // Parallel to Quadratic
+        level: 26, // Parallel to Quadratic
         type: 'evaluation',
         requires: ['a10-sistemas'],
         description: 'Relaciones funcionales.',
@@ -590,7 +616,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a12-1-lineal',
         label: 'Función Lineal',
-        level: 26,
+        level: 27,
         type: 'basic',
         requires: ['a12-funciones'],
         description: 'y = mx + b',
@@ -601,12 +627,12 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a12-2-concepto',
         label: 'Conceptos',
-        level: 26,
+        level: 27,
         type: 'critical',
         requires: ['a12-funciones'],
         description: 'Dominio y rango.',
         xOffset: 60,
-        subcategoryId: 421,
+        subcategoryId: 431,
         behavior: 'quiz_list'
     }
 ];

@@ -121,17 +121,15 @@ function PublicActiveQuiz() {
         }
 
         if (res.status === 401 && !PUBLIC_QUIZ_IDS.includes(numericQuizId)) {
-          try {
-            toast({
-              title: "Conexión inestable",
-              description: "Detectamos problemas con tu servicio de internet. Te redirigiremos al inicio...",
-              variant: "destructive",
-            });
-          } catch (e) { console.error(e); }
-
-          setTimeout(() => {
-            window.location.href = "/auth";
-          }, 4000);
+          // Quiz privado sin sesión — reintentar una vez en silencio antes de redirigir
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          const retry = await fetch(`/api/quizzes/${quizId}/questions`, { credentials: 'include' });
+          if (retry.ok) {
+            const data = await retry.json();
+            return ageGroup === 'child' ? data.filter((q: Question) => !q.content.includes('alcohol')) : data;
+          }
+          // Si sigue fallando tras retry, redirigir a auth sin mostrar aviso
+          window.location.href = '/auth';
           return [];
         }
 
@@ -440,14 +438,12 @@ function PublicActiveQuiz() {
       setIsHintDialogOpen(false);
     } catch (error: any) {
       if (error.res?.status === 401 || (error.message && error.message.includes('401'))) {
+        console.warn('[Quiz Público] Sesión requerida para pistas.');
         toast({
-          title: "Conexión inestable",
-          description: "Detectamos problemas con tu servicio de internet. Te redirigiremos al inicio...",
+          title: "Sesión requerida",
+          description: "Inicia sesión para usar las pistas con tu cuenta.",
           variant: "destructive",
         });
-        setTimeout(() => {
-          window.location.href = "/auth";
-        }, 4000);
         return;
       }
       console.error(error);
