@@ -42,7 +42,7 @@ import { calculusMapNodes } from "@/data/calculus-map-data";
 import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
 import { statisticsMapNodes } from "@/data/statistics-map-data";
 import { Reorder, AnimatePresence, useDragControls, motion } from "framer-motion";
-import { GripVertical } from "lucide-react";
+import { GripVertical, ShieldCheck } from "lucide-react";
 
 const difficultyOptions = [
   { value: "básico", label: "Básico" },
@@ -1475,6 +1475,31 @@ export default function QuizzesAdmin() {
                                   Preguntas ({quiz.totalQuestions})
                                 </Button>
 
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className={`h-8 px-2.5 text-xs flex items-center gap-1.5 transition-all ${quiz.isVerified
+                                      ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
+                                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                                    }`}
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch(`/api/quizzes/${quiz.id}/verify`, {
+                                        method: 'PATCH',
+                                        credentials: 'include',
+                                      });
+                                      if (res.ok) {
+                                        window.location.reload();
+                                      }
+                                    } catch (e) {
+                                      console.error('Error:', e);
+                                    }
+                                  }}
+                                >
+                                  <ShieldCheck className="h-3.5 w-3.5" />
+                                  {quiz.isVerified ? 'Verificado' : 'Verificar'}
+                                </Button>
+
                                 <Dialog>
                                   <DialogTrigger asChild>
                                     <Button
@@ -1899,6 +1924,11 @@ const DraggableQuizItem = React.memo(({
                     {quiz.isPublic && (
                       <Badge variant="outline" className="ml-2 border-blue-500/30 text-blue-400 bg-blue-500/10">
                         <LinkIcon className="h-3 w-3 mr-1" /> Público
+                      </Badge>
+                    )}
+                    {quiz.isVerified && (
+                      <Badge variant="outline" className="ml-2 border-emerald-500/30 text-emerald-400 bg-emerald-500/10">
+                        <ShieldCheck className="h-3 w-3 mr-1" /> Verificado
                       </Badge>
                     )}
                   </div>

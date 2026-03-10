@@ -206,6 +206,7 @@ export class DatabaseStorage implements IStorage {
       difficulty: quizzes.difficulty,
       totalQuestions: quizzes.totalQuestions,
       isPublic: quizzes.isPublic,
+      isVerified: quizzes.isVerified,
       category: categories,
       subcategory: subcategories,
       url: quizzes.url,
@@ -718,6 +719,7 @@ export class DatabaseStorage implements IStorage {
         subcategoryId: number | null;
         url: string | null;
         sortOrder: number | null;
+        isVerified: boolean | null;
       };
       answers: Array<{
         id: number;

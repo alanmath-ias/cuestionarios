@@ -1405,6 +1405,27 @@ Tono: Alentador, profesional y educativo.`;
     }
   });
 
+  // Toggle quiz verification (accessible by admin id=1 and Alan id=2)
+  apiRouter.patch("/quizzes/:quizId/verify", async (req: Request, res: Response) => {
+    const quizId = parseInt(req.params.quizId);
+    const userId = req.session.userId;
+
+    if (!userId) return res.status(401).json({ message: "Authentication required" });
+    if (userId !== 1 && userId !== 2) return res.status(403).json({ message: "Not authorized to verify quizzes" });
+    if (isNaN(quizId)) return res.status(400).json({ message: "Invalid quiz ID" });
+
+    try {
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz) return res.status(404).json({ message: "Quiz not found" });
+
+      const updated = await storage.updateQuiz(quizId, { isVerified: !quiz.isVerified });
+      res.json({ isVerified: updated.isVerified });
+    } catch (error) {
+      console.error("Quiz verify error:", error);
+      res.status(500).json({ message: "Error toggling quiz verification" });
+    }
+  });
+
   apiRouter.get("/quizzes/:quizId/questions", async (req: Request, res: Response) => {
     const quizId = parseInt(req.params.quizId);
 

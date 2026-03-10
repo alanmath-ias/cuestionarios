@@ -560,6 +560,7 @@ export class MemStorage implements IStorage {
       categoryId,
       subcategoryId,
       isPublic: quiz.isPublic ?? null,
+      isVerified: false,
       url: null,
       sortOrder: quiz.sortOrder ?? 0
     };

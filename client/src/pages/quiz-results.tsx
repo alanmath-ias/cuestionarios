@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MathDisplay } from '@/components/ui/math-display';
-import { ArrowLeft, Download, Clock, CheckCircle, XCircle, BookOpen, Trophy, Timer, Target } from 'lucide-react';
+import { ArrowLeft, Download, Clock, CheckCircle, XCircle, BookOpen, Trophy, Timer, Target, ShieldCheck, ShieldOff } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { startQuizResultsTour } from "@/lib/tour";
 import type { QuizResult } from '@shared/quiz-types.js';
 import { ExplanationModal } from './explicacion';
@@ -28,7 +29,10 @@ function QuizResults() {
 
   const searchParams = new URLSearchParams(window.location.search);
   const userId = searchParams.get('user_id');
+  const queryClient = useQueryClient();
   console.log('[QuizResults] Render. progressId:', progressId, 'userId param:', userId);
+
+  const [isVerified, setIsVerified] = useState<boolean | null>(null);
 
   const handleGoBack = () => {
     window.history.back();
@@ -55,6 +59,28 @@ function QuizResults() {
       return res.json();
     },
     enabled: !!results?.quiz.id,
+  });
+
+  // Sync isVerified state from quiz data when results load
+  useEffect(() => {
+    if (results?.quiz && isVerified === null) {
+      setIsVerified((results.quiz as any).isVerified ?? false);
+    }
+  }, [results?.quiz]);
+
+  const verifyMutation = useMutation({
+    mutationFn: async (quizId: number) => {
+      const res = await fetch(`/api/quizzes/${quizId}/verify`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Error al verificar');
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setIsVerified(data.isVerified);
+      queryClient.invalidateQueries({ queryKey: ['/api/quizzes'] });
+    },
   });
 
   const { data: feedback, isLoading: loadingFeedback } = useQuery({
@@ -199,7 +225,23 @@ function QuizResults() {
             <h2 className="text-3xl font-bold text-white">Resultados</h2>
           </div>
 
-          {/* Botón para volver a la encuesta si es un quiz obligatorio */}
+          {/* Botón Verificar — visible solo para Alan (id=2) */}
+          {session?.userId === 2 && results?.quiz.id && (
+            <button
+              onClick={() => verifyMutation.mutate(results.quiz.id)}
+              disabled={verifyMutation.isPending}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${isVerified
+                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
+                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                }`}
+            >
+              {isVerified ? (
+                <><ShieldCheck className="h-4 w-4" /> Verificado</>
+              ) : (
+                <><ShieldOff className="h-4 w-4" /> Verificar cuestionario</>
+              )}
+            </button>
+          )}
           {[68, 69, 72, 73].includes(results?.quiz.id || 0) && (
             <Button
               onClick={() => {

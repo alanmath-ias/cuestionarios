@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff } from "lucide-react";
 import { startActiveQuizTour } from "@/lib/tour";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -1070,6 +1070,39 @@ const ActiveQuiz = () => {
           </div>
 
           <div className="flex items-center gap-2 z-10 ml-auto">
+            {session?.userId === 1 && (
+              <Button
+                variant="outline"
+                className={`flex items-center transition-all ${(quiz as any)?.isVerified
+                  ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 hover:text-emerald-300'
+                  : 'border-slate-600 text-slate-300 hover:bg-white/10 hover:text-white bg-slate-900/50'
+                  }`}
+                onClick={async () => {
+                  if (!quiz?.id) return;
+                  try {
+                    const res = await fetch(`/api/quizzes/${quiz.id}/verify`, {
+                      method: 'PATCH',
+                      credentials: 'include',
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      queryClient.setQueryData([`/api/quizzes/${quiz.id}`], (old: any) =>
+                        old ? { ...old, isVerified: data.isVerified } : old
+                      );
+                      queryClient.invalidateQueries({ queryKey: ['/api/quizzes'] });
+                    }
+                  } catch (e) {
+                    console.error('Error toggling verify:', e);
+                  }
+                }}
+              >
+                {(quiz as any)?.isVerified ? (
+                  <><ShieldCheck className="mr-2 h-4 w-4" /> Verificado</>
+                ) : (
+                  <><ShieldOff className="mr-2 h-4 w-4" /> Verificar</>
+                )}
+              </Button>
+            )}
             {(session?.userId === 1 || session?.userId === 2) && (
               <Button
                 variant="outline"

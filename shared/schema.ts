@@ -80,6 +80,7 @@ export const quizzes = pgTable("quizzes", {
 	subcategoryId: integer("subcategory_id"),
 	url: text("url"), // opcional, tipo texto
 	sortOrder: integer("sort_order").default(0),
+	isVerified: boolean("is_verified").default(false),
 }, (table) => [
 	foreignKey({
 		columns: [table.subcategoryId],

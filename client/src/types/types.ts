@@ -33,6 +33,7 @@ export interface Quiz {
   totalQuestions: number;
   isPublic: boolean | null;
   sortOrder?: number;
+  isVerified?: boolean | null;
 }
 export interface Question {
   id: number;
