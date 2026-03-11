@@ -73,6 +73,48 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
         },
     });
 
+    const bulkDeleteCompletedMutation = useMutation({
+        mutationFn: async () => {
+            const res = await fetch(`/api/admin/users/${userId}/progress/completed`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+            if (!res.ok) throw new Error('Error al eliminar');
+            return res.json();
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/dashboard`] });
+            toast({
+                title: "Completados eliminados",
+                description: `Se eliminaron ${data.deleted} registros de progreso completado.`,
+            });
+        },
+        onError: () => {
+            toast({ title: "Error", description: "No se pudo eliminar el progreso.", variant: "destructive" });
+        },
+    });
+
+    const bulkDeletePendingMutation = useMutation({
+        mutationFn: async () => {
+            const res = await fetch(`/api/admin/users/${userId}/progress/pending`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+            if (!res.ok) throw new Error('Error al eliminar');
+            return res.json();
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/dashboard`] });
+            toast({
+                title: "Pendientes eliminados",
+                description: `Se eliminaron ${data.deleted} registros en curso y todas las asignaciones pendientes.`,
+            });
+        },
+        onError: () => {
+            toast({ title: "Error", description: "No se pudo eliminar las asignaciones.", variant: "destructive" });
+        },
+    });
+
     if (isLoading) {
         return (
             <div className="flex justify-center items-center min-h-screen bg-slate-950">
@@ -130,6 +172,43 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                 <div className="h-2 w-2 rounded-full bg-green-500" />
                                 Completados ({completedQuizzes.length})
                             </h2>
+                            {completedQuizzes.length > 0 && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/20 bg-red-500/5 text-xs"
+                                            disabled={bulkDeleteCompletedMutation.isPending}
+                                        >
+                                            <Trash2 className="h-3 w-3 mr-1" />
+                                            Borrar todo el progreso
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="bg-slate-900 border border-white/10 text-slate-200">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle className="text-red-400">⚠️ ¿Eliminar TODO el progreso completado?</AlertDialogTitle>
+                                            <AlertDialogDescription className="text-slate-400">
+                                                Esta acción es <strong>irreversible</strong>. Se eliminarán los <strong>{completedQuizzes.length} cuestionarios completados</strong> de <strong>{username}</strong>, incluyendo:
+                                                <ul className="list-disc pl-4 mt-2 space-y-1 text-slate-500">
+                                                    <li>Todas las calificaciones y respuestas</li>
+                                                    <li>Todo el historial de progreso</li>
+                                                    <li>Las asignaciones asociadas</li>
+                                                </ul>
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700">Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                onClick={() => bulkDeleteCompletedMutation.mutate()}
+                                                className="bg-red-600 hover:bg-red-700 text-white"
+                                            >
+                                                Eliminar todo
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
                         </div>
 
                         {completedQuizzes.length === 0 ? (
@@ -241,6 +320,43 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                 <div className="h-2 w-2 rounded-full bg-blue-500" />
                                 Pendientes / En Curso ({pendingOrInProgressQuizzes.length})
                             </h2>
+                            {pendingOrInProgressQuizzes.length > 0 && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/20 bg-red-500/5 text-xs"
+                                            disabled={bulkDeletePendingMutation.isPending}
+                                        >
+                                            <Trash2 className="h-3 w-3 mr-1" />
+                                            Borrar todas las asignaciones
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="bg-slate-900 border border-white/10 text-slate-200">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle className="text-red-400">⚠️ ¿Eliminar TODAS las asignaciones pendientes?</AlertDialogTitle>
+                                            <AlertDialogDescription className="text-slate-400">
+                                                Esta acción es <strong>irreversible</strong>. Se eliminarán los <strong>{pendingOrInProgressQuizzes.length} cuestionarios pendientes/en curso</strong> de <strong>{username}</strong>, incluyendo:
+                                                <ul className="list-disc pl-4 mt-2 space-y-1 text-slate-500">
+                                                    <li>Todo el progreso en curso</li>
+                                                    <li>Todas las asignaciones pendientes (nunca iniciadas)</li>
+                                                    <li>Los cuestionarios desaparecerán del dashboard del estudiante</li>
+                                                </ul>
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700">Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                onClick={() => bulkDeletePendingMutation.mutate()}
+                                                className="bg-red-600 hover:bg-red-700 text-white"
+                                            >
+                                                Eliminar todo
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
                         </div>
 
                         {pendingOrInProgressQuizzes.length === 0 ? (

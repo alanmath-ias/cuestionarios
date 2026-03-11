@@ -90,10 +90,22 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         type: 'applied',
         requires: ['n2-suma', 'n2-multi', 'n0-recta'],
         description: 'Aplicación de operaciones básicas.',
-        xOffset: 0,
+        xOffset: -35,
         subcategoryId: 303,
         behavior: 'quiz_list'
     },
+    {
+        id: 'n0-jerarquia-nat',
+        label: 'Jerarquía - Números Naturales',
+        level: 3,
+        type: 'basic',
+        requires: ['n2-suma', 'n2-multi', 'n0-recta'],
+        description: 'Jerarquía de operaciones (PEMDAS/BODMAS) con números naturales.',
+        xOffset: 35,
+        subcategoryId: 434,
+        behavior: 'quiz_list'
+    },
+
 
     // ==========================================
     // NIVEL 2: ENTEROS
@@ -103,7 +115,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         label: 'Números Enteros',
         level: 4,
         type: 'basic',
-        requires: ['n0-problemas'],
+        requires: ['n0-problemas', 'n0-jerarquia-nat'],
         description: 'El mundo de los números negativos.',
         xOffset: 0,
         // subcategoryId removed (parent)

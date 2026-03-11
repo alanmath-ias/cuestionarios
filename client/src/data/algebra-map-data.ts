@@ -112,7 +112,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     },
     {
         id: 'a2-3-mcm-mcd',
-        label: 'mcm y MCD',
+        label: 'mcm y MCD Monomios',
         level: 5,
         type: 'basic',
         requires: ['a2-operaciones'],
@@ -362,13 +362,24 @@ export const algebraMapNodes: ArithmeticNode[] = [
         behavior: 'container'
     },
     {
+        id: 'a6-0-mcm-frac',
+        label: 'mcm, MCD Polinomios',
+        level: 17,
+        type: 'basic',
+        requires: ['a6-fracciones'],
+        description: 'Mínimo común múltiplo y máximo común divisor de polinomios para operar fracciones algebraicas.',
+        xOffset: -60,
+        subcategoryId: 435,
+        behavior: 'quiz_list'
+    },
+    {
         id: 'a6-1-simple',
         label: 'Simplificación',
         level: 17,
         type: 'basic',
         requires: ['a6-fracciones'],
         description: 'Reducción a mínima expresión.',
-        xOffset: -40,
+        xOffset: 0,
         subcategoryId: 399,
         behavior: 'quiz_list'
     },
@@ -379,7 +390,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['a6-fracciones'],
         description: 'Suma, resta, mult, div.',
-        xOffset: 40,
+        xOffset: 60,
         subcategoryId: 400,
         behavior: 'quiz_list'
     },

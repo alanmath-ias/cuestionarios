@@ -2057,6 +2057,60 @@ Tono: Alentador, profesional y educativo.`;
     }
   });
 
+  // Eliminar TODA la actividad completada del usuario (bulk)
+  apiRouter.delete("/admin/users/:userId/progress/completed", requireAdmin, async (req: Request, res: Response) => {
+    const uid = parseInt(req.params.userId);
+    if (isNaN(uid)) return res.status(400).json({ message: "userId inválido" });
+
+    try {
+      // Get all completed progress records for this user
+      const allProgress = await storage.getStudentProgress(uid);
+      const completed = allProgress.filter(p => p.status === "completed");
+
+      for (const p of completed) {
+        // deleteStudentProgress borra student_answers en cascada + el progreso
+        await storage.deleteStudentProgress(p.id);
+        // También limpiar quiz_submissions si existe
+        await storage.deleteSubmissionByProgressId(p.id).catch(() => { });
+      }
+
+      console.log(`[BulkDelete] Eliminated ${completed.length} completed progress records for user ${uid}`);
+      res.json({ deleted: completed.length });
+    } catch (err) {
+      console.error("Error en bulk delete completed:", err);
+      res.status(500).json({ message: "Error al eliminar el progreso completado" });
+    }
+  });
+
+  // Eliminar TODAS las asignaciones pendientes/en-curso del usuario (bulk)
+  apiRouter.delete("/admin/users/:userId/progress/pending", requireAdmin, async (req: Request, res: Response) => {
+    const uid = parseInt(req.params.userId);
+    if (isNaN(uid)) return res.status(400).json({ message: "userId inválido" });
+
+    try {
+      // Get all non-completed progress (in_progress) and delete them
+      const allProgress = await storage.getStudentProgress(uid);
+      const notCompleted = allProgress.filter(p => p.status !== "completed");
+
+      for (const p of notCompleted) {
+        await storage.deleteStudentProgress(p.id);
+        await storage.deleteSubmissionByProgressId(p.id).catch(() => { });
+      }
+
+      // Also remove ALL user_quizzes assignments for this user
+      // (both started and never-started pending assignments)
+      await db.delete(userQuizzes).where(eq(userQuizzes.userId, uid));
+
+      console.log(`[BulkDelete] Eliminated ${notCompleted.length} in-progress records + all pending assignments for user ${uid}`);
+      res.json({ deleted: notCompleted.length });
+    } catch (err) {
+      console.error("Error en bulk delete pending:", err);
+      res.status(500).json({ message: "Error al eliminar las asignaciones pendientes" });
+    }
+  });
+
+
+
   // fin deep seek mejora active-quiz
 
   // DeepSeek API proxy endpoint
