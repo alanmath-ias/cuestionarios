@@ -463,7 +463,8 @@ export class MemStorage implements IStorage {
       mercadopagoPayerId: null,
       subscriptionStatus: 'free',
       subscriptionPlan: null,
-      subscriptionEndDate: null
+      subscriptionEndDate: null,
+      canReport: insertUser.canReport ?? false
     };
     this.users.set(id, user);
     return user;

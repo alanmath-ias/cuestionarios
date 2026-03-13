@@ -1036,22 +1036,22 @@ const ActiveQuiz = () => {
           )}
         </div>
 
-        <div className="relative flex justify-between items-center mb-8">
+        <div className="relative flex flex-wrap justify-between items-center mb-8 gap-3">
           <Button
             variant="outline"
-            className="flex items-center border-white/10 text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-900/50 z-10"
+            className="flex items-center border-white/10 text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-900/50 z-10 h-10 px-3 sm:px-4"
             onClick={handlePreviousQuestion}
             disabled={currentQuestionIndex === 0}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Anterior
+            <ArrowLeft className="sm:mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Anterior</span>
           </Button>
 
           {/* Hint Button: Disabled for parents (mode=readonly) with tooltip */}
-          <div className={(session?.userId === 1 || session?.userId === 2) ? "z-0 px-2" : "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0"}>
+          <div className={session?.canReport ? "z-0 px-2" : "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0"}>
             <Button
               variant="outline"
-              className={`flex items-center border-yellow-500/50 text-yellow-400 bg-yellow-500/5 hover:bg-yellow-500 hover:text-slate-900 hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] transition-all duration-300 scale-100 hover:scale-110 ${isReadOnly ? 'opacity-50 cursor-not-allowed hover:bg-yellow-500/5 hover:text-yellow-400 hover:scale-100 hover:shadow-none' : ''}`}
+              className={`flex items-center border-yellow-500/50 text-yellow-400 bg-yellow-500/5 hover:bg-yellow-500 hover:text-slate-900 hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] transition-all duration-300 scale-100 hover:scale-110 h-10 px-3 sm:px-4 ${isReadOnly ? 'opacity-50 cursor-not-allowed hover:bg-yellow-500/5 hover:text-yellow-400 hover:scale-100 hover:shadow-none' : ''}`}
               onClick={() => {
                 if (isReadOnly) {
                   toast({
@@ -1064,16 +1064,16 @@ const ActiveQuiz = () => {
                 }
               }}
             >
-              <Lightbulb className="mr-2 h-4 w-4" />
-              Pista
+              <Lightbulb className="sm:mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Pista</span>
             </Button>
           </div>
 
-          <div className="flex items-center gap-2 z-10 ml-auto">
+          <div className="flex items-center gap-2 z-10 ml-auto flex-wrap sm:flex-nowrap">
             {session?.userId === 1 && (
               <Button
                 variant="outline"
-                className={`flex items-center transition-all ${(quiz as any)?.isVerified
+                className={`flex items-center transition-all h-10 px-3 sm:px-4 ${(quiz as any)?.isVerified
                   ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 hover:text-emerald-300'
                   : 'border-slate-600 text-slate-300 hover:bg-white/10 hover:text-white bg-slate-900/50'
                   }`}
@@ -1097,27 +1097,27 @@ const ActiveQuiz = () => {
                 }}
               >
                 {(quiz as any)?.isVerified ? (
-                  <><ShieldCheck className="mr-2 h-4 w-4" /> Verificado</>
+                  <><ShieldCheck className="sm:mr-2 h-4 w-4" /> <span className="hidden sm:inline">Verificado</span></>
                 ) : (
-                  <><ShieldOff className="mr-2 h-4 w-4" /> Verificar</>
+                  <><ShieldOff className="sm:mr-2 h-4 w-4" /> <span className="hidden sm:inline">Verificar</span></>
                 )}
               </Button>
             )}
-            {(session?.userId === 1 || session?.userId === 2) && (
+            {session?.canReport && (
               <Button
                 variant="outline"
-                className="flex items-center border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 bg-red-500/5"
+                className="flex items-center border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 bg-red-500/5 h-10 px-3 sm:px-4"
                 onClick={() => setIsReportDialogOpen(true)}
               >
-                <Flag className="mr-2 h-4 w-4" />
-                Reportar
+                <Flag className="sm:mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Reportar</span>
               </Button>
             )}
 
             <Button
               onClick={handleNextQuestion}
               disabled={isNavigating || (currentQuestion.type === 'text' && !answeredQuestions[currentQuestionIndex])}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-none shadow-lg shadow-blue-500/20"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-none shadow-lg shadow-blue-500/20 h-10 px-4 sm:px-6"
             >
               {isNavigating ? (
                 'Procesando...'
@@ -1240,8 +1240,18 @@ const ActiveQuiz = () => {
               />
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => setIsReportDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={handleReportSubmit} disabled={!reportDescription.trim()}>Enviar Reporte</Button>
+              <Button variant="ghost" onClick={() => setIsReportDialogOpen(false)} disabled={reportErrorMutation.isPending}>Cancelar</Button>
+              <Button
+                onClick={handleReportSubmit}
+                disabled={!reportDescription.trim() || reportErrorMutation.isPending}
+                className="min-w-[120px]"
+              >
+                {reportErrorMutation.isPending ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
+                ) : (
+                  'Enviar Reporte'
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

@@ -107,6 +107,7 @@ export default function QuizzesAdmin() {
   const [qeDifficulty, setQeDifficulty] = useState("intermedio");
   const [qeSubcategories, setQeSubcategories] = useState<any[]>([]);
   const [qeSaving, setQeSaving] = useState(false);
+  const [verifyingId, setVerifyingId] = useState<number | null>(null);
 
   // Queries
   const { data: categories, isLoading: loadingCategories } = useQuery<Category[]>({
@@ -1479,25 +1480,36 @@ export default function QuizzesAdmin() {
                                   size="sm"
                                   variant="ghost"
                                   className={`h-8 px-2.5 text-xs flex items-center gap-1.5 transition-all ${quiz.isVerified
-                                      ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
-                                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                                    ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
+                                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                                     }`}
-                                  onClick={async () => {
-                                    try {
-                                      const res = await fetch(`/api/quizzes/${quiz.id}/verify`, {
-                                        method: 'PATCH',
-                                        credentials: 'include',
-                                      });
-                                      if (res.ok) {
-                                        window.location.reload();
-                                      }
-                                    } catch (e) {
-                                      console.error('Error:', e);
-                                    }
-                                  }}
+                                  disabled={verifyingId === quiz.id}
+                                   onClick={async () => {
+                                     try {
+                                       setVerifyingId(quiz.id);
+                                       const res = await fetch(`/api/quizzes/${quiz.id}/verify`, {
+                                         method: 'PATCH',
+                                         headers: { 'Content-Type': 'application/json' },
+                                         body: JSON.stringify({ isVerified: !quiz.isVerified }),
+                                         credentials: 'include',
+                                       });
+                                       if (res.ok) {
+                                         window.location.reload();
+                                       } else {
+                                         setVerifyingId(null);
+                                       }
+                                     } catch (e) {
+                                       console.error('Error:', e);
+                                       setVerifyingId(null);
+                                     }
+                                   }}
                                 >
-                                  <ShieldCheck className="h-3.5 w-3.5" />
-                                  {quiz.isVerified ? 'Verificado' : 'Verificar'}
+                                  {verifyingId === quiz.id ? (
+                                     <Spinner className="h-3.5 w-3.5" />
+                                   ) : (
+                                     <ShieldCheck className="h-3.5 w-3.5" />
+                                   )}
+                                   {verifyingId === quiz.id ? 'Procesando...' : quiz.isVerified ? 'Verificado' : 'Verificar'}
                                 </Button>
 
                                 <Dialog>

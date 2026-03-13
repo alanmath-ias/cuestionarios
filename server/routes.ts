@@ -1418,7 +1418,13 @@ Tono: Alentador, profesional y educativo.`;
       const quiz = await storage.getQuiz(quizId);
       if (!quiz) return res.status(404).json({ message: "Quiz not found" });
 
-      const updated = await storage.updateQuiz(quizId, { isVerified: !quiz.isVerified });
+      const targetState = req.body.isVerified !== undefined ? req.body.isVerified : !quiz.isVerified;
+
+      if (quiz.isVerified === targetState) {
+        return res.json({ isVerified: quiz.isVerified });
+      }
+
+      const updated = await storage.updateQuiz(quizId, { isVerified: targetState });
       res.json({ isVerified: updated.isVerified });
     } catch (error) {
       console.error("Quiz verify error:", error);
@@ -2903,6 +2909,27 @@ Ejemplo de formato:
     } catch (error) {
       console.error("Error updating user credits:", error);
       res.status(500).json({ message: "Error updating user credits" });
+    }
+  });
+
+  apiRouter.patch("/users/:id/report-permission", requireAdmin, async (req, res) => {
+    const userId = parseInt(req.params.id);
+    const { canReport } = req.body;
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    if (typeof canReport !== 'boolean') {
+      return res.status(400).json({ message: "canReport must be a boolean" });
+    }
+
+    try {
+      const updatedUser = await storage.updateUser(userId, { canReport });
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user report permission:", error);
+      res.status(500).json({ message: "Error updating user report permission" });
     }
   });
 

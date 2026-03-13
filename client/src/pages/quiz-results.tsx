@@ -72,6 +72,8 @@ function QuizResults() {
     mutationFn: async (quizId: number) => {
       const res = await fetch(`/api/quizzes/${quizId}/verify`, {
         method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isVerified: !isVerified }),
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Error al verificar');
@@ -231,8 +233,8 @@ function QuizResults() {
               onClick={() => verifyMutation.mutate(results.quiz.id)}
               disabled={verifyMutation.isPending}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${isVerified
-                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
-                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
+                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
                 }`}
             >
               {isVerified ? (

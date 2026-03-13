@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { UserProgressDetails } from "@/components/admin/UserProgressDetails";
+import { Switch } from "@/components/ui/switch";
 
 export default function UsersAdmin() {
   const { data: users, isLoading } = useQuery<any[]>({
@@ -127,7 +128,6 @@ export default function UsersAdmin() {
   const [managingCategoriesUser, setManagingCategoriesUser] = useState<any>(null);
   const [managingCreditsUser, setManagingCreditsUser] = useState<any>(null);
   const [creditsAmount, setCreditsAmount] = useState<string>("");
-
   const updateCreditsMutation = useMutation({
     mutationFn: async ({ userId, credits }: { userId: number; credits: number }) => {
       await apiRequest("PATCH", `/api/users/${userId}/credits`, { credits });
@@ -139,6 +139,26 @@ export default function UsersAdmin() {
       toast({
         title: "Créditos actualizados",
         description: "Los créditos del usuario han sido actualizados.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleReportPermissionMutation = useMutation({
+    mutationFn: async ({ userId, canReport }: { userId: number; canReport: boolean }) => {
+      await apiRequest("PATCH", `/api/users/${userId}/report-permission`, { canReport });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Permiso actualizado",
+        description: "El permiso de reporte ha sido actualizado correctamente.",
       });
     },
     onError: (error: Error) => {
@@ -207,6 +227,7 @@ export default function UsersAdmin() {
                   <TableHead className="text-slate-400">Usuario</TableHead>
                   <TableHead className="text-slate-400">Rol</TableHead>
                   <TableHead className="text-slate-400">Créditos</TableHead>
+                  <TableHead className="text-slate-400">Reportar</TableHead>
                   <TableHead className="text-slate-400 text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -252,6 +273,21 @@ export default function UsersAdmin() {
                         >
                           <Coins className="h-3 w-3" />
                         </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center">
+                        <Switch
+                          checked={user.canReport}
+                          disabled={toggleReportPermissionMutation.isPending}
+                          onCheckedChange={(checked) => {
+                            toggleReportPermissionMutation.mutate({
+                              userId: user.id,
+                              canReport: checked,
+                            });
+                          }}
+                          className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-red-500 border-2 border-slate-800"
+                        />
                       </div>
                     </TableCell>
                     <TableCell className="text-right">

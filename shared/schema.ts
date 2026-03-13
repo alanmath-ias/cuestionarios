@@ -23,6 +23,7 @@ export const users = pgTable("users", {
 	subscriptionStatus: text("subscription_status").default('free'),
 	subscriptionPlan: text("subscription_plan"),
 	subscriptionEndDate: timestamp("subscription_end_date", { mode: 'string' }),
+	canReport: boolean("can_report").default(false).notNull(),
 }, (table) => [
 	unique("users_username_unique").on(table.username),
 ]);
@@ -231,6 +232,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
 	email: true,
 	role: true,
 	googleId: true,
+	canReport: true,
 }).extend({
 	email: z.string().email("Correo electrónico inválido (ejemplo: usuario@dominio.com)").min(1, "El correo es obligatorio"),
 	username: z.string().min(3, "El nombre de usuario debe tener al menos 3 caracteres"),
