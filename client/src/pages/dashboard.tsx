@@ -42,8 +42,10 @@ import {
   Flame,
   Star,
   Sparkles,
-  Zap
+  Zap,
+  Brain
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { FaWhatsapp } from "react-icons/fa";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
@@ -88,6 +90,7 @@ interface QuizWithFeedback {
   url?: string | null;
   feedback?: string;
   isChiqui?: boolean;
+  responseMode?: 'multiple_choice' | 'direct_input';
 }
 
 // Synthetic type for Repasito dialogs (no real DB id needed)
@@ -290,6 +293,15 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback, onClick: (qui
         <h4 className="font-semibold text-sm text-slate-200 transition-colors line-clamp-3 group-hover:text-white">{quiz.title}</h4>
         <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
           <span className="truncate max-w-[120px]">{quiz.difficulty} • {new Date(quiz.completedAt || '').toLocaleDateString()}</span>
+          {quiz.responseMode === 'direct_input' ? (
+            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-1.5 h-4 flex items-center gap-1">
+              <Brain className="w-2.5 h-2.5" /> IA
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-[10px] bg-slate-800 text-slate-400 border-slate-700 px-1.5 h-4 flex items-center gap-1">
+              <ListChecks className="w-2.5 h-2.5" /> Normal
+            </Badge>
+          )}
           {hasFeedback && (
             <span className="flex items-center gap-1 text-emerald-400 font-bold animate-pulse shrink-0">
               <MessageSquare className="w-3 h-3" /> Comentario
@@ -1269,13 +1281,35 @@ export default function UserDashboard() {
                           </div>
                           <div className="flex-1 min-w-0 sm:hidden">
                             <h4 className="font-semibold text-sm text-slate-200 line-clamp-2">{quiz.title}</h4>
-                            <p className="text-xs text-slate-500 truncate">{quiz.difficulty}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-slate-500 truncate">{quiz.difficulty}</p>
+                              {quiz.responseMode === 'direct_input' ? (
+                                <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-1.5 h-4 flex items-center gap-1">
+                                  <Brain className="w-2.5 h-2.5" /> IA
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] bg-slate-800 text-slate-400 border-slate-700 px-1.5 h-4 flex items-center gap-1">
+                                  <ListChecks className="w-2.5 h-2.5" /> Normal
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
 
                         <div className="flex-1 min-w-0 hidden sm:block">
                           <h4 className="font-semibold text-sm text-slate-200">{quiz.title}</h4>
-                          <p className="text-xs text-slate-500 truncate">{quiz.difficulty}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-slate-500 truncate">{quiz.difficulty}</p>
+                            {quiz.responseMode === 'direct_input' ? (
+                              <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-1.5 h-4 flex items-center gap-1">
+                                <Brain className="w-2.5 h-2.5" /> IA
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] bg-slate-800 text-slate-400 border-slate-700 px-1.5 h-4 flex items-center gap-1">
+                                <ListChecks className="w-2.5 h-2.5" /> Normal
+                              </Badge>
+                            )}
+                          </div>
                         </div>
 
                         <div className="flex items-center justify-between w-full sm:w-auto gap-2 mt-2 sm:mt-0 pl-12 sm:pl-0">
@@ -1649,7 +1683,18 @@ export default function UserDashboard() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="font-semibold text-sm text-slate-200">{quiz.title}</h4>
-                        <p className="text-xs text-slate-500">{quiz.difficulty}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-slate-500">{quiz.difficulty}</p>
+                          {quiz.responseMode === 'direct_input' ? (
+                            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-1.5 h-4 flex items-center gap-1">
+                              <Brain className="w-2.5 h-2.5" /> IA
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] bg-slate-800 text-slate-400 border-slate-700 px-1.5 h-4 flex items-center gap-1">
+                              <ListChecks className="w-2.5 h-2.5" /> Normal
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button

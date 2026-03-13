@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { CheckCircle2, ChevronLeft, Clock, Calendar, Search, Trophy, MessageSquare } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Clock, Calendar, Search, Trophy, MessageSquare, Brain, ListChecks } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { UserQuiz } from "@/types/types";
 import { useState } from "react";
@@ -15,6 +16,7 @@ interface QuizWithFeedback extends UserQuiz {
     score?: number;
     timeSpent?: number;
     feedback?: string;
+    responseMode?: 'multiple_choice' | 'direct_input';
 }
 
 async function fetchQuizzes() {
@@ -107,6 +109,15 @@ export default function HistoryPage() {
                                                             <MessageSquare className="w-3.5 h-3.5" />
                                                             Comentario disponible
                                                         </span>
+                                                    )}
+                                                    {quiz.responseMode === 'direct_input' ? (
+                                                        <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-2 flex w-fit items-center gap-1">
+                                                            <Brain className="w-3 h-3" /> Respuesta Directa
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="text-[10px] bg-slate-800 text-slate-400 border-slate-700 px-2 flex w-fit items-center gap-1">
+                                                            <ListChecks className="w-3 h-3" /> Opción Múltiple
+                                                        </Badge>
                                                     )}
                                                 </div>
                                             </div>

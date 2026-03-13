@@ -2,9 +2,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain } from "lucide-react";
 import { startActiveQuizTour } from "@/lib/tour";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useTimer } from "@/hooks/use-timer";
 import { QuestionProgress } from "@/components/QuestionProgress";
@@ -24,6 +24,8 @@ import { AIMarkdown } from "@/components/ui/ai-markdown";
 import { ZoomableImage } from "@/components/ui/ZoomableImage";
 import { ExplanationModal } from "./explicacion";
 import { MathDisplay } from "@/components/ui/math-display";
+import MathKeyboard from "@/components/MathKeyboard";
+import { Input } from "@/components/ui/input";
 
 const SURVEY_QUIZ_IDS = [68, 69, 73, 72];
 
@@ -57,6 +59,7 @@ interface Progress {
   completedQuestions: number;
   timeSpent: number;
   completedAt?: string;
+  responseMode?: 'multiple_choice' | 'direct_input';
   answers?: any[];
 }
 
@@ -123,6 +126,9 @@ const ActiveQuiz = () => {
 
   // Track used hint types per question
   const [usedHintTypes, setUsedHintTypes] = useState<Record<number, ('regular' | 'super')[]>>({});
+
+  const [directResponse, setDirectResponse] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Queries — esperan a que la sesión esté confirmada para evitar 401 al iniciar
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
@@ -314,6 +320,15 @@ const ActiveQuiz = () => {
     }
   }, [questions, currentQuestionIndex]);
 
+  useEffect(() => {
+    // Sync directResponse when question changes
+    if (questions && questions[currentQuestionIndex]) {
+      const qId = questions[currentQuestionIndex].id;
+      const existing = studentAnswers.find(sa => sa.questionId === qId);
+      setDirectResponse(existing?.userResponse || "");
+    }
+  }, [currentQuestionIndex, questions, studentAnswers]);
+
   // Helper to determine font size class based on answer content length
   const getAnswerSizeClass = (content: string) => {
     // Detect if it contains a fraction which adds height
@@ -359,13 +374,43 @@ const ActiveQuiz = () => {
     }
   }, [loadingQuiz, loadingQuestions, session]);
 
+  const handleMathInput = (value: string, offset = 0) => {
+    if (answeredQuestions[currentQuestionIndex]) return;
+
+    const input = inputRef.current;
+    if (!input) {
+      setDirectResponse(prev => prev + value);
+      return;
+    }
+
+    const start = input.selectionStart || 0;
+    const end = input.selectionEnd || 0;
+    const text = directResponse;
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+
+    const newText = before + value + after;
+    setDirectResponse(newText);
+
+    // Reposicionar cursor tras el render
+    setTimeout(() => {
+      const newPos = start + value.length + offset;
+      input.focus();
+      input.setSelectionRange(newPos, newPos);
+    }, 0);
+  };
+
   const handleSelectAnswer = (answerId: number) => {
     if (answeredQuestions[currentQuestionIndex]) return;
     setSelectedAnswerId(answerId);
   };
 
   const submitCurrentAnswer = async () => {
-    if (!questions || (!isChiqui && !progress?.id) || selectedAnswerId === null) return;
+    if (!questions || (!isChiqui && !progress?.id)) return;
+
+    const isDirectInput = progress?.responseMode === 'direct_input';
+    if (!isDirectInput && selectedAnswerId === null) return;
+    if (isDirectInput && !directResponse.trim()) return;
 
     const currentQuestion = questions[currentQuestionIndex];
     const selectedAnswer = currentQuestion.answers?.find((a: any) => a.id === selectedAnswerId);
@@ -379,23 +424,23 @@ const ActiveQuiz = () => {
       timeSpent: elapsedTime, // This tracks time for this specific answer in this session
     };
 
+    if (progress?.responseMode === 'direct_input') {
+      studentAnswer.userResponse = directResponse;
+      studentAnswer.answerId = null;
+      // Note: isCorrect remains false until AI evaluation
+    }
+
+    // Actualización optimista del estado local para navegación instantánea
+    setStudentAnswers(prev => [...prev, studentAnswer]);
+    setAnsweredQuestions(prev => ({ ...prev, [currentQuestionIndex]: true }));
+
     try {
       if (!isChiqui) {
-        await submitAnswerMutation.mutateAsync(studentAnswer);
+        // Enviar al servidor en segundo plano
+        submitAnswerMutation.mutate(studentAnswer);
       }
-      setStudentAnswers([...studentAnswers, studentAnswer]);
-      setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
     } catch (error: any) {
-      // Guardar localmente aunque falle el server — el progreso no se pierde
-      setStudentAnswers(prev => [...prev, studentAnswer]);
-      setAnsweredQuestions(prev => ({ ...prev, [currentQuestionIndex]: true }));
-      // Error de sesión: redirigir solo si es persistente (no en primer intento)
-      if (error.message?.includes("401")) {
-        console.warn("[Quiz] Error 401 al guardar respuesta, manteniendo en estado local.");
-        return;
-      }
-      // Otros errores: logear pero no interrumpir al usuario
-      console.error("[Quiz] Error al guardar respuesta:", error);
+      console.error("[Quiz] Error al guardar respuesta (asíncrono):", error);
     }
   };
 
@@ -404,54 +449,50 @@ const ActiveQuiz = () => {
 
     setIsNavigating(true);
     try {
-      // Check if we are finishing the quiz (either last question OR all questions answered)
-      const isFinishing = (currentQuestionIndex >= questions.length - 1) ||
-        (Object.keys(answeredQuestions).length >= questions.length) ||
-        (Object.keys(answeredQuestions).length === questions.length - 1 && !answeredQuestions[currentQuestionIndex]);
+      const isDirectInput = progress?.responseMode === 'direct_input';
+      const isTextType = currentQuestion.type === 'text';
+      const hasUnconfirmedAnswer = !answeredQuestions[currentQuestionIndex] && (
+        selectedAnswerId !== null ||
+        (isDirectInput && directResponse.trim() !== "") ||
+        (isTextType && textAnswers[currentQuestion.id]?.trim() !== "")
+      );
 
-      if (!isFinishing) {
-        if (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex]) {
+      // Autosave if proceeding with an unconfirmed answer
+      if (hasUnconfirmedAnswer) {
+        if (isTextType && !answeredQuestions[currentQuestionIndex]) {
+          await handleTextAnswerSubmit();
+        } else {
           await submitCurrentAnswer();
         }
+      }
 
-        await new Promise(resolve => setTimeout(resolve, 500));
+      // Re-calculate counts after potential save
+      const updatedAnsweredQuestions = { ...answeredQuestions };
+      if (hasUnconfirmedAnswer) updatedAnsweredQuestions[currentQuestionIndex] = true;
 
+      // Check if we are finishing the quiz
+      const isFinishing = (currentQuestionIndex >= questions.length - 1) ||
+        (Object.keys(updatedAnsweredQuestions).length >= questions.length);
+
+      if (!isFinishing) {
+        // Enviar actualización de progreso en segundo plano sin bloquear la UI
         if (!isChiqui && progress) {
-          await createProgressMutation.mutateAsync({
+          createProgressMutation.mutate({
             ...progress,
             completedQuestions: Math.max(progress.completedQuestions ?? 0, currentQuestionIndex + 1),
-            timeSpent: getTotalTime(), // Save cumulative time
+            timeSpent: getTotalTime(),
           });
         }
 
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         setSelectedAnswerId(null);
       } else {
-        let finalAnswers = studentAnswers;
-        if (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex]) {
-          const currentQuestion = questions[currentQuestionIndex];
-          const selectedAnswer = currentQuestion.answers?.find((a: any) => a.id === selectedAnswerId);
-          const studentAnswer: any = {
-            progressId: progress?.id || 0,
-            questionId: currentQuestion.id,
-            answerId: selectedAnswerId,
-            isCorrect: selectedAnswer?.isCorrect || false,
-            variables: currentQuestion.variables,
-            timeSpent: elapsedTime,
-          };
-          if (!isChiqui) {
-            await submitAnswerMutation.mutateAsync(studentAnswer);
-          }
-          finalAnswers = [...studentAnswers, studentAnswer];
-          setStudentAnswers(finalAnswers);
-          setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
-        }
-        const answeredCount = Object.keys(answeredQuestions).length + (selectedAnswerId !== null && !answeredQuestions[currentQuestionIndex] ? 1 : 0);
+        const answeredCount = Object.keys(updatedAnsweredQuestions).length;
         if (questions && answeredCount < questions.length) {
           setIsIncompleteDialogOpen(true);
           return;
         }
-        await handleFinishQuiz(finalAnswers);
+        await handleFinishQuiz();
       }
     } catch (error: any) {
       if (error.message?.includes("401")) {
@@ -490,22 +531,22 @@ const ActiveQuiz = () => {
       progressId: progress?.id || 0,
       questionId: currentQuestion.id,
       answerId: null,
-      textAnswer: answerText,
+      userResponse: answerText,
       isCorrect: false,
       variables: currentQuestion.variables,
       timeSpent: elapsedTime,
     };
 
+    // Actualización optimista del estado local
+    setStudentAnswers(prev => [...prev, studentAnswer]);
+    setAnsweredQuestions(prev => ({ ...prev, [currentQuestionIndex]: true }));
+
     try {
-      await submitAnswerMutation.mutateAsync(studentAnswer);
-      setStudentAnswers([...studentAnswers, studentAnswer]);
-      setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
+      if (!isChiqui) {
+        submitAnswerMutation.mutate(studentAnswer);
+      }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'No se pudo guardar tu respuesta.',
-        variant: 'destructive',
-      });
+      console.error("[Quiz] Error al guardar respuesta de texto:", error);
     }
   };
 
@@ -968,15 +1009,6 @@ const ActiveQuiz = () => {
                 disabled={answeredQuestions[currentQuestionIndex]}
                 className="bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-600 focus:border-blue-500/50 focus:ring-blue-500/20 resize-none disabled:opacity-50"
               />
-              {!answeredQuestions[currentQuestionIndex] && !isReadOnly && (
-                <Button
-                  onClick={handleTextAnswerSubmit}
-                  disabled={!textAnswers[currentQuestion.id]?.trim()}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Confirmar respuesta
-                </Button>
-              )}
               {answeredQuestions[currentQuestionIndex] && (
                 <div className="mt-4 p-4 rounded-xl bg-slate-800/50 border border-white/10">
                   <h4 className="font-medium mb-2 text-slate-400">Tu respuesta:</h4>
@@ -984,7 +1016,7 @@ const ActiveQuiz = () => {
                 </div>
               )}
             </div>
-          ) : (
+          ) : progress?.responseMode === 'direct_input' ? null : (
             <div className="grid grid-cols-1 gap-4">
               {shuffledAnswers.map((answer, index) => {
                 const existingAnswer = studentAnswers.find(sa =>
@@ -1032,6 +1064,66 @@ const ActiveQuiz = () => {
                   </button>
                 );
               })}
+            </div>
+          )}
+
+          {progress?.responseMode === 'direct_input' && !isReadOnly && (
+            <div className="space-y-6 animate-in fade-in zoom-in duration-500">
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
+                <div className="relative">
+                  <Input
+                    ref={inputRef}
+                    value={directResponse}
+                    onChange={(e) => !answeredQuestions[currentQuestionIndex] && setDirectResponse(e.target.value)}
+                    placeholder="Escribe tu respuesta aquí..."
+                    className="bg-slate-900 border-white/10 text-xl py-6 h-auto text-slate-100 placeholder:text-slate-600 focus:ring-blue-500/50 rounded-2xl transition-all"
+                    disabled={answeredQuestions[currentQuestionIndex]}
+                  />
+                </div>
+              </div>
+
+              {!answeredQuestions[currentQuestionIndex] && (
+                <div className="space-y-4">
+                  <MathKeyboard
+                    onInput={handleMathInput}
+                    onDelete={() => {
+                      const input = inputRef.current;
+                      if (!input) {
+                        setDirectResponse(prev => prev.slice(0, -1));
+                        return;
+                      }
+                      const start = input.selectionStart || 0;
+                      const end = input.selectionEnd || 0;
+                      if (start === end) {
+                        setDirectResponse(prev => prev.substring(0, start - 1) + prev.substring(start));
+                        setTimeout(() => {
+                          input.focus();
+                          input.setSelectionRange(start - 1, start - 1);
+                        }, 0);
+                      } else {
+                        setDirectResponse(prev => prev.substring(0, start) + prev.substring(end));
+                        setTimeout(() => {
+                          input.focus();
+                          input.setSelectionRange(start, start);
+                        }, 0);
+                      }
+                    }}
+                    className="max-w-md mx-auto"
+                  />
+
+                </div>
+              )}
+
+              {answeredQuestions[currentQuestionIndex] && (
+                <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center animate-in slide-in-from-bottom-4 duration-500">
+                  <div className="flex items-center justify-center gap-3 text-blue-400 mb-2 font-medium">
+                    <Brain className="h-5 w-5" />
+                    Evaluación por IA en progreso...
+                  </div>
+                  <p className="text-slate-400 text-sm">Tu respuesta: <span className="text-slate-100 font-mono bg-slate-950 px-2 py-1 rounded ml-2">{directResponse}</span></p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1116,7 +1208,12 @@ const ActiveQuiz = () => {
 
             <Button
               onClick={handleNextQuestion}
-              disabled={isNavigating || (currentQuestion.type === 'text' && !answeredQuestions[currentQuestionIndex])}
+              disabled={isNavigating || (
+                !answeredQuestions[currentQuestionIndex] &&
+                selectedAnswerId === null &&
+                (progress?.responseMode !== 'direct_input' || !directResponse.trim()) &&
+                (currentQuestion.type !== 'text' || !textAnswers[currentQuestion.id]?.trim())
+              )}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-none shadow-lg shadow-blue-500/20 h-10 px-4 sm:px-6"
             >
               {isNavigating ? (
@@ -1142,6 +1239,7 @@ const ActiveQuiz = () => {
             }}
             disabled={false}
             correctAnswers={correctAnswers}
+            responseMode={progress?.responseMode}
           />
         </div>
 

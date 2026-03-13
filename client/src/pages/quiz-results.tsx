@@ -11,6 +11,7 @@ import type { QuizResult } from '@shared/quiz-types.js';
 import { ExplanationModal } from './explicacion';
 import { useSession } from "@/hooks/useSession";
 import { FloatingWhatsApp } from "@/components/ui/FloatingWhatsApp";
+import { Brain, Loader2 } from 'lucide-react';
 
 interface Question {
   id: number;
@@ -49,6 +50,11 @@ function QuizResults() {
       return res.json();
     },
     enabled: !!progressId,
+    refetchInterval: (query) => {
+      const data = query.state.data as QuizResult;
+      const hasPending = data?.answers.some(a => a.userResponse && a.answerId === null && !a.aiEvaluation);
+      return hasPending ? 3000 : false;
+    }
   });
 
   const { data: quizQuestions, isLoading: loadingQuestions } = useQuery<Question[]>({
@@ -126,6 +132,7 @@ function QuizResults() {
 
   const correctAnswers = results?.answers.filter((a) => a.isCorrect).length || 0;
   const totalQuestions = results?.answers.length || 0;
+  const hasPendingAI = results?.answers.some(a => a.userResponse && a.answerId === null && !a.aiEvaluation);
 
   const formatTimeSpent = (seconds?: number | null) => {
     if (!seconds) return '0:00';
@@ -283,8 +290,24 @@ function QuizResults() {
           </div>
         ) : results ? (
           <div className="space-y-8">
+            {hasPendingAI && (
+              <div className="p-6 rounded-2xl bg-blue-600/10 border border-blue-500/30 flex flex-col items-center text-center animate-in fade-in zoom-in duration-500">
+                <div className="bg-blue-500/20 p-3 rounded-full mb-3 relative">
+                  <Brain className="h-8 w-8 text-blue-400" />
+                  <div className="absolute -top-1 -right-1">
+                    <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-blue-300 mb-2">¡Cuestionario en revisión!</h3>
+                <p className="text-slate-400 max-w-md">
+                  Nuestra inteligencia artificial está evaluando tus respuestas abiertas.
+                  Los resultados se actualizarán automáticamente en unos segundos.
+                </p>
+              </div>
+            )}
+
             {/* Header Card */}
-            <Card className="bg-slate-900/50 border-white/10 backdrop-blur-xl shadow-2xl">
+            <Card className={`bg-slate-900/50 border-white/10 backdrop-blur-xl shadow-2xl transition-opacity duration-500 ${hasPendingAI ? 'opacity-50' : 'opacity-100'}`}>
               <CardContent className="p-8">
                 <div className="text-center mb-8">
                   <h3 className="text-2xl font-bold mb-3 text-white">{results.quiz.title}</h3>
@@ -377,6 +400,10 @@ function QuizResults() {
                             <div className="text-slate-200">
                               {renderContent(answer.answerDetails.content)}
                             </div>
+                          ) : answer.userResponse ? (
+                            <div className="text-slate-200 italic">
+                              {renderContent(answer.userResponse)}
+                            </div>
                           ) : (
                             <span className="text-slate-500 italic">No respondida</span>
                           )}
@@ -415,6 +442,18 @@ function QuizResults() {
                           </div>
                         )}
                       </div>
+
+                      {answer.aiEvaluation && (
+                        <div className="mt-4 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+                          <div className="flex items-center gap-2 text-blue-400 font-semibold mb-2">
+                            <BookOpen className="h-4 w-4" />
+                            Evaluación por IA
+                          </div>
+                          <div className="text-slate-300 text-sm italic">
+                            {renderContent(answer.aiEvaluation.feedback || answer.aiEvaluation.explanation || (typeof answer.aiEvaluation === 'string' ? answer.aiEvaluation : ''))}
+                          </div>
+                        </div>
+                      )}
 
 
                     </div>

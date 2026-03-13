@@ -265,7 +265,8 @@ export class DatabaseStorage implements IStorage {
         timeSpent: progress?.timeSpent,
         completedAt: progress?.completedAt,
         progressId: progress?.id,
-        subcategoryId: quiz.subcategoryId // Added to support map filtering
+        subcategoryId: quiz.subcategoryId, // Added to support map filtering
+        responseMode: assignment?.responseMode || progress?.responseMode || 'multiple_choice'
       };
     });
   }
@@ -289,7 +290,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteQuiz(id: number): Promise<void> {
-    await this.db.delete(quizzes).where(eq(quizzes.id, id));
+    await this.db.transaction(async (tx) => {
+      // 1. Limpiar respuestas de estudiantes asociadas a este quiz
+      // (Buscamos progresos de este quiz y borramos sus respuestas)
+      await tx.delete(studentAnswers).where(
+        inArray(
+          studentAnswers.progressId,
+          tx.select({ id: studentProgress.id }).from(studentProgress).where(eq(studentProgress.quizId, id))
+        )
+      ).catch(() => { }); // Ignorar si no hay nada que borrar
+
+      // 2. Limpiar feedback y entregas
+      await tx.delete(quizFeedback).where(
+        inArray(
+          quizFeedback.progressId,
+          tx.select({ id: studentProgress.id }).from(studentProgress).where(eq(studentProgress.quizId, id))
+        )
+      ).catch(() => { });
+
+      await tx.delete(quizSubmissions).where(eq(quizSubmissions.quizId, id));
+
+      // 3. Limpiar progresos y asignaciones
+      await tx.delete(studentProgress).where(eq(studentProgress.quizId, id));
+      await tx.delete(userQuizzes).where(eq(userQuizzes.quizId, id));
+
+      // 4. Limpiar opciones de respuestas de las preguntas
+      await tx.delete(answers).where(
+        inArray(
+          answers.questionId,
+          tx.select({ id: questions.id }).from(questions).where(eq(questions.quizId, id))
+        )
+      ).catch(() => { });
+
+      // 5. Limpiar preguntas
+      await tx.delete(questions).where(eq(questions.quizId, id));
+
+      // 6. Finalmente borrar el cuestionario
+      await tx.delete(quizzes).where(eq(quizzes.id, id));
+    });
   }
 
   //chat gpt cuestionarios a usuarios
@@ -370,6 +408,12 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
+  async updateUserQuizMode(userId: number, quizId: number, mode: string): Promise<void> {
+    await this.db.update(userQuizzes)
+      .set({ responseMode: mode })
+      .where(and(eq(userQuizzes.userId, userId), eq(userQuizzes.quizId, quizId)));
+  }
+
 
   async getUsersAssignedToQuiz(quizId: number) {
     const result = await this.db
@@ -434,6 +478,8 @@ export class DatabaseStorage implements IStorage {
         totalQuestions: quizzes.totalQuestions,
         description: quizzes.description,
         subcategoryId: quizzes.subcategoryId,
+        responseMode: userQuizzes.responseMode,
+        progressResponseMode: studentProgress.responseMode,
       })
       .from(quizzes)
       .leftJoin(userQuizzes, and(
@@ -444,10 +490,7 @@ export class DatabaseStorage implements IStorage {
         eq(studentProgress.userId, userId),
         eq(studentProgress.quizId, quizzes.id)
       ))
-      .leftJoin(quizSubmissions, and(
-        eq(quizSubmissions.userId, userId),
-        eq(quizSubmissions.quizId, quizzes.id)
-      ))
+      .leftJoin(quizSubmissions, eq(quizSubmissions.progressId, studentProgress.id))
       .leftJoin(quizFeedback, eq(quizFeedback.progressId, studentProgress.id))
       .where(or(
         isNotNull(userQuizzes.quizId),
@@ -512,7 +555,8 @@ export class DatabaseStorage implements IStorage {
 
     return uniqueResult.map(q => ({
       ...q,
-      userStatus: q.status === 'completed' ? 'completed' : 'pending'
+      userStatus: q.status === 'completed' ? 'completed' : 'pending',
+      responseMode: q.progressResponseMode || q.responseMode || 'multiple_choice'
     }));
   }
 
@@ -615,6 +659,15 @@ export class DatabaseStorage implements IStorage {
         : null
     };
 
+    if (!progress.responseMode) {
+      const [assignment] = await this.db.select()
+        .from(userQuizzes)
+        .where(and(eq(userQuizzes.userId, progress.userId), eq(userQuizzes.quizId, progress.quizId)));
+      if (assignment) {
+        insertData.responseMode = assignment.responseMode;
+      }
+    }
+
     const result = await this.db.insert(studentProgress)
       .values(insertData)
       .returning();
@@ -663,6 +716,8 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStudentProgress(id: number): Promise<void> {
     await this.db.delete(studentAnswers).where(eq(studentAnswers.progressId, id));
+    await this.db.delete(quizFeedback).where(eq(quizFeedback.progressId, id));
+    await this.db.delete(quizSubmissions).where(eq(quizSubmissions.progressId, id));
     await this.db.delete(studentProgress).where(eq(studentProgress.id, id));
   }
 
@@ -703,10 +758,11 @@ export class DatabaseStorage implements IStorage {
       score?: number;
       completedQuestions: number;
       timeSpent?: number;
-      completedAt?: Date;
+      completedAt?: string | null;
       hintsUsed: number;
       isMini: boolean | null;
       assignedQuestionIds: unknown;
+      responseMode: string;
       quiz: {
         id: number;
         title: string;
@@ -726,9 +782,11 @@ export class DatabaseStorage implements IStorage {
         progressId: number;
         questionId: number;
         answerId: number | null;
+        userResponse: string | null;
         isCorrect: boolean;
         variables: Record<string, number>;
         timeSpent: number;
+        aiEvaluation: any;
         question: {
           id: number;
           content: string;
@@ -768,7 +826,8 @@ export class DatabaseStorage implements IStorage {
             isPublic: true,
             subcategoryId: true,
             url: true,
-            sortOrder: true
+            sortOrder: true,
+            isVerified: true
           }
         },
         answers: {
@@ -809,10 +868,11 @@ export class DatabaseStorage implements IStorage {
         score: progressWithRelations.score ?? null,
         completedQuestions: progressWithRelations.completedQuestions,
         timeSpent: progressWithRelations.timeSpent ?? null,
-        completedAt: progressWithRelations.completedAt?.toISOString() ?? null,
+        completedAt: progressWithRelations.completedAt ?? null,
         hintsUsed: progressWithRelations.hintsUsed,
         isMini: progressWithRelations.isMini ?? false,
-        assignedQuestionIds: progressWithRelations.assignedQuestionIds ?? null
+        assignedQuestionIds: progressWithRelations.assignedQuestionIds ?? null,
+        responseMode: progressWithRelations.responseMode
       },
       quiz: progressWithRelations.quiz,
       answers: enrichedAnswers
@@ -1253,15 +1313,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: number): Promise<void> {
+    // 1. Limpiar respuestas de todos sus progresos
     await this.db.delete(studentAnswers).where(
       inArray(
         studentAnswers.progressId,
         this.db.select({ id: studentProgress.id }).from(studentProgress).where(eq(studentProgress.userId, id))
       )
     );
+    // 2. Limpiar feedback y entregas de todos sus progresos
+    await this.db.delete(quizFeedback).where(
+      inArray(
+        quizFeedback.progressId,
+        this.db.select({ id: studentProgress.id }).from(studentProgress).where(eq(studentProgress.userId, id))
+      )
+    );
+    await this.db.delete(quizSubmissions).where(eq(quizSubmissions.userId, id));
+
+    // 3. Limpiar historial y resultados especiales
+    await this.db.delete(chiquiResults).where(eq(chiquiResults.userId, id));
+    await this.db.delete(chiquiHistory).where(eq(chiquiHistory.userId, id));
+    await this.db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, id));
+    await this.db.delete(questionReports).where(eq(questionReports.userId, id));
+
+    // 4. Limpiar asignaciones y categorías
     await this.db.delete(studentProgress).where(eq(studentProgress.userId, id));
     await this.db.delete(userQuizzes).where(eq(userQuizzes.userId, id));
     await this.db.delete(userCategories).where(eq(userCategories.userId, id));
+
+    // 5. Borrar el usuario finalmente
     await this.db.delete(users).where(eq(users.id, id));
   }
 

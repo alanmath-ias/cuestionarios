@@ -19,7 +19,7 @@ import { questions as questionsTable } from "../shared/schema.js";
 import { inArray } from "drizzle-orm";
 //deep seek entrenamiento:
 
-import { answers } from "../shared/schema.js"; // Asegúrate de importar correctamente
+import { answers, studentAnswers as studentAnswersTable } from "../shared/schema.js"; // Asegúrate de importar correctamente
 
 //chat gpt dashboar personalizado
 import { requireAuth } from "./middleware/requireAuth.js";
@@ -83,6 +83,9 @@ const publicQuizIds = [278, 279, 280, 281, 282, 283, 285, 286];
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   const apiRouter = express.Router();
+
+
+
   app.use("/api", apiRouter);
 
   // Auth Setup
@@ -960,6 +963,25 @@ Tono: Alentador, profesional y educativo.`;
     }
   });
 
+  // Update quiz response mode (Admin only)
+  apiRouter.patch("/users/:userId/quizzes/:quizId/mode", requireAdmin, async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId);
+    const quizId = parseInt(req.params.quizId);
+    const { mode } = req.body;
+
+    if (isNaN(userId) || isNaN(quizId) || !mode) {
+      return res.status(400).json({ message: "Invalid data provided" });
+    }
+
+    try {
+      await storage.updateUserQuizMode(userId, quizId, mode);
+      res.json({ message: "Modo de cuestionario actualizado con éxito" });
+    } catch (error) {
+      console.error("Error updating quiz mode:", error);
+      res.status(500).json({ message: "Error actualizando el modo del cuestionario" });
+    }
+  });
+
   // Delete user (Admin only)
   apiRouter.delete("/users/:userId", requireAdmin, async (req: Request, res: Response) => {
     const userId = parseInt(req.params.userId);
@@ -1429,6 +1451,25 @@ Tono: Alentador, profesional y educativo.`;
     } catch (error) {
       console.error("Quiz verify error:", error);
       res.status(500).json({ message: "Error toggling quiz verification" });
+    }
+  });
+
+  // Change response mode for a user assignment (Admin only)
+  apiRouter.patch("/admin/users/:userId/quizzes/:quizId/mode", requireAdmin, async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId);
+    const quizId = parseInt(req.params.quizId);
+    const { mode } = req.body;
+
+    if (isNaN(userId) || isNaN(quizId) || !mode) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    try {
+      await storage.updateUserQuizMode(userId, quizId, mode);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating quiz mode:", error);
+      res.status(500).json({ message: "Error updating quiz mode" });
     }
   });
 
@@ -1919,6 +1960,13 @@ Tono: Alentador, profesional y educativo.`;
               await storage.updateUserHintCredits(userId, user.hintCredits + creditsEarned);
             }
           }
+
+          // Trigger AI evaluation if direct input mode
+          if (existingProgress.responseMode === 'direct_input') {
+            evaluateProgressDirectAnswers(existingProgress.id, storage).catch(err =>
+              console.error("Error al disparar evaluación por IA:", err)
+            );
+          }
         }
 
         return res.json(updatedProgress);
@@ -1967,6 +2015,13 @@ Tono: Alentador, profesional y educativo.`;
           if (user) {
             await storage.updateUserHintCredits(userId, user.hintCredits + creditsEarned);
           }
+        }
+
+        // Trigger AI evaluation if direct input mode
+        if (newProgress.responseMode === 'direct_input') {
+          evaluateProgressDirectAnswers(newProgress.id, storage).catch(err =>
+            console.error("Error al disparar evaluación por IA:", err)
+          );
         }
       }
 
@@ -2417,6 +2472,14 @@ Ejemplo de formato:
       }
 
       const answer = await storage.createStudentAnswer(answerData);
+
+      // Disparar evaluación por IA de forma asíncrona si es una respuesta directa
+      if (answer.userResponse && answer.answerId === null) {
+        evaluateSingleAnswer(answer, storage).catch(err =>
+          console.error("[AI Evaluation] Error en evaluación asíncrona inmediata:", err)
+        );
+      }
+
       res.status(201).json(answer);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -3515,8 +3578,117 @@ Ejemplo de formato:
     }
   });
 
-  //chat gpt calificaciones
-  // Dentro de setupRoutes(app, storage)
+  // Nueva función para evaluar una sola respuesta
+  async function evaluateSingleAnswer(answer: any, storage: any) {
+    try {
+      const question = await storage.getQuestion(answer.questionId);
+      if (!question) return;
+
+      const qAnswers = await storage.getAnswersByQuestion(question.id);
+      const correctAnswer = qAnswers.find((a: any) => a.isCorrect)?.content || "No especificada";
+
+      const prompt = `Actúa como un profesor experto. Evalúa la respuesta del estudiante a la siguiente pregunta:
+      
+      Pregunta: ${question.content.replace(/¡/g, '')}
+      Respuesta Correcta Esperada: ${correctAnswer.replace(/¡/g, '')}
+      Respuesta del Estudiante: ${answer.userResponse.replace(/¡/g, '')}
+      
+      Determina si la respuesta del estudiante es esencialmente correcta, incluso si hay pequeñas variaciones en la redacción o formato.
+      Asegúrate de que el feedback sea constructivo y breve.
+      
+      Responde estrictamente en formato JSON:
+      {
+        "isCorrect": boolean,
+        "feedback": "string"
+      }`;
+
+      const apiKey = process.env.DEEPSEEK_API_KEY || process.env.VITE_DEEPSEEK_API_KEY;
+      if (!apiKey) {
+        console.error("[AI Evaluation] API Key missing");
+        return;
+      }
+
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.2,
+          response_format: { type: 'json_object' }
+        }),
+      });
+
+      if (response.ok) {
+        const data: any = await response.json();
+        let rawContent = data.choices[0].message.content;
+
+        // Limpiar bloques de código markdown si los hay
+        rawContent = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        try {
+          const evaluation = JSON.parse(rawContent);
+
+          await db.update(studentAnswers)
+            .set({
+              isCorrect: evaluation.isCorrect,
+              aiEvaluation: evaluation
+            })
+            .where(eq(studentAnswers.id, answer.id));
+
+          console.log(`[AI Evaluation] Pregunta ${answer.questionId} de progreso ${answer.progressId} evaluada: ${evaluation.isCorrect ? 'Correcta' : 'Incorrecta'}`);
+
+          // Recalcular score total automáticamente tras cada evaluación exitosa
+          const updatedAnswers = await storage.getStudentAnswersByProgress(answer.progressId);
+          const correctCount = updatedAnswers.filter((a: any) => a.isCorrect).length;
+          const newScore = Number(((correctCount / updatedAnswers.length) * 10).toFixed(1));
+
+          await storage.updateStudentProgress(answer.progressId, {
+            score: newScore,
+            completedAt: new Date().toISOString()
+          });
+
+          // Sincronizar con la entrega si existe
+          await db.update(quizSubmissions)
+            .set({ score: newScore })
+            .where(eq(quizSubmissions.progressId, answer.progressId));
+
+        } catch (parseError) {
+          console.error(`[AI Evaluation] Error parseando respuesta de IA: ${rawContent}`, parseError);
+        }
+      }
+    } catch (error) {
+      console.error("[AI Evaluation] Error en evaluateSingleAnswer:", error);
+    }
+  }
+
+  // Función para evaluar respuestas directas usando IA (limpieza final)
+  // Función para evaluar respuestas directas pendientes (limpieza final)
+  async function evaluateProgressDirectAnswers(progressId: number, storage: any) {
+    try {
+      console.log(`[AI Evaluation] Verificando tareas pendientes para progreso ${progressId}`);
+      const answersList = await storage.getStudentAnswersByProgress(progressId);
+
+      const pendingAnswers = answersList.filter((a: any) => a.userResponse && a.answerId === null && !a.aiEvaluation);
+
+      if (pendingAnswers.length === 0) {
+        console.log(`[AI Evaluation] Todo al día para progreso ${progressId}`);
+        return;
+      }
+
+      console.log(`[AI Evaluation] Procesando ${pendingAnswers.length} evaluaciones pendientes...`);
+      for (const answer of pendingAnswers) {
+        await evaluateSingleAnswer(answer, storage);
+      }
+      console.log(`[AI Evaluation] Finalizado procesamiento para progreso ${progressId}`);
+    } catch (error) {
+      console.error("[AI Evaluation] Error en limpieza final:", error);
+    }
+  }
+
   //active-quiz entrega datos del quiz recien hecho:
   app.post("/api/quiz-submission", async (req, res) => {
     const { userId, quizId, score, progressId } = req.body;
@@ -3534,13 +3706,20 @@ Ejemplo de formato:
       return res.status(400).json({ error: "Datos incompletos o inválidos" });
     }
 
-    // Admin Mode: Ignore submission
+    /*// Admin Mode: Ignore submission
     if (userId === 1) {
       return res.status(200).json({ success: true, message: "Admin submission ignored" });
-    }
+    }*/
 
     try {
       await storage.saveQuizSubmission({ userId, quizId, score, progressId });
+
+      // Disparar evaluación por IA en segundo plano si es necesario
+      // No bloqueamos la respuesta al cliente
+      evaluateProgressDirectAnswers(progressId, storage).catch(err =>
+        console.error("Error al disparar evaluación por IA:", err)
+      );
+
       res.status(200).json({ success: true });
     } catch (error) {
       console.error("Error guardando quiz submission:", error);

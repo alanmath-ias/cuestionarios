@@ -95,10 +95,12 @@ export const studentAnswers = pgTable("student_answers", {
 	progressId: integer("progress_id").notNull(),
 	questionId: integer("question_id").notNull(),
 	answerId: integer("answer_id"),
+	userResponse: text("user_response"),
 	isCorrect: boolean("is_correct"),
 	variables: jsonb(),
 	timeSpent: integer("time_spent"),
 	hintsUsed: integer("hints_used").default(0).notNull(),
+	aiEvaluation: jsonb("ai_evaluation"),
 });
 
 
@@ -130,6 +132,7 @@ export const studentProgress = pgTable("student_progress", {
 	hintsUsed: integer("hints_used").default(0).notNull(),
 	isMini: boolean("is_mini").default(false), // Added to sync with DB
 	assignedQuestionIds: jsonb("assigned_question_ids"), // Added to sync with DB
+	responseMode: text("response_mode").default('multiple_choice').notNull(),
 });
 
 
@@ -209,6 +212,7 @@ export const quizFeedback = pgTable("quiz_feedback", {
 export const userQuizzes = pgTable("user_quizzes", {
 	userId: integer("user_id").notNull(),
 	quizId: integer("quiz_id").notNull(),
+	responseMode: text("response_mode").default('multiple_choice').notNull(),
 }, (table) => [
 	foreignKey({
 		columns: [table.quizId],
@@ -299,10 +303,12 @@ export const insertStudentAnswerSchema = createInsertSchema(studentAnswers).pick
 	progressId: true,
 	questionId: true,
 	answerId: true,
+	userResponse: true,
 	isCorrect: true,
 	variables: true,
 	timeSpent: true,
 	hintsUsed: true,
+	aiEvaluation: true,
 });
 
 export const insertUserCategorySchema = createInsertSchema(userCategories).pick({

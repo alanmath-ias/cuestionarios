@@ -8,6 +8,8 @@ export interface QuizAnswerResult {
   isCorrect: boolean;
   variables: Record<string, number>;
   timeSpent: number;
+  userResponse?: string | null;
+  aiEvaluation?: any;
   question: Question;
   answerDetails: (Answer & { isCorrect?: boolean }) | null;
   correctAnswer: Answer | null;

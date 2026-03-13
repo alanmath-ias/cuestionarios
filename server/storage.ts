@@ -63,6 +63,7 @@ export interface IStorage {
   getCategoriesByUserId(userId: number): Promise<any[]>;
   getQuizzesByUserId(userId: number): Promise<any[]>;
   updateUserCategories(userId: number, categoryIds: number[]): Promise<void>;
+  updateUserQuizMode(userId: number, quizId: number, mode: string): Promise<void>;
 
   // Subcategory methods
   getAllSubcategories(): Promise<any[]>;
@@ -183,6 +184,7 @@ export class MemStorage implements IStorage {
   async getCategoriesByUserId(userId: number): Promise<any[]> { return []; }
   async getQuizzesByUserId(userId: number): Promise<any[]> { return []; }
   async updateUserCategories(userId: number, categoryIds: number[]): Promise<void> { }
+  async updateUserQuizMode(userId: number, quizId: number, mode: string): Promise<void> { }
   async getUserByGoogleId(googleId: string): Promise<User | undefined> { return undefined; }
   async updateUserGoogleId(userId: number, googleId: string): Promise<void> { }
   async getUserByEmail(email: string): Promise<User | undefined> { return undefined; }
@@ -656,12 +658,13 @@ export class MemStorage implements IStorage {
       quizId: progress.quizId,
       userId: progress.userId,
       score: progress.score ?? null,
-      completedQuestions: progress.completedQuestions ?? null,
+      completedQuestions: progress.completedQuestions ?? 0,
       timeSpent: progress.timeSpent ?? null,
-      completedAt: progress.completedAt?.toISOString() ?? null,
-      hintsUsed: 0,
-      isMini: false,
-      assignedQuestionIds: null
+      completedAt: progress.completedAt instanceof Date ? progress.completedAt.toISOString() : (progress.completedAt ?? null),
+      hintsUsed: progress.hintsUsed ?? 0,
+      isMini: progress.isMini ?? false,
+      assignedQuestionIds: progress.assignedQuestionIds ?? null,
+      responseMode: progress.responseMode ?? 'multiple_choice'
     };
     this.studentProgress.set(id, newProgress);
     return newProgress;
@@ -702,7 +705,9 @@ export class MemStorage implements IStorage {
       timeSpent: answer.timeSpent ?? null,
       progressId: answer.progressId,
       answerId: answer.answerId ?? null,
-      hintsUsed: 0
+      userResponse: answer.userResponse ?? null,
+      hintsUsed: answer.hintsUsed ?? 0,
+      aiEvaluation: answer.aiEvaluation ?? null
     };
     this.studentAnswers.set(id, newAnswer);
     return newAnswer;

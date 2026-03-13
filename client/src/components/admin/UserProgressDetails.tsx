@@ -5,7 +5,7 @@ import {
     Card,
     CardContent,
 } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Trash2, Eye, Search, RotateCcw } from "lucide-react";
+import { Loader2, ArrowLeft, Trash2, Eye, Search, RotateCcw, ListChecks } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -22,6 +22,9 @@ import {
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Brain } from "lucide-react";
 
 export function UserProgressDetails({ userId, username, onBack }: { userId: number, username: string, onBack: () => void }) {
     const [searchTerm, setSearchTerm] = useState("");
@@ -55,7 +58,7 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
     const deleteAssignmentMutation = useMutation({
         mutationFn: async ({ userId, quizId }: { userId: number, quizId: number }) => {
             // Use the correct endpoint for removing assignments
-            await apiRequest("DELETE", "/api/admin/users/quizzes", { userId, quizId });
+            await apiRequest("DELETE", "/api/admin/assignments", { userId, quizId });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/dashboard`] });
@@ -112,6 +115,26 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
         },
         onError: () => {
             toast({ title: "Error", description: "No se pudo eliminar las asignaciones.", variant: "destructive" });
+        },
+    });
+
+    const updateQuizModeMutation = useMutation({
+        mutationFn: async ({ quizId, mode }: { quizId: number, mode: string }) => {
+            await apiRequest("PATCH", `/api/admin/users/${userId}/quizzes/${quizId}/mode`, { mode });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/dashboard`] });
+            toast({
+                title: "Configuración actualizada",
+                description: "Se ha cambiado el modo de respuesta para este cuestionario.",
+            });
+        },
+        onError: (error: Error) => {
+            toast({
+                title: "Error",
+                description: error.message,
+                variant: "destructive",
+            });
         },
     });
 
@@ -225,9 +248,18 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                             <div className="flex justify-between items-start gap-4">
                                                 <div className="flex-1">
                                                     <h3 className="font-medium text-slate-200 mb-1">{q.title}</h3>
-                                                    <div className="flex items-center gap-2 text-sm text-slate-400">
+                                                    <div className="flex items-center gap-2 text-sm text-slate-400 mb-2">
                                                         <span>Completado: {q.completedAt ? new Date(q.completedAt).toLocaleDateString() : 'N/A'}</span>
                                                     </div>
+                                                    {q.responseMode === 'direct_input' ? (
+                                                        <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-2 flex w-fit items-center gap-1">
+                                                            <Brain className="w-3 h-3" /> Respuesta Directa
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="text-[10px] bg-slate-800 text-slate-400 border-slate-700 px-2 flex w-fit items-center gap-1">
+                                                            <ListChecks className="w-3 h-3" /> Opción Múltiple
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                                 <div className="flex flex-col items-end gap-2">
                                                     <Badge variant={q.score >= 7 ? "default" : "secondary"} className={`text-sm px-3 py-1 ${q.score >= 7 ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/20' : 'bg-slate-700 text-slate-300'}`}>
@@ -373,23 +405,44 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                         <Card key={q.id} className="bg-slate-900 border border-white/10 hover:border-white/20 transition-all shadow-lg">
                                             <CardContent className="p-4">
                                                 <div className="flex justify-between items-start gap-4">
-                                                    <div>
+                                                    <div className="flex-1">
                                                         <h3 className="font-medium text-slate-200 mb-1">{q.title}</h3>
-                                                        {isStarted ? (
-                                                            <>
-                                                                <div className="flex items-center gap-2 text-sm text-slate-400">
-                                                                    <span>Progreso: {q.completedQuestions || 0} preguntas</span>
-                                                                </div>
-                                                                <div className="text-xs text-slate-500 mt-1">
-                                                                    Última actividad: {q.updatedAt ? new Date(q.updatedAt).toLocaleDateString() : 'Reciente'}
-                                                                </div>
-                                                            </>
-                                                        ) : (
-                                                            <div className="flex items-center gap-2 text-sm text-slate-500">
-                                                                <Badge variant="outline" className="text-slate-400 border-slate-600 bg-slate-800/50">
-                                                                    Pendiente
-                                                                </Badge>
+                                                        {!isStarted && <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700">Pendiente</Badge>}
+                                                    </div>
+                                                    <div className="flex flex-col items-end gap-3">
+                                                        <div className="flex items-center gap-3 bg-slate-800/80 px-4 py-2 rounded-xl border border-white/10 shadow-inner">
+                                                            <div className="flex items-center space-x-3">
+                                                                <Label
+                                                                    htmlFor={`mode-${q.id}`}
+                                                                    className={`text-[11px] font-bold transition-colors cursor-pointer ${q.responseMode === 'direct_input' ? 'text-slate-500' : 'text-blue-400'}`}
+                                                                >
+                                                                    Opción Múltiple
+                                                                </Label>
+                                                                <Switch
+                                                                    id={`mode-${q.id}`}
+                                                                    checked={q.responseMode === 'direct_input'}
+                                                                    onCheckedChange={(checked) => {
+                                                                        updateQuizModeMutation.mutate({
+                                                                            quizId: q.id,
+                                                                            mode: checked ? 'direct_input' : 'multiple_choice'
+                                                                        });
+                                                                    }}
+                                                                    className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-slate-700 border-2 border-white/10 scale-110"
+                                                                />
+                                                                <Label
+                                                                    htmlFor={`mode-${q.id}`}
+                                                                    className={`text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${q.responseMode === 'direct_input' ? 'text-blue-400' : 'text-slate-500'}`}
+                                                                >
+                                                                    <Brain className={`h-3.5 w-3.5 ${q.responseMode === 'direct_input' ? 'text-blue-400' : 'text-slate-600'}`} />
+                                                                    Respuesta Directa
+                                                                </Label>
                                                             </div>
+                                                        </div>
+
+                                                        {isStarted && (
+                                                            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-2 py-0.5">
+                                                                En curso
+                                                            </Badge>
                                                         )}
                                                     </div>
                                                 </div>

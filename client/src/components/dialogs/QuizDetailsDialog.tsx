@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, MessageCircle, Trophy, ArrowRight, Calendar, Star, Zap, XCircle, Flame } from "lucide-react";
+import { CheckCircle2, MessageCircle, Trophy, ArrowRight, Calendar, Star, Zap, XCircle, Flame, Brain, ListChecks } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { useEffect } from "react";
@@ -19,6 +20,7 @@ interface QuizDetailsDialogProps {
         readByStudent?: boolean;
         isChiqui?: boolean;
         categoryId?: number;
+        responseMode?: 'multiple_choice' | 'direct_input';
     } | null;
     childId?: string;
 }
@@ -115,7 +117,18 @@ export function QuizDetailsDialog({ open, onOpenChange, quiz, childId }: QuizDet
                         )}
                         <span>{quiz.title}</span>
                     </DialogTitle>
-                    <DialogDescription className="text-slate-400">
+                    <div className="flex items-center gap-2 mt-1">
+                        {quiz.responseMode === 'direct_input' ? (
+                            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-2 flex w-fit items-center gap-1">
+                                <Brain className="w-3 h-3" /> Respuesta Directa (IA)
+                            </Badge>
+                        ) : quiz.responseMode === 'multiple_choice' ? (
+                            <Badge variant="outline" className="text-[10px] bg-slate-800 text-slate-400 border-slate-700 px-2 flex w-fit items-center gap-1">
+                                <ListChecks className="w-3 h-3" /> Opción Múltiple
+                            </Badge>
+                        ) : null}
+                    </div>
+                    <DialogDescription className="text-slate-400 pt-1">
                         {quiz.completedAt
                             ? `Completado el ${new Date(quiz.completedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}`
                             : 'Pendiente para hoy'}
@@ -204,18 +217,18 @@ export function QuizDetailsDialog({ open, onOpenChange, quiz, childId }: QuizDet
                         {/* Streak badge + milestone messages */}
                         {currentStreak > 0 && (
                             <div className={`flex flex-col gap-2 rounded-xl border p-3 ${currentStreak >= 7
-                                    ? 'bg-orange-500/10 border-orange-500/20'
-                                    : currentStreak >= 3
-                                        ? 'bg-yellow-500/10 border-yellow-500/20'
-                                        : 'bg-slate-800/30 border-white/5'
+                                ? 'bg-orange-500/10 border-orange-500/20'
+                                : currentStreak >= 3
+                                    ? 'bg-yellow-500/10 border-yellow-500/20'
+                                    : 'bg-slate-800/30 border-white/5'
                                 }`}>
                                 <div className="flex items-center justify-between">
                                     <span className="flex items-center gap-1.5 text-sm font-bold text-white">
                                         <Flame className={`w-4 h-4 ${currentStreak >= 7 ? 'text-orange-400' :
-                                                currentStreak >= 3 ? 'text-yellow-400' : 'text-slate-400'
+                                            currentStreak >= 3 ? 'text-yellow-400' : 'text-slate-400'
                                             } fill-current`} />
                                         Racha actual: <span className={`text-lg ${currentStreak >= 7 ? 'text-orange-400' :
-                                                currentStreak >= 3 ? 'text-yellow-400' : 'text-slate-300'
+                                            currentStreak >= 3 ? 'text-yellow-400' : 'text-slate-300'
                                             }`}>{currentStreak}</span> día{currentStreak !== 1 ? 's' : ''} seguido{currentStreak !== 1 ? 's' : ''}
                                     </span>
                                 </div>

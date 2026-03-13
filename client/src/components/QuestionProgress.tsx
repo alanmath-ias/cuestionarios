@@ -7,6 +7,7 @@ interface QuestionProgressProps {
     onQuestionClick: (index: number) => void;
     disabled?: boolean;
     correctAnswers?: Record<number, boolean>;
+    responseMode?: string;
 }
 
 export function QuestionProgress({
@@ -15,7 +16,8 @@ export function QuestionProgress({
     currentQuestionIndex,
     onQuestionClick,
     disabled,
-    correctAnswers = {}
+    correctAnswers = {},
+    responseMode
 }: QuestionProgressProps) {
     return (
         <div className="w-full">
@@ -37,9 +39,14 @@ export function QuestionProgress({
 
                     let bgClass = "bg-slate-800/50 text-slate-500 border-slate-700 hover:bg-slate-700 hover:text-slate-300";
                     if (isAnswered) {
-                        if (isCorrect === true) bgClass = "bg-green-500/20 text-green-400 border-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.2)]";
-                        else if (isCorrect === false) bgClass = "bg-red-500/20 text-red-400 border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.2)]";
-                        else bgClass = "bg-slate-700 text-slate-300 border-slate-600"; // Answered but no correctness info
+                        if (responseMode === 'direct_input') {
+                            // Blue/Cyan for direct input answered questions to avoid early "Wrong" fear
+                            bgClass = "bg-blue-500/20 text-blue-400 border-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.2)]";
+                        } else {
+                            if (isCorrect === true) bgClass = "bg-green-500/20 text-green-400 border-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.2)]";
+                            else if (isCorrect === false) bgClass = "bg-red-500/20 text-red-400 border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.2)]";
+                            else bgClass = "bg-slate-700 text-slate-300 border-slate-600";
+                        }
                     }
 
                     return (
