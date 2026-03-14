@@ -1915,7 +1915,8 @@ export default function UserDashboard() {
                     return (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {quizzesForSub.map((quiz) => {
-                          const isCompleted = completedQuizzes.some(q => q.id === quiz.id);
+                          const assignedQuiz = quizzes?.find(q => q.id === quiz.id);
+                          const isCompleted = assignedQuiz?.status === "completed";
                           return (
                             <div key={quiz.id} className="group flex flex-col gap-3 p-4 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-blue-500/30 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.15)]">
                               <div className="flex items-center justify-between gap-2 md:gap-4">
@@ -1923,9 +1924,20 @@ export default function UserDashboard() {
                                   <div className={`h-10 w-10 md:h-12 md:w-12 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${isCompleted ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'}`}>
                                     {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />}
                                   </div>
-                                  <div>
+                                  <div className="flex flex-col">
                                     <h4 className="font-semibold text-sm text-slate-200 line-clamp-2">{quiz.title}</h4>
-                                    <p className="text-xs text-slate-500 line-clamp-none">{quiz.description}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <p className="text-xs text-slate-500 line-clamp-none">{quiz.description}</p>
+                                      {assignedQuiz?.responseMode === 'direct_input' ? (
+                                        <Badge variant="outline" className="text-[9px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-1 h-3.5 flex items-center gap-1">
+                                          <Brain className="w-2 h-2" /> IA
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="text-[9px] bg-slate-800 text-slate-400 border-slate-700 px-1 h-3.5 flex items-center gap-1">
+                                          <ListChecks className="w-2 h-2" /> Normal
+                                        </Badge>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>

@@ -3175,7 +3175,7 @@ Ejemplo de formato:
   // Asignar múltiples quizzes a un usuario con notificación por correo
   apiRouter.post("/admin/users/:userId/quizzes", requireAdmin, async (req, res) => {
     const userId = parseInt(req.params.userId);
-    const { quizIds } = req.body;
+    const { quizIds, responseMode } = req.body;
 
     if (isNaN(userId) || !Array.isArray(quizIds)) {
       return res.status(400).json({ message: "Invalid input" });
@@ -3190,8 +3190,8 @@ Ejemplo de formato:
       const results = [];
 
       for (const quizId of quizIds) {
-        // Asignar quiz
-        await storage.assignQuizToUser(userId, quizId);
+        // Asignar quiz con el responseMode recibido (opcionalmente)
+        await storage.assignQuizToUser(userId, quizId, responseMode);
 
         // Obtener detalles del quiz para el correo
         const quiz = await storage.getQuiz(quizId);

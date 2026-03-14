@@ -12,11 +12,12 @@ import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, ListChecks, Folder, UserPlus, Pencil, Save, X } from "lucide-react";
+import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, ListChecks, Folder, UserPlus, Pencil, Save, X, Brain } from "lucide-react";
 import { DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Category, Quiz, Subcategory, User } from "@/types/types";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -84,6 +85,7 @@ export default function QuizzesAdmin() {
   const [quizSearchQuery, setQuizSearchQuery] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [expandedSubcategories, setExpandedSubcategories] = useState<string[]>([]);
+  const [assignmentResponseMode, setAssignmentResponseMode] = useState<string>('multiple_choice');
 
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -616,7 +618,8 @@ export default function QuizzesAdmin() {
   const toggleQuizAssignment = async (
     quizId: number,
     userId: number,
-    isAssigned: boolean
+    isAssigned: boolean,
+    responseMode?: string // Nuevo parámetro para controlar el modo
   ) => {
     try {
       let url = "/api/admin/assignments";
@@ -626,7 +629,7 @@ export default function QuizzesAdmin() {
       if (!isAssigned) {
         url = `/api/admin/users/${userId}/quizzes`;
         method = "POST";
-        body = { quizIds: [quizId] };
+        body = { quizIds: [quizId], responseMode: responseMode || 'multiple_choice' };
       }
 
       const res = await fetch(url, {
@@ -1104,6 +1107,8 @@ export default function QuizzesAdmin() {
                           }}
                           expandedSubcategories={expandedSubcategories}
                           setExpandedSubcategories={setExpandedSubcategories}
+                          assignmentResponseMode={assignmentResponseMode}
+                          setAssignmentResponseMode={setAssignmentResponseMode}
                         />
                       ))}
                     </Reorder.Group>
@@ -1156,6 +1161,8 @@ export default function QuizzesAdmin() {
                                         allUsers={allUsers}
                                         assignedUsers={assignedUsers}
                                         toggleQuizAssignment={toggleQuizAssignment}
+                                        assignmentResponseMode={assignmentResponseMode}
+                                        setAssignmentResponseMode={setAssignmentResponseMode}
                                       />
                                     ))}
                                   </AnimatePresence>
@@ -1518,8 +1525,10 @@ export default function QuizzesAdmin() {
                                       size="sm"
                                       variant="ghost"
                                       className="h-8 px-2.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-white/5 flex items-center gap-1.5"
-                                      onClick={() => {
+                                      onClick={(e) => {
+                                        e.stopPropagation();
                                         setVisibleQuizId(quiz.id);
+                                        setAssignmentResponseMode('multiple_choice'); // Default to multiple choice on open
                                         fetchAssignedUsers(quiz.id);
                                       }}
                                     >
@@ -1529,10 +1538,41 @@ export default function QuizzesAdmin() {
                                   </DialogTrigger>
                                   <DialogContent className="bg-slate-950 border-slate-800 text-slate-200 max-h-[80vh] flex flex-col z-[100]">
                                     <DialogHeader>
-                                      <DialogTitle>Asignar Usuarios</DialogTitle>
-                                      <DialogDescription className="text-slate-400">
-                                        Acceso para: <span className="text-slate-200 font-medium">{quiz.title}</span>
-                                      </DialogDescription>
+                                      <div className="flex flex-col gap-2">
+                                        <DialogTitle>Asignar Usuarios</DialogTitle>
+                                        <div className="flex items-center justify-between">
+                                          <DialogDescription className="text-slate-400">
+                                            Acceso para: <span className="text-slate-200 font-medium">{quiz.title}</span>
+                                          </DialogDescription>
+
+                                          {/* Modo Selector añadido según la interfaz Admin Users */}
+                                          <div className="flex items-center gap-3 bg-slate-800/80 px-4 py-2 rounded-xl border border-white/10 shadow-inner">
+                                            <div className="flex items-center justify-center space-x-3 w-full">
+                                              <Label
+                                                htmlFor={`mode-main-${quiz.id}`}
+                                                className={`text-[11px] font-bold transition-colors cursor-pointer ${assignmentResponseMode === 'direct_input' ? 'text-slate-500' : 'text-blue-400'}`}
+                                              >
+                                                Opción Múltiple
+                                              </Label>
+                                              <Switch
+                                                id={`mode-main-${quiz.id}`}
+                                                checked={assignmentResponseMode === 'direct_input'}
+                                                onCheckedChange={(checked) => {
+                                                  setAssignmentResponseMode(checked ? 'direct_input' : 'multiple_choice');
+                                                }}
+                                                className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-slate-700 border-2 border-white/10 scale-110"
+                                              />
+                                              <Label
+                                                htmlFor={`mode-main-${quiz.id}`}
+                                                className={`text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${assignmentResponseMode === 'direct_input' ? 'text-blue-400' : 'text-slate-500'}`}
+                                              >
+                                                <Brain className={`w-3.5 h-3.5 ${assignmentResponseMode === 'direct_input' ? 'text-blue-400' : 'text-slate-500'}`} />
+                                                Respuesta Directa
+                                              </Label>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
                                     </DialogHeader>
                                     <div className="relative mb-4">
                                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -1554,7 +1594,7 @@ export default function QuizzesAdmin() {
                                             <input
                                               type="checkbox"
                                               checked={assignedUsers.includes(user.id)}
-                                              onChange={() => toggleQuizAssignment(quiz.id, user.id, assignedUsers.includes(user.id))}
+                                              onChange={() => toggleQuizAssignment(quiz.id, user.id, assignedUsers.includes(user.id), assignmentResponseMode)}
                                               className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-600"
                                             />
                                             <div className="flex flex-col">
@@ -1608,7 +1648,9 @@ const DraggableCategoryItem = React.memo(({
   isExpanded,
   onToggle,
   expandedSubcategories,
-  setExpandedSubcategories
+  setExpandedSubcategories,
+  assignmentResponseMode,
+  setAssignmentResponseMode
 }: any) => {
   const controls = useDragControls();
 
@@ -1730,6 +1772,8 @@ const DraggableCategoryItem = React.memo(({
                               : [...prev, `subcat-${subcategory.id}`]
                           );
                         }}
+                        assignmentResponseMode={assignmentResponseMode}
+                        setAssignmentResponseMode={setAssignmentResponseMode}
                       />
                     ))}
                 </Reorder.Group>
@@ -1758,7 +1802,9 @@ const DraggableSubcategoryItem = React.memo(({
   assignedUsers,
   toggleQuizAssignment,
   isExpanded,
-  onToggle
+  onToggle,
+  assignmentResponseMode,
+  setAssignmentResponseMode
 }: any) => {
   const controls = useDragControls();
 
@@ -1862,6 +1908,8 @@ const DraggableSubcategoryItem = React.memo(({
                         allUsers={allUsers}
                         assignedUsers={assignedUsers}
                         toggleQuizAssignment={toggleQuizAssignment}
+                        assignmentResponseMode={assignmentResponseMode}
+                        setAssignmentResponseMode={setAssignmentResponseMode}
                       />
                     ))}
                   </AnimatePresence>
@@ -1888,7 +1936,9 @@ const DraggableQuizItem = React.memo(({
   setSearchQuery,
   allUsers,
   assignedUsers,
-  toggleQuizAssignment
+  toggleQuizAssignment,
+  assignmentResponseMode,
+  setAssignmentResponseMode
 }: any) => {
   const controls = useDragControls();
 
@@ -1985,8 +2035,10 @@ const DraggableQuizItem = React.memo(({
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setVisibleQuizId(quiz.id);
+                        setAssignmentResponseMode('multiple_choice'); // Default
                         fetchAssignedUsers(quiz.id);
                       }}
                       className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
@@ -1996,10 +2048,41 @@ const DraggableQuizItem = React.memo(({
                   </DialogTrigger>
                   <DialogContent className="bg-slate-950 border-slate-800 text-slate-200 max-h-[80vh] flex flex-col">
                     <DialogHeader>
-                      <DialogTitle>Asignar Usuarios</DialogTitle>
-                      <DialogDescription className="text-slate-400">
-                        Acceso para: <span className="text-slate-200 font-medium">{quiz.title}</span>
-                      </DialogDescription>
+                      <div className="flex flex-col gap-2">
+                        <DialogTitle>Asignar Usuarios</DialogTitle>
+                        <div className="flex items-center justify-between">
+                          <DialogDescription className="text-slate-400">
+                            Acceso para: <span className="text-slate-200 font-medium">{quiz.title}</span>
+                          </DialogDescription>
+
+                          {/* Modo Selector añadido según la interfaz Admin Users */}
+                          <div className="flex items-center gap-3 bg-slate-800/80 px-4 py-2 rounded-xl border border-white/10 shadow-inner">
+                            <div className="flex items-center justify-center space-x-3 w-full">
+                              <Label
+                                htmlFor={`mode-drag-${quiz.id}`}
+                                className={`text-[11px] font-bold transition-colors cursor-pointer ${assignmentResponseMode === 'direct_input' ? 'text-slate-500' : 'text-blue-400'}`}
+                              >
+                                Opción Múltiple
+                              </Label>
+                              <Switch
+                                id={`mode-drag-${quiz.id}`}
+                                checked={assignmentResponseMode === 'direct_input'}
+                                onCheckedChange={(checked) => {
+                                  setAssignmentResponseMode(checked ? 'direct_input' : 'multiple_choice');
+                                }}
+                                className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-slate-700 border-2 border-white/10 scale-110"
+                              />
+                              <Label
+                                htmlFor={`mode-drag-${quiz.id}`}
+                                className={`text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${assignmentResponseMode === 'direct_input' ? 'text-blue-400' : 'text-slate-500'}`}
+                              >
+                                <Brain className={`w-3.5 h-3.5 ${assignmentResponseMode === 'direct_input' ? 'text-blue-400' : 'text-slate-500'}`} />
+                                Respuesta Directa
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </DialogHeader>
                     <div className="relative mb-4">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -2018,7 +2101,7 @@ const DraggableQuizItem = React.memo(({
                             <input
                               type="checkbox"
                               checked={assignedUsers.includes(user.id)}
-                              onChange={() => toggleQuizAssignment(quiz.id, user.id, assignedUsers.includes(user.id))}
+                              onChange={() => toggleQuizAssignment(quiz.id, user.id, assignedUsers.includes(user.id), assignmentResponseMode)}
                               className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-600"
                             />
                             <div className="flex flex-col">

@@ -129,11 +129,13 @@ const ActiveQuiz = () => {
 
   const [directResponse, setDirectResponse] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastSyncQuestionId = useRef<number | null>(null);
 
   // Queries — esperan a que la sesión esté confirmada para evitar 401 al iniciar
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${quizId}`],
     enabled: !sessionLoading && !isChiqui && !!quizId,
+    placeholderData: (prev) => prev,
   });
 
   const { data: questions, isLoading: loadingQuestions, error: errorQuestions } = useQuery<Question[]>({
@@ -159,6 +161,7 @@ const ActiveQuiz = () => {
     },
     // Esperar a que la sesión esté confirmada antes de disparar el fetch
     enabled: !sessionLoading && (!!quizId || !!categoryId),
+    placeholderData: (prev) => prev,
   });
 
   const hasUnevaluatedAnswers = studentAnswers.some(a => a.userResponse !== undefined && a.isCorrect === null);
@@ -167,6 +170,7 @@ const ActiveQuiz = () => {
     queryKey: isChiqui ? ["chiqui-progress-placeholder"] : [`/api/progress/${quizId}`],
     enabled: !isChiqui && !!quizId && !!session?.userId,
     refetchInterval: hasUnevaluatedAnswers ? 3000 : false,
+    placeholderData: (prev) => prev,
   });
 
   const isDirectInput = progress?.responseMode === 'direct_input' || mode === 'direct_input';
@@ -352,11 +356,25 @@ const ActiveQuiz = () => {
   }, [questions, currentQuestionIndex]);
 
   useEffect(() => {
-    // Sync directResponse when question changes
+    // Sync directResponse when question changes or on initial load
     if (questions && questions[currentQuestionIndex]) {
       const qId = questions[currentQuestionIndex].id;
-      const existing = studentAnswers.find(sa => sa.questionId === qId);
-      setDirectResponse(existing?.userResponse || "");
+      const isFocused = document.activeElement === inputRef.current;
+
+      // Sincronizar SIEMPRE si cambiamos de pregunta
+      if (lastSyncQuestionId.current !== qId) {
+        const existing = studentAnswers.find(sa => sa.questionId === qId);
+        setDirectResponse(existing?.userResponse || "");
+        lastSyncQuestionId.current = qId;
+      }
+      // Si es la misma pregunta, solo sincronizar si no hay nada escrito y no hay foco,
+      // para evitar pisar lo que el usuario está escribiendo.
+      else if (!directResponse && !isFocused) {
+        const existing = studentAnswers.find(sa => sa.questionId === qId);
+        if (existing?.userResponse) {
+          setDirectResponse(existing.userResponse);
+        }
+      }
     }
   }, [currentQuestionIndex, questions, studentAnswers]);
 
@@ -480,6 +498,7 @@ const ActiveQuiz = () => {
 
     setIsNavigating(true);
     try {
+      const currentQuestion = questions[currentQuestionIndex];
       const isTextType = currentQuestion.type === 'text';
       const hasUnconfirmedAnswer = !answeredQuestions[currentQuestionIndex] && (
         selectedAnswerId !== null ||

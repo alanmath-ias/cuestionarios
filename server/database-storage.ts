@@ -392,9 +392,13 @@ export class DatabaseStorage implements IStorage {
     return result.map(row => row.quizzes);
   }
 
-  async assignQuizToUser(userId: number, quizId: number) {
+  async assignQuizToUser(userId: number, quizId: number, responseMode?: string) {
     try {
-      await this.db.insert(userQuizzes).values({ userId, quizId }).onConflictDoNothing();
+      await this.db.insert(userQuizzes).values({
+        userId,
+        quizId,
+        responseMode: responseMode || 'multiple_choice'
+      }).onConflictDoNothing();
     } catch (error) {
       console.error("DB Error in assignQuizToUser:", error);
       throw error;
