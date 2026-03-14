@@ -6,7 +6,7 @@ interface QuestionProgressProps {
     currentQuestionIndex: number;
     onQuestionClick: (index: number) => void;
     disabled?: boolean;
-    correctAnswers?: Record<number, boolean>;
+    correctAnswers?: Record<number, boolean | null>;
     responseMode?: string;
 }
 
@@ -39,8 +39,8 @@ export function QuestionProgress({
 
                     let bgClass = "bg-slate-800/50 text-slate-500 border-slate-700 hover:bg-slate-700 hover:text-slate-300";
                     if (isAnswered) {
-                        if (responseMode === 'direct_input') {
-                            // Blue/Cyan for direct input answered questions to avoid early "Wrong" fear
+                        if (responseMode === 'direct_input' && (isCorrect === null || isCorrect === undefined)) {
+                            // Blue/Cyan for direct input answered questions pending evaluation
                             bgClass = "bg-blue-500/20 text-blue-400 border-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.2)]";
                         } else {
                             if (isCorrect === true) bgClass = "bg-green-500/20 text-green-400 border-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.2)]";

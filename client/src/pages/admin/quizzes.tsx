@@ -1484,32 +1484,32 @@ export default function QuizzesAdmin() {
                                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                                     }`}
                                   disabled={verifyingId === quiz.id}
-                                   onClick={async () => {
-                                     try {
-                                       setVerifyingId(quiz.id);
-                                       const res = await fetch(`/api/quizzes/${quiz.id}/verify`, {
-                                         method: 'PATCH',
-                                         headers: { 'Content-Type': 'application/json' },
-                                         body: JSON.stringify({ isVerified: !quiz.isVerified }),
-                                         credentials: 'include',
-                                       });
-                                       if (res.ok) {
-                                         window.location.reload();
-                                       } else {
-                                         setVerifyingId(null);
-                                       }
-                                     } catch (e) {
-                                       console.error('Error:', e);
-                                       setVerifyingId(null);
-                                     }
-                                   }}
+                                  onClick={async () => {
+                                    try {
+                                      setVerifyingId(quiz.id);
+                                      const res = await fetch(`/api/quizzes/${quiz.id}/verify`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ isVerified: !quiz.isVerified }),
+                                        credentials: 'include',
+                                      });
+                                      if (res.ok) {
+                                        window.location.reload();
+                                      } else {
+                                        setVerifyingId(null);
+                                      }
+                                    } catch (e) {
+                                      console.error('Error:', e);
+                                      setVerifyingId(null);
+                                    }
+                                  }}
                                 >
                                   {verifyingId === quiz.id ? (
-                                     <Spinner className="h-3.5 w-3.5" />
-                                   ) : (
-                                     <ShieldCheck className="h-3.5 w-3.5" />
-                                   )}
-                                   {verifyingId === quiz.id ? 'Procesando...' : quiz.isVerified ? 'Verificado' : 'Verificar'}
+                                    <Spinner className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <ShieldCheck className="h-3.5 w-3.5" />
+                                  )}
+                                  {verifyingId === quiz.id ? 'Procesando...' : quiz.isVerified ? 'Verificado' : 'Verificar'}
                                 </Button>
 
                                 <Dialog>

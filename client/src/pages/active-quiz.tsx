@@ -161,10 +161,15 @@ const ActiveQuiz = () => {
     enabled: !sessionLoading && (!!quizId || !!categoryId),
   });
 
+  const hasUnevaluatedAnswers = studentAnswers.some(a => a.userResponse !== undefined && a.isCorrect === null);
+
   const { data: progress, isLoading: loadingProgress } = useQuery<Progress>({
     queryKey: isChiqui ? ["chiqui-progress-placeholder"] : [`/api/progress/${quizId}`],
     enabled: !isChiqui && !!quizId && !!session?.userId,
+    refetchInterval: hasUnevaluatedAnswers ? 3000 : false,
   });
+
+  const isDirectInput = progress?.responseMode === 'direct_input' || mode === 'direct_input';
 
   const { data: chiquiResults } = useQuery<any[]>({
     queryKey: ["chiqui-results", searchParams.get('user_id')],
@@ -232,12 +237,30 @@ const ActiveQuiz = () => {
   // Timer
   // IMPORTANT: initialElapsedTime is set to 0 to restart the visual timer for this session.
   // The total time will be calculated as previousTimeSpent + elapsedTime.
-  const { formattedTime, elapsedTime, start, pause } = useTimer({
+  const { formattedTime, elapsedTime, start, pause, reset } = useTimer({
     initialTime: isChiqui ? 1200 : (quiz?.timeLimit || 0),
     initialElapsedTime: 0,
-    autoStart: session?.userId !== 1,
+    autoStart: false, // We will manually start it to ensure it catches the loaded time
     onTimeUp: () => handleFinishQuiz()
   });
+
+  // Sync background AI evaluation results when progress is refetched via polling
+  useEffect(() => {
+    if (progress?.answers && isInitialized) {
+      setStudentAnswers(prev => {
+        let updated = [...prev];
+        let changed = false;
+        for (const serverAns of progress.answers as any[]) {
+          const localIdx = updated.findIndex(a => a.questionId === serverAns.questionId);
+          if (localIdx >= 0 && updated[localIdx].isCorrect === null && serverAns.isCorrect !== null) {
+            updated[localIdx] = { ...updated[localIdx], isCorrect: serverAns.isCorrect };
+            changed = true;
+          }
+        }
+        return changed ? updated : prev;
+      });
+    }
+  }, [progress?.answers, isInitialized]);
 
   // Helper to calculate total cumulative time
   const getTotalTime = () => {
@@ -290,6 +313,10 @@ const ActiveQuiz = () => {
           setAnsweredQuestions(answeredMap);
         }
         setIsInitialized(true);
+        if (session?.userId !== 1 && quiz?.timeLimit) {
+          reset(quiz.timeLimit);
+          start();
+        }
       } else if (isChiqui) {
         // Check if there is already a result for today
         const todayCategoryResult = chiquiResults?.find(r =>
@@ -303,6 +330,10 @@ const ActiveQuiz = () => {
           setShowChiquiResult(true);
         }
         setIsInitialized(true);
+        if (session?.userId !== 1) {
+          reset(1200);
+          start();
+        }
       } else if (mode === 'readonly') {
         // If readonly and NO progress, just initialize empty state
         setIsInitialized(true);
@@ -424,10 +455,10 @@ const ActiveQuiz = () => {
       timeSpent: elapsedTime, // This tracks time for this specific answer in this session
     };
 
-    if (progress?.responseMode === 'direct_input') {
+    if (isDirectInput) {
       studentAnswer.userResponse = directResponse;
       studentAnswer.answerId = null;
-      // Note: isCorrect remains false until AI evaluation
+      studentAnswer.isCorrect = null; // Important: null means pending evaluation
     }
 
     // Actualización optimista del estado local para navegación instantánea
@@ -449,7 +480,6 @@ const ActiveQuiz = () => {
 
     setIsNavigating(true);
     try {
-      const isDirectInput = progress?.responseMode === 'direct_input';
       const isTextType = currentQuestion.type === 'text';
       const hasUnconfirmedAnswer = !answeredQuestions[currentQuestionIndex] && (
         selectedAnswerId !== null ||
@@ -475,6 +505,11 @@ const ActiveQuiz = () => {
         (Object.keys(updatedAnsweredQuestions).length >= questions.length);
 
       if (!isFinishing) {
+        // En modo opción múltiple, añadimos una pequeña pausa para que el usuario vea si acertó
+        if (!isDirectInput) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+        }
+
         // Enviar actualización de progreso en segundo plano sin bloquear la UI
         if (!isChiqui && progress) {
           createProgressMutation.mutate({
@@ -701,7 +736,8 @@ const ActiveQuiz = () => {
     }
   };
 
-  if (sessionLoading || (!isChiqui && loadingQuiz) || loadingQuestions) {
+  // Prevent flashing by waiting for progress initialization (creation or fetch)
+  if (sessionLoading || (!isChiqui && loadingQuiz) || loadingQuestions || (!isInitialized && session?.userId !== 1 && !isReadOnly)) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-slate-950">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -723,7 +759,7 @@ const ActiveQuiz = () => {
   const currentQuestion = questions[currentQuestionIndex];
   if (!currentQuestion) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">No questions found</div>;
 
-  const correctAnswers = questions?.reduce((acc: Record<number, boolean>, question, index) => {
+  const correctAnswers = questions?.reduce((acc: Record<number, boolean | null>, question, index) => {
     const studentAnswer = studentAnswers.find(a => a.questionId === question.id);
     if (studentAnswer) {
       acc[index] = studentAnswer.isCorrect;
@@ -946,7 +982,9 @@ const ActiveQuiz = () => {
                 ? 'Resuelve la siguiente ecuación:'
                 : currentQuestion.type === 'text'
                   ? 'Responde la siguiente pregunta:'
-                  : 'Selecciona la respuesta correcta'}
+                  : isDirectInput
+                    ? 'Escribe la respuesta correcta:'
+                    : 'Selecciona la respuesta correcta'}
             </h3>
 
             {currentQuestion.imageUrl && (
@@ -1016,7 +1054,7 @@ const ActiveQuiz = () => {
                 </div>
               )}
             </div>
-          ) : progress?.responseMode === 'direct_input' ? null : (
+          ) : isDirectInput ? null : (
             <div className="grid grid-cols-1 gap-4">
               {shuffledAnswers.map((answer, index) => {
                 const existingAnswer = studentAnswers.find(sa =>
@@ -1067,7 +1105,7 @@ const ActiveQuiz = () => {
             </div>
           )}
 
-          {progress?.responseMode === 'direct_input' && !isReadOnly && (
+          {isDirectInput && !isReadOnly && (
             <div className="space-y-6 animate-in fade-in zoom-in duration-500">
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />

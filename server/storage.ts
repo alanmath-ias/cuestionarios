@@ -64,6 +64,8 @@ export interface IStorage {
   getQuizzesByUserId(userId: number): Promise<any[]>;
   updateUserCategories(userId: number, categoryIds: number[]): Promise<void>;
   updateUserQuizMode(userId: number, quizId: number, mode: string): Promise<void>;
+  assignQuizToUser(userId: number, quizId: number): Promise<void>;
+  removeQuizFromUser(userId: number, quizId: number): Promise<void>;
 
   // Subcategory methods
   getAllSubcategories(): Promise<any[]>;
