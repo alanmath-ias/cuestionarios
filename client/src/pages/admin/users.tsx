@@ -63,7 +63,15 @@ export default function UsersAdmin() {
     if (highlight) {
       setHighlightId(parseInt(highlight));
     }
-  }, [searchString]);
+
+    const viewProgress = params.get("viewProgress");
+    if (viewProgress && users) {
+      const user = users.find((u: any) => u.id === parseInt(viewProgress));
+      if (user) {
+        setSelectedUser(user);
+      }
+    }
+  }, [searchString, users]);
 
   // Sort users alphabetically by username
   const sortedUsers = users ? [...users].sort((a: any, b: any) =>
@@ -183,7 +191,12 @@ export default function UsersAdmin() {
       <UserProgressDetails
         userId={selectedUser.id}
         username={selectedUser.username}
-        onBack={() => setSelectedUser(null)}
+        onBack={() => {
+          setSelectedUser(null);
+          const params = new URLSearchParams(window.location.search);
+          params.delete("viewProgress");
+          window.history.pushState({}, '', `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`);
+        }}
       />
     );
   }
@@ -304,7 +317,12 @@ export default function UsersAdmin() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setSelectedUser(user)}
+                          onClick={() => {
+                            setSelectedUser(user);
+                            const params = new URLSearchParams(window.location.search);
+                            params.set("viewProgress", String(user.id));
+                            window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
+                          }}
                           title="Ver progreso detallado"
                           className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
                         >

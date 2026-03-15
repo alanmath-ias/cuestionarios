@@ -35,7 +35,7 @@ export function ZoomableImage({ src, alt, className }: ZoomableImageProps) {
                 </div>
             </DialogTrigger>
 
-            <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 overflow-hidden bg-slate-950/90 border-white/10 backdrop-blur-xl group/dialog">
+            <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 overflow-hidden bg-slate-950/90 border-white/10 backdrop-blur-xl group/dialog [&>button:last-child]:hidden">
                 <div className="relative w-full h-full min-h-[60vh] flex flex-col items-center justify-center p-4">
                     <TransformWrapper
                         initialScale={1}
@@ -96,6 +96,16 @@ export function ZoomableImage({ src, alt, className }: ZoomableImageProps) {
                     <div className="absolute top-6 left-6 text-slate-400 text-sm font-medium pointer-events-none bg-slate-950/50 px-4 py-2 rounded-full border border-white/10 backdrop-blur-md opacity-0 group-hover/dialog:opacity-100 transition-opacity duration-300">
                         Zoom: Gira la rueda o pellizca | Pan: Arrastra
                     </div>
+
+                    <DialogClose asChild>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="absolute top-6 right-6 z-50 rounded-full w-14 h-14 bg-slate-900/90 border-white/20 text-white hover:bg-white/20 hover:text-white shadow-2xl backdrop-blur-md transition-all scale-100 hover:scale-105"
+                        >
+                            <X className="h-7 w-7" />
+                        </Button>
+                    </DialogClose>
                 </div>
             </DialogContent>
         </Dialog>

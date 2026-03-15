@@ -36,7 +36,11 @@ function QuizResults() {
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
 
   const handleGoBack = () => {
-    window.history.back();
+    if (userId) {
+      setLocation(`/admin/users?viewProgress=${userId}`);
+    } else {
+      window.history.back();
+    }
   };
 
   const { data: results, isLoading: loadingResults, error } = useQuery<QuizResult>({

@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap } from "lucide-react";
 import { startActiveQuizTour } from "@/lib/tour";
 import { useState, useEffect, useRef } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -321,7 +321,7 @@ const ActiveQuiz = () => {
           reset(quiz.timeLimit);
           start();
         }
-      } else if (isChiqui) {
+      } else if (isChiqui && questions) {
         // Check if there is already a result for today
         const todayCategoryResult = chiquiResults?.find(r =>
           r.categoryId === parseInt(categoryId!) &&
@@ -332,6 +332,27 @@ const ActiveQuiz = () => {
           setChiquiScore(todayCategoryResult.lastScore);
           setStudentAnswers(todayCategoryResult.lastAnswers || []);
           setShowChiquiResult(true);
+        } else {
+          // Restore partial progress from LocalStorage
+          const savedPartial = localStorage.getItem(`chiqui_partial_${categoryId}`);
+          if (savedPartial) {
+            try {
+              const { answers, index } = JSON.parse(savedPartial);
+              if (answers && Array.isArray(answers)) {
+                setStudentAnswers(answers);
+                const answeredMap: Record<number, boolean> = {};
+                answers.forEach((ans: any) => {
+                  const qId = ans.questionId;
+                  const qidx = questions.findIndex(q => q.id === qId);
+                  if (qidx !== -1) answeredMap[qidx] = true;
+                });
+                setAnsweredQuestions(answeredMap);
+                setCurrentQuestionIndex(Math.min(index, questions.length - 1));
+              }
+            } catch (err) {
+              console.error("Error restoring Chiqui progress State:", err);
+            }
+          }
         }
         setIsInitialized(true);
         if (session?.userId !== 1) {
@@ -409,6 +430,18 @@ const ActiveQuiz = () => {
       });
     }
   }, [quiz, session, progress, loadingProgress, quizId, isReadOnly, isChiqui]);
+
+  // Save Partial Chiqui progress
+  useEffect(() => {
+    if (isChiqui && isInitialized && !showChiquiResult) {
+      if (studentAnswers.length > 0) {
+        localStorage.setItem(`chiqui_partial_${categoryId}`, JSON.stringify({
+          answers: studentAnswers,
+          index: currentQuestionIndex
+        }));
+      }
+    }
+  }, [studentAnswers, currentQuestionIndex, isChiqui, isInitialized, categoryId, showChiquiResult]);
 
   useEffect(() => {
     if (!loadingQuiz && !loadingQuestions && session?.userId && !session.tourStatus?.activeQuiz) {
@@ -679,6 +712,8 @@ const ActiveQuiz = () => {
           answers: answersToUse
         });
 
+        localStorage.removeItem(`chiqui_partial_${categoryId}`);
+
         toast({
           title: "¡Repasito completado!",
           description: `Has acertado ${score} de 5 preguntas. ¡Sigue así!`,
@@ -765,6 +800,31 @@ const ActiveQuiz = () => {
   }
 
   if (errorQuestions || !questions || questions.length === 0) {
+    if (isChiqui) {
+      return (
+        <div className="flex flex-col justify-center items-center min-h-screen p-6 text-center bg-slate-950 text-slate-200 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+            <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-600/10 rounded-full blur-[100px]" />
+            <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-600/10 rounded-full blur-[100px]" />
+          </div>
+
+          <div className="bg-amber-500/10 p-4 rounded-full mb-4 border border-amber-500/20 relative z-10 animate-bounce">
+            <Zap className="h-12 w-12 text-amber-400" />
+          </div>
+          <h2 className="text-2xl font-bold mb-3 bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent relative z-10">¡Aún no hay Repasitos disponibles!</h2>
+          <p className="text-slate-300 max-w-sm mb-3 leading-relaxed relative z-10 text-sm">
+            La sección de <strong>Repasitos</strong> sirve para repasar conceptos que ya has estudiado.
+          </p>
+          <p className="text-slate-400 max-w-sm mb-6 text-xs relative z-10">
+            Como todavía no has realizado cuestionarios de esta materia, la inteligencia artificial no tiene preguntas para repasar. ¡Te invitamos a realizar cuestionarios primero!
+          </p>
+          <Button onClick={() => setLocation("/dashboard")} className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-500/20 font-bold relative z-10">
+            Volver al Inicio
+          </Button>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center bg-slate-950 text-slate-200">
         <AlertCircle className="h-12 w-12 text-red-500 mb-4" />

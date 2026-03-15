@@ -1068,6 +1068,18 @@ export default function UserDashboard() {
 
               return (
                 <div key={category.id} className="flex flex-col items-center gap-1">
+                  <span
+                    onClick={() => setExpandedRoadmapCategoryId(expandedRoadmapCategoryId === category.id ? null : category.id)}
+                    className={cn(
+                      "text-[9px] md:text-[10px] font-black text-center max-w-[68px] line-clamp-1 leading-tight mb-1 tracking-wider cursor-pointer uppercase transition-all duration-300",
+                      expandedRoadmapCategoryId === category.id
+                        ? "text-yellow-400 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]"
+                        : "text-blue-400/80 hover:text-blue-300 hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.4)]"
+                    )}
+                    title={category.name}
+                  >
+                    {category.name}
+                  </span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>

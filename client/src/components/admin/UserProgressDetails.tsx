@@ -266,7 +266,7 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                                         Nota: {q.score}/10
                                                     </Badge>
                                                     {q.progressId && (
-                                                        <Link href={`/results/${q.progressId}`}>
+                                                        <Link href={`/results/${q.progressId}?user_id=${userId}`}>
                                                             <Button variant="secondary" size="sm" className="h-7 text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700">
                                                                 <Eye className="h-3 w-3 mr-1" />
                                                                 Ver Detalles
