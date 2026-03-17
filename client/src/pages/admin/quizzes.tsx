@@ -117,6 +117,12 @@ const DraggableDialogQuizItem = ({
       id={String(quiz.id)}
       dragListener={false}
       dragControls={controls}
+      onDragStart={() => {
+        document.body.classList.add('dragging-active');
+      }}
+      onDragEnd={() => {
+        document.body.classList.remove('dragging-active');
+      }}
       className={cn(
         "group flex flex-col gap-3 p-4 rounded-xl transition-all",
         isHighlighted

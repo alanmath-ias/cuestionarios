@@ -222,7 +222,8 @@ export class DatabaseStorage implements IStorage {
   async getQuizzesBySubcategory(subcategoryId: number): Promise<Quiz[]> {
     return await this.db.select()
       .from(quizzes)
-      .where(eq(quizzes.subcategoryId, subcategoryId));
+      .where(eq(quizzes.subcategoryId, subcategoryId))
+      .orderBy(asc(quizzes.sortOrder));
   }
 
   async getPublicQuizzes(): Promise<Quiz[]> {
@@ -231,7 +232,7 @@ export class DatabaseStorage implements IStorage {
 
   async getQuizzesByCategory(categoryId: number, userId?: number): Promise<any[]> {
     if (!userId) {
-      return await this.db.select().from(quizzes).where(eq(quizzes.categoryId, categoryId));
+      return await this.db.select().from(quizzes).where(eq(quizzes.categoryId, categoryId)).orderBy(asc(quizzes.sortOrder));
     }
 
     const results = await this.db
@@ -245,7 +246,8 @@ export class DatabaseStorage implements IStorage {
         eq(quizzes.id, userQuizzes.quizId),
         eq(userQuizzes.userId, userId)
       ))
-      .where(eq(quizzes.categoryId, categoryId));
+      .where(eq(quizzes.categoryId, categoryId))
+      .orderBy(asc(quizzes.sortOrder));
 
     return results.map(row => {
       const quiz = row.quizzes;
