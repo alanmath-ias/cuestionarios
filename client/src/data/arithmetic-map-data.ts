@@ -261,7 +261,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     // ==========================================
     {
         id: 'n9-main',
-        label: 'Potencias y Raíces',
+        label: 'Potencias, Raíces y Logaritmos',
         level: 10,
         type: 'basic',
         requires: ['n7-mcd', 'n7-problemas-aplicacion'],
@@ -269,6 +269,17 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         xOffset: 0,
         // subcategoryId removed (parent)
         behavior: 'container'
+    },
+    {
+        id: 'n9-logaritmos',
+        label: 'Logaritmos',
+        level: 11,
+        type: 'basic',
+        requires: ['n9-main'],
+        description: 'Concepto y propiedades de los logaritmos.',
+        xOffset: 0,
+        subcategoryId: 436,
+        behavior: 'quiz_list'
     },
     {
         id: 'n9-potencias',

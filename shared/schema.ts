@@ -60,14 +60,7 @@ export const session = pgTable("session", {
 }, (table) => [
 	index("IDX_session_expire").using("btree", table.expire.asc().nullsLast().op("timestamp_ops")),
 ]);
-
-export const answers = pgTable("answers", {
-	id: serial().primaryKey().notNull(),
-	questionId: integer("question_id").notNull(),
-	content: text().notNull(),
-	isCorrect: boolean("is_correct").notNull(),
-	explanation: text(),
-});
+// answers table definition moved below questions to fit reference order
 
 export const quizzes = pgTable("quizzes", {
 	id: serial().primaryKey().notNull(),
@@ -118,7 +111,28 @@ export const questions = pgTable("questions", {
 	hint2: text("hint2"),
 	hint3: text("hint3"),
 	explanation: text("explanation"),
-});
+}, (table) => [
+	foreignKey({
+		columns: [table.quizId],
+		foreignColumns: [quizzes.id],
+		name: "questions_quiz_id_fkey"
+	}).onDelete("cascade"),
+]);
+
+export const answers = pgTable("answers", {
+	id: serial().primaryKey().notNull(),
+	questionId: integer("question_id").notNull(),
+	content: text().notNull(),
+	isCorrect: boolean("is_correct").notNull(),
+	explanation: text(),
+}, (table) => [
+	foreignKey({
+		columns: [table.questionId],
+		foreignColumns: [questions.id],
+		name: "answers_question_id_fkey"
+	}).onDelete("cascade"),
+]);
+
 
 export const studentProgress = pgTable("student_progress", {
 	id: serial().primaryKey().notNull(),
