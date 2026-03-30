@@ -240,7 +240,8 @@ export default function UsersAdmin() {
                   <TableHead className="text-slate-400">Usuario</TableHead>
                   <TableHead className="text-slate-400">Rol</TableHead>
                   <TableHead className="text-slate-400">Créditos</TableHead>
-                  <TableHead className="text-slate-400">Reportar</TableHead>
+                  <TableHead className="text-slate-400">Total Reportes</TableHead>
+                  <TableHead className="text-slate-400">Permiso Reportar</TableHead>
                   <TableHead className="text-slate-400 text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -286,6 +287,13 @@ export default function UsersAdmin() {
                         >
                           <Coins className="h-3 w-3" />
                         </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-center">
+                        <Badge variant="outline" className="bg-slate-800 text-slate-300 border-white/10">
+                          {user.totalReports || 0}
+                        </Badge>
                       </div>
                     </TableCell>
                     <TableCell>

@@ -9,6 +9,7 @@ import ActiveQuiz from "@/pages/active-quiz";
 import QuizResults from "@/pages/quiz-results";
 import FreeQuizzes from "@/pages/free-quizzes";
 import ProfilePage from "@/pages/profile";
+import UserReports from "@/pages/user-reports";
 import AuthPage from "@/pages/auth-page";
 import WelcomePage from "@/pages/welcome";
 import CategoriesAdmin from "@/pages/admin/categories";
@@ -294,6 +295,9 @@ function Router() {
       </Route>
       <Route path="/profile">
         {() => <ProtectedRoute component={ProfilePage} path="/profile" />}
+      </Route>
+      <Route path="/user/reports">
+        {() => <ProtectedRoute component={UserReports} path="/user/reports" />}
       </Route>
       <Route path="/free-quizzes">
         {() => <PageLayout><FreeQuizzes /></PageLayout>}

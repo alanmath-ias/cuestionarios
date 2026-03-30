@@ -125,8 +125,12 @@ export interface IStorage {
   // Question Reports
   createQuestionReport(report: InsertQuestionReport): Promise<QuestionReport>;
   getQuestionReports(): Promise<QuestionReport[]>;
+  getUserReports(userId: number): Promise<QuestionReport[]>;
+  updateQuestionReport(id: number, data: Partial<InsertQuestionReport>, userId: number): Promise<QuestionReport>;
+  deleteQuestionReport(id: number, userId?: number): Promise<void>;
   getQuestionReportDetails(id: number): Promise<any>;
   updateQuestionReportStatus(id: number, status: string): Promise<QuestionReport>;
+  rewardAndResolveReport(reportId: number, credits: number): Promise<void>;
 
   // Question methods
   updateQuestion(id: number, question: Partial<Question>): Promise<Question>;
@@ -468,7 +472,8 @@ export class MemStorage implements IStorage {
       subscriptionStatus: 'free',
       subscriptionPlan: null,
       subscriptionEndDate: null,
-      canReport: insertUser.canReport ?? false
+      canReport: insertUser.canReport ?? false,
+      totalReports: 0
     };
     this.users.set(id, user);
     return user;
@@ -742,8 +747,12 @@ export class MemStorage implements IStorage {
   // Question Reports
   async createQuestionReport(report: InsertQuestionReport): Promise<QuestionReport> { throw new Error("Method not implemented."); }
   async getQuestionReports(): Promise<QuestionReport[]> { return []; }
+  async getUserReports(userId: number): Promise<QuestionReport[]> { return []; }
+  async updateQuestionReport(id: number, data: Partial<InsertQuestionReport>, userId: number): Promise<QuestionReport> { throw new Error("Method not implemented."); }
+  async deleteQuestionReport(id: number, userId?: number): Promise<void> { throw new Error("Method not implemented."); }
   async getQuestionReportDetails(id: number): Promise<any> { return null; }
   async updateQuestionReportStatus(id: number, status: string): Promise<QuestionReport> { throw new Error("Method not implemented."); }
+  async rewardAndResolveReport(reportId: number, credits: number): Promise<void> { throw new Error("Method not implemented."); }
 
   // Password Reset
   async createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken> { throw new Error("Method not implemented."); }

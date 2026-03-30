@@ -13,7 +13,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CheckCircle, Eye, Bot, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -24,9 +23,17 @@ import {
     DialogTitle,
     DialogDescription,
 } from "@/components/ui/dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MathText } from "@/components/ui/math-display";
 import { AIMarkdown } from "@/components/ui/ai-markdown";
+import { Loader2, CheckCircle, Eye, Bot, Trash2, ChevronDown } from "lucide-react";
 
 interface QuestionReport {
     id: number;
@@ -43,6 +50,7 @@ interface ReportDetails extends QuestionReport {
         id: number;
         name: string;
         email: string;
+        totalReports?: number;
     };
     quiz: {
         id: number;
@@ -118,17 +126,19 @@ export default function AdminReports() {
         },
     });
 
-    const deleteReportMutation = useMutation({
-        mutationFn: async (id: number) => {
-            const res = await apiRequest("DELETE", `/api/admin/reports/${id}`);
-            if (!res.ok) throw new Error("No se pudo eliminar el reporte");
+    const resolveAndRewardMutation = useMutation({
+        mutationFn: async ({ id, credits }: { id: number, credits: number }) => {
+            const res = await apiRequest("POST", `/api/admin/reports/${id}/resolve`, { credits });
+            if (!res.ok) throw new Error("No se pudo resolver el reporte");
+            return res.json();
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
             toast({
-                title: "Reporte eliminado",
-                description: "El reporte ha sido eliminado correctamente.",
+                title: "Reporte resuelto",
+                description: "El reporte ha sido cerrado y actualizado.",
             });
+            handleCloseDialog();
         },
         onError: (error: Error) => {
             toast({
@@ -226,26 +236,43 @@ export default function AdminReports() {
                                                             Ver Detalles
                                                         </Button>
                                                         {report.status === "pending" && (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => updateStatusMutation.mutate({ id: report.id, status: "resolved" })}
-                                                                disabled={updateStatusMutation.isPending}
-                                                                className="bg-green-500/10 text-green-400 hover:bg-green-500/20 border-green-500/20 hover:text-green-300"
-                                                            >
-                                                                <CheckCircle className="h-4 w-4 mr-1" />
-                                                                Marcar Resuelto
-                                                            </Button>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        disabled={resolveAndRewardMutation.isPending}
+                                                                        className="bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border-purple-500/20 hover:text-purple-300"
+                                                                    >
+                                                                        <CheckCircle className="h-4 w-4 mr-1" /> Resolver <ChevronDown className="h-3 w-3 ml-1" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent className="bg-slate-900 border-white/10 text-slate-200">
+                                                                    <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: report.id, credits: 0 })}>
+                                                                        Resolver (0 créditos)
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuSeparator className="bg-white/10" />
+                                                                    <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: report.id, credits: 1 })}>
+                                                                        Resolver y dar 1 crédito
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: report.id, credits: 2 })}>
+                                                                        Resolver y dar 2 créditos
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: report.id, credits: 3 })}>
+                                                                        Resolver y dar 3 créditos
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
                                                         )}
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
                                                             onClick={() => {
-                                                                if (window.confirm("¿Estás seguro de que deseas eliminar este reporte?")) {
-                                                                    deleteReportMutation.mutate(report.id);
+                                                                if (window.confirm("¿Deseas eliminar este reporte ignorándolo (0 créditos)?")) {
+                                                                    resolveAndRewardMutation.mutate({ id: report.id, credits: 0 });
                                                                 }
                                                             }}
-                                                            disabled={deleteReportMutation.isPending}
+                                                            disabled={resolveAndRewardMutation.isPending}
                                                             className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20 hover:text-red-300"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
@@ -282,6 +309,7 @@ export default function AdminReports() {
                                         <div>
                                             <h4 className="font-semibold text-sm text-slate-400">Reportado por</h4>
                                             <p className="text-slate-200">{reportDetails.user?.name} ({reportDetails.user?.email})</p>
+                                            <p className="text-xs text-slate-500 mt-1">Total reportes históricos: {reportDetails.user?.totalReports ?? 0}</p>
                                         </div>
                                         <div>
                                             <h4 className="font-semibold text-sm text-slate-400">Cuestionario</h4>

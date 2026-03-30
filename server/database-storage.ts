@@ -1519,11 +1519,23 @@ export class DatabaseStorage implements IStorage {
   // Question Reports
   async createQuestionReport(report: InsertQuestionReport): Promise<QuestionReport> {
     const result = await this.db.insert(questionReports).values(report).returning();
+    await this.db.update(users).set({ totalReports: sql`${users.totalReports} + 1` }).where(eq(users.id, report.userId));
     return result[0];
   }
 
   async getQuestionReports(): Promise<QuestionReport[]> {
     return await this.db.select().from(questionReports).orderBy(desc(questionReports.createdAt));
+  }
+
+  async getUserReports(userId: number): Promise<any[]> {
+    const rawReports = await this.db.select().from(questionReports).where(eq(questionReports.userId, userId)).orderBy(desc(questionReports.createdAt));
+
+    // Enrich reports with full details
+    const detailedReports = await Promise.all(
+      rawReports.map(report => this.getQuestionReportDetails(report.id))
+    );
+
+    return detailedReports.filter(Boolean);
   }
 
   async updateQuestionReportStatus(id: number, status: string): Promise<QuestionReport> {
@@ -1535,8 +1547,37 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async deleteQuestionReport(id: number): Promise<void> {
-    await this.db.delete(questionReports).where(eq(questionReports.id, id));
+  async updateQuestionReport(id: number, data: Partial<InsertQuestionReport>, userId: number): Promise<QuestionReport> {
+    const result = await this.db
+      .update(questionReports)
+      .set({ ...data, status: "pending" }) // Reset status to pending when edited
+      .where(and(eq(questionReports.id, id), eq(questionReports.userId, userId)))
+      .returning();
+
+    if (result.length === 0) {
+      throw new Error("Reporte no encontrado o no tienes permiso para editarlo");
+    }
+    return result[0];
+  }
+
+  async deleteQuestionReport(id: number, userId?: number): Promise<void> {
+    const conditions = userId ? and(eq(questionReports.id, id), eq(questionReports.userId, userId)) : eq(questionReports.id, id);
+    await this.db.delete(questionReports).where(conditions);
+  }
+
+  async rewardAndResolveReport(reportId: number, credits: number): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const reportList = await tx.select().from(questionReports).where(eq(questionReports.id, reportId));
+      if (reportList.length > 0) {
+        const report = reportList[0];
+        if (credits > 0) {
+          await tx.update(users)
+            .set({ hintCredits: sql`${users.hintCredits} + ${credits}` })
+            .where(eq(users.id, report.userId));
+        }
+        await tx.update(questionReports).set({ status: 'resolved' }).where(eq(questionReports.id, reportId));
+      }
+    });
   }
 
   async getQuestionReportDetails(id: number): Promise<any> {
@@ -1547,7 +1588,8 @@ export class DatabaseStorage implements IStorage {
           columns: {
             id: true,
             name: true,
-            email: true
+            email: true,
+            totalReports: true
           }
         },
         quiz: {

@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, HelpCircle, Gamepad2, BrainCircuit, CreditCard } from 'lucide-react';
+import { ChevronDown, HelpCircle, Gamepad2, BrainCircuit, CreditCard, AlertTriangle } from 'lucide-react';
 import { RestZoneDialog } from '@/components/dialogs/RestZoneDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
@@ -23,6 +23,8 @@ interface User {
   email?: string;
   role?: string;
   hintCredits: number;
+  canReport?: boolean;
+  totalReports?: number;
 }
 
 interface UserMenuProps {
@@ -161,6 +163,12 @@ export function UserMenu({ user }: UserMenuProps) {
             <Gamepad2 className="mr-2 h-4 w-4" />
             <span>Zona de Descanso</span>
           </DropdownMenuItem>
+          {user.role !== 'admin' && (user.canReport || (user.totalReports && user.totalReports > 0)) && (
+            <DropdownMenuItem onClick={() => setLocation('/user/reports')}>
+              <AlertTriangle className="mr-2 h-4 w-4 text-yellow-500" />
+              <span>Mis Reportes</span>
+            </DropdownMenuItem>
+          )}
           {user.role !== 'admin' && (
             <DropdownMenuItem onClick={() => startTour(location)}>
               <HelpCircle className="mr-2 h-4 w-4" />

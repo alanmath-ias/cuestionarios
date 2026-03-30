@@ -3789,6 +3789,56 @@ Ejemplo de formato:
     }
   });
 
+  apiRouter.post("/admin/reports/:id/resolve", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (req.user?.role !== "admin") return res.status(403).send("No autorizado");
+
+      const reportId = parseInt(req.params.id);
+      const credits = parseInt(req.body.credits || "0", 10);
+      await storage.rewardAndResolveReport(reportId, credits);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error resolving report:", error);
+      res.status(500).send("Error al resolver el reporte");
+    }
+  });
+
+  // User Reports Management
+  apiRouter.get("/user/reports", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) return res.status(401).send("No autorizado");
+      const reports = await storage.getUserReports(req.user.id);
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching user reports:", error);
+      res.status(500).send("Error al obtener reportes del usuario");
+    }
+  });
+
+  apiRouter.patch("/user/reports/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) return res.status(401).send("No autorizado");
+      const reportId = parseInt(req.params.id);
+      const updatedReport = await storage.updateQuestionReport(reportId, req.body, req.user.id);
+      res.json(updatedReport);
+    } catch (error: any) {
+      console.error("Error editing report:", error);
+      res.status(500).send(error.message || "Error al editar el reporte");
+    }
+  });
+
+  apiRouter.delete("/user/reports/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) return res.status(401).send("No autorizado");
+      const reportId = parseInt(req.params.id);
+      await storage.deleteQuestionReport(reportId, req.user.id);
+      res.sendStatus(204);
+    } catch (error) {
+      console.error("Error deleting user report:", error);
+      res.status(500).send("Error al eliminar el reporte");
+    }
+  });
+
   apiRouter.get("/admin/reports/:id/details", requireAuth, async (req: Request, res: Response) => {
     try {
       if (req.user?.role !== "admin") return res.status(403).send("No autorizado");

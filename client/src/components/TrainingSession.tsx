@@ -409,7 +409,7 @@ export function TrainingSession({ title, questions, loading, onExit }: TrainingS
                             <span>Progreso</span>
                             <span>{Math.round(progress)}%</span>
                         </div>
-                        <Progress value={progress} className="h-2 bg-slate-800" indicatorClassName="bg-gradient-to-r from-blue-500 to-purple-500" />
+                        <Progress value={progress} className="h-2 bg-slate-800" />
 
                         {/* Navigation Circles (Desktop) */}
                         <div className="hidden md:flex justify-between mt-4 px-1">

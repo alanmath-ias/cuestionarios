@@ -11,6 +11,9 @@ const userSchema = z.object({
   email: z.string().optional(),
   role: z.string().optional(),
   createdAt: z.string().transform(str => new Date(str)),
+  hintCredits: z.number().default(0),
+  canReport: z.boolean().optional(),
+  totalReports: z.number().optional(),
 });
 
 type User = z.infer<typeof userSchema>;

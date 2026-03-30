@@ -24,6 +24,7 @@ export const users = pgTable("users", {
 	subscriptionPlan: text("subscription_plan"),
 	subscriptionEndDate: timestamp("subscription_end_date", { mode: 'string' }),
 	canReport: boolean("can_report").default(false).notNull(),
+	totalReports: integer("total_reports").default(0).notNull(),
 }, (table) => [
 	unique("users_username_unique").on(table.username),
 ]);

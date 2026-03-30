@@ -32,6 +32,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       subscriptionEndDate: user.subscriptionEndDate,
       googleId: user.googleId,
       canReport: user.canReport,
+      totalReports: user.totalReports,
     };
 
     next();

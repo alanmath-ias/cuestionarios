@@ -12,7 +12,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { User, Mail, Shield, GraduationCap, ArrowLeft, UserCircle, Pencil, Save, X, Zap, Check, Lock } from 'lucide-react';
+import { User, Mail, Shield, GraduationCap, ArrowLeft, UserCircle, Pencil, Save, X, Zap, Check, Lock, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
 import {
@@ -33,6 +33,7 @@ interface User {
   subscriptionStatus?: string;
   subscriptionPlan?: string;
   subscriptionEndDate?: string;
+  totalReports?: number;
 }
 
 export default function ProfilePage() {
@@ -338,6 +339,21 @@ export default function ProfilePage() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Total Reports */}
+                  {user.totalReports !== undefined && user.totalReports > 0 && (
+                    <div className="p-4 rounded-xl bg-slate-800/50 border border-white/5 flex items-start gap-4 mt-4">
+                      <div className="p-2 bg-yellow-500/10 rounded-lg">
+                        <AlertTriangle className="h-5 w-5 text-yellow-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-slate-400 mb-1">Total de Reportes Históricos</p>
+                        <p className="font-medium text-slate-200">
+                          {user.totalReports}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-6 rounded-xl bg-slate-800/30 border border-white/5">
