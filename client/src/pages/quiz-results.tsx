@@ -16,6 +16,7 @@ import { Brain, Loader2 } from 'lucide-react';
 interface Question {
   id: number;
   content: string;
+  imageUrl?: string | null;
   answers: {
     id: number;
     content: string;
@@ -390,6 +391,19 @@ function QuizResults() {
                     <div className="p-6">
                       <div className="mb-6 text-lg text-slate-200">
                         {renderContent(answer.question.content)}
+                        {/* Display image if the question has one */}
+                        {(() => {
+                          const fullQuestion = quizQuestions?.find((q: any) => q.id === answer.question.id);
+                          const imageUrl = fullQuestion?.imageUrl || answer.question.imageUrl;
+                          if (imageUrl) {
+                            return (
+                              <div className="mt-4 flex justify-center">
+                                <img src={imageUrl} alt="Imagen de la pregunta" className="max-w-full h-auto max-h-64 rounded-lg shadow-md border border-white/10" />
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -14,6 +14,7 @@ import { useLocation } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { startTour } from '@/lib/tour';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useSession } from '@/hooks/useSession';
 
 interface User {
   id: number;
@@ -34,6 +35,8 @@ export function UserMenu({ user }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const [showRestZone, setShowRestZone] = useState(false);
   const [ageModalOpen, setAgeModalOpen] = useState(false);
+
+  const { session } = useSession(); // Access session to check impersonation status
 
   // Get user initials
   const getInitials = (name: string) => {
@@ -165,9 +168,19 @@ export function UserMenu({ user }: UserMenuProps) {
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-            Cerrar Sesión
-          </DropdownMenuItem>
+          {session?.isImpersonating ? (
+            <DropdownMenuItem
+              disabled
+              className="text-slate-500 cursor-not-allowed hidden md:block"
+              title="No puedes cerrar sesión mientras estás viendo como otro usuario"
+            >
+              Cerrar Sesión (Modo Visualización)
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+              Cerrar Sesión
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

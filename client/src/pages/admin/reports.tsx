@@ -57,6 +57,7 @@ interface ReportDetails extends QuestionReport {
             content: string;
             isCorrect: boolean;
         }[];
+        imageUrl?: string | null;
     };
 }
 
@@ -303,6 +304,11 @@ export default function AdminReports() {
                                             <div className="text-lg font-medium text-slate-200">
                                                 <MathText>{reportDetails.question?.content}</MathText>
                                             </div>
+                                            {reportDetails.question?.imageUrl && (
+                                                <div className="mt-4 flex justify-center">
+                                                    <img src={reportDetails.question.imageUrl} alt="Imagen de la pregunta" className="max-w-full h-auto max-h-64 rounded-lg shadow-md border border-white/10" />
+                                                </div>
+                                            )}
 
                                             <div className="space-y-2">
                                                 {reportDetails.question?.answers?.map((answer) => (

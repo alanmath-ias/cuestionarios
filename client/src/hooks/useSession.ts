@@ -8,6 +8,7 @@ interface SessionData {
   hintCredits?: number;
   tourStatus?: Record<string, boolean>;
   canReport?: boolean;
+  isImpersonating?: boolean;
 }
 
 export function useSession() {
@@ -28,7 +29,8 @@ export function useSession() {
             username: userData.username,
             hintCredits: userData.hintCredits,
             tourStatus: userData.tourStatus,
-            canReport: userData.canReport
+            canReport: userData.canReport,
+            isImpersonating: userData.isImpersonating
           });
         } else {
           setSession(null);
