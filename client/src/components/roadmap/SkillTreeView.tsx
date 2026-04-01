@@ -98,10 +98,9 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
 
             for (const child of children) {
                 // Traverse down IF:
-                // 1. It is NOT a Critical Node (Stop at major section boundaries)
-                // 2. It is NOT a Container Node (Stop at next parent section)
-                // 3. We haven't seen it yet
-                const isBlockingNode = child.type === 'critical' || child.behavior === 'container';
+                // 1. It is NOT a Container Node (Stop at next parent section/family boundary)
+                // 2. We haven't seen it yet
+                const isBlockingNode = child.behavior === 'container';
 
                 if (!isBlockingNode && !highlighted.has(child.id) && !queue.includes(child.id)) {
                     queue.push(child.id);

@@ -432,29 +432,50 @@ function QuizList() {
                     }
                   });
 
-                  // Pass 3: Container Aggregation (Bottom-Up Logic)
-                  // If container, check children. If all children green -> parent green.
+                  // Pass 3: Container Aggregation (Recursive Family Logic)
+                  // A container is 'completed' if its entire family network (descendants until next container) is green.
                   currentMapNodes.filter(n => n.behavior === 'container').forEach(container => {
-                    // Note: We intentionally do NOT check if container is locked here. 
-                    // If it has active children, it should UNLOCK and show Play.
+                    // Helper to get all descendants recursively until another container is encountered
+                    const getFamilyDescendants = (rootId: string) => {
+                      const descendants: string[] = [];
+                      const queue = [rootId];
+                      const visited = new Set<string>();
 
-                    const children = currentMapNodes.filter(n => n.requires.includes(container.id));
+                      while (queue.length > 0) {
+                        const currentId = queue.shift()!;
+                        if (visited.has(currentId)) continue;
+                        visited.add(currentId);
+
+                        // Find nodes that require the current one
+                        const children = currentMapNodes.filter(n => n.requires.includes(currentId));
+
+                        for (const child of children) {
+                          // If child is another container, we STOP here and DON'T add it to this family
+                          if (child.behavior === 'container') continue;
+
+                          descendants.push(child.id);
+                          queue.push(child.id);
+                        }
+                      }
+                      return descendants;
+                    };
+
+                    const familyNetwork = getFamilyDescendants(container.id);
                     const hasContent = getFilteredQuizzesForNode(container).length > 0;
-
-                    // Intrinsic Status
                     const intrinsicDone = hasContent ? map[container.id] === 'completed' : true;
 
-                    if (children.length === 0) {
+                    if (familyNetwork.length === 0) {
                       if (!hasContent) map[container.id] = 'locked'; // Empty container
                       return;
                     }
 
-                    const allChildrenCompleted = children.every(c => map[c.id] === 'completed');
-                    const anyChildActive = children.some(c => map[c.id] !== 'locked');
+                    // Check if EVERY member of the family network is completed
+                    const allFamilyCompleted = familyNetwork.every(nodeId => map[nodeId] === 'completed');
+                    const anyFamilyActive = familyNetwork.some(nodeId => map[nodeId] !== 'locked');
 
-                    if (allChildrenCompleted && intrinsicDone) {
+                    if (allFamilyCompleted && intrinsicDone) {
                       map[container.id] = 'completed';
-                    } else if (anyChildActive || (hasContent && map[container.id] !== 'locked')) {
+                    } else if (anyFamilyActive || (hasContent && map[container.id] !== 'locked')) {
                       map[container.id] = 'available'; // Play icon
                     } else {
                       map[container.id] = 'locked';

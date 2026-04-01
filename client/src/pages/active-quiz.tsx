@@ -610,6 +610,8 @@ const ActiveQuiz = () => {
     } catch (error: any) {
       console.error("[Quiz] Error al guardar respuesta (asíncrono):", error);
     }
+
+    return studentAnswer;
   };
 
   const handleNextQuestion = async () => {
@@ -626,11 +628,12 @@ const ActiveQuiz = () => {
       );
 
       // Autosave if proceeding with an unconfirmed answer
+      let lastAnswer = null;
       if (hasUnconfirmedAnswer) {
         if (isTextType && !answeredQuestions[currentQuestionIndex]) {
-          await handleTextAnswerSubmit();
+          lastAnswer = await handleTextAnswerSubmit();
         } else {
-          await submitCurrentAnswer();
+          lastAnswer = await submitCurrentAnswer();
         }
       }
 
@@ -665,7 +668,13 @@ const ActiveQuiz = () => {
           setIsIncompleteDialogOpen(true);
           return;
         }
-        await handleFinishQuiz();
+
+        // IMPORTANT: Calculate final answers including the one we just processed
+        const finalAnswersList = lastAnswer
+          ? [...studentAnswers, lastAnswer]
+          : studentAnswers;
+
+        await handleFinishQuiz(finalAnswersList);
       }
     } catch (error: any) {
       if (error.message?.includes("401")) {
@@ -721,6 +730,8 @@ const ActiveQuiz = () => {
     } catch (error) {
       console.error("[Quiz] Error al guardar respuesta de texto:", error);
     }
+
+    return studentAnswer;
   };
 
   const handleRequestHint = async (type: 'regular' | 'super') => {
@@ -823,7 +834,7 @@ const ActiveQuiz = () => {
     if (!progress || !quiz) return;
 
     try {
-      const score = studentAnswers.length > 0 ? Number(((studentAnswers.filter(a => a.isCorrect).length / studentAnswers.length) * 10).toFixed(1)) : 0;
+      const score = answersToUse.length > 0 ? Number(((answersToUse.filter(a => a.isCorrect).length / answersToUse.length) * 10).toFixed(1)) : 0;
       const totalTime = getTotalTime();
 
       const progressUpdate = {
