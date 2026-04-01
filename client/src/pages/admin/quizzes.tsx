@@ -157,49 +157,44 @@ const DraggableDialogQuizItem = ({
         <Button
           size="sm"
           variant="ghost"
-          className="shrink-0 h-8 px-2.5 text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 flex items-center gap-1.5"
+          className="shrink-0 h-8 px-2 sm:px-2.5 text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 flex items-center gap-1.5"
           onClick={() => openQuickEdit(quiz)}
         >
           <Pencil className="h-3.5 w-3.5" />
-          Editar
+          <span className="hidden sm:inline">Editar</span>
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 mt-auto pt-3 border-t border-white/5">
-        <div className="flex items-center gap-2">
-          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${quiz.difficulty === "básico" || quiz.difficulty === "Fácil"
-            ? "bg-green-500/10 text-green-400 border border-green-500/20"
-            : quiz.difficulty === "intermedio" || quiz.difficulty === "Medio"
-              ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"
-              : "bg-red-500/10 text-red-400 border border-red-500/20"
-            }`}>
-            {quiz.difficulty}
-          </span>
-          <div className="flex items-center gap-1.5 ml-1">
+      <div className="flex flex-wrap items-center justify-between gap-2 mt-auto pt-3 border-t border-white/5">
+        <div className="flex items-center flex-wrap gap-2">
+          <div className="flex items-center flex-wrap gap-1.5">
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 px-2.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 flex items-center gap-1.5"
+              className="h-8 px-2 sm:px-2.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 flex items-center gap-1.5"
               onClick={() => setLocation(`/quiz/${quiz.id}`)}
+              title="Ver cuestionario"
             >
               <Eye className="h-3.5 w-3.5" />
-              Ver
+              <span className="hidden sm:inline">Ver</span>
             </Button>
 
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 px-2.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-white/5 flex items-center gap-1.5"
+              className="h-8 px-2 sm:px-2.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-white/5 flex items-center gap-1.5"
               onClick={() => handleManageQuestions(quiz.id)}
+              title={`Preguntas (${quiz.totalQuestions})`}
             >
               <ListChecks className="h-3.5 w-3.5" />
-              Preguntas ({quiz.totalQuestions})
+              <span className="hidden sm:inline">Preguntas</span>
+              <span className="text-[10px] sm:text-xs">({quiz.totalQuestions})</span>
             </Button>
 
             <Button
               size="sm"
               variant="ghost"
-              className={`h-8 px-2.5 text-xs flex items-center gap-1.5 transition-all ${quiz.isVerified
+              className={`h-8 px-2 sm:px-2.5 text-xs flex items-center gap-1.5 transition-all ${quiz.isVerified
                 ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                 }`}
@@ -221,13 +216,16 @@ const DraggableDialogQuizItem = ({
                   setVerifyingId(null);
                 }
               }}
+              title={quiz.isVerified ? 'Verificado' : 'Verificar'}
             >
               {verifyingId === quiz.id ? (
                 <Spinner className="h-3.5 w-3.5" />
               ) : (
                 <ShieldCheck className="h-3.5 w-3.5" />
               )}
-              {verifyingId === quiz.id ? 'Procesando...' : quiz.isVerified ? 'Verificado' : 'Verificar'}
+              <span className="hidden sm:inline">
+                {verifyingId === quiz.id ? 'Procesando...' : quiz.isVerified ? 'Verificado' : 'Verificar'}
+              </span>
             </Button>
 
             <Dialog>
@@ -235,16 +233,17 @@ const DraggableDialogQuizItem = ({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-8 px-2.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-white/5 flex items-center gap-1.5"
+                  className="h-8 px-2 sm:px-2.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-white/5 flex items-center gap-1.5"
                   onClick={(e) => {
                     e.stopPropagation();
                     setVisibleQuizId(quiz.id);
                     setAssignmentResponseMode('multiple_choice');
                     fetchAssignedUsers(quiz.id);
                   }}
+                  title="Asignar usuarios"
                 >
                   <UserPlus className="h-3.5 w-3.5" />
-                  Asignar
+                  <span className="hidden sm:inline">Asignar</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="bg-slate-950 border-slate-800 text-slate-200 max-h-[80vh] flex flex-col z-[100]">

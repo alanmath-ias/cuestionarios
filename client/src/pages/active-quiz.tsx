@@ -456,6 +456,92 @@ const ActiveQuiz = () => {
     }
   }, [loadingQuiz, loadingQuestions, session]);
 
+  // Navegación por Teclado (PC)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // No navegar si hay diálogos abiertos o si el cuestionario terminó
+      const isModalOpen = isReportDialogOpen || isHintDialogOpen || isIncompleteDialogOpen || showExplanation || showChiquiResult;
+      if (isModalOpen) return;
+
+      const activeElement = document.activeElement;
+      const isInputFocused = activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement?.getAttribute('contenteditable') === 'true';
+
+      // Si estamos en un input (que no sea el de respuesta matemática), ignorar flechas/enter
+      if (isInputFocused && activeElement !== inputRef.current) return;
+
+      if (e.key === 'ArrowRight') {
+        handleNextQuestion();
+      } else if (e.key === 'ArrowLeft') {
+        handlePreviousQuestion();
+      } else if (e.key === 'Enter') {
+        const currentQuestion = questions?.[currentQuestionIndex];
+        const isTextType = currentQuestion?.type === 'text';
+
+        // Solo avanzar con Enter si hay alguna respuesta seleccionada o escrita
+        const hasValue = selectedAnswerId !== null ||
+          (isDirectInput && directResponse.trim() !== "") ||
+          (isTextType && textAnswers[currentQuestion?.id!]?.trim() !== "");
+
+        if (hasValue) {
+          handleNextQuestion();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    currentQuestionIndex, questions, selectedAnswerId, isDirectInput,
+    directResponse, textAnswers, isReportDialogOpen, isHintDialogOpen,
+    isIncompleteDialogOpen, showExplanation, showChiquiResult
+  ]);
+
+  // Gestos Táctiles (Swipe para Móvil)
+  useEffect(() => {
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.changedTouches[0].screenX;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      touchEndX = e.changedTouches[0].screenX;
+      handleSwipe();
+    };
+
+    const handleSwipe = () => {
+      const isModalOpen = isReportDialogOpen || isHintDialogOpen || isIncompleteDialogOpen || showExplanation || showChiquiResult;
+      if (isModalOpen) return;
+
+      const swipeThreshold = 80; // Umbral para evitar disparos accidentales
+      const diff = touchStartX - touchEndX;
+
+      if (Math.abs(diff) > swipeThreshold) {
+        if (diff > 0) {
+          // Swipe Izquierda -> Siguiente
+          handleNextQuestion();
+        } else {
+          // Swipe Derecha -> Anterior
+          handlePreviousQuestion();
+        }
+      }
+    };
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [
+    currentQuestionIndex, questions, selectedAnswerId, isDirectInput,
+    directResponse, textAnswers, isReportDialogOpen, isHintDialogOpen,
+    isIncompleteDialogOpen, showExplanation, showChiquiResult
+  ]);
+
   const handleMathInput = (value: string, offset = 0) => {
     if (answeredQuestions[currentQuestionIndex]) return;
 

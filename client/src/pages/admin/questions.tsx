@@ -73,79 +73,91 @@ const QuestionCard = React.memo(({
   return (
     <Card className="overflow-hidden border border-white/5 bg-slate-950 hover:bg-slate-900/80 transition-all">
       <CardContent className="p-4">
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="outline" className="bg-slate-900 text-slate-400 border-slate-700">{getQuestionTypeName(question.type)}</Badge>
-              <Badge variant="secondary" className="bg-slate-800 text-slate-300">{getDifficultyName(question.difficulty)}</Badge>
-              <Badge variant="default" className="bg-blue-600/20 text-blue-400 hover:bg-blue-600/30">{question.points} puntos</Badge>
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+          <div className="flex-1 w-full min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <Badge variant="outline" className="bg-slate-900 text-slate-400 border-slate-700 whitespace-nowrap">
+                {getQuestionTypeName(question.type)}
+              </Badge>
+              <Badge variant="secondary" className="bg-slate-800 text-slate-300 border-slate-700 whitespace-nowrap">
+                {getDifficultyName(question.difficulty)}
+              </Badge>
+              <Badge variant="default" className="bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 whitespace-nowrap">
+                {question.points} puntos
+              </Badge>
             </div>
-            <div className="flex gap-2">
-              <span className="font-medium text-slate-200">{index + 1}.</span>
-              <HoverCard>
-                <HoverCardTrigger asChild>
-                  <div className="cursor-help">
-                    <ContentRenderer content={question.content} className="font-medium text-slate-200" />
-                  </div>
-                </HoverCardTrigger>
-                <HoverCardContent className="w-80 bg-slate-900 border-slate-700">
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold text-slate-200">Respuestas:</h4>
-                    {question.answers && question.answers.length > 0 ? (
-                      <ul className="text-sm space-y-1">
-                        {question.answers.map((answer, i) => (
-                          <li key={i} className={`flex items-start gap-2 ${answer.isCorrect ? 'text-green-400 font-medium' : 'text-slate-400'}`}>
-                            {answer.isCorrect ? (
-                              <Check className="h-4 w-4 mt-0.5 shrink-0 text-green-500" />
-                            ) : (
-                              <span className="w-4 h-4 block shrink-0" />
-                            )}
-                            <ContentRenderer content={answer.content} />
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-slate-500 italic">No hay respuestas configuradas</p>
-                    )}
-                    {question.imageUrl && (
-                      <div className="mt-2 flex justify-center border border-white/5 rounded-lg overflow-hidden bg-slate-900/50 p-2">
-                        <ZoomableImage
-                          src={question.imageUrl}
-                          alt="Imagen de la pregunta"
-                          className="max-h-32 object-contain rounded"
-                        />
+            <div className="flex gap-2 w-full min-w-0">
+              <span className="font-medium text-slate-200 shrink-0">{index + 1}.</span>
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <HoverCard>
+                  <HoverCardTrigger asChild>
+                    <div className="cursor-help w-full">
+                      <div className="font-medium text-slate-200 break-words">
+                        <ContentRenderer content={question.content} />
                       </div>
-                    )}
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
+                    </div>
+                  </HoverCardTrigger>
+                  <HoverCardContent className="w-80 bg-slate-900 border-slate-700 z-[110]">
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold text-slate-200">Respuestas:</h4>
+                      {question.answers && question.answers.length > 0 ? (
+                        <ul className="text-sm space-y-1">
+                          {question.answers.map((answer, i) => (
+                            <li key={i} className={`flex items-start gap-2 ${answer.isCorrect ? 'text-green-400 font-medium' : 'text-slate-400'}`}>
+                              {answer.isCorrect ? (
+                                <Check className="h-4 w-4 mt-0.5 shrink-0 text-green-500" />
+                              ) : (
+                                <span className="w-4 h-4 block shrink-0" />
+                              )}
+                              <ContentRenderer content={answer.content} />
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-slate-500 italic">No hay respuestas configuradas</p>
+                      )}
+                      {question.imageUrl && (
+                        <div className="mt-2 flex justify-center border border-white/5 rounded-lg overflow-hidden bg-slate-900/50 p-2">
+                          <ZoomableImage
+                            src={question.imageUrl}
+                            alt="Imagen de la pregunta"
+                            className="max-h-32 object-contain rounded"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
+              </div>
             </div>
             {question.imageUrl && (
-              <div className="mt-2">
-                <p className="text-sm text-slate-400">
+              <div className="mt-3 p-2 bg-slate-900/30 rounded border border-white/5 overflow-hidden">
+                <p className="text-[10px] sm:text-sm text-slate-400 truncate" title={question.imageUrl}>
                   <strong className="text-slate-500">Imagen:</strong> {question.imageUrl}
                 </p>
               </div>
             )}
           </div>
-          <div className="flex space-x-2 ml-4">
+          <div className="flex shrink-0 gap-2 sm:ml-4 w-full sm:w-auto mt-2 sm:mt-0 justify-end sm:justify-start border-t sm:border-t-0 border-white/5 pt-3 sm:pt-0">
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleEdit(question)}
               title="Editar pregunta"
-              className="bg-slate-800 text-blue-400 hover:bg-blue-500/10 border-blue-500/20"
+              className="bg-slate-800 text-blue-400 hover:bg-blue-500/10 border-blue-500/20 h-9 sm:h-8 px-3"
             >
-              <Pencil className="h-4 w-4" />
+              <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5 mr-1.5 sm:mr-0" />
+              <span className="sm:hidden text-xs">Editar</span>
             </Button>
             <Button
               variant="destructive"
               size="sm"
               onClick={() => handleDelete(question.id)}
               title="Eliminar pregunta"
-              className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+              className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 h-9 sm:h-8 px-3"
             >
-              <Trash className="h-4 w-4" />
+              <Trash className="h-4 w-4 sm:h-3.5 sm:w-3.5 mr-1.5 sm:mr-0" />
+              <span className="sm:hidden text-xs">Eliminar</span>
             </Button>
           </div>
         </div>

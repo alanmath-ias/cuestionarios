@@ -1059,15 +1059,104 @@ export default function UserDashboard() {
         {/* Stars Navigation & Roadmap */}
         <div className="mb-8 space-y-4">
           {/* Stars Navigation */}
-          <div className="flex items-center justify-center gap-4 py-4 flex-wrap">
-            {sortedCategories.map((category) => {
+          {/* Mobile Motivational Hint */}
+          <div className="flex md:hidden justify-center pointer-events-none">
+            <motion.div
+              animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="bg-gradient-to-r from-blue-600/20 to-yellow-600/20 border border-white/10 px-4 py-1.5 rounded-full flex items-center gap-2 backdrop-blur-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">¡Usa el mapa y el repasito diario!</span>
+            </motion.div>
+          </div>
+
+          <div className="flex items-center justify-center gap-4 py-4 flex-wrap relative">
+            {sortedCategories.map((category, index) => {
               const categoryResult = chiquiResults?.find(r => r.categoryId === category.id);
               const lastScore = categoryResult?.lastScore;
               const lastDate = categoryResult?.lastDate;
               const isDoneToday = lastDate ? new Date(lastDate).toDateString() === new Date().toDateString() : false;
 
+              const isFirst = index === 0;
+              const isLast = index === sortedCategories.length - 1;
+
               return (
-                <div key={category.id} className="flex flex-col items-center gap-1">
+                <div key={category.id} className="flex flex-col items-center gap-1 relative">
+                  {/* Motivational Nudge V2 - Left (Maps) */}
+                  {isFirst && (
+                    <div className="hidden lg:flex flex-col items-center absolute -left-24 xl:-left-32 top-[-30px] pointer-events-none z-10">
+                      <motion.div
+                        animate={{ y: [0, -4, 0], opacity: [0.9, 1, 0.9] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2 backdrop-blur-md shadow-[0_0_15px_rgba(59,130,246,0.2)] text-center min-w-[90px]"
+                      >
+                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-tighter leading-tight">
+                          🌟 Tu ruta al éxito
+                        </p>
+                      </motion.div>
+                      <svg width="100" height="70" viewBox="0 0 100 70" className="overflow-visible -mt-2">
+                        <motion.path
+                          d="M 20 0 Q 40 10, 80 50"
+                          stroke="#3b82f6"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          fill="transparent"
+                          initial={{ pathLength: 0 }}
+                          animate={{ pathLength: [0, 1, 1, 0] }}
+                          transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.8, 1] }}
+                        />
+                        <motion.path
+                          d="M 75 42 L 80 50 L 72 52"
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: [0, 0, 1, 1, 0] }}
+                          transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.5, 0.8, 1] }}
+                        />
+                      </svg>
+                    </div>
+                  )}
+
+                  {/* Motivational Nudge V2 - Right (Repasito) */}
+                  {isLast && (
+                    <div className="hidden lg:flex flex-col items-center absolute -right-24 xl:-right-32 top-[45px] pointer-events-none z-10">
+                      <motion.div
+                        animate={{ y: [0, -4, 0], opacity: [0.9, 1, 0.9] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                        className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-3 py-2 backdrop-blur-md shadow-[0_0_15px_rgba(234,179,8,0.2)] text-center min-w-[100px]"
+                      >
+                        <p className="text-[9px] font-black text-yellow-400 uppercase tracking-tighter leading-tight">
+                          ⚡ ¡Mejora cada día!
+                        </p>
+                      </motion.div>
+                      <svg width="100" height="70" viewBox="0 0 100 70" className="overflow-visible -mt-2">
+                        <motion.path
+                          d="M 80 0 Q 60 10, 20 50"
+                          stroke="#eab308"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          fill="transparent"
+                          initial={{ pathLength: 0 }}
+                          animate={{ pathLength: [0, 1, 1, 0] }}
+                          transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.8, 1], delay: 0.5 }}
+                        />
+                        <motion.path
+                          d="M 25 42 L 20 50 L 28 52"
+                          fill="none"
+                          stroke="#eab308"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: [0, 0, 1, 1, 0] }}
+                          transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.5, 0.8, 1], delay: 0.5 }}
+                        />
+                      </svg>
+                    </div>
+                  )}
+
                   <span
                     onClick={() => setExpandedRoadmapCategoryId(expandedRoadmapCategoryId === category.id ? null : category.id)}
                     className={cn(
@@ -1425,14 +1514,19 @@ export default function UserDashboard() {
                             {/* Map Button moved to Top Right on Mobile only as it's smaller */}
                             <div className="md:hidden" onClick={(e) => e.stopPropagation()}>
                               <Link href={`/category/${category.id}?view=roadmap`}>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 px-3 text-[10px] font-bold bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all whitespace-nowrap"
+                                <motion.div
+                                  animate={{ scale: [1, 1.05, 1] }}
+                                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
                                 >
-                                  <MapIcon className="w-3.5 h-3.5 mr-1" />
-                                  Mapa
-                                </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 px-3 text-[10px] font-bold bg-yellow-500/10 text-yellow-500 border border-yellow-500/40 hover:bg-yellow-500 hover:text-slate-900 hover:shadow-[0_0_20px_rgba(234,179,8,0.5)] transition-all duration-300 whitespace-nowrap"
+                                  >
+                                    <MapIcon className="w-3.5 h-3.5 mr-1" />
+                                    Mapa
+                                  </Button>
+                                </motion.div>
                               </Link>
                             </div>
                           </div>
@@ -1487,14 +1581,19 @@ export default function UserDashboard() {
                             {/* Mapa - Desktop only in this row */}
                             <div className="hidden md:block">
                               <Link href={`/category/${category.id}?view=roadmap`}>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 px-3 text-xs font-medium bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all whitespace-nowrap"
+                                <motion.div
+                                  animate={{ scale: [1, 1.05, 1] }}
+                                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
                                 >
-                                  <MapIcon className="w-3.5 h-3.5 mr-1.5" />
-                                  Mapa
-                                </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 px-3 text-xs font-bold bg-yellow-500/10 text-yellow-500 border border-yellow-500/40 hover:bg-yellow-500 hover:text-slate-900 hover:shadow-[0_0_20px_rgba(234,179,8,0.5)] transition-all duration-300 whitespace-nowrap"
+                                  >
+                                    <MapIcon className="w-3.5 h-3.5 mr-1.5" />
+                                    Mapa
+                                  </Button>
+                                </motion.div>
                               </Link>
                             </div>
 

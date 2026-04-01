@@ -305,15 +305,15 @@ export default function AdminReports() {
                             <ScrollArea className="h-[60vh] pr-4">
                                 <div className="space-y-6">
                                     {/* Información del Usuario */}
-                                    <div className="grid grid-cols-2 gap-4 p-4 bg-slate-950/50 rounded-lg border border-white/5">
-                                        <div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-950/50 rounded-lg border border-white/5">
+                                        <div className="min-w-0">
                                             <h4 className="font-semibold text-sm text-slate-400">Reportado por</h4>
-                                            <p className="text-slate-200">{reportDetails.user?.name} ({reportDetails.user?.email})</p>
+                                            <p className="text-slate-200 break-all sm:break-normal">{reportDetails.user?.name} ({reportDetails.user?.email})</p>
                                             <p className="text-xs text-slate-500 mt-1">Total reportes históricos: {reportDetails.user?.totalReports ?? 0}</p>
                                         </div>
-                                        <div>
+                                        <div className="min-w-0">
                                             <h4 className="font-semibold text-sm text-slate-400">Cuestionario</h4>
-                                            <p className="text-slate-200">{reportDetails.quiz?.title} (ID: {reportDetails.quiz?.id})</p>
+                                            <p className="text-slate-200 truncate" title={reportDetails.quiz?.title}>{reportDetails.quiz?.title} (ID: {reportDetails.quiz?.id})</p>
                                         </div>
                                     </div>
 
