@@ -599,7 +599,10 @@ const ActiveQuiz = () => {
     }
 
     // Actualización optimista del estado local para navegación instantánea
-    setStudentAnswers(prev => [...prev, studentAnswer]);
+    setStudentAnswers(prev => {
+      const filtered = prev.filter(ans => ans.questionId !== studentAnswer.questionId);
+      return [...filtered, studentAnswer];
+    });
     setAnsweredQuestions(prev => ({ ...prev, [currentQuestionIndex]: true }));
 
     try {
@@ -720,7 +723,10 @@ const ActiveQuiz = () => {
     };
 
     // Actualización optimista del estado local
-    setStudentAnswers(prev => [...prev, studentAnswer]);
+    setStudentAnswers(prev => {
+      const filtered = prev.filter(ans => ans.questionId !== studentAnswer.questionId);
+      return [...filtered, studentAnswer];
+    });
     setAnsweredQuestions(prev => ({ ...prev, [currentQuestionIndex]: true }));
 
     try {
@@ -834,7 +840,18 @@ const ActiveQuiz = () => {
     if (!progress || !quiz) return;
 
     try {
-      const score = answersToUse.length > 0 ? Number(((answersToUse.filter(a => a.isCorrect).length / answersToUse.length) * 10).toFixed(1)) : 0;
+      // Deduplicar respuestas por ID de pregunta para asegurar conteo exacto
+      const uniqueAnswers = Array.from(
+        new Map(answersToUse.map(a => [a.questionId, a])).values()
+      );
+
+      const totalQ = questions?.length || 0;
+      const correctQ = uniqueAnswers.filter(a => a.isCorrect).length;
+
+      // Calcular nota sobre 10 usando el total real de preguntas como denominador
+      // Asegurar que la nota no exceda el máximo de 10.0 ante posibles cambios de metadata
+      const rawScore = totalQ > 0 ? (correctQ / totalQ) * 10 : 0;
+      const score = Number(Math.min(rawScore, 10).toFixed(1));
       const totalTime = getTotalTime();
 
       const progressUpdate = {

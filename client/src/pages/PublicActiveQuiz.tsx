@@ -252,7 +252,10 @@ function PublicActiveQuiz() {
 
     console.log('submitCurrentAnswer: generated answer', studentAnswer);
 
-    setStudentAnswers([...studentAnswers, studentAnswer]);
+    setStudentAnswers(prev => {
+      const filtered = prev.filter(ans => ans.questionId !== studentAnswer.questionId);
+      return [...filtered, studentAnswer];
+    });
     setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
     return studentAnswer;
   };
@@ -275,7 +278,10 @@ function PublicActiveQuiz() {
       timeSpent: deltaTime,
     };
 
-    setStudentAnswers([...studentAnswers, studentAnswer]);
+    setStudentAnswers(prev => {
+      const filtered = prev.filter(ans => ans.questionId !== studentAnswer.questionId);
+      return [...filtered, studentAnswer];
+    });
     setAnsweredQuestions({ ...answeredQuestions, [currentQuestionIndex]: true });
     return studentAnswer;
   };
@@ -294,9 +300,14 @@ function PublicActiveQuiz() {
     console.log('answersToSave length', answersToSave.length);
     // alert(`Saving ${answersToSave.length} answers. Final answer present: ${!!finalAnswer}`);
 
+    // Deduplicar respuestas por ID de pregunta para asegurar conteo exacto
+    const uniqueAnswers = Array.from(
+      new Map(answersToSave.map(a => [a.questionId, a])).values()
+    );
+
     // Calculate score
-    const correctCount = answersToSave.filter(a => a.isCorrect).length;
-    const score = (correctCount / questions.length) * 10;
+    const correctCount = uniqueAnswers.filter(a => a.isCorrect).length;
+    const score = questions.length > 0 ? (correctCount / questions.length) * 10 : 0;
 
     const results = {
       quizId: quiz?.id || 0,
