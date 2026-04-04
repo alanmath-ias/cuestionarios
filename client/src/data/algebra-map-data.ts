@@ -101,7 +101,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     },
     {
         id: 'a2-2-multi',
-        label: 'Multiplicación',
+        label: 'Multiplicación y División',
         level: 5,
         type: 'basic',
         requires: ['a2-operaciones'],
@@ -536,6 +536,28 @@ export const algebraMapNodes: ArithmeticNode[] = [
         subcategoryId: 429,
         behavior: 'quiz_list'
     },
+    {
+        id: 'a8-4-miscelanea',
+        label: 'Miscelánea',
+        level: 25,
+        type: 'applied',
+        requires: ['a8-1-lineales', 'a8-3-simultaneas'],
+        description: 'Mezcla de casos de inecuaciones.',
+        xOffset: -32.5,
+        subcategoryId: 438,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a8-5-problemas',
+        label: 'Problemas de Aplicación',
+        level: 25,
+        type: 'applied',
+        requires: ['a8-3-simultaneas', 'a8-2-cuadraticas'],
+        description: 'Desigualdades en la vida real.',
+        xOffset: 32.5,
+        subcategoryId: 439,
+        behavior: 'quiz_list'
+    },
 
     // ==========================================
     // NIVEL A10: SISTEMAS DE ECUACIONES (Shifted Down)
@@ -543,7 +565,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-sistemas',
         label: 'Sistemas 2x2',
-        level: 25, // Shifted UP (Children 24 -> 25)
+        level: 26, // Shifted from 25
         type: 'critical',
         requires: ['a7-ecuaciones'],
         description: 'Dos variables, dos condiciones.',
@@ -553,7 +575,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-1-teoria',
         label: 'Teoría Sistemas',
-        level: 26,
+        level: 27, // Shifted from 26
         type: 'basic',
         requires: ['a10-sistemas'],
         description: 'Compatible, Incompatible.',
@@ -564,7 +586,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-2-metodos',
         label: 'Métodos Alg.',
-        level: 26,
+        level: 27, // Shifted from 26
         type: 'basic',
         requires: ['a10-sistemas'],
         description: 'Sustitución, Igualación.',
@@ -575,7 +597,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-3-grafico',
         label: 'Método Gráfico',
-        level: 26,
+        level: 27, // Shifted from 26
         type: 'applied',
         requires: ['a10-sistemas'],
         description: 'Intersección de rectas.',
@@ -586,7 +608,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-4-cramer',
         label: 'Cramer',
-        level: 26,
+        level: 27, // Shifted from 26
         type: 'critical',
         requires: ['a10-sistemas'],
         description: 'Determinantes.',
@@ -601,7 +623,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a11-cuadraticas',
         label: 'Ec. Cuadráticas',
-        level: 27, // Shifted UP (Children 26 -> 27)
+        level: 28, // Shifted from 27
         type: 'critical',
         requires: ['a10-sistemas', 'a5-factorizacion'],
         description: 'Segundo grado.',
@@ -612,7 +634,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a11-1-solucion',
         label: 'Resolución',
-        level: 28,
+        level: 29, // Shifted from 28
         type: 'basic',
         requires: ['a11-cuadraticas'],
         description: 'Fórmula general y factores.',
@@ -627,7 +649,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a12-funciones',
         label: 'Funciones',
-        level: 27, // Parallel to Quadratic
+        level: 28, // Shifted from 27
         type: 'evaluation',
         requires: ['a10-sistemas'],
         description: 'Relaciones funcionales.',
@@ -638,7 +660,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a12-1-lineal',
         label: 'Función Lineal',
-        level: 28,
+        level: 29, // Shifted from 28
         type: 'basic',
         requires: ['a12-funciones'],
         description: 'y = mx + b',
@@ -649,7 +671,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a12-2-concepto',
         label: 'Conceptos',
-        level: 28,
+        level: 29, // Shifted from 28
         type: 'critical',
         requires: ['a12-funciones'],
         description: 'Dominio y rango.',
