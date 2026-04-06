@@ -1,5 +1,6 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { cn } from '@/lib/utils';
 import { ArithmeticNode } from '../../data/arithmetic-map-data';
 import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw, LayoutDashboard, Search, X, CheckCircle2, AlertTriangle, PlayCircle } from 'lucide-react';
@@ -27,59 +28,40 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     const transformRef = useRef<ReactZoomPanPinchRef>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState(1000);
+    const [triggeredFamilies, setTriggeredFamilies] = useState<Set<string>>(new Set());
 
-    // Calculate Total Visible Quizzes and Node Progress
+    // Calculate Multi-purpose progress metrics
     const { totalVisibleQuizzes, nodeProgress } = React.useMemo(() => {
         if (!allQuizzes || allQuizzes.length === 0) return { totalVisibleQuizzes: 0, nodeProgress: {} };
-
         const mappedQuizIds = new Set<number>();
         const progressMapLocal: Record<string, number> = {};
 
-        // Iterate every node to find which quizzes it "captures"
         nodes.forEach(node => {
-            if (!node.subcategoryId && (!node.additionalSubcategories || node.additionalSubcategories.length === 0)) {
-                progressMapLocal[node.id] = 0;
-                return; // Skip purely structural nodes
-            }
+            const hasSub = !!(node.subcategoryId || (node.additionalSubcategories && node.additionalSubcategories.length > 0));
+            if (!hasSub) return;
 
-            // 1. Gather Candidate Quizzes (Primary + Additional Subcategories)
-            let matchingQuizzes = allQuizzes.filter(q =>
+            let matches = allQuizzes.filter(q =>
                 q.subcategoryId === node.subcategoryId ||
                 (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId))
             );
 
-            // 2. Apply Inclusion Keywords
-            if (node.filterKeywords && node.filterKeywords.length > 0) {
-                const keywords = node.filterKeywords.map(k => k.toLowerCase());
-                matchingQuizzes = matchingQuizzes.filter(q =>
-                    keywords.some((k: string) => q.title.toLowerCase().includes(k))
-                );
+            if (node.filterKeywords?.length) {
+                const kw = node.filterKeywords.map(k => k.toLowerCase());
+                matches = matches.filter(q => kw.some(k => q.title.toLowerCase().includes(k)));
+            }
+            if (node.excludeKeywords?.length) {
+                const ex = node.excludeKeywords.map(k => k.toLowerCase());
+                matches = matches.filter(q => !ex.some(k => q.title.toLowerCase().includes(k)));
             }
 
-            // 3. Apply Exclusion Keywords
-            if (node.excludeKeywords && node.excludeKeywords.length > 0) {
-                const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
-                matchingQuizzes = matchingQuizzes.filter(q =>
-                    !excludeKeys.some((k: string) => q.title.toLowerCase().includes(k))
-                );
+            if (matches.length > 0) {
+                const done = matches.filter(q => q.status === 'completed').length;
+                progressMapLocal[node.id] = (done / matches.length) * 100;
+                matches.forEach(q => mappedQuizIds.add(q.id));
             }
-
-            // Calculate progress for this node
-            if (matchingQuizzes.length > 0) {
-                const completedCount = matchingQuizzes.filter(q => q.status === 'completed').length;
-                progressMapLocal[node.id] = (completedCount / matchingQuizzes.length) * 100;
-            } else {
-                progressMapLocal[node.id] = 0;
-            }
-
-            // Add matched IDs to total count set
-            matchingQuizzes.forEach(q => mappedQuizIds.add(q.id));
         });
 
-        return {
-            totalVisibleQuizzes: mappedQuizIds.size,
-            nodeProgress: progressMapLocal
-        };
+        return { totalVisibleQuizzes: mappedQuizIds.size, nodeProgress: progressMapLocal };
     }, [nodes, allQuizzes]);
 
     // Get highlighted nodes recursively (stops at next container)
@@ -193,6 +175,20 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
         reloadTimeoutRef.current = setTimeout(() => {
             setShowReloadButton(false);
         }, 4000);
+    };
+
+    const fireFamilyFireworks = () => {
+        const duration = 4 * 1000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 45, spread: 360, ticks: 100, zIndex: 10000 };
+
+        const interval: any = setInterval(function () {
+            const timeLeft = animationEnd - Date.now();
+            if (timeLeft <= 0) return clearInterval(interval);
+            const particleCount = 80 * (timeLeft / duration);
+            // Force origin higher up so it falls through the view
+            confetti({ ...defaults, particleCount, origin: { x: Math.random(), y: 0.2 } });
+        }, 250);
     };
 
     useEffect(() => {
@@ -625,11 +621,34 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                     }}
                                                 >
                                                     <motion.div
-                                                        initial={{ opacity: 0, scale: 0, y: 20 }}
-                                                        whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                                                        viewport={{ once: true }}
-                                                        transition={{ delay: index * 0.05, type: 'spring' }}
-                                                        className="flex flex-col items-center justify-center p-4" // Use padding to avoid cropping shadows
+                                                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                                                        whileInView={isCompleted ? {
+                                                            opacity: 1,
+                                                            scale: [1, 1.4, 1],
+                                                            y: 0,
+                                                            filter: ["brightness(1)", "brightness(2.5)", "brightness(1)"],
+                                                        } : {
+                                                            opacity: 1,
+                                                            scale: 1,
+                                                            y: 0,
+                                                            filter: "brightness(1)"
+                                                        }}
+                                                        viewport={{ once: true, amount: 0.1 }}
+                                                        onViewportEnter={() => {
+                                                            if (node.behavior === 'container' && isCompleted && !triggeredFamilies.has(node.id)) {
+                                                                // Delayed trigger to ensure user is looking at the screen after scroll
+                                                                setTimeout(() => fireFamilyFireworks(), 400);
+                                                                setTriggeredFamilies(prev => new Set(prev).add(node.id));
+                                                            }
+                                                        }}
+                                                        transition={{
+                                                            duration: 1.5,
+                                                            ease: "easeInOut",
+                                                            times: [0, 0.5, 1],
+                                                            opacity: { duration: 0.6 },
+                                                            y: { type: 'spring', damping: 20 }
+                                                        }}
+                                                        className="flex flex-col items-center justify-center p-4 relative" // Use padding to avoid cropping shadows
                                                     >
                                                         {/* Tooltip for Locked Items ("Próximamente") */}
                                                         <div className="relative group">
