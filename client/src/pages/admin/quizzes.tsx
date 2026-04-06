@@ -12,7 +12,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, ListChecks, Folder, UserPlus, Pencil, Save, X, Brain } from "lucide-react";
+import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, ListChecks, Folder, UserPlus, Pencil, Save, X, Brain, Search, Map as MapIcon, CheckCircle2, AlertTriangle, Ban, GripVertical, ShieldCheck, Crown, Gamepad2 } from "lucide-react";
 import { DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,7 +35,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Search, Map as MapIcon, CheckCircle2, AlertTriangle, Ban } from "lucide-react";
 import { SkillTreeView } from "@/components/roadmap/SkillTreeView";
 import { arithmeticMapNodes, ArithmeticNode } from "@/data/arithmetic-map-data";
 import { algebraMapNodes } from "@/data/algebra-map-data";
@@ -43,7 +42,6 @@ import { calculusMapNodes } from "@/data/calculus-map-data";
 import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
 import { statisticsMapNodes } from "@/data/statistics-map-data";
 import { Reorder, AnimatePresence, useDragControls, motion } from "framer-motion";
-import { GripVertical, ShieldCheck } from "lucide-react";
 
 const difficultyOptions = [
   { value: "básico", label: "Básico" },
@@ -124,7 +122,7 @@ const DraggableDialogQuizItem = ({
         document.body.classList.remove('dragging-active');
       }}
       className={cn(
-        "group flex flex-col gap-3 p-4 rounded-xl transition-all",
+        "group flex flex-col gap-3 p-3 sm:p-4 rounded-xl transition-all",
         isHighlighted
           ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.3)] ring-1 ring-blue-400"
           : "bg-slate-800/40 border border-white/5 hover:bg-slate-800/60 hover:border-blue-500/30 shadow-sm"
@@ -165,7 +163,7 @@ const DraggableDialogQuizItem = ({
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 mt-auto pt-3 border-t border-white/5">
+      <div className="flex flex-wrap items-center justify-between gap-y-3 gap-x-2 mt-auto pt-3 border-t border-white/5">
         <div className="flex items-center flex-wrap gap-2">
           <div className="flex items-center flex-wrap gap-1.5">
             <Button
@@ -287,7 +285,7 @@ const DraggableDialogQuizItem = ({
             </Dialog>
           </div>
         </div>
-        <span className="text-[11px] text-slate-500 font-mono">ID: {quiz.id}</span>
+        <span className="text-[10px] text-slate-500 font-mono sm:mt-0">ID: {quiz.id}</span>
       </div>
     </Reorder.Item>
   );
@@ -317,6 +315,7 @@ export default function QuizzesAdmin() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
   const [selectedNode, setSelectedNode] = useState<ArithmeticNode | null>(null);
   const [highlightedQuizId, setHighlightedQuizId] = useState<number | null>(null);
+  const [showMasteryDialog, setShowMasteryDialog] = useState(false);
   const [hasRestoredFromUrl, setHasRestoredFromUrl] = useState(false);
 
   // Quick-edit state
@@ -403,12 +402,13 @@ export default function QuizzesAdmin() {
           throw new Error("Formato de datos inválido");
         }
 
-        if (editingId && form.getValues("subcategoryId")) {
-          const currentSub = data.find((sub: any) => sub.id === Number(form.getValues("subcategoryId")));
+        const currentVal = form.getValues("subcategoryId");
+        if (currentVal) {
+          const currentSub = data.find((sub: any) => sub.id === Number(currentVal));
           if (!currentSub) {
             form.setValue("subcategoryId", "");
           }
-        } else {
+        } else if (!editingId) {
           form.setValue("subcategoryId", "");
         }
       } catch (error) {
@@ -1267,15 +1267,15 @@ export default function QuizzesAdmin() {
 
           <div className="md:col-span-2">
             <Card className="bg-slate-900 border-white/10 shadow-xl">
-              <CardHeader className="bg-slate-950/50 border-b border-white/5 flex flex-row items-center justify-between">
+              <CardHeader className="bg-slate-950/50 border-b border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <CardTitle className="text-slate-100">Cuestionarios Existentes</CardTitle>
                   <CardDescription className="text-slate-400">
                     Lista de todos los cuestionarios disponibles en el sistema
                   </CardDescription>
                 </div>
-                <div className="flex gap-4 items-center">
-                  <div className="relative w-64">
+                <div className="flex gap-4 items-center w-full sm:w-auto">
+                  <div className="relative w-full sm:w-64">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
                     <Input
                       placeholder="Buscar cuestionario..."
@@ -1424,7 +1424,7 @@ export default function QuizzesAdmin() {
               <MapIcon className="h-6 w-6 text-blue-400" />
               {activeMapCategory ? getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name)?.title : "Mapa de Habilidades"}
             </DialogTitle>
-            <DialogDescription className="text-slate-300 font-medium">
+            <DialogDescription className="text-slate-300 font-medium break-words">
               Visualización del árbol de habilidades y cobertura de contenido.
             </DialogDescription>
           </DialogHeader>
@@ -1456,7 +1456,7 @@ export default function QuizzesAdmin() {
                       const anyChildActive = children.some(c => getFilteredQuizzesForNode(c).length > 0);
                       map[node.id] = (hasContent || anyChildActive) ? 'available' : 'locked';
                     } else {
-                      map[node.id] = hasContent ? 'available' : 'locked';
+                      map[node.id] = (hasContent || node.id.endsWith('mastery')) ? 'available' : 'locked';
                     }
                   });
 
@@ -1464,6 +1464,10 @@ export default function QuizzesAdmin() {
                 })()}
                 allQuizzes={quizzes?.filter(q => q.categoryId === activeMapCategory) || []}
                 onNodeClick={(node, highlightedQuizId) => {
+                  if (node.id.endsWith('mastery')) {
+                    setShowMasteryDialog(true);
+                    return;
+                  }
                   setSelectedNode(node);
                   if (highlightedQuizId) {
                     setHighlightedQuizId(highlightedQuizId);
@@ -1608,7 +1612,7 @@ export default function QuizzesAdmin() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6 pt-2">
+          <div className="flex-1 overflow-y-auto min-h-0 px-3 sm:px-6 pb-6 pt-2">
             {selectedNode && (
               (() => {
                 const node = selectedNode;
@@ -1658,6 +1662,79 @@ export default function QuizzesAdmin() {
                 );
               })()
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mastery Congratulations Dialog (Admin Preview) */}
+      <Dialog open={showMasteryDialog} onOpenChange={setShowMasteryDialog}>
+        <DialogContent className="bg-slate-950 border-yellow-500/30 text-slate-200 max-w-md overflow-hidden p-0 rounded-3xl z-[150]">
+          <div className="relative p-8 flex flex-col items-center text-center overflow-hidden">
+            {/* Celebratory Background Particles */}
+            <div className="absolute inset-0 pointer-events-none">
+              <motion.div
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.1, 0.3, 0.1],
+                }}
+                transition={{ duration: 4, repeat: Infinity }}
+                className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-gradient-to-br from-yellow-500/10 via-purple-500/10 to-blue-500/10 rounded-full blur-3xl"
+              />
+            </div>
+
+            <motion.div
+              initial={{ scale: 0, rotate: -20 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", damping: 12 }}
+              className="relative mb-6"
+            >
+              <div className="absolute inset-0 bg-yellow-400/20 blur-2xl rounded-full" />
+              <div className="relative w-24 h-24 bg-gradient-to-b from-yellow-300 to-yellow-600 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(234,179,8,0.4)] border-4 border-yellow-200/50">
+                <Crown className="w-12 h-12 text-white drop-shadow-lg" />
+              </div>
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                className="absolute -inset-2 border-2 border-dashed border-yellow-500/30 rounded-full"
+              />
+            </motion.div>
+
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-3xl font-black text-white mb-2 tracking-tight"
+            >
+              VISTA PREVIA: ¡MAESTRÍA!
+            </motion.h2>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-slate-300 mb-8 leading-relaxed"
+            >
+              Este es el mensaje que ven los usuarios al alcanzar la maestría en <span className="text-yellow-400 font-bold">{categories?.find(c => c.id === activeMapCategory)?.name || "esta materia"}</span>.
+            </motion.p>
+
+            <div className="flex flex-col gap-3 w-full relative z-10">
+              <Button
+                className="w-full h-14 rounded-2xl bg-gradient-to-r from-yellow-500 via-orange-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-white font-bold text-lg shadow-[0_10px_30px_rgba(234,179,8,0.3)] border-0"
+                onClick={() => {
+                  setShowMasteryDialog(false);
+                  setLocation(`/training/${activeMapCategory}`);
+                }}
+              >
+                Ir a Entrenamiento (Demo)
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="w-full text-slate-400 hover:text-white hover:bg-white/5"
+                onClick={() => setShowMasteryDialog(false)}
+              >
+                Cerrar vista previa
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

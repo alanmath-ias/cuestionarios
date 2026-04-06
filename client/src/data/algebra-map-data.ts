@@ -579,7 +579,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['a10-sistemas'],
         description: 'Compatible, Incompatible.',
-        xOffset: -40,
+        xOffset: -60,
         subcategoryId: 413,
         behavior: 'quiz_list'
     },
@@ -590,7 +590,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['a10-sistemas'],
         description: 'Sustitución, Igualación.',
-        xOffset: 0,
+        xOffset: -20,
         subcategoryId: 414,
         behavior: 'quiz_list'
     },
@@ -601,7 +601,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         type: 'applied',
         requires: ['a10-sistemas'],
         description: 'Intersección de rectas.',
-        xOffset: 40,
+        xOffset: 20,
         subcategoryId: 415,
         behavior: 'quiz_list'
     },
@@ -612,7 +612,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         type: 'critical',
         requires: ['a10-sistemas'],
         description: 'Determinantes.',
-        xOffset: 80,
+        xOffset: 60,
         subcategoryId: 416,
         behavior: 'quiz_list'
     },
@@ -627,7 +627,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         type: 'critical',
         requires: ['a10-sistemas', 'a5-factorizacion'],
         description: 'Segundo grado.',
-        xOffset: -40,
+        xOffset: 0,
         subcategoryId: 417,
         behavior: 'container'
     },
@@ -638,8 +638,19 @@ export const algebraMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['a11-cuadraticas'],
         description: 'Fórmula general y factores.',
-        xOffset: -40,
+        xOffset: -20,
         subcategoryId: 430,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a11-2-problemas',
+        label: 'Problemas',
+        level: 29,
+        type: 'applied',
+        requires: ['a11-cuadraticas'],
+        description: 'Problemas - Ec. Cuadráticas.',
+        xOffset: 20,
+        subcategoryId: 440,
         behavior: 'quiz_list'
     },
 
@@ -649,34 +660,45 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a12-funciones',
         label: 'Funciones',
-        level: 28, // Shifted from 27
+        level: 30, // Shifted down 2 levels
         type: 'evaluation',
         requires: ['a10-sistemas'],
         description: 'Relaciones funcionales.',
-        xOffset: 40,
+        xOffset: 0,
         subcategoryId: 419,
         behavior: 'container'
     },
     {
         id: 'a12-1-lineal',
         label: 'Función Lineal',
-        level: 29, // Shifted from 28
+        level: 31,
         type: 'basic',
         requires: ['a12-funciones'],
         description: 'y = mx + b',
-        xOffset: 20,
+        xOffset: -20,
         subcategoryId: 420,
         behavior: 'quiz_list'
     },
     {
         id: 'a12-2-concepto',
         label: 'Conceptos',
-        level: 29, // Shifted from 28
+        level: 31,
         type: 'critical',
         requires: ['a12-funciones'],
         description: 'Dominio y rango.',
-        xOffset: 60,
+        xOffset: 20,
         subcategoryId: 431,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a13-mastery',
+        label: 'Maestría en Álgebra',
+        level: 32,
+        type: 'evaluation',
+        requires: ['a12-1-lineal', 'a12-2-concepto'],
+        description: 'El desafío definitivo de todo el módulo.',
+        xOffset: 0,
+        subcategoryId: 441,
         behavior: 'quiz_list'
     }
 ];

@@ -428,7 +428,7 @@ function QuizList() {
                       map[node.id] = 'available';
                     } else {
                       // Content nodes are available if they have content, otherwise locked
-                      map[node.id] = hasContent ? 'available' : 'locked';
+                      map[node.id] = (hasContent || node.id.endsWith('mastery')) ? 'available' : 'locked';
                     }
                   });
 
@@ -485,7 +485,7 @@ function QuizList() {
                   return map;
                 })()}
                 onNodeClick={(node, highlightedQuizId) => {
-                  if (node.level === 33) {
+                  if (node.id.endsWith('mastery')) {
                     setShowMasteryDialog(true);
                     return;
                   }

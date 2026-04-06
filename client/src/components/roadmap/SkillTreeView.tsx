@@ -268,10 +268,10 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                 className="w-full relative"
             >
                 {/* Search Bar - Top Right above Legend */}
-                <div className="md:absolute md:top-[-100px] md:right-4 relative mt-4 md:mt-0 mb-4 md:mb-0 z-[90] flex flex-col items-center md:items-end gap-2 pointer-events-auto px-4 w-full md:w-auto">
+                <div className="md:absolute md:top-[-100px] md:right-4 relative mt-4 md:mt-0 mb-4 md:mb-0 z-[90] flex flex-col items-center md:items-end gap-2 pointer-events-auto px-2 sm:px-4 w-full md:w-auto">
                     <div
                         ref={searchRef}
-                        className="relative w-full max-w-sm md:max-w-xs"
+                        className="relative w-full max-w-[280px] sm:max-w-sm md:max-w-xs"
                     >
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -305,7 +305,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                    className="absolute top-full right-0 mt-3 w-[320px] bg-slate-900/95 border border-slate-700 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar z-[100]"
+                                    className="absolute top-full right-0 mt-3 w-full max-w-[280px] sm:max-w-[320px] bg-slate-900/95 border border-slate-700 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar z-[100]"
                                 >
                                     {filteredQuizzes.length > 0 ? (
                                         <div className="py-2">
@@ -643,13 +643,13 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                                     (node.type === 'critical' && node.behavior === 'container') ? 'hexagon-mask' :
                                                                         node.behavior === 'container' ? 'rotate-45 rounded-2xl' : 'rounded-full',
 
-                                                                    (node.level !== 33 && isLocked) && "cursor-not-allowed shadow-[0_0_20px_rgba(245,158,11,0.3)]",
-                                                                    (node.level === 33 || !isLocked) && "cursor-pointer",
+                                                                    (!node.id.endsWith('mastery') && isLocked) && "cursor-not-allowed shadow-[0_0_20px_rgba(245,158,11,0.3)]",
+                                                                    (node.id.endsWith('mastery') || !isLocked) && "cursor-pointer",
 
                                                                     isHighlighted ? "ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_40px_rgba(251,191,36,0.6)] scale-110" : "",
                                                                     !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
                                                                         !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf]" :
-                                                                            node.level === 33 ? "shadow-[0_0_50px_rgba(192,38,211,0.8)] animate-pulse" :
+                                                                            node.id.endsWith('mastery') ? "shadow-[0_0_50px_rgba(192,38,211,0.8)] animate-pulse" :
                                                                                 !isHighlighted && isAvailable ? (
                                                                                     node.type === 'critical' ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" :
                                                                                         "shadow-[0_0_30px_#3b82f6]"
@@ -657,7 +657,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                                 )}
                                                                 style={{
                                                                     background: isHighlighted ? 'linear-gradient(135deg, #b45309, #f59e0b)' :
-                                                                        node.level === 33 ? 'linear-gradient(135deg, #4c1d95, #701a75, #db2777)' :
+                                                                        node.id.endsWith('mastery') ? 'linear-gradient(135deg, #4c1d95, #701a75, #db2777)' :
                                                                             isCompleted ? 'linear-gradient(135deg, #1f2937, #064e3b)' :
                                                                                 isInProgress ? 'linear-gradient(135deg, #134e4a, #2dd4bf)' :
                                                                                     isAvailable ? (
@@ -666,7 +666,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                                                     ) : isLocked ? 'linear-gradient(135deg, #1e293b, #451a03)' : '#1e293b',
 
                                                                     border: `3px solid ${isHighlighted ? '#fbbf24' :
-                                                                        node.level === 33 ? '#fbbf24' :
+                                                                        node.id.endsWith('mastery') ? '#fbbf24' :
                                                                             isCompleted ? '#4ade80' :
                                                                                 isInProgress ? '#5eead4' :
                                                                                     isAvailable ? (node.type === 'critical' ? '#fb7185' : '#3b82f6') :
@@ -677,7 +677,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                                 <div className={cn("flex items-center justify-center", node.behavior === 'container' && !(node.type === 'critical' && node.behavior === 'container') && "-rotate-45")}>
                                                                     {isCompleted ? (
                                                                         <CheckCircle className="w-8 h-8 text-green-400" />
-                                                                    ) : node.level === 33 ? (
+                                                                    ) : node.id.endsWith('mastery') ? (
                                                                         <motion.div
                                                                             animate={{ rotate: [0, 10, -10, 0] }}
                                                                             transition={{ repeat: Infinity, duration: 2 }}
@@ -689,7 +689,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                                     ) : (
                                                                         (node.type === 'critical' && node.behavior === 'container') ? <Hexagon className="w-8 h-8 text-yellow-400 fill-yellow-400/20" /> :
                                                                             node.type === 'critical' ? <Star className="w-8 h-8 text-white fill-white/20" /> :
-                                                                                node.level === 33 ? (
+                                                                                node.id.endsWith('mastery') ? (
                                                                                     <motion.div
                                                                                         animate={{ rotate: [0, 10, -10, 0] }}
                                                                                         transition={{ repeat: Infinity, duration: 2 }}
@@ -704,7 +704,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                                 </div>
                                                             </motion.button>
 
-                                                            {isLocked && node.level !== 33 && (
+                                                            {isLocked && !node.id.endsWith('mastery') && (
                                                                 <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-slate-400 text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none border border-slate-700 z-50">
                                                                     Próximamente
                                                                 </div>
