@@ -26,6 +26,14 @@ import { ExplanationModal } from "./explicacion";
 import { MathDisplay } from "@/components/ui/math-display";
 import MathKeyboard from "@/components/MathKeyboard";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const SURVEY_QUIZ_IDS = [68, 69, 73, 72];
 
@@ -1559,14 +1567,34 @@ const ActiveQuiz = () => {
                 Describe el problema que encontraste en esta pregunta.
               </DialogDescription>
             </DialogHeader>
-            <div className="py-4">
-              <Textarea
-                value={reportDescription}
-                onChange={(e) => setReportDescription(e.target.value)}
-                placeholder="Describe el error..."
-                className="bg-slate-800 border-white/10 text-slate-200"
-                rows={4}
-              />
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-500 uppercase tracking-wider font-bold">Opciones comunes</Label>
+                <Select onValueChange={(value) => setReportDescription(prev => prev ? `${prev}\n${value}` : value)}>
+                  <SelectTrigger className="bg-slate-800 border-white/10 text-slate-200">
+                    <SelectValue placeholder="Selecciona un error común..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-white/10 text-slate-200">
+                    <SelectItem value="La pregunta está mal redactada">La pregunta está mal redactada</SelectItem>
+                    <SelectItem value="Errores de escritura en la pregunta">Errores de escritura en la pregunta</SelectItem>
+                    <SelectItem value="Errores matemáticos en la pregunta">Errores matemáticos en la pregunta</SelectItem>
+                    <SelectItem value="No está la respuesta correcta">No está la respuesta correcta</SelectItem>
+                    <SelectItem value="Hay dos respuestas correcta">Hay dos respuestas correcta</SelectItem>
+                    <SelectItem value="Errores de escritura en la respuesta">Errores de escritura en la respuesta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-500 uppercase tracking-wider font-bold">Descripción detallada</Label>
+                <Textarea
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  placeholder="Describe el error..."
+                  className="bg-slate-800 border-white/10 text-slate-200 min-h-[100px]"
+                  rows={4}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setIsReportDialogOpen(false)} disabled={reportErrorMutation.isPending}>Cancelar</Button>

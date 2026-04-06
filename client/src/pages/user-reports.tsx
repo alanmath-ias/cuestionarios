@@ -169,14 +169,34 @@ export default function UserReports() {
                                         <div>
                                             <span className="text-sm font-semibold text-slate-400 block mb-2 cursor-pointer">Descripción del error: </span>
                                             {editingId === report.id ? (
-                                                <div className="space-y-3">
-                                                    <Textarea
-                                                        autoFocus
-                                                        className="bg-slate-950 border-blue-500/50 focus:border-blue-500 w-full min-h-[100px] text-slate-200"
-                                                        value={editForm.description}
-                                                        onChange={(e) => setEditForm({ description: e.target.value })}
-                                                        placeholder="Explica qué error encontraste..."
-                                                    />
+                                                <div className="space-y-4">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs text-slate-500 uppercase tracking-wider font-bold">Opciones comunes</Label>
+                                                        <Select onValueChange={(value) => setEditForm(prev => ({ ...prev, description: prev.description ? `${prev.description}\n${value}` : value }))}>
+                                                            <SelectTrigger className="bg-slate-950 border-white/10 text-slate-200">
+                                                                <SelectValue placeholder="Selecciona un error común..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="bg-slate-900 border-white/10 text-slate-200">
+                                                                <SelectItem value="La pregunta está mal redactada">La pregunta está mal redactada</SelectItem>
+                                                                <SelectItem value="Errores de escritura en la pregunta">Errores de escritura en la pregunta</SelectItem>
+                                                                <SelectItem value="Errores matemáticos en la pregunta">Errores matemáticos en la pregunta</SelectItem>
+                                                                <SelectItem value="No está la respuesta correcta">No está la respuesta correcta</SelectItem>
+                                                                <SelectItem value="Hay dos respuestas correcta">Hay dos respuestas correcta</SelectItem>
+                                                                <SelectItem value="Errores de escritura en la respuesta">Errores de escritura en la respuesta</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs text-slate-500 uppercase tracking-wider font-bold">Descripción del error</Label>
+                                                        <Textarea
+                                                            autoFocus
+                                                            className="bg-slate-950 border-blue-500/50 focus:border-blue-500 w-full min-h-[100px] text-slate-200"
+                                                            value={editForm.description}
+                                                            onChange={(e) => setEditForm({ description: e.target.value })}
+                                                            placeholder="Explica qué error encontraste..."
+                                                        />
+                                                    </div>
                                                     <div className="flex justify-start gap-2">
                                                         <Button
                                                             size="sm"
