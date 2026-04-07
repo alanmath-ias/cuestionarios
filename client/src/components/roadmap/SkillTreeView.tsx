@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { cn } from '@/lib/utils';
 import { ArithmeticNode } from '../../data/arithmetic-map-data';
-import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw, LayoutDashboard, Search, X, CheckCircle2, AlertTriangle, PlayCircle } from 'lucide-react';
+import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw, LayoutDashboard, Search, X, CheckCircle2, AlertTriangle, PlayCircle, Medal } from 'lucide-react';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { TransformWrapper, TransformComponent, ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,12 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState(1000);
     const [triggeredFamilies, setTriggeredFamilies] = useState<Set<string>>(new Set());
+    const [celebratingNodeId, setCelebratingNodeId] = useState<string | null>(null);
+    const [showCelebrationDialog, setShowCelebrationDialog] = useState(false);
+    const [processedCelebrateParam, setProcessedCelebrateParam] = useState<string | null>(null);
+    const [processedScrollId, setProcessedScrollId] = useState<string | null>(null); // New state
+    const [processedCelebrationId, setProcessedCelebrationId] = useState<string | null>(null); // New state
+    const [celebrationType, setCelebrationType] = useState<'node' | 'family'>('node'); // New state for type of celebration
 
     // Calculate Multi-purpose progress metrics
     const { totalVisibleQuizzes, nodeProgress } = React.useMemo(() => {
@@ -41,8 +47,8 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
             if (!hasSub) return;
 
             let matches = allQuizzes.filter(q =>
-                q.subcategoryId === node.subcategoryId ||
-                (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId))
+                Number(q.subcategoryId) === Number(node.subcategoryId) ||
+                (node.additionalSubcategories && node.additionalSubcategories.includes(Number(q.subcategoryId)))
             );
 
             if (node.filterKeywords?.length) {
@@ -197,6 +203,92 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
         };
     }, []);
 
+    // Handle Focus and Celebration Trigger from URL
+    useEffect(() => {
+        const searchParams = new URLSearchParams(window.location.search);
+        const focusId = searchParams.get('focusNode');
+        const source = searchParams.get('source');
+
+        if (!focusId || nodes.length === 0) return;
+
+        const targetNode = nodes.find(n => n.id === focusId);
+        if (!targetNode) return;
+
+        // 1. Process Smooth Scroll (Only once per focusId)
+        if (focusId !== processedScrollId) {
+            setProcessedScrollId(focusId);
+            setTimeout(() => {
+                const element = document.getElementById(`node-container-${focusId}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 500);
+
+            // Clean URL after a delay if we are just focusing
+            if (source !== 'quiz') {
+                setTimeout(() => {
+                    const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
+                    window.history.replaceState({}, '', newUrl);
+                }, 3000);
+            }
+        }
+
+        // 2. Process Celebration (Reactive to allQuizzes and nodeProgress updates)
+        if (source === 'quiz' && focusId !== processedCelebrationId && nodeProgress[focusId] === 100) {
+            const targetNode = nodes.find(n => n.id === focusId);
+            if (!targetNode) return;
+
+            // CHECK FAMILY COMPLETION
+            // We search UP the requires chain to find the nearest container ancestor.
+            const findParentContainer = (startNodeId: string): ArithmeticNode | null => {
+                const queue = [startNodeId];
+                const visited = new Set<string>();
+                while (queue.length > 0) {
+                    const cid = queue.shift()!;
+                    if (visited.has(cid)) continue;
+                    visited.add(cid);
+                    const cnode = nodes.find(n => n.id === cid);
+                    if (!cnode) continue;
+                    for (const rid of cnode.requires) {
+                        const rnode = nodes.find(n => n.id === rid);
+                        if (rnode?.behavior === 'container') return rnode;
+                        queue.push(rid);
+                    }
+                }
+                return null;
+            };
+
+            const parentContainer = findParentContainer(focusId);
+            const isFamilyMastery = parentContainer ? (progressMap[parentContainer.id] === 'completed') : false;
+            const familyToCelebrate = isFamilyMastery && parentContainer ? parentContainer : targetNode;
+
+            setProcessedCelebrationId(focusId);
+            setCelebrationType(isFamilyMastery ? 'family' : 'node');
+            setCelebratingNodeId(familyToCelebrate.id);
+
+            console.log(`[Celebration Check] Node: ${focusId}, ParentContainer: ${parentContainer?.id}, FamilyMastery: ${isFamilyMastery}`);
+
+            setTimeout(() => {
+                setShowCelebrationDialog(true);
+
+                if (isFamilyMastery) {
+                    fireFamilyFireworks();
+                } else {
+                    confetti({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
+                    });
+                }
+
+                // Clean URL after celebration
+                const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
+                window.history.replaceState({}, '', newUrl);
+            }, 1200);
+        }
+    }, [nodes, allQuizzes, processedScrollId, processedCelebrationId, nodeProgress, progressMap]);
+
     // Search Logic
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -263,6 +355,65 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
             <div
                 className="w-full relative"
             >
+                {/* Celebration Dialog Modal */}
+                <AnimatePresence>
+                    {showCelebrationDialog && celebratingNodeId && (
+                        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                                className="bg-slate-900 border-2 border-yellow-500/50 rounded-3xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(234,179,8,0.3)] text-center relative overflow-hidden"
+                            >
+                                {/* Decoration */}
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+
+                                <div className="mb-6 relative inline-block">
+                                    <div className={cn(
+                                        "absolute inset-0 blur-2xl rounded-full",
+                                        celebrationType === 'family' ? "bg-slate-400/20" : "bg-yellow-500/20"
+                                    )} />
+                                    <div className={cn(
+                                        "relative bg-slate-800 p-4 rounded-full border-2",
+                                        celebrationType === 'family' ? "border-slate-400/30" : "border-yellow-500/30"
+                                    )}>
+                                        {celebrationType === 'family' ? (
+                                            <Trophy className="w-12 h-12 text-slate-200" />
+                                        ) : (
+                                            <Medal className="w-12 h-12 text-yellow-400 fill-yellow-400/20" />
+                                        )}
+                                    </div>
+                                    <motion.div
+                                        animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
+                                        transition={{ repeat: Infinity, duration: 2 }}
+                                        className={cn(
+                                            "absolute -top-2 -right-2 p-1.5 rounded-full shadow-lg",
+                                            celebrationType === 'family' ? "bg-slate-400 text-slate-900" : "bg-yellow-500 text-slate-900"
+                                        )}
+                                    >
+                                        {celebrationType === 'family' ? <Trophy className="w-4 h-4" /> : <Star className="w-4 h-4 fill-current" />}
+                                    </motion.div>
+                                </div>
+
+                                <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">
+                                    {celebrationType === 'family' ? '¡MAESTRÍA DE CATEGORÍA!' : '¡NODO COMPLETADO!'}
+                                </h2>
+                                <p className="text-slate-400 mb-6 font-medium">
+                                    {celebrationType === 'family'
+                                        ? '¡Felicidades! Has completado todos los desafíos de esta familia.'
+                                        : 'Has demostrado gran maestría en'} <span className="text-yellow-400 font-bold">"{nodes.find(n => n.id === celebratingNodeId)?.label}"</span>. ¡Sigue así!
+                                </p>
+
+                                <Button
+                                    onClick={() => setShowCelebrationDialog(false)}
+                                    className="w-full bg-gradient-to-r from-yellow-600 to-amber-500 hover:from-yellow-500 hover:to-amber-400 text-slate-950 font-black py-6 rounded-2xl shadow-[0_10px_20px_rgba(202,138,4,0.3)] transition-all hover:scale-[1.02] active:scale-95"
+                                >
+                                    ¡EXCELENTE!
+                                </Button>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
                 {/* Search Bar - Top Right above Legend */}
                 <div className="md:absolute md:top-[-100px] md:right-4 relative mt-4 md:mt-0 mb-4 md:mb-0 z-[90] flex flex-col items-center md:items-end gap-2 pointer-events-auto px-2 sm:px-4 w-full md:w-auto">
                     <div
@@ -612,6 +763,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                             return (
                                                 <div
                                                     key={node.id}
+                                                    id={`node-container-${node.id}`}
                                                     style={{
                                                         position: 'absolute',
                                                         left: pos.x,

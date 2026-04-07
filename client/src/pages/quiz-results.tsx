@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -11,9 +11,8 @@ import type { QuizResult } from '@shared/quiz-types.js';
 import { ExplanationModal } from './explicacion';
 import { useSession } from "@/hooks/useSession";
 import { FloatingWhatsApp } from "@/components/ui/FloatingWhatsApp";
-import { Brain, Loader2, Sparkles, Star as LucideStar } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import confetti from 'canvas-confetti';
+import { Brain, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { arithmeticMapNodes } from "@/data/arithmetic-map-data";
 import { algebraMapNodes } from "@/data/algebra-map-data";
 import { calculusMapNodes } from "@/data/calculus-map-data";
@@ -35,8 +34,6 @@ function QuizResults() {
   const { progressId } = useParams<{ progressId: string }>();
   const [_, setLocation] = useLocation();
   const { session } = useSession();
-  const [hasCelebrated, setHasCelebrated] = useState(false);
-  const [celebrationType, setCelebrationType] = useState<'node' | 'family' | null>(null);
 
   const searchParams = new URLSearchParams(window.location.search);
   const userId = searchParams.get('user_id');
@@ -45,13 +42,6 @@ function QuizResults() {
 
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
 
-  const handleGoBack = () => {
-    if (userId) {
-      setLocation(`/admin/users?viewProgress=${userId}`);
-    } else {
-      window.history.back();
-    }
-  };
 
   const { data: results, isLoading: loadingResults, error } = useQuery<QuizResult>({
     queryKey: [`/api/results/${progressId}`, userId],
@@ -81,6 +71,76 @@ function QuizResults() {
     enabled: !!results?.quiz.id,
   });
 
+  const { data: allUserQuizzes } = useQuery<any[]>({
+    queryKey: ["user-quizzes"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/quizzes", { credentials: "include" });
+      if (!res.ok) throw new Error("Error fetching all quizzes");
+      return res.json();
+    },
+    enabled: !!results && session?.role === 'student',
+  });
+
+  // Memoized current node detection for cross-component use (navigation & celebration)
+  const currentNode = useMemo(() => {
+    if (!results) return null;
+
+    const categoryId = results.quiz.categoryId;
+    const categoryName = (results.quiz as any).categoryName?.toLowerCase() || "";
+    let nodes: any[] = [];
+
+    if (categoryId === 1 || categoryName.includes("aritmética")) nodes = arithmeticMapNodes;
+    else if (categoryId === 2 || categoryName.includes("álgebra")) nodes = algebraMapNodes;
+    else if (categoryId === 4 || categoryName.includes("diferencial")) nodes = calculusMapNodes;
+    else if (categoryId === 5 || categoryName.includes("integral")) nodes = integralCalculusMapNodes;
+    else if (categoryId === 19 || categoryName.includes("estadística")) nodes = statisticsMapNodes;
+
+    if (nodes.length === 0) return null;
+
+    return nodes.find(n => {
+      const isSubMatch = n.subcategoryId === results.quiz.subcategoryId ||
+        (n.additionalSubcategories && n.additionalSubcategories.includes(results.quiz.subcategoryId));
+
+      if (!isSubMatch) return false;
+
+      // Match by keywords if present
+      if (n.filterKeywords?.length) {
+        const kw = n.filterKeywords.map((k: string) => k.toLowerCase());
+        const matches = kw.some((k: string) => results.quiz.title.toLowerCase().includes(k));
+        if (!matches) return false;
+      }
+
+      if (n.excludeKeywords?.length) {
+        const ex = n.excludeKeywords.map((k: string) => k.toLowerCase());
+        const excluded = ex.some((k: string) => results.quiz.title.toLowerCase().includes(k));
+        if (excluded) return false;
+      }
+
+      return true;
+    });
+  }, [results]);
+
+  const handleGoBack = () => {
+    // Invalidate queries to ensure map progress is fresh
+    queryClient.invalidateQueries({ queryKey: ["/api/quizzes"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
+    queryClient.invalidateQueries({ queryKey: ["user-quizzes"] });
+
+    if (userId) {
+      setLocation(`/admin/users?viewProgress=${userId}`);
+    } else {
+      const categoryId = results?.quiz.categoryId || 1;
+      const isFreshQuiz = new URLSearchParams(window.location.search).get('source') === 'quiz';
+
+      let params = '';
+      if (isFreshQuiz && currentNode) {
+        params = `&focusNode=${currentNode.id}&source=quiz`;
+      }
+
+      setLocation(`/category/${categoryId}?view=roadmap${params}`);
+    }
+  };
+
   // Sync isVerified state from quiz data when results load
   useEffect(() => {
     if (results?.quiz && isVerified === null) {
@@ -105,143 +165,6 @@ function QuizResults() {
     },
   });
 
-  const { data: allUserQuizzes } = useQuery<any[]>({
-    queryKey: ["user-quizzes"],
-    queryFn: async () => {
-      const res = await fetch("/api/user/quizzes", { credentials: "include" });
-      if (!res.ok) throw new Error("Error fetching all quizzes");
-      return res.json();
-    },
-    enabled: !!results && session?.role === 'student',
-  });
-
-  // Celebration Logic
-  useEffect(() => {
-    if (results && allUserQuizzes && !hasCelebrated && session?.role === 'student' && !userId) {
-      // 1. Identify current Map based on categoryId
-      const categoryId = results.quiz.categoryId;
-      // Find category name from categories if not in results
-      let categoryName = (results.quiz as any).categoryName?.toLowerCase() || "";
-      if (!categoryName) {
-        // Fallback or just use categoryId
-      }
-      let nodes: any[] = [];
-
-      if (categoryId === 1 || categoryName.includes("aritmética")) nodes = arithmeticMapNodes;
-      else if (categoryId === 2 || categoryName.includes("álgebra")) nodes = algebraMapNodes;
-      else if (categoryId === 4 || categoryName.includes("diferencial")) nodes = calculusMapNodes;
-      else if (categoryId === 5 || categoryName.includes("integral")) nodes = integralCalculusMapNodes;
-      else if (categoryId === 19 || categoryName.includes("estadística")) nodes = statisticsMapNodes;
-
-      if (nodes.length === 0) return;
-
-      // 2. Find the node that contains this quiz
-      const currentNode = nodes.find(n =>
-        n.subcategoryId === results.quiz.subcategoryId ||
-        (n.additionalSubcategories && n.additionalSubcategories.includes(results.quiz.subcategoryId))
-      );
-
-      if (!currentNode) return;
-
-      // 3. Check Node Completion (all quizzes in this node must be completed)
-      const getNodeQuizzes = (node: any) => {
-        return allUserQuizzes.filter(q =>
-          q.subcategoryId === node.subcategoryId ||
-          (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId))
-        );
-      };
-
-      const nodeQuizzes = getNodeQuizzes(currentNode);
-      const isNodeCompleted = nodeQuizzes.length > 0 && nodeQuizzes.every(q => q.status === 'completed');
-
-      if (isNodeCompleted) {
-        // 4. Check Family Completion
-        // A family consists of the container/parent and its descendants until the next container
-        // We look for the parent container of this node
-        let parentContainer: any = null;
-        let currentParentNodes: any[] = [];
-
-        // Simple heuristic: nodes at the same group level or under the same critical parent
-        // Actually, let's use the hierarchy. Find the closest container by level back
-        for (let i = nodes.indexOf(currentNode); i >= 0; i--) {
-          if (nodes[i].behavior === 'container') {
-            parentContainer = nodes[i];
-            break;
-          }
-        }
-
-        if (parentContainer) {
-          // All nodes that require this container or its children until next container
-          const familyNodes = nodes.filter(n => {
-            // Find if n depends on parentContainer directly or indirectly
-            let deps = [n.id];
-            let checked = new Set();
-            while (deps.length > 0) {
-              let d = deps.shift();
-              if (d === parentContainer.id) return true;
-              if (checked.has(d)) continue;
-              checked.add(d);
-              let node = nodes.find(node => node.id === d);
-              if (node && node.requires) deps.push(...node.requires);
-            }
-            return false;
-          });
-
-          const isFamilyCompleted = familyNodes.every(n => {
-            if (n.behavior === 'container' && (!n.subcategoryId && (!n.additionalSubcategories || n.additionalSubcategories.length === 0))) return true;
-            const quizzes = getNodeQuizzes(n);
-            return quizzes.length === 0 || quizzes.every(q => q.status === 'completed');
-          });
-
-          if (isFamilyCompleted) {
-            setCelebrationType('family');
-            fireFireworks();
-          } else {
-            setCelebrationType('node');
-            fireConfetti();
-          }
-        } else {
-          setCelebrationType('node');
-          fireConfetti();
-        }
-
-        setHasCelebrated(true);
-      }
-    }
-  }, [results, allUserQuizzes, hasCelebrated, session, userId]);
-
-  const fireConfetti = () => {
-    confetti({
-      particleCount: 150,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
-    });
-  };
-
-  const fireFireworks = () => {
-    const duration = 5 * 1000;
-    const animationEnd = Date.now() + duration;
-    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
-
-    function randomInRange(min: number, max: number) {
-      return Math.random() * (max - min) + min;
-    }
-
-    const interval: any = setInterval(function () {
-      const timeLeft = animationEnd - Date.now();
-
-      if (timeLeft <= 0) {
-        return clearInterval(interval);
-      }
-
-      const particleCount = 50 * (timeLeft / duration);
-      // since particles fall down, start a bit higher than random
-      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-    }, 250);
-  };
-
   const { data: feedback, isLoading: loadingFeedback } = useQuery({
     queryKey: ['quiz-feedback', progressId],
     queryFn: async () => {
@@ -256,7 +179,11 @@ function QuizResults() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    // Invalidate queries on mount as well to ensure latest progress if navigating via URL
+    queryClient.invalidateQueries({ queryKey: ["/api/quizzes"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
+    queryClient.invalidateQueries({ queryKey: ["user-quizzes"] });
+  }, [queryClient]);
 
   useEffect(() => {
     if (!isLoading && session?.userId && !session.tourStatus?.quizResults) {
@@ -667,59 +594,6 @@ function QuizResults() {
           />
         )}
       </div>
-      <AnimatePresence>
-        {celebrationType && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
-          >
-            <motion.div
-              initial={{ scale: 0.8, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="max-w-md w-full"
-            >
-              <Card className="border-2 border-yellow-400 bg-slate-900 shadow-[0_0_50px_rgba(251,191,36,0.5)] overflow-hidden">
-                <div className="bg-gradient-to-br from-yellow-600 via-amber-500 to-orange-600 p-8 text-center text-white relative">
-                  <motion.div
-                    animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
-                    transition={{ repeat: Infinity, duration: 3 }}
-                  >
-                    <Trophy className="w-24 h-24 mx-auto drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
-                  </motion.div>
-                  <h2 className="text-4xl font-black mt-4 tracking-tighter italic">¡FANTÁSTICO!</h2>
-                  <p className="text-yellow-100 font-bold uppercase text-xs tracking-widest mt-2">Hito Alcanzado</p>
-
-                  <LucideStar className="absolute top-4 left-4 w-6 h-6 text-yellow-200 animate-pulse" />
-                  <LucideStar className="absolute bottom-4 right-4 w-6 h-6 text-yellow-200 animate-pulse" />
-                </div>
-                <CardContent className="p-8 text-center bg-slate-900 border-t border-yellow-500/20">
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-center gap-3 text-2xl font-black text-white italic">
-                      <Sparkles className="text-yellow-400 w-8 h-8" />
-                      <span>{celebrationType === 'family' ? 'Sección Completada' : 'Nodo Finalizado'}</span>
-                      <Sparkles className="text-yellow-400 w-8 h-8" />
-                    </div>
-                    <p className="text-slate-300 leading-relaxed font-medium">
-                      {celebrationType === 'family'
-                        ? "¡Efectivamente eres un experto! Has dominado todos los temas de esta sección del mapa. Tu camino hacia el conocimiento es imparable."
-                        : "¡Excelente desempeño! Has terminado todos los contenidos de este nodo temático. Estás forjando una base sólida."}
-                    </p>
-                    <Button
-                      onClick={() => setCelebrationType(null)}
-                      className="w-full h-16 text-xl font-black bg-yellow-500 hover:bg-yellow-400 text-slate-950 shadow-[0_4px_0_rgb(180,83,9)] active:translate-y-1 active:shadow-none transition-all rounded-2xl"
-                    >
-                      ¡A POR MÁS!
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <FloatingWhatsApp
         message="Hola, acabo de terminar un cuestionario y me gustaría cotizar clases de refuerzo."

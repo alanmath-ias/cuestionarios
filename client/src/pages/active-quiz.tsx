@@ -883,7 +883,7 @@ const ActiveQuiz = () => {
         }),
       });
 
-      setLocation(`/results/${progress.id}`, { replace: true });
+      setLocation(`/results/${progress.id}?source=quiz`, { replace: true });
     } catch (error) {
       toast({
         title: 'Error',
