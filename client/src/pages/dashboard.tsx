@@ -64,14 +64,7 @@ import { QuizDetailsDialog } from "@/components/dialogs/QuizDetailsDialog";
 import { RestZoneDialog } from "@/components/dialogs/RestZoneDialog";
 import { WelcomeDialog } from "@/components/dialogs/WelcomeDialog";
 import { getRandomQuote } from "@/lib/motivational-quotes";
-import { HorizontalRoadmap } from "@/components/roadmap/HorizontalRoadmap";
-import { RoadmapNode } from "@/types/types";
 import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
-import { arithmeticMapNodes, ArithmeticNode } from "@/data/arithmetic-map-data";
-import { algebraMapNodes } from "@/data/algebra-map-data";
-import { calculusMapNodes } from "@/data/calculus-map-data";
-import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
-import { statisticsMapNodes } from "@/data/statistics-map-data";
 
 
 interface QuizWithFeedback {
@@ -500,171 +493,11 @@ export default function UserDashboard() {
     ) || [];
   }, [categoryQuizzes, categorySearchQuery]);
 
-  // --- Roadmap Data Logic ---
-  const [expandedRoadmapCategoryId, setExpandedRoadmapCategoryId] = useState<number | null>(null);
-  const activeCategoryId = expandedRoadmapCategoryId;
 
-  // Helper to get map nodes based on category
-  const getMapNodes = (catId: number | null) => {
-    if (!catId) return [];
-    const category = sortedCategories.find(c => c.id === catId);
-    const name = category?.name.toLowerCase() || "";
 
-    if (catId === 1 || name.includes("aritmética")) return arithmeticMapNodes;
-    if (catId === 2 || name.includes("álgebra")) return algebraMapNodes;
-    if (catId === 4 || name.includes("diferencial")) return calculusMapNodes;
-    if (catId === 5 || name.includes("integral")) return integralCalculusMapNodes;
-    if (catId === 19 || name.includes("estadística") || name.includes("estadistica")) return statisticsMapNodes;
-    return [];
-  };
 
-  const { data: activeCategorySubcategories } = useQuery<any[]>({
-    queryKey: ["category-subcategories-roadmap", activeCategoryId],
-    queryFn: async () => {
-      if (!activeCategoryId) return [];
-      const res = await fetch(`/api/admin/subcategories/by-category/${activeCategoryId}`);
-      if (!res.ok) return [];
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
-    },
-    enabled: !!activeCategoryId,
-  });
 
-  const { data: activeCategoryQuizzes } = useQuery<Quiz[]>({
-    queryKey: ["category-quizzes-roadmap", activeCategoryId],
-    queryFn: () => activeCategoryId ? fetchCategoryQuizzes(activeCategoryId) : Promise.resolve([]),
-    enabled: !!activeCategoryId,
-  });
 
-  // Calculate Roadmap Nodes
-  // Calculate Roadmap Nodes based on MAP DATA (Visual Order)
-  const roadmapNodes: RoadmapNode[] = useMemo(() => {
-    const rawNodes = ((activeCategoryId ? getMapNodes(activeCategoryId) : []) as ArithmeticNode[]);
-
-    // 1. First pass: Calculate individual node content and status
-    const processedNodes = rawNodes.map((node) => {
-      const categoryQuizzes = activeCategoryQuizzes || [];
-      let nodeQuizzes = categoryQuizzes.filter(q => q.subcategoryId == node.subcategoryId) || [];
-
-      if (node.filterKeywords && node.filterKeywords.length > 0) {
-        const keywords = node.filterKeywords.map(k => k.toLowerCase());
-        nodeQuizzes = nodeQuizzes.filter(q => {
-          const titleLower = q.title.toLowerCase();
-          if (!keywords.some(k => titleLower.includes(k))) return false;
-          if (node.excludeKeywords && node.excludeKeywords.length > 0) {
-            const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
-            if (excludeKeys.some(k => titleLower.includes(k))) return false;
-          }
-          return true;
-        });
-      }
-
-      let progressPercent = 0;
-      if (nodeQuizzes.length > 0 && quizzes) {
-        const completedCount = nodeQuizzes.filter(q =>
-          quizzes.some(uq => uq.id === q.id && uq.status === 'completed')
-        ).length;
-        progressPercent = (completedCount / nodeQuizzes.length) * 100;
-      }
-
-      // EXPLORATORY LOGIC: No prerequisites, only content-based
-      let status: 'locked' | 'available' | 'completed' | 'partial' = 'locked';
-      if (nodeQuizzes.length === 0) {
-        status = 'locked';
-      } else if (progressPercent >= 100) {
-        status = 'completed';
-      } else {
-        status = 'available';
-      }
-
-      return {
-        ...node,
-        nodeQuizzes,
-        progressPercent,
-        calculatedStatus: status
-      };
-    });
-
-    // 2. Second pass: Grouping and Parent status aggregation
-    const groupNodes: Record<string | number, any[]> = {};
-    let currentParent: any = null;
-
-    processedNodes.forEach(node => {
-      const isParent = node.behavior === 'container' || node.type === 'critical';
-      if (isParent) {
-        currentParent = node;
-        groupNodes[node.id] = [];
-      } else if (currentParent) {
-        groupNodes[currentParent.id].push(node);
-      }
-    });
-
-    // 3. Third pass: Construct final RoadmapNode objects
-    return processedNodes.map((node) => {
-      const isParent = node.behavior === 'container' || node.type === 'critical';
-      let finalStatus: 'locked' | 'available' | 'completed' | 'partial' = node.calculatedStatus;
-
-      if (isParent) {
-        const children = groupNodes[node.id] || [];
-        if (children.length > 0) {
-          const allLocked = children.every(c => c.calculatedStatus === 'locked');
-          const allCompleted = children.every(c => c.calculatedStatus === 'completed');
-          const anyAvailable = children.some(c => c.calculatedStatus === 'available');
-          const hasLockedChild = children.some(c => c.calculatedStatus === 'locked');
-          const hasCompletedChild = children.some(c => c.calculatedStatus === 'completed');
-
-          if (allLocked && node.calculatedStatus === 'locked') {
-            finalStatus = 'locked';
-          } else if (allCompleted) {
-            finalStatus = 'completed';
-          } else if (anyAvailable) {
-            finalStatus = 'available';
-          } else if (hasLockedChild && hasCompletedChild) {
-            // Mixed: Some completed, some locked -> Partial
-            finalStatus = 'partial';
-          }
-        }
-      }
-
-      return {
-        id: node.id || `node-${Math.random()}`,
-        title: node.label || 'Sin título',
-        description: node.description || '',
-        status: finalStatus,
-        type: 'subcategory',
-        nodeType: node.type,
-        behavior: node.behavior,
-        progress: node.progressPercent,
-        hasContent: node.nodeQuizzes.length > 0 || (isParent && (groupNodes[node.id] || []).some(c => c.nodeQuizzes.length > 0)),
-        onClick: () => {
-          if (isParent) {
-            const hasAnyContent = node.nodeQuizzes.length > 0 || (groupNodes[node.id] || []).some(c => c.nodeQuizzes.length > 0);
-            if (hasAnyContent) {
-              if (node.subcategoryId && activeCategorySubcategories) {
-                const sub = activeCategorySubcategories.find(s => s.id === node.subcategoryId);
-                if (sub) handleSubcategorySelect(sub);
-              }
-              const cat = sortedCategories.find(c => c.id === activeCategoryId);
-              if (cat) setSelectedCategoryForDetails(cat);
-            }
-          } else {
-            if (finalStatus !== 'locked') {
-              const cat = sortedCategories.find(c => c.id === activeCategoryId);
-              if (cat) {
-                setSelectedCategoryForDetails(cat);
-                setCategorySearchQuery(node.label || '');
-                setQuizSearchQuery(node.label || '');
-              }
-              if (node.subcategoryId && activeCategorySubcategories) {
-                const sub = activeCategorySubcategories.find(s => s.id === node.subcategoryId);
-                if (sub) handleSubcategorySelect(sub);
-              }
-            }
-          }
-        }
-      };
-    });
-  }, [activeCategoryId, activeCategoryQuizzes, activeCategorySubcategories, quizzes, sortedCategories]);
 
   const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
   const [quizSearchQuery, setQuizSearchQuery] = useState("");
@@ -1120,50 +953,12 @@ export default function UserDashboard() {
                     </div>
                   )}
 
-                  {/* Motivational Nudge V2 - Right (Repasito) */}
-                  {isLast && (
-                    <div className="hidden lg:flex flex-col items-center absolute -right-24 xl:-right-32 top-[45px] pointer-events-none z-10">
-                      <motion.div
-                        animate={{ y: [0, -4, 0], opacity: [0.9, 1, 0.9] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                        className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-3 py-2 backdrop-blur-md shadow-[0_0_15px_rgba(234,179,8,0.2)] text-center min-w-[100px]"
-                      >
-                        <p className="text-[9px] font-black text-yellow-400 uppercase tracking-tighter leading-tight">
-                          ⚡ ¡Mejora cada día!
-                        </p>
-                      </motion.div>
-                      <svg width="100" height="70" viewBox="0 0 100 70" className="overflow-visible -mt-2">
-                        <motion.path
-                          d="M 80 0 Q 60 10, 20 50"
-                          stroke="#eab308"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          fill="transparent"
-                          initial={{ pathLength: 0 }}
-                          animate={{ pathLength: [0, 1, 1, 0] }}
-                          transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.8, 1], delay: 0.5 }}
-                        />
-                        <motion.path
-                          d="M 25 42 L 20 50 L 28 52"
-                          fill="none"
-                          stroke="#eab308"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: [0, 0, 1, 1, 0] }}
-                          transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.5, 0.8, 1], delay: 0.5 }}
-                        />
-                      </svg>
-                    </div>
-                  )}
+
 
                   <span
-                    onClick={() => setExpandedRoadmapCategoryId(expandedRoadmapCategoryId === category.id ? null : category.id)}
+                    onClick={() => setLocation(`/category/${category.id}?view=roadmap`)}
                     className={cn(
-                      "text-[9px] md:text-[10px] font-black text-center max-w-[68px] line-clamp-1 leading-tight mb-1 tracking-wider cursor-pointer uppercase transition-all duration-300",
-                      expandedRoadmapCategoryId === category.id
-                        ? "text-yellow-400 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]"
-                        : "text-blue-400/80 hover:text-blue-300 hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.4)]"
+                      "text-[9px] md:text-[10px] font-black text-center max-w-[68px] line-clamp-1 leading-tight mb-1 tracking-wider cursor-pointer uppercase transition-all duration-300 text-blue-400/80 hover:text-blue-300 hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.4)]"
                     )}
                     title={category.name}
                   >
@@ -1175,29 +970,16 @@ export default function UserDashboard() {
                         <motion.button
                           whileHover={{ scale: 1.2, rotate: 15 }}
                           whileTap={{ scale: 0.9 }}
-                          onClick={() => setExpandedRoadmapCategoryId(expandedRoadmapCategoryId === category.id ? null : category.id)}
+                          onClick={() => setLocation(`/category/${category.id}?view=roadmap`)}
                           className={cn(
-                            "relative p-3 rounded-full transition-all duration-300 border shadow-sm",
-                            expandedRoadmapCategoryId === category.id
-                              ? "bg-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.5)] border-yellow-500/50"
-                              : "bg-blue-600/10 border-blue-500/20 hover:bg-slate-800 hover:border-blue-500/40 hover:shadow-blue-500/20"
+                            "relative p-3 rounded-full transition-all duration-300 border shadow-sm bg-blue-600/10 border-blue-500/20 hover:bg-slate-800 hover:border-blue-500/40 hover:shadow-blue-500/20"
                           )}
                         >
                           <Star
                             className={cn(
-                              "w-8 h-8 transition-all duration-300 drop-shadow-sm",
-                              expandedRoadmapCategoryId === category.id
-                                ? "text-yellow-400 fill-yellow-400 animate-pulse"
-                                : "text-blue-500 fill-blue-500/10 group-hover:text-yellow-500 group-hover:fill-yellow-500/20"
+                              "w-8 h-8 transition-all duration-300 drop-shadow-sm text-blue-500 fill-blue-500/10 group-hover:text-yellow-500 group-hover:fill-yellow-500/20"
                             )}
                           />
-                          {/* Active Indicator Dot */}
-                          {expandedRoadmapCategoryId === category.id && (
-                            <motion.div
-                              layoutId="activeStarDot"
-                              className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-yellow-500"
-                            />
-                          )}
                         </motion.button>
                       </TooltipTrigger>
                       <TooltipContent className="bg-slate-900 border-slate-800 text-yellow-200 font-bold">
@@ -1206,98 +988,14 @@ export default function UserDashboard() {
                     </Tooltip>
                   </TooltipProvider>
 
-                  {/* ChiquiTest (Repasito) Rayo Button */}
-                  <div className="flex flex-col items-center gap-1 group/repasito">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <motion.button
-                            initial={false}
-                            animate={!isDoneToday ? {
-                              scale: [1, 1.15, 1],
-                              opacity: [1, 0.7, 1],
-                              filter: ["drop-shadow(0 0 0px rgba(234,179,8,0))", "drop-shadow(0 0 12px rgba(234,179,8,0.8))", "drop-shadow(0 0 0px rgba(234,179,8,0))"]
-                            } : {}}
-                            transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                            onClick={() => {
-                              const scoreNum = lastScore !== undefined ? lastScore : 0;
-                              setSelectedQuiz({
-                                title: `Repasito de ${category.name}`,
-                                completedAt: isDoneToday ? lastDate : undefined,
-                                score: isDoneToday ? scoreNum : undefined,
-                                isChiqui: true,
-                                categoryId: category.id
-                              });
-                            }}
-                            className={cn(
-                              "w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all border",
-                              isDoneToday
-                                ? "bg-slate-800/80 text-yellow-500 border-yellow-500/20 shadow-none"
-                                : "bg-gradient-to-br from-yellow-400 via-orange-500 to-yellow-600 text-slate-950 border-white/20 shadow-yellow-500/40 hover:shadow-yellow-500/60"
-                            )}
-                          >
-                            <Zap className={cn("w-5 h-5", !isDoneToday && "fill-current animate-pulse")} />
-                          </motion.button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-slate-900 border-slate-800 text-white font-medium p-3 rounded-xl shadow-2xl">
-                          <div className="space-y-1">
-                            <p className="font-bold text-yellow-400 flex items-center gap-1">
-                              <Zap className="w-3 h-3 fill-current" /> Repasito Diario
-                            </p>
-                            <p className="text-xs text-slate-300">5 preguntas de tus temas completados</p>
-                            <p className="text-[10px] text-yellow-400/80 font-medium italic mt-1 underline">Haz clic para ver tu calendario y racha</p>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
 
-                    {/* Static Score/Repasito Label */}
-                    <div className={cn(
-                      "text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border whitespace-nowrap flex items-center gap-1",
-                      isDoneToday
-                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                        : "bg-slate-800 border-white/5"
-                    )}>
-                      {isDoneToday ? (
-                        <span>{lastScore !== undefined ? `${lastScore}/5` : "0/5"}</span>
-                      ) : (
-                        <motion.span
-                          animate={{ opacity: [1, 0.3, 1], color: ["#f59e0b", "#fb923c", "#f59e0b"] }}
-                          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                          className="flex items-center gap-0.5"
-                        >
-                          <Zap className="w-2.5 h-2.5 fill-current" />
-                          Repasito
-                        </motion.span>
-                      )}
-                    </div>
-                  </div>
                 </div>
               );
             })}
           </div>
-
-          {/* Expandable Roadmap */}
-          <AnimatePresence>
-            {expandedRoadmapCategoryId && (
-              <motion.div
-                initial={{ opacity: 0, height: 0, y: -20 }}
-                animate={{ opacity: 1, height: 'auto', y: 0 }}
-                exit={{ opacity: 0, height: 0, y: -20 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="overflow-hidden"
-              >
-                <HorizontalRoadmap
-                  nodes={roadmapNodes}
-                  categoryName={sortedCategories.find(c => c.id === expandedRoadmapCategoryId)?.name}
-                  title={sortedCategories.find(c => c.id === expandedRoadmapCategoryId)?.name ? `Tu camino en ${sortedCategories.find(c => c.id === expandedRoadmapCategoryId)?.name}` : 'Tu Progreso'}
-                  className="bg-slate-900/50 border border-white/5 rounded-2xl shadow-2xl"
-                  onClose={() => setExpandedRoadmapCategoryId(null)}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
+
+
 
 
         {/* Main Layout: 2 Columns (Content | Sidebar) */}
@@ -1486,7 +1184,7 @@ export default function UserDashboard() {
                       <div
                         key={category.id}
                         id={`category-card-${category.id}`}
-                        onClick={() => handleCategoryClick(category)}
+                        onClick={() => handleCategorySelect(category)}
                         className={`group relative overflow-hidden rounded-xl border transition-all duration-300 cursor-pointer max-w-full ${isRecommended
                           ? "bg-purple-900/10 border-purple-500/30 hover:border-purple-500/50"
                           : "bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-rose-500/30 hover:shadow-[0_0_15px_-3px_rgba(244,63,94,0.15)]"
@@ -1521,7 +1219,7 @@ export default function UserDashboard() {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-8 px-3 text-[10px] font-bold bg-yellow-500/10 text-yellow-500 border border-yellow-500/40 hover:bg-yellow-500 hover:text-slate-900 hover:shadow-[0_0_20px_rgba(234,179,8,0.5)] transition-all duration-300 whitespace-nowrap"
+                                    className="h-8 px-3 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500 hover:text-slate-900 hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] transition-all duration-300 whitespace-nowrap"
                                   >
                                     <MapIcon className="w-3.5 h-3.5 mr-1" />
                                     Mapa
@@ -1533,6 +1231,87 @@ export default function UserDashboard() {
 
                           {/* Action Buttons row (Entrenar, Videos, Temas) */}
                           <div className="flex flex-wrap md:flex-nowrap items-center gap-2 mt-1 md:mt-0 max-w-full" onClick={(e) => e.stopPropagation()}>
+                            {(() => {
+                              const categoryResult = chiquiResults?.find(r => r.categoryId === category.id);
+                              const lastScore = categoryResult?.lastScore;
+                              const lastDate = categoryResult?.lastDate;
+                              const isDoneToday = lastDate ? new Date(lastDate).toDateString() === new Date().toDateString() : false;
+
+                              return (
+                                <div className="flex items-center group/repasito relative">
+                                  {/* Motivational Nudge for Repasito (Integrated) */}
+                                  {!isDoneToday && (
+                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-20 w-max">
+                                      <motion.div
+                                        initial={{ opacity: 0, scale: 0.8, y: 5 }}
+                                        animate={{
+                                          opacity: 1,
+                                          scale: 1,
+                                          y: [0, -5, 0]
+                                        }}
+                                        transition={{
+                                          opacity: { duration: 0.3 },
+                                          y: { repeat: Infinity, duration: 2, ease: "easeInOut" }
+                                        }}
+                                        className="bg-yellow-500 text-slate-900 text-[10px] font-black px-2.5 py-1 rounded-lg shadow-[0_0_15px_rgba(234,179,8,0.4)] border border-yellow-400 whitespace-nowrap uppercase tracking-tight flex items-center gap-1"
+                                      >
+                                        <Zap className="w-3 h-3 fill-current" /> ¡Mejora cada día!
+                                      </motion.div>
+                                      <svg width="12" height="8" viewBox="0 0 12 8" className="text-yellow-500 fill-current -mt-0.5 filter drop-shadow-sm">
+                                        <path d="M 0 0 L 6 8 L 12 0 Z" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <motion.button
+                                          initial={false}
+                                          animate={!isDoneToday ? {
+                                            scale: [1, 1.1, 1],
+                                            filter: ["drop-shadow(0 0 0px rgba(234,179,8,0))", "drop-shadow(0 0 8px rgba(234,179,8,0.5))", "drop-shadow(0 0 0px rgba(234,179,8,0))"]
+                                          } : {}}
+                                          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const scoreNum = lastScore !== undefined ? lastScore : 0;
+                                            setSelectedQuiz({
+                                              title: `Repasito de ${category.name}`,
+                                              completedAt: isDoneToday ? lastDate : undefined,
+                                              score: isDoneToday ? scoreNum : undefined,
+                                              isChiqui: true,
+                                              categoryId: category.id
+                                            });
+                                          }}
+                                          className={cn(
+                                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all border text-xs font-bold whitespace-nowrap",
+                                            isDoneToday
+                                              ? "bg-slate-800/80 text-emerald-400 border-emerald-500/20 hover:bg-slate-700"
+                                              : "bg-yellow-500/10 text-yellow-500 border-yellow-500/40 hover:bg-yellow-500 hover:text-slate-900"
+                                          )}
+                                        >
+                                          <Zap className={cn("w-3.5 h-3.5", !isDoneToday && "fill-current animate-pulse")} />
+                                          <span>Repasito</span>
+                                          {isDoneToday && lastScore !== undefined && (
+                                            <span className="ml-1 text-[10px] opacity-70">({lastScore}/5)</span>
+                                          )}
+                                        </motion.button>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="bg-slate-900 border-slate-800 text-white font-medium p-3 rounded-xl shadow-2xl z-50">
+                                        <div className="space-y-1">
+                                          <p className="font-bold text-yellow-400 flex items-center gap-1">
+                                            <Zap className="w-3 h-3 fill-current" /> Repasito Diario
+                                          </p>
+                                          <p className="text-xs text-slate-300 font-normal">5 preguntas de tus temas completados</p>
+                                          <p className="text-[10px] text-yellow-400/80 font-medium italic mt-1 underline">Haz clic para ver tu calendario y racha</p>
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
+                              );
+                            })()}
+
                             {/* Entrenamiento (CTA) - Mobile Visible ONLY */}
                             <div className="md:hidden">
                               <Link href={`/training/${category.id}`}>
@@ -1561,22 +1340,7 @@ export default function UserDashboard() {
                               </button>
                             )}
 
-                            {/* Temas */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className={`h-8 px-3 text-xs font-medium border transition-all whitespace-nowrap ${isRecommended
-                                ? "bg-purple-500/10 text-purple-300 border-purple-500/20 hover:bg-purple-500/20"
-                                : "bg-slate-700/50 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white"
-                                }`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCategorySelect(category);
-                              }}
-                            >
-                              <ListChecks className="w-3.5 h-3.5 mr-1.5" />
-                              Temas
-                            </Button>
+
 
                             {/* Mapa - Desktop only in this row */}
                             <div className="hidden md:block">
@@ -1588,7 +1352,7 @@ export default function UserDashboard() {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-8 px-3 text-xs font-bold bg-yellow-500/10 text-yellow-500 border border-yellow-500/40 hover:bg-yellow-500 hover:text-slate-900 hover:shadow-[0_0_20px_rgba(234,179,8,0.5)] transition-all duration-300 whitespace-nowrap"
+                                    className="h-8 px-3 text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500 hover:text-slate-900 hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] transition-all duration-300 whitespace-nowrap"
                                   >
                                     <MapIcon className="w-3.5 h-3.5 mr-1.5" />
                                     Mapa

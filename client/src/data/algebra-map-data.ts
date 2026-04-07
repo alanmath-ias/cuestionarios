@@ -330,8 +330,8 @@ export const algebraMapNodes: ArithmeticNode[] = [
     },
 
     {
-        id: 'a5-mastery',
-        label: 'Maestría Final',
+        id: 'a5-miscelanea',
+        label: 'Miscelánea Factorización',
         level: 15,
         type: 'evaluation',
         requires: ['a5-5-combinada', 'a5-6-ax2', 'a5-7-cubos', 'a5-8-adicion'],
@@ -355,7 +355,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         label: 'Fracciones Alg.',
         level: 16, // Shifted UP (15 gap 1)
         type: 'basic',
-        requires: ['a5-mastery'],
+        requires: ['a5-miscelanea'],
         description: 'Simplificación y operaciones racionales.',
         xOffset: 0,
         subcategoryId: 398,

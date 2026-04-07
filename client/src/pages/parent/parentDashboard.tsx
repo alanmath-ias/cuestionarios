@@ -52,12 +52,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import VideoEmbed from "../VideoEmbed"; // Relative import since both are in src/pages (parent is subdir)
 import { QuizDetailsDialog } from "@/components/dialogs/QuizDetailsDialog";
-import { HorizontalRoadmap } from "@/components/roadmap/HorizontalRoadmap";
-import { RoadmapNode } from "@/types/types";
-import { arithmeticMapNodes } from "@/data/arithmetic-map-data";
-import { algebraMapNodes } from "@/data/algebra-map-data";
-import { calculusMapNodes } from "@/data/calculus-map-data";
-import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
 import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
 import { startParentDashboardTour } from "@/lib/tour";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -284,21 +278,9 @@ export default function ParentDashboard() {
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [quizSearchQuery, setQuizSearchQuery] = useState("");
   const { toast } = useToast();
-  const [expandedRoadmapCategoryId, setExpandedRoadmapCategoryId] = useState<number | null>(null);
-  const activeCategoryId = expandedRoadmapCategoryId;
 
-  // Helper to get map nodes based on category
-  const getMapNodes = (catId: number | null) => {
-    if (!catId) return [];
-    const category = categories?.find(c => c.id === catId);
-    const name = category?.name.toLowerCase() || "";
 
-    if (catId === 1 || name.includes("aritmética")) return arithmeticMapNodes;
-    if (catId === 2 || name.includes("álgebra")) return algebraMapNodes;
-    if (catId === 4 || name.includes("diferencial")) return calculusMapNodes;
-    if (catId === 5 || name.includes("integral")) return integralCalculusMapNodes;
-    return [];
-  };
+
 
   const queryOptions = {
     refetchOnWindowFocus: true,
@@ -373,25 +355,15 @@ export default function ParentDashboard() {
     enabled: !!selectedCategoryForDetails,
   });
 
-  // Roadmap specific data (Calculated from allQuizzes and child progress)
-  const activeCategoryQuizzesRoadmap = useMemo(() => {
-    if (!activeCategoryId || !allQuizzes) return [];
-    return allQuizzes.filter(q => Number(q.categoryId) === Number(activeCategoryId));
-  }, [activeCategoryId, allQuizzes]);
 
-  const { data: activeCategorySubcategoriesRoadmap } = useQuery<any[]>({
-    queryKey: ["category-subcategories-roadmap", activeCategoryId],
-    queryFn: async () => {
-      if (!activeCategoryId) return [];
-      const res = await fetch(`/api/admin/subcategories/by-category/${activeCategoryId}`);
-      if (!res.ok) return [];
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
-    },
-    enabled: !!activeCategoryId,
-  });
 
-  // Filter quizzes for the selected category (using allQuizzes for complete view)
+  const handleCategorySelect = (category: Category | null) => {
+    setSelectedCategoryForDetails(category);
+    setSelectedSubcategory(null);
+    setCategorySearchQuery("");
+  };
+
+  // Re-define categoryQuizzes here (moved from removed block)
   const categoryQuizzes = useMemo(() => {
     if (!selectedCategoryForDetails || !allQuizzes) return [];
     const allCatQuizzes = allQuizzes.filter(q => Number(q.categoryId) === Number(selectedCategoryForDetails.id));
@@ -409,123 +381,6 @@ export default function ParentDashboard() {
       };
     }) as QuizWithFeedback[];
   }, [selectedCategoryForDetails, allQuizzes, quizzes]);
-
-  // Calculate Roadmap Nodes for Parent View (Read-Only)
-  const roadmapNodes: RoadmapNode[] = useMemo(() => {
-    const rawNodes = ((activeCategoryId ? getMapNodes(activeCategoryId) : []) as any[]);
-
-    // 1. First pass: Calculate individual node content and status
-    const processedNodes = rawNodes.map((node) => {
-      const categoryQuizzes = activeCategoryQuizzesRoadmap || [];
-      let nodeQuizzes = categoryQuizzes.filter(q => q.subcategoryId == node.subcategoryId) || [];
-
-      if (node.filterKeywords && node.filterKeywords.length > 0) {
-        const keywords = node.filterKeywords.map((k: string) => k.toLowerCase());
-        nodeQuizzes = nodeQuizzes.filter(q => {
-          const titleLower = q.title.toLowerCase();
-          if (!keywords.some((k: string) => titleLower.includes(k))) return false;
-          if (node.excludeKeywords && node.excludeKeywords.length > 0) {
-            const excludeKeys = node.excludeKeywords.map((k: string) => k.toLowerCase());
-            if (excludeKeys.some((k: string) => titleLower.includes(k))) return false;
-          }
-          return true;
-        });
-      }
-
-      let progressPercent = 0;
-      if (nodeQuizzes.length > 0 && quizzes) {
-        const completedCount = nodeQuizzes.filter(q =>
-          quizzes.some(uq => uq.id === q.id && uq.userStatus === 'completed')
-        ).length;
-        progressPercent = (completedCount / nodeQuizzes.length) * 100;
-      }
-
-      let status: 'locked' | 'available' | 'completed' = 'locked';
-      if (nodeQuizzes.length > 0) {
-        status = progressPercent >= 100 ? 'completed' : 'available';
-      }
-
-      return {
-        ...node,
-        nodeQuizzes,
-        progressPercent,
-        calculatedStatus: status
-      };
-    });
-
-    // 2. Second pass: Grouping and Parent status aggregation
-    const groupNodes: Record<string | number, any[]> = {};
-    let currentParent: any = null;
-
-    processedNodes.forEach(node => {
-      const isParent = node.behavior === 'container' || node.type === 'parent' || node.type === 'critical';
-      if (isParent) {
-        currentParent = node;
-        groupNodes[node.id] = [];
-      } else if (currentParent) {
-        if (currentParent && groupNodes[currentParent.id]) {
-          groupNodes[currentParent.id].push(node);
-        }
-      }
-    });
-
-    // 3. Third pass: Construct final RoadmapNode objects
-    return processedNodes.map((node) => {
-      const isParent = node.behavior === 'container' || node.type === 'parent' || node.type === 'critical';
-      let finalStatus: 'locked' | 'available' | 'completed' = node.calculatedStatus;
-
-      if (isParent) {
-        const children = groupNodes[node.id] || [];
-        if (children.length > 0) {
-          const allLocked = children.every(c => c.calculatedStatus === 'locked');
-          const allCompleted = children.every(c => c.calculatedStatus === 'completed');
-          const anyAvailable = children.some(c => c.calculatedStatus === 'available' || c.calculatedStatus === 'completed');
-
-          if (allLocked && node.calculatedStatus === 'locked') {
-            finalStatus = 'locked';
-          } else if (allCompleted) {
-            finalStatus = 'completed';
-          } else if (anyAvailable) {
-            finalStatus = 'available';
-          }
-        }
-      }
-
-      const hasContent = node.nodeQuizzes.length > 0 || isParent;
-
-      return {
-        id: node.id || `node-${Math.random()}`,
-        title: node.label || 'Sin título',
-        description: node.description || '',
-        status: finalStatus,
-        type: 'subcategory',
-        nodeType: node.type,
-        behavior: node.behavior,
-        progress: node.progressPercent,
-        hasContent: hasContent,
-        onClick: () => {
-          if (node.nodeQuizzes.length > 0) {
-            const cat = categories?.find(c => c.id === activeCategoryId);
-            if (cat) {
-              setSelectedCategoryForDetails(cat);
-              const sub = activeCategorySubcategoriesRoadmap?.find(s => s.id === node.subcategoryId);
-              if (sub) {
-                handleSubcategorySelect(sub);
-              } else {
-                setQuizSearchQuery(node.label || '');
-              }
-            }
-          }
-        }
-      };
-    });
-  }, [activeCategoryId, activeCategoryQuizzesRoadmap, activeCategorySubcategoriesRoadmap, quizzes, categories]);
-
-  const handleCategorySelect = (category: Category | null) => {
-    setSelectedCategoryForDetails(category);
-    setSelectedSubcategory(null);
-    setCategorySearchQuery("");
-  };
 
   const handleSubcategorySelect = (subcategory: any | null) => {
     setSelectedSubcategory(subcategory);
@@ -692,29 +547,16 @@ export default function ParentDashboard() {
                       <motion.button
                         whileHover={{ scale: 1.2, rotate: 15 }}
                         whileTap={{ scale: 0.9 }}
-                        onClick={() => setExpandedRoadmapCategoryId(expandedRoadmapCategoryId === category.id ? null : category.id)}
+                        onClick={() => setLocation(`/category/${category.id}?user_id=${childId}&view=roadmap`)}
                         className={cn(
-                          "relative p-3 rounded-full transition-all duration-300 border shadow-sm",
-                          expandedRoadmapCategoryId === category.id
-                            ? "bg-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.5)] border-yellow-500/50"
-                            : "bg-blue-600/10 border-blue-500/20 hover:bg-slate-800 hover:border-blue-500/40 hover:shadow-blue-500/20"
+                          "relative p-3 rounded-full transition-all duration-300 border shadow-sm bg-blue-600/10 border-blue-500/20 hover:bg-slate-800 hover:border-blue-500/40 hover:shadow-blue-500/20"
                         )}
                       >
                         <Star
                           className={cn(
-                            "w-8 h-8 transition-all duration-300 drop-shadow-sm",
-                            expandedRoadmapCategoryId === category.id
-                              ? "text-yellow-400 fill-yellow-400 animate-pulse"
-                              : "text-blue-500 fill-blue-500/10 group-hover:text-yellow-500 group-hover:fill-yellow-500/20"
+                            "w-8 h-8 transition-all duration-300 drop-shadow-sm text-blue-500 fill-blue-500/10 group-hover:text-yellow-500 group-hover:fill-yellow-500/20"
                           )}
                         />
-                        {/* Active Indicator Dot */}
-                        {expandedRoadmapCategoryId === category.id && (
-                          <motion.div
-                            layoutId="activeStarDot"
-                            className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-yellow-500"
-                          />
-                        )}
                       </motion.button>
                     </TooltipTrigger>
                     <TooltipContent className="bg-slate-900 border-slate-800 text-yellow-200 font-bold">
@@ -723,87 +565,13 @@ export default function ParentDashboard() {
                   </Tooltip>
                 </TooltipProvider>
 
-                {/* ChiquiTest (Repasito) Rayo Button — opens calendar dialog */}
-                <div className="flex flex-col items-center gap-1 group/repasito">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <motion.button
-                          onClick={() => {
-                            setSelectedChiquiQuiz({
-                              title: `Repasito de ${category.name}`,
-                              completedAt: isDoneToday ? lastDate : undefined,
-                              score: isDoneToday ? lastScore : undefined,
-                              isChiqui: true,
-                              categoryId: category.id
-                            });
-                          }}
-                          className={cn(
-                            "w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all border",
-                            isDoneToday
-                              ? "bg-slate-800/80 text-yellow-500 border-yellow-500/20 shadow-none cursor-pointer hover:bg-slate-700"
-                              : "bg-slate-800/40 text-slate-500 border-slate-700 shadow-none cursor-pointer opacity-70 hover:opacity-100"
-                          )}
-                        >
-                          <Zap className={cn("w-5 h-5", isDoneToday && "fill-current")} />
-                        </motion.button>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-slate-900 border-slate-800 text-white font-medium p-3 rounded-xl shadow-2xl">
-                        <div className="space-y-1">
-                          <p className="font-bold text-yellow-400 flex items-center gap-1">
-                            <Zap className="w-3 h-3 fill-current" /> Repasito Diario
-                          </p>
-                          <p className="text-xs text-slate-300">Progreso del Estudiante</p>
-                          {isDoneToday ? (
-                            <p className="text-[10px] text-emerald-400 font-bold mt-1">Ver calendario y resultados</p>
-                          ) : (
-                            <p className="text-[10px] text-slate-400 font-bold mt-1">Aún no ha completado el repasito de hoy</p>
-                          )}
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
 
-                  {/* Static score label */}
-                  <div className={cn(
-                    "text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border whitespace-nowrap",
-                    isDoneToday
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                      : "bg-slate-800 text-slate-500 border-white/5"
-                  )}>
-                    {isDoneToday && lastScore !== undefined ? `${lastScore}/5` : "–/5"}
-                  </div>
-                </div>
               </div>
             );
           })}
         </div>
 
-        {/* Roadmap Display Area */}
-        <AnimatePresence mode="wait">
-          {expandedRoadmapCategoryId && (
-            <motion.div
-              key={expandedRoadmapCategoryId}
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden bg-slate-900/40 border border-blue-500/10 rounded-3xl backdrop-blur-md"
-            >
-              <HorizontalRoadmap
-                nodes={roadmapNodes}
-                title={`Progreso de ${parentChild?.child_name || 'Hijo'}`}
-                categoryName={categories?.find(c => c.id === expandedRoadmapCategoryId)?.name}
-                onClose={() => setExpandedRoadmapCategoryId(null)}
-              />
-              <div className="px-6 pb-6 text-center">
-                <p className="text-xs text-slate-500 italic flex items-center justify-center gap-2">
-                  <Star className="w-3 h-3 text-yellow-500" />
-                  Haz clic en los temas para ver los cuestionarios y resultados del estudiante (Solo lectura).
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -940,7 +708,8 @@ export default function ParentDashboard() {
                 {sortedCategories.map((category) => (
                   <div
                     key={category.id + "-cat"}
-                    className="group relative overflow-hidden rounded-xl border transition-all duration-300 bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-rose-500/30 hover:shadow-[0_0_15px_-3px_rgba(244,63,94,0.15)] max-w-full"
+                    onClick={() => handleCategorySelect(category)}
+                    className="group relative overflow-hidden rounded-xl border transition-all duration-300 bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-rose-500/30 hover:shadow-[0_0_15px_-3px_rgba(244,63,94,0.15)] max-w-full cursor-pointer"
                   >
                     <div className="flex flex-col md:flex-row md:items-center p-3 gap-3">
                       <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -955,6 +724,64 @@ export default function ParentDashboard() {
                       </div>
 
                       <div className="flex items-center gap-2 mt-2 md:mt-0 overflow-x-auto pb-1 md:pb-0 no-scrollbar max-w-full">
+                        {/* Repasito (Daily Quiz) Bolt - RELOCATED HERE (Parent View) */}
+                        {(() => {
+                          const categoryResult = chiquiResults?.find(r => r.categoryId === category.id);
+                          const lastScore = categoryResult?.lastScore;
+                          const lastDate = categoryResult?.lastDate;
+                          const isDoneToday = lastDate ? new Date(lastDate).toDateString() === new Date().toDateString() : false;
+
+                          return (
+                            <div className="flex items-center group/repasito">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedChiquiQuiz({
+                                          title: `Repasito de ${category.name}`,
+                                          completedAt: isDoneToday ? lastDate : undefined,
+                                          score: isDoneToday ? lastScore : undefined,
+                                          isChiqui: true,
+                                          categoryId: category.id
+                                        });
+                                      }}
+                                      className={cn(
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all border text-xs font-bold whitespace-nowrap",
+                                        isDoneToday
+                                          ? "bg-slate-800/80 text-emerald-400 border-emerald-500/20 hover:bg-slate-700"
+                                          : "bg-slate-800/40 text-slate-500 border-slate-700 shadow-none cursor-pointer opacity-70 hover:opacity-100"
+                                      )}
+                                    >
+                                      <Zap className={cn("w-3.5 h-3.5", isDoneToday && "fill-current")} />
+                                      <span className="hidden lg:inline">Repasito</span>
+                                      {isDoneToday && lastScore !== undefined && (
+                                        <span className="ml-1 text-[10px] opacity-70">({lastScore}/5)</span>
+                                      )}
+                                    </motion.button>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="bg-slate-900 border-slate-800 text-white font-medium p-3 rounded-xl shadow-2xl z-50">
+                                    <div className="space-y-1">
+                                      <p className="font-bold text-yellow-400 flex items-center gap-1">
+                                        <Zap className="w-3 h-3 fill-current" /> Repasito Diario
+                                      </p>
+                                      <p className="text-xs text-slate-300 font-normal">Progreso del Estudiante</p>
+                                      {isDoneToday ? (
+                                        <p className="text-[10px] text-emerald-400 font-bold mt-1">Ver calendario y resultados</p>
+                                      ) : (
+                                        <p className="text-[10px] text-slate-400 font-bold mt-1">Aún no ha completado el repasito de hoy</p>
+                                      )}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                          );
+                        })()}
+
                         {category.youtubeLink && (
                           <button
                             onClick={() => handleCreateVideo(category.youtubeLink!)}
@@ -965,19 +792,11 @@ export default function ParentDashboard() {
                             <span className="hidden lg:inline">Videos</span>
                           </button>
                         )}
-                        <Button
-                          size="sm"
-                          className="h-8 px-3 text-xs font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all whitespace-nowrap"
-                          onClick={() => handleCategorySelect(category)}
-                          title="Ver temas y cuestionarios"
-                        >
-                          <ListChecks className="w-3.5 h-3.5 mr-1.5" />
-                          Temas
-                        </Button>
+
 
                         <Button
                           size="sm"
-                          className="h-8 px-3 text-xs font-medium bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all whitespace-nowrap"
+                          className="h-8 px-3 text-xs font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all whitespace-nowrap"
                           onClick={() => setLocation(`/category/${category.id}?user_id=${childId}&view=roadmap`)}
                           title="Ver mapa de progreso"
                         >
@@ -1045,7 +864,7 @@ export default function ParentDashboard() {
             compact={true}
           />
         </div>
-      </div>
+      </div >
 
       <QuizDetailsDialog
         open={!!selectedQuiz}
@@ -1322,13 +1141,15 @@ export default function ParentDashboard() {
         </DialogContent>
       </Dialog>
 
-      {currentUser && (
-        <OnboardingTour
-          isOpen={!currentUser.tourStatus?.onboarding}
-          user={currentUser}
-          onComplete={startParentDashboardTour}
-        />
-      )}
-    </div>
+      {
+        currentUser && (
+          <OnboardingTour
+            isOpen={!currentUser.tourStatus?.onboarding}
+            user={currentUser}
+            onComplete={startParentDashboardTour}
+          />
+        )
+      }
+    </div >
   );
 }
