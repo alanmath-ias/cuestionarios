@@ -65,6 +65,8 @@ import { RestZoneDialog } from "@/components/dialogs/RestZoneDialog";
 import { WelcomeDialog } from "@/components/dialogs/WelcomeDialog";
 import { getRandomQuote } from "@/lib/motivational-quotes";
 import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
+import { MasteryInsignia } from "@/components/dashboard/MasteryInsignia";
+import { AwardsDialog } from "@/components/dashboard/AwardsDialog";
 
 
 interface QuizWithFeedback {
@@ -340,6 +342,7 @@ export default function UserDashboard() {
   const [_, setLocation] = useLocation();
   const [selectedCategoryForDetails, setSelectedCategoryForDetails] = useState<Category | null>(null);
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
+  const [selectedAwardsCategory, setSelectedAwardsCategory] = useState<Category | null>(null);
 
   // Welcome Dialog State
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
@@ -906,64 +909,21 @@ export default function UserDashboard() {
 
           <div className="flex items-center justify-center gap-4 py-4 flex-wrap relative">
             {sortedCategories.map((category, index) => {
-              const categoryResult = chiquiResults?.find(r => r.categoryId === category.id);
-              const lastScore = categoryResult?.lastScore;
-              const lastDate = categoryResult?.lastDate;
-              const isDoneToday = lastDate ? new Date(lastDate).toDateString() === new Date().toDateString() : false;
-
               const isFirst = index === 0;
               const isLast = index === sortedCategories.length - 1;
 
               return (
-                <div key={category.id} className="flex flex-col items-center gap-1 relative">
-                  {/* Motivational Nudge V2 - Left (Maps) */}
-                  {isFirst && (
-                    <div className="hidden lg:flex flex-col items-center absolute -left-24 xl:-left-32 top-[-30px] pointer-events-none z-10">
-                      <motion.div
-                        animate={{ y: [0, -4, 0], opacity: [0.9, 1, 0.9] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                        className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2 backdrop-blur-md shadow-[0_0_15px_rgba(59,130,246,0.2)] text-center min-w-[90px]"
-                      >
-                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-tighter leading-tight">
-                          🌟 Tu ruta al éxito
-                        </p>
-                      </motion.div>
-                      <svg width="100" height="70" viewBox="0 0 100 70" className="overflow-visible -mt-2">
-                        <motion.path
-                          d="M 20 0 Q 40 10, 80 50"
-                          stroke="#3b82f6"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          fill="transparent"
-                          initial={{ pathLength: 0 }}
-                          animate={{ pathLength: [0, 1, 1, 0] }}
-                          transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.8, 1] }}
-                        />
-                        <motion.path
-                          d="M 75 42 L 80 50 L 72 52"
-                          fill="none"
-                          stroke="#3b82f6"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: [0, 0, 1, 1, 0] }}
-                          transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.5, 0.8, 1] }}
-                        />
-                      </svg>
-                    </div>
-                  )}
+                <div key={category.id} className="flex flex-col items-center gap-1.5 relative group/star">
+                  {/* Achievement Insignia ABOVE the Star */}
+                  <div className="h-10 flex items-center justify-center">
+                    <MasteryInsignia
+                      categoryId={category.id}
+                      quizzes={quizzes || []}
+                      onClick={() => setSelectedAwardsCategory(category)}
+                      size="lg"
+                    />
+                  </div>
 
-
-
-                  <span
-                    onClick={() => setLocation(`/category/${category.id}?view=roadmap`)}
-                    className={cn(
-                      "text-[9px] md:text-[10px] font-black text-center max-w-[68px] line-clamp-1 leading-tight mb-1 tracking-wider cursor-pointer uppercase transition-all duration-300 text-blue-400/80 hover:text-blue-300 hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.4)]"
-                    )}
-                    title={category.name}
-                  >
-                    {category.name}
-                  </span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -977,7 +937,7 @@ export default function UserDashboard() {
                         >
                           <Star
                             className={cn(
-                              "w-8 h-8 transition-all duration-300 drop-shadow-sm text-blue-500 fill-blue-500/10 group-hover:text-yellow-500 group-hover:fill-yellow-500/20"
+                              "w-8 h-8 transition-all duration-300 drop-shadow-sm text-blue-500 fill-blue-500/10 group-hover/star:text-yellow-500 group-hover/star:fill-yellow-500/20"
                             )}
                           />
                         </motion.button>
@@ -988,7 +948,53 @@ export default function UserDashboard() {
                     </Tooltip>
                   </TooltipProvider>
 
+                  <span
+                    onClick={() => setLocation(`/category/${category.id}?view=roadmap`)}
+                    className={cn(
+                      "text-[9px] md:text-[10px] font-black text-center max-w-[68px] line-clamp-1 leading-tight mt-1 tracking-wider cursor-pointer uppercase transition-all duration-300 text-blue-400/80 hover:text-blue-300 hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.4)]"
+                    )}
+                    title={category.name}
+                  >
+                    {category.name}
+                  </span>
 
+                  {/* Motivational Nudge V3 - Attached to Last Star */}
+                  {isLast && (
+                    <div className="hidden lg:flex flex-col items-center absolute -right-24 xl:-right-32 bottom-[-10px] pointer-events-none z-10 transition-all">
+                      <svg width="80" height="60" viewBox="0 0 100 70" className="overflow-visible mb-[-12px]">
+                        <motion.path
+                          d="M 80 60 Q 60 50, 20 15"
+                          stroke="#3b82f6"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          fill="transparent"
+                          initial={{ pathLength: 0 }}
+                          animate={{ pathLength: [0, 1, 1, 0] }}
+                          transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.8, 1] }}
+                        />
+                        <motion.path
+                          d="M 25 22 L 20 15 L 28 12"
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: [0, 0, 1, 1, 0] }}
+                          transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.5, 0.8, 1] }}
+                        />
+                      </svg>
+                      <motion.div
+                        animate={{ y: [0, 4, 0], opacity: [0.9, 1, 0.9] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2 backdrop-blur-md shadow-[0_0_15px_rgba(59,130,246,0.2)] text-center min-w-[95px] flex items-center gap-1.5"
+                      >
+                        <Star className="w-2.5 h-2.5 text-yellow-500 fill-yellow-500" />
+                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-tighter leading-tight whitespace-nowrap">
+                          Tu ruta al éxito
+                        </p>
+                      </motion.div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -2113,7 +2119,16 @@ export default function UserDashboard() {
             />
           )
         }
-      </div >
+
+        <AwardsDialog
+          isOpen={!!selectedAwardsCategory}
+          onClose={() => setSelectedAwardsCategory(null)}
+          category={selectedAwardsCategory}
+          quizzes={quizzes || []}
+          username={currentUser?.username || "Estudiante"}
+        />
+
+      </div>
       <FloatingWhatsApp
         message="Hola, me gustaría cotizar clases de refuerzo para mejorar mi rendimiento en matemáticas."
         tooltip="Cotizar Clases de Refuerzo"
