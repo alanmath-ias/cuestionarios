@@ -149,6 +149,26 @@ export default function AdminReports() {
         },
     });
 
+    const deleteReportMutation = useMutation({
+        mutationFn: async (id: number) => {
+            await apiRequest("DELETE", `/api/admin/reports/${id}`);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
+            toast({
+                title: "Reporte eliminado",
+                description: "El reporte ha sido eliminado permanentemente.",
+            });
+        },
+        onError: () => {
+            toast({
+                title: "Error",
+                description: "No se pudo eliminar el reporte.",
+                variant: "destructive",
+            });
+        },
+    });
+
     const handleCloseDialog = () => {
         setSelectedReportId(null);
         setAiResponse(null);
@@ -268,14 +288,18 @@ export default function AdminReports() {
                                                             size="sm"
                                                             variant="outline"
                                                             onClick={() => {
-                                                                if (window.confirm("¿Deseas eliminar este reporte ignorándolo (0 créditos)?")) {
-                                                                    resolveAndRewardMutation.mutate({ id: report.id, credits: 0 });
+                                                                if (window.confirm("¿Deseas eliminar permanentemente este reporte?")) {
+                                                                    deleteReportMutation.mutate(report.id);
                                                                 }
                                                             }}
-                                                            disabled={resolveAndRewardMutation.isPending}
+                                                            disabled={deleteReportMutation.isPending}
                                                             className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20 hover:text-red-300"
                                                         >
-                                                            <Trash2 className="h-4 w-4" />
+                                                            {deleteReportMutation.isPending ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                            ) : (
+                                                                <Trash2 className="h-4 w-4" />
+                                                            )}
                                                         </Button>
                                                     </div>
                                                 </TableCell>
@@ -313,7 +337,9 @@ export default function AdminReports() {
                                         </div>
                                         <div className="min-w-0">
                                             <h4 className="font-semibold text-sm text-slate-400">Cuestionario</h4>
-                                            <p className="text-slate-200 truncate" title={reportDetails.quiz?.title}>{reportDetails.quiz?.title} (ID: {reportDetails.quiz?.id})</p>
+                                            <p className="text-slate-200" title={reportDetails.quiz?.title}>
+                                                {reportDetails.quiz?.title} <span className="text-slate-500 text-xs">(ID: {reportDetails.quiz?.id})</span>
+                                            </p>
                                         </div>
                                     </div>
 

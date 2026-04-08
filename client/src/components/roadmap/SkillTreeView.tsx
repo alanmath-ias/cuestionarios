@@ -32,9 +32,11 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     const [celebratingNodeId, setCelebratingNodeId] = useState<string | null>(null);
     const [showCelebrationDialog, setShowCelebrationDialog] = useState(false);
     const [processedCelebrateParam, setProcessedCelebrateParam] = useState<string | null>(null);
-    const [processedScrollId, setProcessedScrollId] = useState<string | null>(null); // New state
-    const [processedCelebrationId, setProcessedCelebrationId] = useState<string | null>(null); // New state
-    const [celebrationType, setCelebrationType] = useState<'node' | 'family'>('node'); // New state for type of celebration
+    const [processedScrollId, setProcessedScrollId] = useState<string | null>(null); // state for scroll
+    const [processedCelebrationId, setProcessedCelebrationId] = useState<string | null>(null); // state for node/family celebrate
+    const [celebrationType, setCelebrationType] = useState<'node' | 'family'>('node'); // type of celebration
+    const [showSilverMedal, setShowSilverMedal] = useState(false); // State for silver medal overlay
+    const [processedSilverMedalId, setProcessedSilverMedalId] = useState<string | null>(null); // To avoid repeat
 
     // Calculate Multi-purpose progress metrics
     const { totalVisibleQuizzes, nodeProgress } = React.useMemo(() => {
@@ -224,13 +226,23 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                 }
             }, 500);
 
-            // Clean URL after a delay if we are just focusing
-            if (source !== 'quiz') {
-                setTimeout(() => {
-                    const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
-                    window.history.replaceState({}, '', newUrl);
-                }, 3000);
-            }
+            // Clean URL after a delay to prevent "sticky" parameters (like source=quiz)
+            // that cause the medal to reappear when using the back button.
+            setTimeout(() => {
+                const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
+                window.history.replaceState({}, '', newUrl);
+            }, 3000);
+        }
+
+        // 1.5 Process Silver Medal (Every quiz completion)
+        if (source === 'quiz' && focusId !== processedSilverMedalId) {
+            setProcessedSilverMedalId(focusId);
+            // Wait for scroll to start before showing medal
+            setTimeout(() => {
+                setShowSilverMedal(true);
+                // Hide after 2.5 seconds
+                setTimeout(() => setShowSilverMedal(false), 2500);
+            }, 800);
         }
 
         // 2. Process Celebration (Reactive to allQuizzes and nodeProgress updates)
@@ -370,28 +382,33 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
 
                                 <div className="mb-6 relative inline-block">
                                     <div className={cn(
-                                        "absolute inset-0 blur-2xl rounded-full",
-                                        celebrationType === 'family' ? "bg-slate-400/20" : "bg-yellow-500/20"
+                                        "absolute inset-0 blur-3xl rounded-full scale-110",
+                                        celebrationType === 'family' ? "bg-slate-400/30" : "bg-yellow-500/30"
                                     )} />
                                     <div className={cn(
-                                        "relative bg-slate-800 p-4 rounded-full border-2",
-                                        celebrationType === 'family' ? "border-slate-400/30" : "border-yellow-500/30"
+                                        "relative p-6 rounded-full border-4 shadow-2xl",
+                                        celebrationType === 'family'
+                                            ? "bg-gradient-to-br from-slate-400 via-slate-500 to-slate-700 border-slate-300/50 shadow-slate-900/50"
+                                            : "bg-gradient-to-br from-yellow-300 via-yellow-500 to-amber-700 border-yellow-200/50 shadow-amber-900/50"
                                     )}>
                                         {celebrationType === 'family' ? (
-                                            <Trophy className="w-12 h-12 text-slate-200" />
+                                            <Trophy className="w-16 h-16 text-slate-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
                                         ) : (
-                                            <Medal className="w-12 h-12 text-yellow-400 fill-yellow-400/20" />
+                                            <Medal className="w-16 h-16 text-yellow-50 fill-yellow-100/10 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
                                         )}
+
+                                        {/* Shine effect */}
+                                        <div className="absolute top-2 left-2 w-4 h-4 bg-white/30 blur-sm rounded-full" />
                                     </div>
                                     <motion.div
-                                        animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
-                                        transition={{ repeat: Infinity, duration: 2 }}
+                                        animate={{ scale: [1, 1.3, 1], rotate: [0, 15, -15, 0] }}
+                                        transition={{ repeat: Infinity, duration: 2.5 }}
                                         className={cn(
-                                            "absolute -top-2 -right-2 p-1.5 rounded-full shadow-lg",
-                                            celebrationType === 'family' ? "bg-slate-400 text-slate-900" : "bg-yellow-500 text-slate-900"
+                                            "absolute -top-1 -right-1 p-2 rounded-full shadow-xl border-2",
+                                            celebrationType === 'family' ? "bg-slate-200 border-slate-400 text-slate-900" : "bg-yellow-400 border-yellow-600 text-slate-900"
                                         )}
                                     >
-                                        {celebrationType === 'family' ? <Trophy className="w-4 h-4" /> : <Star className="w-4 h-4 fill-current" />}
+                                        {celebrationType === 'family' ? <Trophy className="w-5 h-5" /> : <Star className="w-5 h-5 fill-current" />}
                                     </motion.div>
                                 </div>
 
@@ -410,6 +427,44 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                 >
                                     ¡EXCELENTE!
                                 </Button>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
+                {/* Silver Medal Overlay (Quick Celebration) */}
+                <AnimatePresence>
+                    {showSilverMedal && (
+                        <div className="fixed inset-0 z-[10001] flex items-center justify-center pointer-events-none">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
+                                animate={{
+                                    opacity: [0, 1, 1, 0],
+                                    scale: [0.5, 1.2, 1, 0.8],
+                                    rotate: [-20, 0, 0, 10]
+                                }}
+                                transition={{
+                                    duration: 2.5,
+                                    times: [0, 0.2, 0.8, 1],
+                                    ease: "easeOut"
+                                }}
+                                className="flex flex-col items-center"
+                            >
+                                <div className="relative">
+                                    {/* Outer Glow */}
+                                    <div className="absolute inset-0 bg-slate-400/30 blur-3xl rounded-full scale-150 animate-pulse" />
+
+                                    {/* Medal Icon */}
+                                    <div className="relative bg-gradient-to-br from-slate-200 via-slate-400 to-slate-500 p-8 rounded-full border-4 border-slate-300 shadow-[0_0_60px_rgba(148,163,184,0.6)]">
+                                        <Medal className="w-32 h-32 text-slate-100 drop-shadow-2xl" />
+
+                                        {/* Inner Shine */}
+                                        <div className="absolute top-4 left-4 w-8 h-8 bg-white/40 blur-md rounded-full rotate-45" />
+                                    </div>
+
+                                    {/* Particle Burst Effects (CSS animations) */}
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 border-white/20 rounded-full animate-ping scale-150" />
+                                </div>
                             </motion.div>
                         </div>
                     )}
