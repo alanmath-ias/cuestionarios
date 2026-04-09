@@ -619,8 +619,8 @@ export default function AdminReports() {
                                         </div>
 
                                         {aiResponse && (
-                                            <div className="bg-purple-500/10 p-4 rounded-lg border border-purple-500/20 text-sm text-slate-200">
-                                                <AIMarkdown content={aiResponse} />
+                                            <div className="bg-purple-500/10 p-4 rounded-lg border border-purple-500/20 text-sm">
+                                                <AIMarkdown content={aiResponse} className="text-white prose-invert" />
                                             </div>
                                         )}
                                     </div>
