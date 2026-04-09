@@ -792,32 +792,39 @@ function QuizList() {
                                 {quiz.difficulty}
                               </span>
 
-                              <div className="flex gap-2">
-                                {!isCompleted && !searchParams.get('user_id') && (
+                              <div className="flex flex-col items-end gap-1">
+                                {isCompleted && quizProgress?.score !== undefined && (
+                                  <span className="text-xs font-bold text-white mr-1 opacity-90">
+                                    Nota: {quizProgress.score.toFixed(1)}/10
+                                  </span>
+                                )}
+                                <div className="flex gap-2">
+                                  {!isCompleted && !searchParams.get('user_id') && (
+                                    <Button
+                                      size="sm"
+                                      className="h-7 px-2 text-xs bg-slate-700 hover:bg-slate-600 text-white border border-slate-600"
+                                      onClick={(e) => handleMiniStart(quiz.id)}
+                                    >
+                                      Mini
+                                    </Button>
+                                  )}
                                   <Button
                                     size="sm"
-                                    className="h-7 px-2 text-xs bg-slate-700 hover:bg-slate-600 text-white border border-slate-600"
-                                    onClick={(e) => handleMiniStart(quiz.id)}
+                                    className={`h-7 px-3 text-xs font-medium ${isCompleted ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                                    onClick={() => {
+                                      if (isCompleted && quizProgress) {
+                                        // Ensure user_id is passed if present
+                                        const parentUserId = searchParams.get('user_id');
+                                        const resultUrl = `/results/${quizProgress.id}${parentUserId ? `?user_id=${parentUserId}` : ''}`;
+                                        setLocation(resultUrl);
+                                      } else {
+                                        handleQuizAction(quiz.id);
+                                      }
+                                    }}
                                   >
-                                    Mini
+                                    {isCompleted ? 'Ver Resultados' : 'Comenzar'}
                                   </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  className={`h-7 px-3 text-xs font-medium ${isCompleted ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
-                                  onClick={() => {
-                                    if (isCompleted && quizProgress) {
-                                      // Ensure user_id is passed if present
-                                      const parentUserId = searchParams.get('user_id');
-                                      const resultUrl = `/results/${quizProgress.id}${parentUserId ? `?user_id=${parentUserId}` : ''}`;
-                                      setLocation(resultUrl);
-                                    } else {
-                                      handleQuizAction(quiz.id);
-                                    }
-                                  }}
-                                >
-                                  {isCompleted ? 'Ver Resultados' : 'Comenzar'}
-                                </Button>
+                                </div>
                               </div>
                             </div>
                           </div>

@@ -8,6 +8,12 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { TransformWrapper, TransformComponent, ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface SkillTreeViewProps {
     nodes: ArithmeticNode[];
@@ -39,37 +45,112 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     const [processedSilverMedalId, setProcessedSilverMedalId] = useState<string | null>(null); // To avoid repeat
 
     // Calculate Multi-purpose progress metrics
-    const { totalVisibleQuizzes, nodeProgress } = React.useMemo(() => {
-        if (!allQuizzes || allQuizzes.length === 0) return { totalVisibleQuizzes: 0, nodeProgress: {} };
+    const { totalVisibleQuizzes, nodeProgress, nodeAverages, nodeCompletedCount, nodeTotalQuizzes } = React.useMemo(() => {
+        if (!allQuizzes || allQuizzes.length === 0) return { totalVisibleQuizzes: 0, nodeProgress: {}, nodeAverages: {}, nodeCompletedCount: {}, nodeTotalQuizzes: {} };
         const mappedQuizIds = new Set<number>();
         const progressMapLocal: Record<string, number> = {};
+        const averagesMapLocal: Record<string, number> = {};
+        const completedCountMapLocal: Record<string, number> = {};
+        const totalQuizzesMapLocal: Record<string, number> = {};
+
+        // Helper to get all descendant IDs recursively
+        const getDescendantIds = (rootId: string) => {
+            const descendants: string[] = [rootId];
+            const queue = [rootId];
+            const visited = new Set<string>();
+
+            while (queue.length > 0) {
+                const currentId = queue.shift()!;
+                if (visited.has(currentId)) continue;
+                visited.add(currentId);
+
+                const children = nodes.filter(n => n.requires.includes(currentId));
+                for (const child of children) {
+                    if (child.behavior !== 'container') {
+                        descendants.push(child.id);
+                        queue.push(child.id);
+                    }
+                }
+            }
+            return descendants;
+        };
 
         nodes.forEach(node => {
-            const hasSub = !!(node.subcategoryId || (node.additionalSubcategories && node.additionalSubcategories.length > 0));
-            if (!hasSub) return;
+            let contextQuizzes: any[] = [];
 
-            let matches = allQuizzes.filter(q =>
-                Number(q.subcategoryId) === Number(node.subcategoryId) ||
-                (node.additionalSubcategories && node.additionalSubcategories.includes(Number(q.subcategoryId)))
-            );
+            if (node.behavior === 'container') {
+                // For containers, we aggregate EVERY individual quiz in their family branch
+                const familyIds = getDescendantIds(node.id);
+                const familyNodes = nodes.filter(n => familyIds.includes(n.id));
 
-            if (node.filterKeywords?.length) {
-                const kw = node.filterKeywords.map(k => k.toLowerCase());
-                matches = matches.filter(q => kw.some(k => q.title.toLowerCase().includes(k)));
+                familyNodes.forEach(fn => {
+                    let nodeMatches = allQuizzes.filter(q =>
+                        Number(q.subcategoryId) === Number(fn.subcategoryId) ||
+                        (fn.additionalSubcategories && fn.additionalSubcategories.includes(Number(q.subcategoryId)))
+                    );
+
+                    if (fn.filterKeywords?.length) {
+                        const kw = fn.filterKeywords.map(k => k.toLowerCase());
+                        nodeMatches = nodeMatches.filter(q => kw.some(k => q.title.toLowerCase().includes(k)));
+                    }
+                    if (fn.excludeKeywords?.length) {
+                        const ex = fn.excludeKeywords.map(k => k.toLowerCase());
+                        nodeMatches = nodeMatches.filter(q => !ex.some(k => q.title.toLowerCase().includes(k)));
+                    }
+
+                    contextQuizzes.push(...nodeMatches);
+                });
+
+                // Deduplicate quizzes if they appear in multiple related nodes
+                const seenIds = new Set();
+                contextQuizzes = contextQuizzes.filter(q => {
+                    if (seenIds.has(q.id)) return false;
+                    seenIds.add(q.id);
+                    return true;
+                });
+            } else {
+                const hasSub = !!(node.subcategoryId || (node.additionalSubcategories && node.additionalSubcategories.length > 0));
+                if (!hasSub) return;
+
+                contextQuizzes = allQuizzes.filter(q =>
+                    Number(q.subcategoryId) === Number(node.subcategoryId) ||
+                    (node.additionalSubcategories && node.additionalSubcategories.includes(Number(q.subcategoryId)))
+                );
+
+                if (node.filterKeywords?.length) {
+                    const kw = node.filterKeywords.map(k => k.toLowerCase());
+                    contextQuizzes = contextQuizzes.filter(q => kw.some(k => q.title.toLowerCase().includes(k)));
+                }
+                if (node.excludeKeywords?.length) {
+                    const ex = node.excludeKeywords.map(k => k.toLowerCase());
+                    contextQuizzes = contextQuizzes.filter(q => !ex.some(k => q.title.toLowerCase().includes(k)));
+                }
             }
-            if (node.excludeKeywords?.length) {
-                const ex = node.excludeKeywords.map(k => k.toLowerCase());
-                matches = matches.filter(q => !ex.some(k => q.title.toLowerCase().includes(k)));
-            }
 
-            if (matches.length > 0) {
-                const done = matches.filter(q => q.status === 'completed').length;
-                progressMapLocal[node.id] = (done / matches.length) * 100;
-                matches.forEach(q => mappedQuizIds.add(q.id));
+            if (contextQuizzes.length > 0) {
+                const completedQuizzes = contextQuizzes.filter(q => q.status === 'completed');
+                const doneCount = completedQuizzes.length;
+
+                progressMapLocal[node.id] = (doneCount / contextQuizzes.length) * 100;
+                completedCountMapLocal[node.id] = doneCount;
+                totalQuizzesMapLocal[node.id] = contextQuizzes.length;
+
+                if (doneCount > 0) {
+                    const totalScore = completedQuizzes.reduce((sum, q) => sum + (Number(q.score) || 0), 0);
+                    averagesMapLocal[node.id] = totalScore / doneCount;
+                }
+
+                contextQuizzes.forEach(q => mappedQuizIds.add(q.id));
             }
         });
 
-        return { totalVisibleQuizzes: mappedQuizIds.size, nodeProgress: progressMapLocal };
+        return {
+            totalVisibleQuizzes: mappedQuizIds.size,
+            nodeProgress: progressMapLocal,
+            nodeAverages: averagesMapLocal,
+            nodeCompletedCount: completedCountMapLocal,
+            nodeTotalQuizzes: totalQuizzesMapLocal
+        };
     }, [nodes, allQuizzes]);
 
     // Get highlighted nodes recursively (stops at next container)
@@ -345,11 +426,12 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     };
 
     return (
-        <div
-            ref={containerRef}
-            className="relative w-full min-h-[600px] flex flex-col items-center bg-transparent py-8"
-            onClick={() => setHighlightedNodeId(null)} // Click outside clears highlight
-        >
+        <TooltipProvider delayDuration={300}>
+            <div
+                ref={containerRef}
+                className="relative w-full min-h-[600px] flex flex-col items-center bg-transparent py-8"
+                onClick={() => setHighlightedNodeId(null)} // Click outside clears highlight
+            >
             {styles}
 
             {/* Header */}
@@ -816,18 +898,19 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                             const isHighlighted = highlightedSet.has(node.id);
 
                                             return (
-                                                <div
-                                                    key={node.id}
-                                                    id={`node-container-${node.id}`}
-                                                    style={{
-                                                        position: 'absolute',
-                                                        left: pos.x,
-                                                        top: pos.y,
-                                                        transform: 'translate(-50%, -50%)',
-                                                        zIndex: isHighlighted ? 30 : 10
-                                                    }}
-                                                >
-                                                    <motion.div
+                                                <Tooltip key={node.id}>
+                                                    <TooltipTrigger asChild>
+                                                        <div
+                                                            id={`node-container-${node.id}`}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                left: pos.x,
+                                                                top: pos.y,
+                                                                transform: 'translate(-50%, -50%)',
+                                                                zIndex: isHighlighted ? 30 : 10
+                                                            }}
+                                                        >
+                                                            <motion.div
                                                         initial={{ opacity: 0, scale: 0.8, y: 20 }}
                                                         whileInView={isCompleted ? {
                                                             opacity: 1,
@@ -974,18 +1057,24 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                             </div>
                                                         )}
 
-                                                        {/* Label under node - Optimized for mobile density */}
-                                                        <div className="mt-4 w-32 md:w-40 text-center pointer-events-none">
-                                                            <span className={cn(
-                                                                "inline-block px-3 py-1 rounded-xl text-[10px] md:text-xs font-bold border backdrop-blur-md shadow-sm transition-colors duration-300 leading-tight whitespace-pre-line",
+                                                        {/* Label under node - Closer to progress bar and includes score */}
+                                                        <div className="mt-1 w-32 md:w-40 text-center pointer-events-none flex flex-col items-center">
+                                                            <div className={cn(
+                                                                "inline-flex flex-col items-center px-3 py-1 rounded-xl text-[10px] md:text-xs font-bold border backdrop-blur-md shadow-sm transition-colors duration-300 leading-tight",
                                                                 isHighlighted ? "bg-yellow-950/50 border-yellow-500/50 text-yellow-200" :
                                                                     isCompleted ? "bg-green-950/50 border-green-500/50 text-green-300" :
                                                                         isAvailable ? "bg-blue-950/50 border-blue-500/50 text-blue-200" :
                                                                             isLocked ? "bg-amber-950/50 border-amber-600/50 text-amber-400" :
                                                                                 "bg-slate-900/50 border-slate-700 text-slate-500"
                                                             )}>
-                                                                {node.label}
-                                                            </span>
+                                                                <span className="whitespace-pre-line">{node.label}</span>
+                                                                
+                                                                {nodeAverages[node.id] !== undefined && (isCompleted || (node.behavior === 'container' && nodeProgress[node.id] > 0)) && (
+                                                                    <span className="text-[11px] md:text-[12px] font-black text-yellow-400 mt-1 pb-0.5 drop-shadow-[0_0_8px_rgba(234,179,8,0.4)]">
+                                                                        {nodeAverages[node.id].toFixed(1)}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
 
                                                         {highlightedNodeId === node.id && node.behavior === 'container' && (
@@ -998,7 +1087,37 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                             </motion.div>
                                                         )}
                                                     </motion.div>
-                                                </div>
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent
+                                                        side="top"
+                                                        className="bg-slate-900/95 border border-slate-700 text-white p-3 rounded-xl shadow-2xl backdrop-blur-md z-[1001]"
+                                                    >
+                                                        <div className="flex flex-col gap-1 min-w-[140px]">
+                                                            <p className="font-bold text-sm text-blue-400 border-b border-white/10 pb-1 mb-1">{node.label}</p>
+                                                            <div className="flex items-center justify-between text-xs">
+                                                                <span className="text-slate-400">Promedio:</span>
+                                                                <span className="font-mono font-bold text-white text-sm">
+                                                                    {nodeAverages[node.id] ? nodeAverages[node.id].toFixed(1) : '---'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between text-xs">
+                                                                <span className="text-slate-400">Completados:</span>
+                                                                <span className="font-mono text-white">
+                                                                    {nodeCompletedCount[node.id] || 0} / {nodeTotalQuizzes[node.id] || 0}
+                                                                </span>
+                                                            </div>
+                                                            {nodeProgress[node.id] > 0 && (
+                                                                <div className="mt-2 w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                                                                    <div 
+                                                                        className="h-full bg-blue-500" 
+                                                                        style={{ width: `${nodeProgress[node.id]}%` }}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </TooltipContent>
+                                                </Tooltip>
                                             );
                                         })}
 
@@ -1010,5 +1129,6 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                 </div>
             </div>
         </div>
-    );
-};
+    </TooltipProvider>
+);
+}
