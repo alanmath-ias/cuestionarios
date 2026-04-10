@@ -105,8 +105,8 @@ export interface IStorage {
   getQuizFeedback(progressId: number): Promise<any>;
   markSubmissionAsReviewed(progressId: number): Promise<void>;
   deleteSubmissionByProgressId(progressId: number): Promise<void>;
-  getQuizResults(progressId: number): Promise<any>;
   getStudentAnswers(progressId: number): Promise<any>;
+  updateProgressScore(progressId: number, score: number): Promise<void>;
   backfillQuizSubmissions(): Promise<void>;
 
   // Dashboard Analytics
@@ -229,6 +229,13 @@ export class MemStorage implements IStorage {
   async deleteSubmissionByProgressId(progressId: number): Promise<void> { }
   async getQuizResults(progressId: number): Promise<any> { return null; }
   async getStudentAnswers(progressId: number): Promise<any> { return []; }
+  async updateProgressScore(progressId: number, score: number): Promise<void> {
+    const progress = this.studentProgress.get(progressId);
+    if (progress) {
+      progress.score = score;
+      this.studentProgress.set(progressId, progress);
+    }
+  }
 
   async getStudentsAtRisk(limit: number = 5): Promise<any[]> { return []; }
   async getRecentActivity(limit: number = 10): Promise<any[]> { return []; }

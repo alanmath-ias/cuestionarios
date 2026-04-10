@@ -5,7 +5,7 @@ import {
     Card,
     CardContent,
 } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Trash2, Eye, Search, RotateCcw, ListChecks } from "lucide-react";
+import { Loader2, ArrowLeft, Trash2, Eye, Search, RotateCcw, ListChecks, Pencil, ChevronUp, ChevronDown } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -19,6 +19,15 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+// Select removed as requested
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -28,6 +37,8 @@ import { Brain } from "lucide-react";
 
 export function UserProgressDetails({ userId, username, onBack }: { userId: number, username: string, onBack: () => void }) {
     const [searchTerm, setSearchTerm] = useState("");
+    const [editingScore, setEditingScore] = useState<{ progressId: number; title: string; currentScore: number } | null>(null);
+    const [newScore, setNewScore] = useState<string>("");
     const { toast } = useToast();
 
     // Fetch comprehensive dashboard data (quizzes + categories)
@@ -137,6 +148,41 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
             });
         },
     });
+
+    const updateScoreMutation = useMutation({
+        mutationFn: async ({ progressId, score }: { progressId: number, score: number }) => {
+            await apiRequest("PATCH", `/api/admin/progress/${progressId}/score`, { score });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/dashboard`] });
+            setEditingScore(null);
+            toast({
+                title: "Nota actualizada",
+                description: "La calificación ha sido corregida exitosamente.",
+            });
+        },
+        onError: (error: Error) => {
+            toast({
+                title: "Error al actualizar",
+                description: error.message,
+                variant: "destructive",
+            });
+        },
+    });
+
+    const handleIncrement = () => {
+        const val = parseFloat(newScore) || 0;
+        if (val < 10) {
+            setNewScore(Math.min(10, val + 0.5).toString());
+        }
+    };
+
+    const handleDecrement = () => {
+        const val = parseFloat(newScore) || 0;
+        if (val > 0) {
+            setNewScore(Math.max(0, val - 0.5).toString());
+        }
+    };
 
     if (isLoading) {
         return (
@@ -262,17 +308,33 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col items-end gap-2">
-                                                    <Badge variant={q.score >= 7 ? "default" : "secondary"} className={`text-sm px-3 py-1 ${q.score >= 7 ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/20' : 'bg-slate-700 text-slate-300'}`}>
+                                                    <Badge variant={q.score >= 7 ? "default" : "secondary"} className={`text-sm px-3 py-1 ${q.score >= 7 ? 'bg-green-500/30 text-green-400 hover:bg-green-500/40 border-green-500/30' : 'bg-slate-700 text-slate-300'}`}>
                                                         Nota: {q.score}/10
                                                     </Badge>
-                                                    {q.progressId && (
-                                                        <Link href={`/results/${q.progressId}?user_id=${userId}`}>
-                                                            <Button variant="secondary" size="sm" className="h-7 text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700">
-                                                                <Eye className="h-3 w-3 mr-1" />
-                                                                Ver Detalles
-                                                            </Button>
-                                                        </Link>
-                                                    )}
+                                                    <div className="flex gap-2">
+                                                        {q.progressId && (
+                                                            <>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-7 text-xs bg-slate-800 text-blue-400 hover:text-blue-300 hover:bg-slate-700 border-slate-700"
+                                                                    onClick={() => {
+                                                                        setEditingScore({ progressId: q.progressId, title: q.title, currentScore: q.score });
+                                                                        setNewScore(q.score.toString());
+                                                                    }}
+                                                                >
+                                                                    <Pencil className="h-3 w-3 mr-1" />
+                                                                    Editar
+                                                                </Button>
+                                                                <Link href={`/results/${q.progressId}?user_id=${userId}`}>
+                                                                    <Button variant="secondary" size="sm" className="h-7 text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700">
+                                                                        <Eye className="h-3 w-3 mr-1" />
+                                                                        Ver Detalles
+                                                                    </Button>
+                                                                </Link>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -513,6 +575,75 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                     </div>
                 </div>
             </div>
+
+            <Dialog open={!!editingScore} onOpenChange={(open) => !open && setEditingScore(null)}>
+                <DialogContent className="bg-slate-900 border border-white/10 text-slate-200">
+                    <DialogHeader>
+                        <DialogTitle>Editar Calificación</DialogTitle>
+                        <DialogDescription className="text-slate-400">
+                            Corrección manual de nota para "{editingScore?.title}".
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="score" className="text-slate-300">Nueva Nota (0-10)</Label>
+                            <div className="flex items-center gap-2">
+                                <div className="relative flex-1">
+                                    <Input
+                                        id="score"
+                                        type="number"
+                                        min="0"
+                                        max="10"
+                                        step="0.1"
+                                        value={newScore}
+                                        onChange={(e) => setNewScore(e.target.value)}
+                                        className="bg-slate-800 border-slate-700 text-white w-full pr-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        placeholder="Ej: 8.5"
+                                    />
+                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col items-center border-l border-slate-700 h-full justify-center bg-slate-800/50 rounded-r-md overflow-hidden">
+                                        <button
+                                            type="button"
+                                            onClick={handleIncrement}
+                                            className="p-1 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                                            title="Subir"
+                                        >
+                                            <ChevronUp className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleDecrement}
+                                            className="p-1 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors border-t border-slate-700"
+                                            title="Bajar"
+                                        >
+                                            <ChevronDown className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setEditingScore(null)} disabled={updateScoreMutation.isPending}>
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                const score = parseFloat(newScore);
+                                if (isNaN(score) || score < 0 || score > 10) {
+                                    toast({ title: "Valor inválido", description: "Por favor ingresa una nota entre 0 y 10.", variant: "destructive" });
+                                    return;
+                                }
+                                updateScoreMutation.mutate({ progressId: editingScore!.progressId, score });
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            disabled={updateScoreMutation.isPending}
+                        >
+                            {updateScoreMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            Guardar Cambios
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

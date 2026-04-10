@@ -4024,6 +4024,24 @@ Ejemplo de formato:
     res.json({ success: true });
   });
 
+  // Editar nota de un progreso (Admin)
+  apiRouter.patch('/admin/progress/:progressId/score', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const progressId = Number(req.params.progressId);
+      const { score } = req.body;
+
+      if (isNaN(progressId) || score === undefined || isNaN(Number(score))) {
+        return res.status(400).json({ error: "Datos de entrada inválidos" });
+      }
+
+      await storage.updateProgressScore(progressId, Number(score));
+      res.json({ success: true, message: "Nota actualizada correctamente" });
+    } catch (error) {
+      console.error("Error updating progress score:", error);
+      res.status(500).json({ error: "Error interno al actualizar la nota" });
+    }
+  });
+
 
   app.get("/api/user/alerts", requireAuth, async (req, res) => {
     try {

@@ -1,4 +1,4 @@
-﻿import {
+import {
   users, categories, quizzes, questions, answers, studentProgress, studentAnswers,
   type User, type InsertUser,
   type Category, type InsertCategory,
@@ -725,6 +725,20 @@ export class DatabaseStorage implements IStorage {
     await this.db.delete(quizFeedback).where(eq(quizFeedback.progressId, id));
     await this.db.delete(quizSubmissions).where(eq(quizSubmissions.progressId, id));
     await this.db.delete(studentProgress).where(eq(studentProgress.id, id));
+  }
+
+  async updateProgressScore(progressId: number, score: number): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      // 1. Update studentProgress
+      await tx.update(studentProgress)
+        .set({ score: score })
+        .where(eq(studentProgress.id, progressId));
+
+      // 2. Update quizSubmissions (if exists)
+      await tx.update(quizSubmissions)
+        .set({ score: score })
+        .where(eq(quizSubmissions.progressId, progressId));
+    });
   }
 
   async getStudentAnswersByProgress(progressId: number): Promise<StudentAnswer[]> {

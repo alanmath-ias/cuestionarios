@@ -129,15 +129,25 @@ function QuizResults() {
     if (userId) {
       setLocation(`/admin/users?viewProgress=${userId}`);
     } else {
-      const categoryId = results?.quiz.categoryId || 1;
-      const isFreshQuiz = new URLSearchParams(window.location.search).get('source') === 'quiz';
+      const searchParams = new URLSearchParams(window.location.search);
+      const isFreshQuiz = searchParams.get('source') === 'quiz';
 
-      let params = '';
-      if (isFreshQuiz && currentNode) {
-        params = `&focusNode=${currentNode.id}&source=quiz`;
+      if (isFreshQuiz) {
+        const categoryId = results?.quiz.categoryId || 1;
+        let params = '';
+        if (currentNode) {
+          params = `&focusNode=${currentNode.id}&source=quiz`;
+        }
+        setLocation(`/category/${categoryId}?view=roadmap${params}`);
+      } else {
+        // Si no venimos de un quiz recién terminado, usamos el comportamiento normal de "atrás"
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          // Fallback si no hay historial previo
+          setLocation('/dashboard');
+        }
       }
-
-      setLocation(`/category/${categoryId}?view=roadmap${params}`);
     }
   };
 
