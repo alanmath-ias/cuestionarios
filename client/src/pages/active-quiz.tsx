@@ -550,9 +550,13 @@ const ActiveQuiz = () => {
       if (isInputFocused && activeElement !== inputRef.current) return;
 
       if (e.key === 'ArrowRight') {
-        handleNextQuestion();
+        if (currentQuestionIndex < (questions?.length || 0) - 1) {
+          setCurrentQuestionIndex(prev => prev + 1);
+        }
       } else if (e.key === 'ArrowLeft') {
-        handlePreviousQuestion();
+        if (currentQuestionIndex > 0) {
+          setCurrentQuestionIndex(prev => prev - 1);
+        }
       } else if (e.key === 'Enter') {
         const currentQuestion = questions?.[currentQuestionIndex];
         const isTextType = currentQuestion?.type === 'text';
@@ -562,7 +566,7 @@ const ActiveQuiz = () => {
           (isDirectInput && directResponse.trim() !== "") ||
           (isTextType && textAnswers[currentQuestion?.id!]?.trim() !== "");
 
-        if (hasValue) {
+        if (hasValue || answeredQuestions[currentQuestionIndex]) {
           handleNextQuestion();
         }
       }

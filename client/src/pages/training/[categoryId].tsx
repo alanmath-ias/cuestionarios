@@ -5,10 +5,24 @@ import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from 'wouter';
 import { TrainingSession, TrainingQuestion } from "@/components/TrainingSession";
 
+const CATEGORY_NAMES: Record<string, string> = {
+  "1": "Aritmética",
+  "3": "Álgebra",
+  "4": "Trigonometría",
+  "5": "Cálculo",
+  "6": "Ecuaciones Diferenciales",
+  "7": "Cálculo Integral",
+  "8": "Física Mecánica",
+  "10": "Física Mecánica",
+  "2": "Geometría"
+};
+
 const TrainingPage = ({ categoryId }: { categoryId: string }) => {
   const [questions, setQuestions] = useState<TrainingQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [_, setLocation] = useLocation();
+
+  const title = CATEGORY_NAMES[categoryId] || "Entrenamiento";
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -32,7 +46,7 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
 
   return (
     <TrainingSession
-      title="Entrenamiento"
+      title={title}
       questions={questions}
       loading={loading}
       onExit={() => setLocation("/")}

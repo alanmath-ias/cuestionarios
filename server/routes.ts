@@ -2571,7 +2571,6 @@ Ejemplo de formato:
 
 
 
-  // API para gestionar categorías
   apiRouter.get("/admin/categories", requireAdmin, async (req: Request, res: Response) => {
     try {
       const allCategories = await storage.getCategories();
@@ -3345,18 +3344,37 @@ Ejemplo de formato:
         .from(quizzes)
         .where(eq(quizzes.categoryId, categoryId));
 
-      if (quizzesInCategory.length === 0) {
-        return res.status(404).json({ message: "No hay quizzes para esta categoría" });
+      const quizIds = quizzesInCategory.map(q => q.id);
+
+      // Excepción: Agregar Cuestionarios de Diagnóstico (Categoría 21) según la materia
+      const diagnosticMapping: Record<number, number> = {
+        1: 278, // Aritmética
+        3: 279, // Álgebra
+        4: 280, // Trigonometría
+        5: 281, // Cálculo
+        6: 282, // Ecuaciones Diferenciales
+        7: 283, // Cálculo Integral
+        8: 286, // Física Mecánica
+        10: 285 // Estadística
+      };
+
+      if (diagnosticMapping[categoryId]) {
+        quizIds.push(diagnosticMapping[categoryId]);
       }
 
-      const quizIds = quizzesInCategory.map(q => q.id);
+      // Filtrar para excluir IDs 68 y 69 (Lenguaje/Encuesta)
+      const filteredQuizIds = quizIds.filter(id => id !== 68 && id !== 69);
+
+      if (filteredQuizIds.length === 0) {
+        return res.status(404).json({ message: "No hay cuestionarios válidos para esta categoría" });
+      }
 
       // 2. Obtener preguntas con sus respuestas (usando la tabla answers)
       const questionsWithAnswers = await db.transaction(async (tx) => {
         const questions = await tx
           .select()
           .from(questionsTable)
-          .where(inArray(questionsTable.quizId, quizIds));
+          .where(inArray(questionsTable.quizId, filteredQuizIds));
 
         const questionsData = await Promise.all(
           questions.map(async (question) => {
