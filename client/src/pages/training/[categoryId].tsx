@@ -50,6 +50,7 @@ const TrainingPage = ({ categoryId }: { categoryId: string }) => {
       questions={questions}
       loading={loading}
       onExit={() => setLocation("/")}
+      categoryId={parseInt(categoryId)}
     />
   );
 };

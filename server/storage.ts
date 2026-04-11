@@ -144,6 +144,12 @@ export interface IStorage {
   getChiquiQuestions(userId: number, categoryId: number): Promise<any[]>;
   saveChiquiResult(userId: number, categoryId: number, score: number, answers: any[]): Promise<void>;
   getChiquiResults(userId: number): Promise<any[]>;
+
+  // Training Persistence methods
+  saveTrainingResult(userId: number, categoryId: number, score: number, totalQuestions: number, answers: any[], questionsData: any[]): Promise<void>;
+  getTrainingResult(userId: number, categoryId: number): Promise<any | null>;
+  getDailyTrainingRewardCount(userId: number, categoryId: number): Promise<number>;
+  saveTrainingHistory(data: any): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -773,6 +779,12 @@ export class MemStorage implements IStorage {
   async getChiquiQuestions(userId: number, categoryId: number): Promise<any[]> { return []; }
   async saveChiquiResult(userId: number, categoryId: number, score: number, answers: any[]): Promise<void> { }
   async getChiquiResults(userId: number): Promise<any[]> { return []; }
+
+  // Training Persistence methods
+  async saveTrainingResult(userId: number, categoryId: number, score: number, totalQuestions: number, answers: any[], questionsData: any[]): Promise<void> { }
+  async getTrainingResult(userId: number, categoryId: number): Promise<any | null> { return null; }
+  async getDailyTrainingRewardCount(userId: number, categoryId: number): Promise<number> { return 0; }
+  async saveTrainingHistory(data: any): Promise<void> { }
 }
 
 import { DatabaseStorage } from "./database-storage.js";

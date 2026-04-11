@@ -11,7 +11,7 @@ import * as expressSession from "express-session";
 import { eq, sql, and, or, isNull, isNotNull } from "drizzle-orm";
 
 import { db } from "./db.js";
-import { userCategories, categories, quizzes } from "../shared/schema.js";
+import { userCategories, categories, quizzes, trainingHistory } from "../shared/schema.js";
 import { users } from "../shared/schema.js";
 import { getUsersAssignedToQuiz } from './storage.js'; // Ruta ajustada para usar .js
 //chat gpt entrenamiento
@@ -1322,40 +1322,123 @@ Tono: Alentador, profesional y educativo.`;
       });
 
     } catch (err) {
-      if (err instanceof Error) {
-        console.error('❌ Error al obtener preguntas:', {
-          error: err.message,
-          stack: err.stack,
-          params: req.params,
-          timestamp: new Date().toISOString()
-        });
+      console.error('❌ Error al obtener preguntas entrenamiento:', err);
+      res.status(500).json({ error: "Error al obtener preguntas" });
+    }
+  });
 
-        res.status(500).json({
-          error: "Error al obtener preguntas",
-          details: {
-            categoryId,
-            subcategoryId,
-            internalError: process.env.NODE_ENV === 'development' ? err.message : undefined
-          }
-        });
-      } else {
-        console.error('❌ Error desconocido al obtener preguntas:', {
-          error: err,
-          params: req.params,
-          timestamp: new Date().toISOString()
-        });
+  // Training Persistence and Rewards
+  app.post('/api/training/reward', async (req, res) => {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
-        res.status(500).json({
-          error: "Error desconocido al obtener preguntas",
-          details: {
-            categoryId,
-            subcategoryId,
-            internalError: process.env.NODE_ENV === 'development' ? JSON.stringify(err) : undefined
+    try {
+      const { categoryId, score, totalPoints, totalQuestions, answers, questionsData } = req.body;
+      const finalScore = (score / (totalPoints || 1)) * 10;
+      
+      // Save detailed result for persistence/review
+      await storage.saveTrainingResult(userId, categoryId, finalScore, totalQuestions || 0, answers || [], questionsData || []);
+
+      // Reward logic (3 times per day per category)
+      const dailyCount = await storage.getDailyTrainingRewardCount(userId, categoryId);
+      let creditsPlus = 0;
+      let limitReached = dailyCount >= 3;
+
+      if (!limitReached) {
+        if (finalScore >= 9) creditsPlus = 5;
+        else if (finalScore >= 8) creditsPlus = 4;
+        else if (finalScore >= 7) creditsPlus = 3;
+        else creditsPlus = 2;
+
+        if (creditsPlus > 0) {
+          const user = await storage.getUser(userId);
+          if (user) {
+            await storage.updateUserCredits(userId, user.hintCredits + creditsPlus);
+            await storage.saveTrainingHistory({
+              userId,
+              categoryId,
+              score: finalScore,
+              earnedCredits: creditsPlus,
+              completedAt: new Date()
+            });
           }
-        });
+        }
       }
-    } finally {
 
+      res.json({
+        success: true,
+        creditsPlus,
+        limitReached,
+        finalScore
+      });
+    } catch (error) {
+      console.error("Error in training reward:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get('/api/training/last-result/:categoryId', async (req, res) => {
+    const userId = req.session.userId;
+    const categoryId = Number(req.params.categoryId);
+    if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+    try {
+      const result = await storage.getTrainingResult(userId, categoryId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching last training result:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get('/api/results/training/:categoryId', async (req, res) => {
+    const userId = req.session.userId;
+    const categoryId = Number(req.params.categoryId);
+    if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+    try {
+      const data = await storage.getTrainingResult(userId, categoryId);
+      if (!data) return res.status(404).json({ error: "Result not found" });
+
+      const category = await storage.getCategory(categoryId);
+
+      // Model as a standard QuizResult
+      const result = {
+        progress: {
+          id: `training-${categoryId}`, // Virtual ID for progress
+          userId,
+          quizId: 0,
+          status: 'completed' as const,
+          score: data.score,
+          completedQuestions: data.totalQuestions,
+          timeSpent: 0,
+          completedAt: data.completedAt?.toISOString() || new Date().toISOString(),
+        },
+        quiz: {
+          id: 0,
+          title: `Entrenamiento: ${category?.name || 'Materia'}`,
+          totalQuestions: data.totalQuestions,
+          categoryId: categoryId,
+          subcategoryId: 0,
+        },
+        answers: data.answers.map((a: any) => {
+          const qData = data.questionsData.find((q: any) => q.id === a.questionId);
+          // Map selectedOption index to content for the frontend 'answerDetails'
+          const selectedOption = qData?.options?.[a.selectedOption];
+          return {
+            ...a,
+            question: qData,
+            answerDetails: selectedOption ? { 
+              content: selectedOption.text 
+            } : null
+          };
+        })
+      };
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching training result for view:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -3398,9 +3481,18 @@ Ejemplo de formato:
         return questionsData;
       });
 
-      // 3. Seleccionar 20 preguntas aleatorias
+      // 3. Determinar cantidad de preguntas según la materia (Pedagogía/Psicología)
+      const getTrainingCount = (catId: number) => {
+        // Foundation/Basic subjects: 12 questions
+        const foundationCats = [1, 2, 3, 4, 16, 9, 21]; // Aritmética (1), Álgebra (3), Trigonometría (4), Geometría (2/9?), Lógica (16), Nivelación (21)
+        return foundationCats.includes(catId) ? 12 : 10;
+      };
+
+      const questionCount = getTrainingCount(categoryId);
+
+      // 4. Seleccionar preguntas aleatorias
       const shuffled = questionsWithAnswers.sort(() => 0.5 - Math.random());
-      const selected = shuffled.slice(0, 20);
+      const selected = shuffled.slice(0, questionCount);
 
       res.json({ questions: selected });
     } catch (err) {

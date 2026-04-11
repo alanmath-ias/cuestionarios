@@ -381,6 +381,36 @@ export const insertChiquiHistorySchema = createInsertSchema(chiquiHistory).pick(
 export type ChiquiHistory = typeof chiquiHistory.$inferSelect;
 export type InsertChiquiHistory = z.infer<typeof insertChiquiHistorySchema>;
 
+export const trainingHistory = pgTable("training_history", {
+	id: serial("id").primaryKey().notNull(),
+	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	categoryId: integer("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
+	score: real("score").notNull(),
+	earnedCredits: integer("earned_credits").default(0).notNull(),
+	completedAt: timestamp("completed_at").defaultNow().notNull(),
+});
+
+export const trainingResults = pgTable("training_results", {
+	id: serial("id").primaryKey().notNull(),
+	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	categoryId: integer("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
+	score: real("score").notNull(),
+	totalQuestions: integer("total_questions").notNull(),
+	answers: jsonb("answers").$type<any[]>().notNull(), // { questionId, selectedOption, isCorrect }
+	questionsData: jsonb("questions_data").$type<any[]>().notNull(), // Store shuffled question data
+	completedAt: timestamp("completed_at").defaultNow().notNull(),
+}, (table) => [
+	unique("training_results_user_category_unique").on(table.userId, table.categoryId),
+]);
+
+export const insertTrainingHistorySchema = createInsertSchema(trainingHistory);
+export type TrainingHistory = typeof trainingHistory.$inferSelect;
+export type InsertTrainingHistory = z.infer<typeof insertTrainingHistorySchema>;
+
+export const insertTrainingResultSchema = createInsertSchema(trainingResults);
+export type TrainingResult = typeof trainingResults.$inferSelect;
+export type InsertTrainingResult = z.infer<typeof insertTrainingResultSchema>;
+
 // Types exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;

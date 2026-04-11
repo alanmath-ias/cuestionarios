@@ -383,6 +383,10 @@ function Router() {
         <TrainingPageSub /> {/* Sin pasar props manualmente */}
       </Route>
 
+      <Route path="/results/training/:categoryId">
+        {(params) => <ProtectedRoute component={QuizResults} path={`/results/training/${params.categoryId}`} />}
+      </Route>
+
       <Route path="/admin/RegistrarPadres">
         <AdminProtectedRoute
           component={RegistrarPadres}

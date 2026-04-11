@@ -35,6 +35,7 @@ interface TrainingSessionProps {
     questions: TrainingQuestion[];
     loading: boolean;
     onExit: () => void;
+    categoryId?: number;
 }
 
 const motivationalMessages = {
@@ -66,6 +67,8 @@ const getRandomMessage = (type: keyof typeof motivationalMessages) => {
     return messages[Math.floor(Math.random() * messages.length)];
 };
 
+import { useLocation } from "wouter";
+
 // Componente para renderizar contenido igual que en ActiveQuiz
 const QuestionContent = ({ content }: { content: string }) => {
   const getQuestionSizeClass = (text: string) => {
@@ -82,7 +85,8 @@ const QuestionContent = ({ content }: { content: string }) => {
   );
 };
 
-export function TrainingSession({ title, questions, loading, onExit }: TrainingSessionProps) {
+export function TrainingSession({ title, questions, loading, onExit, categoryId }: TrainingSessionProps) {
+    const [, setLocation] = useLocation();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [score, setScore] = useState(0);
@@ -91,6 +95,12 @@ export function TrainingSession({ title, questions, loading, onExit }: TrainingS
     const [answeredQuestions, setAnsweredQuestions] = useState<AnsweredQuestion[]>([]);
     const [feedbackMessage, setFeedbackMessage] = useState("");
     const [reviewMode, setReviewMode] = useState(false);
+    const [rewardClaimed, setRewardClaimed] = useState(false);
+    const [creditsEarned, setCreditsEarned] = useState<number | null>(null);
+    const [rewardLimitReached, setRewardLimitReached] = useState(false);
+    const [claimingReward, setClaimingReward] = useState(false);
+    const [internalLoading, setInternalLoading] = useState(false);
+    const claimRewardOnce = useRef(false);
     const { toast } = useToast();
 
     // Timer Logic - Count-up Stopwatch from 0
@@ -99,6 +109,61 @@ export function TrainingSession({ title, questions, loading, onExit }: TrainingS
         initialElapsedTime: 0,
         autoStart: true,
     });
+
+    useEffect(() => {
+        if (quizCompleted && !reviewMode) {
+            pause();
+            if (categoryId && !claimRewardOnce.current) {
+                claimRewardOnce.current = true;
+                handleClaimReward();
+            }
+        }
+    }, [quizCompleted, reviewMode, categoryId]);
+
+    const handleClaimReward = async () => {
+        const totalPoints = questions.reduce((acc, q) => acc + q.points, 0);
+        setClaimingReward(true);
+        try {
+            const response = await fetch("/api/training/reward", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    categoryId,
+                    score,
+                    totalPoints,
+                    totalQuestions: questions.length,
+                    answers: answeredQuestions,
+                    questionsData: questions.map(q => ({
+                      id: q.id,
+                      content: q.content,
+                      type: q.type,
+                      difficulty: q.difficulty,
+                      points: q.points,
+                      imageUrl: q.imageUrl,
+                      options: q.options
+                    }))
+                })
+            });
+
+            if (!response.ok) throw new Error("Error en la petición");
+
+            const data = await response.json();
+            if (data.success) {
+                setCreditsEarned(data.creditsPlus);
+                setRewardLimitReached(data.limitReached);
+                setRewardClaimed(true);
+            }
+        } catch (error) {
+            console.error("Error al reclamar recompensa:", error);
+            toast({
+                title: "Error",
+                description: "No se pudo procesar tu recompensa",
+                variant: "destructive"
+            });
+        } finally {
+            setClaimingReward(false);
+        }
+    };
 
     const formatStopwatch = () => {
         const minutes = Math.floor(elapsedTime / 60);
@@ -228,7 +293,7 @@ export function TrainingSession({ title, questions, loading, onExit }: TrainingS
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [currentIndex, questions, selectedOption, showResult, quizCompleted, answeredQuestions]);
 
-    if (loading) {
+    if (loading || internalLoading) {
         return (
             <div className="flex justify-center items-center min-h-screen bg-slate-950">
                 <Loader2 className="animate-spin h-12 w-12 text-blue-500" />
@@ -254,7 +319,6 @@ export function TrainingSession({ title, questions, loading, onExit }: TrainingS
         const totalPoints = questions.reduce((acc, q) => acc + q.points, 0);
         const percentage = Math.round((score / totalPoints) * 100);
         const isGoodScore = percentage >= 70;
-        pause();
 
         return (
             <div className="min-h-screen bg-slate-950 text-slate-50 relative overflow-hidden flex items-center justify-center p-4">
@@ -283,10 +347,51 @@ export function TrainingSession({ title, questions, loading, onExit }: TrainingS
                             </div>
                         </div>
 
+                        {/* Reward Feedback */}
+                        {claimingReward ? (
+                            <div className="flex items-center justify-center gap-2 text-slate-400 py-4">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span className="font-medium">Calculando tus créditos...</span>
+                            </div>
+                        ) : rewardClaimed && (
+                            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className={`p-4 rounded-2xl border ${rewardLimitReached ? 'bg-amber-500/10 border-amber-500/30' : 'bg-green-500/10 border-green-500/30'}`}>
+                                {rewardLimitReached ? (
+                                    <div className="flex flex-col items-center gap-1">
+                                        <p className="text-amber-400 font-bold flex items-center gap-2">
+                                            <Target className="h-4 w-4" /> Límite diario alcanzado
+                                        </p>
+                                        <p className="text-slate-400 text-sm">Has ganado 0 créditos esta vez (máx. 3 por materia), ¡pero sigue practicando!</p>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center gap-1">
+                                        <p className="text-green-400 font-bold flex items-center gap-2">
+                                            <Sparkles className="h-5 w-5 animate-pulse" /> ¡Has ganado {creditsEarned} créditos!
+                                        </p>
+                                        <p className="text-slate-400 text-sm">Créditos de pista sumados a tu cuenta por tu esfuerzo.</p>
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+
                         <div className="flex flex-wrap justify-center gap-4 pt-4">
-                            <Button onClick={enterReviewMode} className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-xl px-8 h-12 rounded-2xl">Revisar Errores</Button>
-                            <Button onClick={resetQuiz} variant="outline" className="border-white/10 text-slate-300 h-12 px-8 rounded-2xl">Reintentar</Button>
-                            <Button variant="ghost" onClick={onExit} className="text-slate-400 hover:text-white h-12 px-8">Volver al Mapa</Button>
+                            <Button 
+                              onClick={() => setLocation(`/results/training/${categoryId}`)} 
+                              className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-xl px-8 h-12 rounded-2xl"
+                            >
+                              Revisar Errores
+                            </Button>
+                            <Button 
+                              onClick={() => {
+                                setInternalLoading(true);
+                                resetQuiz();
+                              }} 
+                              className="bg-slate-800 hover:bg-slate-700 text-white border border-white/10 h-12 px-8 rounded-2xl"
+                            >
+                                Reintentar
+                            </Button>
+                            <Button variant="ghost" onClick={onExit} className="text-slate-400 hover:text-white h-12 px-8">
+                                Volver al Mapa
+                            </Button>
                         </div>
                     </div>
                 </motion.div>

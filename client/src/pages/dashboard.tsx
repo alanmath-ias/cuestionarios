@@ -43,7 +43,8 @@ import {
   Star,
   Sparkles,
   Zap,
-  Brain
+  Brain,
+  Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FaWhatsapp } from "react-icons/fa";
@@ -316,6 +317,9 @@ export default function UserDashboard() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<QuizWithFeedback | RepasistoQuiz | null>(null);
+  const [selectedTraining, setSelectedTraining] = useState<any>(null);
+  const [isTrainingDialogOpen, setIsTrainingDialogOpen] = useState(false);
+  const [loadingTraining, setLoadingTraining] = useState(false);
 
   const handleSelectQuiz = (quiz: QuizWithFeedback) => {
     setSelectedQuiz(quiz);
@@ -793,10 +797,56 @@ export default function UserDashboard() {
     }
   };
 
+  const handleTrainingClick = async (categoryId: number, categoryName: string) => {
+    setLoadingTraining(true);
+    try {
+      const resp = await fetch(`/api/training/last-result/${categoryId}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data) {
+          setSelectedTraining({
+            categoryId,
+            categoryName,
+            lastResult: data
+          });
+          setIsTrainingDialogOpen(true);
+        } else {
+          setLocation(`/training/${categoryId}`);
+        }
+      } else {
+        setLocation(`/training/${categoryId}`);
+      }
+    } catch (err) {
+      console.error("Error fetching training result:", err);
+      setLocation(`/training/${categoryId}`);
+    } finally {
+      setLoadingTraining(false);
+    }
+  };
+
   const handleCategoryClick = (category: Category) => {
     setSelectedCategoryForDetails(category);
     setCategorySearchQuery("");
   };
+
+  // Reopen training dialog if coming back from a review
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reopenId = params.get('reopenTraining');
+    if (reopenId && categories && categories.length > 0) {
+      const catId = parseInt(reopenId);
+      const category = categories.find(c => c.id === catId);
+      if (category) {
+        // Clean up URL parameter
+        const newParams = new URLSearchParams(window.location.search);
+        newParams.delete('reopenTraining');
+        const newSearch = newParams.toString();
+        window.history.replaceState({}, '', `${window.location.pathname}${newSearch ? '?' + newSearch : ''}`);
+        
+        handleTrainingClick(catId, category.name);
+      }
+    }
+  }, [categories, window.location.search]);
 
   if (currentUser?.role === 'admin') {
     return <AdminDashboard />;
@@ -1320,15 +1370,15 @@ export default function UserDashboard() {
 
                             {/* Entrenamiento (CTA) - Mobile Visible ONLY */}
                             <div className="md:hidden">
-                              <Link href={`/training/${category.id}`}>
-                                <Button
-                                  size="sm"
-                                  className="h-8 px-4 text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all whitespace-nowrap"
-                                >
-                                  <Gamepad2 className="w-3.5 h-3.5 mr-1.5" />
-                                  Entrenar
-                                </Button>
-                              </Link>
+                              <Button
+                                size="sm"
+                                disabled={loadingTraining}
+                                onClick={() => handleTrainingClick(category.id, category.name)}
+                                className="h-8 px-4 text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all whitespace-nowrap"
+                              >
+                                {loadingTraining ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Gamepad2 className="w-3.5 h-3.5 mr-1.5" />}
+                                Entrenar
+                              </Button>
                             </div>
 
                             {/* Video */}
@@ -1369,15 +1419,15 @@ export default function UserDashboard() {
 
                             {/* Entrenamiento (CTA) - Desktop only in this row */}
                             <div className="hidden md:block">
-                              <Link href={`/training/${category.id}`}>
-                                <Button
-                                  size="sm"
-                                  className="h-8 px-4 text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all whitespace-nowrap"
-                                >
-                                  <Gamepad2 className="w-3.5 h-3.5 mr-1.5" />
-                                  Entrenar
-                                </Button>
-                              </Link>
+                              <Button
+                                size="sm"
+                                disabled={loadingTraining}
+                                onClick={() => handleTrainingClick(category.id, category.name)}
+                                className="h-8 px-4 text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 border-0 transition-all whitespace-nowrap"
+                              >
+                                {loadingTraining ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Gamepad2 className="w-4 h-4 mr-1.5" />}
+                                Entrenar
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -2127,6 +2177,79 @@ export default function UserDashboard() {
           quizzes={quizzes || []}
           username={currentUser?.username || "Estudiante"}
         />
+
+        {/* Training Summary Dialog */}
+        <Dialog open={isTrainingDialogOpen} onOpenChange={setIsTrainingDialogOpen}>
+          <DialogContent className="bg-slate-900 border-white/10 text-slate-100 max-w-md rounded-[2rem] overflow-hidden shadow-2xl p-0">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 to-cyan-500" />
+            
+            <div className="p-8">
+              <DialogHeader className="mb-6">
+                <div className="flex justify-center mb-4">
+                  <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center border border-blue-500/30">
+                    <Gamepad2 className="w-8 h-8 text-blue-400" />
+                  </div>
+                </div>
+                <DialogTitle className="text-2xl font-black text-center text-white">
+                  Entrenamiento: {selectedTraining?.categoryName}
+                </DialogTitle>
+                <DialogDescription className="text-center text-slate-400 pt-2">
+                  Ya tienes un resultado guardado en esta materia. ¿Qué te gustaría hacer?
+                </DialogDescription>
+              </DialogHeader>
+
+              {selectedTraining?.lastResult && (
+                <div className="bg-slate-800/50 rounded-2xl p-6 border border-white/5 mb-8 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">Último Puntaje</span>
+                    <Badge className={cn(
+                      "font-black text-lg px-3 py-0.5 border-none",
+                      selectedTraining.lastResult.score >= 7 ? "bg-green-500/20 text-green-400" : "bg-blue-500/20 text-blue-400"
+                    )}>
+                      {selectedTraining.lastResult.score.toFixed(1)}/10
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500">Fecha</span>
+                    <span className="text-slate-300 font-medium">
+                      {new Date(selectedTraining.lastResult.completedAt).toLocaleDateString('es-ES', { 
+                        day: 'numeric', month: 'short', year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-3">
+                <Button 
+                  onClick={() => {
+                    setIsTrainingDialogOpen(false);
+                    setLocation(`/results/training/${selectedTraining.categoryId}`);
+                  }}
+                  className="h-14 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold border border-white/10 gap-2"
+                >
+                  <ClipboardCheck className="w-5 h-5 text-blue-400" /> Revisar Último Entrenamiento
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setIsTrainingDialogOpen(false);
+                    setLocation(`/training/${selectedTraining.categoryId}`);
+                  }}
+                  className="h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-black shadow-xl shadow-blue-500/20 border-none gap-2"
+                >
+                  <PlayCircle className="w-5 h-5" /> Comenzar Nuevo Entrenamiento
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setIsTrainingDialogOpen(false)}
+                  className="text-slate-500 hover:text-white mt-2"
+                >
+                  Ahora no
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
       </div>
       <FloatingWhatsApp

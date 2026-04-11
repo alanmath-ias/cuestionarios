@@ -9,7 +9,8 @@ import {
   type StudentAnswer, type InsertStudentAnswer,
   questionReports, type QuestionReport, type InsertQuestionReport,
   passwordResetTokens, type PasswordResetToken, type InsertPasswordResetToken,
-  chiquiResults, chiquiHistory
+  chiquiResults, chiquiHistory, trainingResults, trainingHistory,
+  type TrainingResult, type InsertTrainingResult, type TrainingHistory, type InsertTrainingHistory
 } from "../shared/schema.js";
 
 import { db, DbClient } from "./db.js";
@@ -184,10 +185,17 @@ export class DatabaseStorage implements IStorage {
         })),
     }));
 
-    // 5. Aleatorizar y limitar a 20 preguntas
+    // 5. Aleatorizar y limitar según la categoría
+    let limit = 10;
+    if (categoryId === 1 || categoryId === 2) { // Aritmética / Álgebra/Trigonometría
+      limit = 12;
+    } else if ([4, 5, 19].includes(categoryId)) { // Física / Cálculo / Estadística (4=Diferencial, 5=Integral, 19=Estadística)
+      limit = 10;
+    }
+
     return questionsWithOptions
       .sort(() => 0.5 - Math.random())
-      .slice(0, 20);
+      .slice(0, limit);
   }
 
 
@@ -1876,6 +1884,61 @@ export class DatabaseStorage implements IStorage {
 
   async getChiquiResults(userId: number): Promise<any[]> {
     return this.db.select().from(chiquiResults).where(eq(chiquiResults.userId, userId));
+  }
+
+  // Training Persistence methods
+  async saveTrainingResult(userId: number, categoryId: number, score: number, totalQuestions: number, answers: any[], questionsData: any[]): Promise<void> {
+    await this.db.insert(trainingResults)
+      .values({
+        userId,
+        categoryId,
+        score,
+        totalQuestions,
+        answers,
+        questionsData,
+        completedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [trainingResults.userId, trainingResults.categoryId],
+        set: {
+          score,
+          totalQuestions,
+          answers,
+          questionsData,
+          completedAt: new Date(),
+        }
+      });
+  }
+
+  async getTrainingResult(userId: number, categoryId: number): Promise<any | null> {
+    const result = await this.db.select()
+      .from(trainingResults)
+      .where(and(eq(trainingResults.userId, userId), eq(trainingResults.categoryId, categoryId)))
+      .limit(1);
+    
+    return result[0] || null;
+  }
+
+  async getDailyTrainingRewardCount(userId: number, categoryId: number): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const result = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(trainingHistory)
+      .where(
+        and(
+          eq(trainingHistory.userId, userId),
+          eq(trainingHistory.categoryId, categoryId),
+          gte(trainingHistory.completedAt, today)
+        )
+      );
+
+    return Number(result[0].count);
+  }
+
+  async saveTrainingHistory(data: any): Promise<void> {
+    await this.db.insert(trainingHistory).values(data);
   }
 
   private simpleHash(str: string): number {

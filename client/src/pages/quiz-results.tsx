@@ -31,7 +31,8 @@ interface Question {
 }
 
 function QuizResults() {
-  const { progressId } = useParams<{ progressId: string }>();
+  const params = useParams();
+  const progressId = params.progressId || params.categoryId;
   const [_, setLocation] = useLocation();
   const { session } = useSession();
 
@@ -43,18 +44,22 @@ function QuizResults() {
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
 
 
+  const isTraining = window.location.pathname.includes('/results/training/');
+
   const { data: results, isLoading: loadingResults, error } = useQuery<QuizResult>({
-    queryKey: [`/api/results/${progressId}`, userId],
+    queryKey: [isTraining ? `/api/results/training/${progressId}` : `/api/results/${progressId}`, userId],
     queryFn: async () => {
-      const url = userId
-        ? `/api/results/${progressId}?user_id=${userId}`
+      const baseUrl = isTraining 
+        ? `/api/results/training/${progressId}`
         : `/api/results/${progressId}`;
+      const url = userId ? `${baseUrl}?user_id=${userId}` : baseUrl;
       const res = await fetch(url, { credentials: 'include' });
       if (!res.ok) throw new Error('Error fetching results');
       return res.json();
     },
     enabled: !!progressId,
     refetchInterval: (query) => {
+      if (isTraining) return false;
       const data = query.state.data as QuizResult;
       const hasPending = data?.answers.some(a => a.userResponse && a.answerId === null && !a.aiEvaluation);
       return hasPending ? 3000 : false;
@@ -62,13 +67,13 @@ function QuizResults() {
   });
 
   const { data: quizQuestions, isLoading: loadingQuestions } = useQuery<Question[]>({
-    queryKey: [`/api/quizzes/${results?.quiz.id}/questions`],
+    queryKey: [`/api/quizzes/${results?.quiz?.id}/questions`],
     queryFn: async () => {
-      const res = await fetch(`/api/quizzes/${results?.quiz.id}/questions`);
+      const res = await fetch(`/api/quizzes/${results?.quiz?.id}/questions`);
       if (!res.ok) throw new Error('Error fetching quiz questions');
       return res.json();
     },
-    enabled: !!results?.quiz.id,
+    enabled: !!results?.quiz?.id && !isTraining,
   });
 
   const { data: allUserQuizzes } = useQuery<any[]>({
@@ -85,8 +90,8 @@ function QuizResults() {
   const currentNode = useMemo(() => {
     if (!results) return null;
 
-    const categoryId = results.quiz.categoryId;
-    const categoryName = (results.quiz as any).categoryName?.toLowerCase() || "";
+    const categoryId = results.quiz?.categoryId;
+    const categoryName = (results.quiz as any)?.categoryName?.toLowerCase() || "";
     let nodes: any[] = [];
 
     if (categoryId === 1 || categoryName.includes("aritmética")) nodes = arithmeticMapNodes;
@@ -98,21 +103,21 @@ function QuizResults() {
     if (nodes.length === 0) return null;
 
     return nodes.find(n => {
-      const isSubMatch = n.subcategoryId === results.quiz.subcategoryId ||
-        (n.additionalSubcategories && n.additionalSubcategories.includes(results.quiz.subcategoryId));
+      const isSubMatch = n.subcategoryId === results.quiz?.subcategoryId ||
+        (n.additionalSubcategories && n.additionalSubcategories.includes(results.quiz?.subcategoryId));
 
       if (!isSubMatch) return false;
 
       // Match by keywords if present
       if (n.filterKeywords?.length) {
         const kw = n.filterKeywords.map((k: string) => k.toLowerCase());
-        const matches = kw.some((k: string) => results.quiz.title.toLowerCase().includes(k));
+        const matches = kw.some((k: string) => results.quiz?.title.toLowerCase().includes(k));
         if (!matches) return false;
       }
 
       if (n.excludeKeywords?.length) {
         const ex = n.excludeKeywords.map((k: string) => k.toLowerCase());
-        const excluded = ex.some((k: string) => results.quiz.title.toLowerCase().includes(k));
+        const excluded = ex.some((k: string) => results.quiz?.title.toLowerCase().includes(k));
         if (excluded) return false;
       }
 
@@ -133,12 +138,15 @@ function QuizResults() {
       const isFreshQuiz = searchParams.get('source') === 'quiz';
 
       if (isFreshQuiz) {
-        const categoryId = results?.quiz.categoryId || 1;
-        let params = '';
+        const categoryId = results?.quiz?.categoryId || params.categoryId;
+        let p = '';
         if (currentNode) {
-          params = `&focusNode=${currentNode.id}&source=quiz`;
+          p = `&focusNode=${currentNode.id}&source=quiz`;
         }
-        setLocation(`/category/${categoryId}?view=roadmap${params}`);
+        setLocation(`/category/${categoryId}?view=roadmap${p}`);
+      } else if (isTraining && results?.quiz?.categoryId) {
+        // Redirigir al dashboard con parámetro para reabrir el diálogo de entrenamiento
+        setLocation(`/dashboard?reopenTraining=${results.quiz.categoryId}`);
       } else {
         // Si no venimos de un quiz recién terminado, usamos el comportamiento normal de "atrás"
         if (window.history.length > 1) {
@@ -230,8 +238,14 @@ function QuizResults() {
   };
 
   const getCorrectAnswerContent = (answer: any): string | undefined => {
+    // For training results, the options are embedded in the answer.question object
+    if (isTraining && answer.question?.options) {
+      const correctAnswer = answer.question.options.find((o: any) => o.isCorrect);
+      return correctAnswer?.text;
+    }
+    
     if (!quizQuestions) return undefined;
-    const fullQuestion = quizQuestions.find((q: any) => q.id === answer.question.id);
+    const fullQuestion = quizQuestions.find((q: any) => q.id === answer.question?.id);
     const correctAnswer = fullQuestion?.answers.find((a: any) => a.isCorrect);
     return correctAnswer?.content;
   };
@@ -272,7 +286,7 @@ function QuizResults() {
     ]);
 
     const csvContent = [
-      `Resultados: ${results.quiz.title}`,
+      `Resultados: ${results.quiz?.title || 'Entrenamiento'}`,
       '',
       headers.join(','),
       ...rows.map(row => row.join(','))
@@ -401,7 +415,7 @@ function QuizResults() {
                   <h3 className="text-2xl font-bold mb-3 text-white">{results.quiz.title}</h3>
                   <div className="inline-flex items-center bg-blue-500/10 text-blue-300 px-4 py-1.5 rounded-full text-sm border border-blue-500/20">
                     <Clock className="mr-2 h-4 w-4" />
-                    Completado en {formatTimeSpent(results.progress.timeSpent)} minutos
+                    Completado en {results.progress ? formatTimeSpent(results.progress.timeSpent) : '--'} minutos
                   </div>
                 </div>
 
@@ -438,9 +452,9 @@ function QuizResults() {
                     </div>
                     <div className="text-sm font-medium text-slate-400 mb-1">Tiempo/Pregunta</div>
                     <div className="text-4xl font-bold text-white">
-                      {Math.floor((results.progress.timeSpent || 0) / totalQuestions / 60)}
+                      {results.progress ? Math.floor((results.progress.timeSpent || 0) / totalQuestions / 60) : 0}
                       <span className="text-xl text-slate-500">
-                        :{Math.floor((results.progress.timeSpent || 0) / totalQuestions % 60).toString().padStart(2, '0')}
+                        :{results.progress ? Math.floor((results.progress.timeSpent || 0) / totalQuestions % 60).toString().padStart(2, '0') : '00'}
                       </span>
                     </div>
                   </div>
@@ -476,8 +490,9 @@ function QuizResults() {
                         {renderContent(answer.question.content)}
                         {/* Display image if the question has one */}
                         {(() => {
-                          const fullQuestion = quizQuestions?.find((q: any) => q.id === answer.question.id);
-                          const imageUrl = fullQuestion?.imageUrl || answer.question.imageUrl;
+                           const qId = answer.question?.id;
+                           const fullQuestion = quizQuestions?.find((q: any) => q.id === qId);
+                           const imageUrl = fullQuestion?.imageUrl || answer.question?.imageUrl;
                           if (imageUrl) {
                             return (
                               <div className="mt-4 flex justify-center">
