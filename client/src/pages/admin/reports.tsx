@@ -199,6 +199,7 @@ export default function AdminReports() {
                 title: "Reporte eliminado",
                 description: "El reporte ha sido eliminado permanentemente.",
             });
+            handleCloseDialog();
         },
         onError: () => {
             toast({
@@ -410,10 +411,62 @@ export default function AdminReports() {
                 <Dialog open={!!selectedReportId} onOpenChange={(open) => !open && handleCloseDialog()}>
                     <DialogContent className="max-w-3xl max-h-[90vh] bg-slate-900 border border-white/10 text-slate-200">
                         <DialogHeader>
-                            <DialogTitle className="text-slate-100">Detalles del Reporte #{selectedReportId}</DialogTitle>
-                            <DialogDescription className="text-slate-400">
-                                Información completa sobre el error reportado.
-                            </DialogDescription>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <DialogTitle className="text-slate-100">Detalles del Reporte #{selectedReportId}</DialogTitle>
+                                    <DialogDescription className="text-slate-400">
+                                        Información completa sobre el error reportado.
+                                    </DialogDescription>
+                                </div>
+                                <div className="flex gap-2 mr-6">
+                                    {reportDetails?.status === "pending" && (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    disabled={resolveAndRewardMutation.isPending}
+                                                    className="bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border-purple-500/20 hover:text-purple-300"
+                                                >
+                                                    <CheckCircle className="h-4 w-4 mr-1" /> Resolver <ChevronDown className="h-3 w-3 ml-1" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent className="bg-slate-900 border-white/10 text-slate-200">
+                                                <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: selectedReportId!, credits: 0 })}>
+                                                    Resolver (0 créditos)
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator className="bg-white/10" />
+                                                <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: selectedReportId!, credits: 1 })}>
+                                                    Resolver y dar 1 crédito
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: selectedReportId!, credits: 2 })}>
+                                                    Resolver y dar 2 créditos
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: selectedReportId!, credits: 3 })}>
+                                                    Resolver y dar 3 créditos
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                            if (window.confirm("¿Deseas eliminar permanentemente este reporte?")) {
+                                                deleteReportMutation.mutate(selectedReportId!);
+                                            }
+                                        }}
+                                        disabled={deleteReportMutation.isPending}
+                                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20 hover:text-red-300"
+                                    >
+                                        {deleteReportMutation.isPending ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Trash2 className="h-4 w-4" />
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
                         </DialogHeader>
 
                         {isLoadingDetails ? (

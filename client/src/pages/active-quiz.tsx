@@ -2,7 +2,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, X as CloseIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { startActiveQuizTour } from "@/lib/tour";
 import { useState, useEffect, useRef } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -139,6 +140,12 @@ const ActiveQuiz = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const lastSyncQuestionId = useRef<number | null>(null);
 
+  // Admin Edit State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState("");
+  const [editAnswers, setEditAnswers] = useState<any[]>([]);
+
   // Queries — esperan a que la sesión esté confirmada para evitar 401 al iniciar
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${quizId}`],
@@ -234,6 +241,32 @@ const ActiveQuiz = () => {
     },
   });
 
+  const updateQuestionMutation = useMutation({
+    mutationFn: async ({ id, payload }: { id: number; payload: any }) => {
+      const res = await apiRequest("PUT", `/api/admin/questions/${id}`, payload);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Error al actualizar la pregunta");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: isChiqui ? [`/api/chiquitest/questions/${categoryId}`] : [`/api/quizzes/${quizId}/questions`] });
+      setIsEditing(false);
+      toast({
+        title: "Pregunta actualizada",
+        description: "Los cambios se han guardado correctamente.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo actualizar la pregunta",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Handlers
   const handleReportSubmit = () => {
     if (!questions || !reportDescription.trim()) return;
@@ -243,6 +276,43 @@ const ActiveQuiz = () => {
       quizId: currentQuestion.quizId,
       questionId: currentQuestion.id,
       description: reportDescription,
+    });
+  };
+
+  const handleStartEdit = () => {
+    if (!questions) return;
+    const currentQ = questions[currentQuestionIndex];
+    setEditContent(currentQ.content);
+    setEditImageUrl(currentQ.imageUrl || "");
+    setEditAnswers(currentQ.answers || []);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = () => {
+    if (!questions) return;
+    const currentQ = questions[currentQuestionIndex];
+
+    // Basic validation
+    if (!editContent.trim()) {
+      toast({ title: "Error", description: "El contenido no puede estar vacío", variant: "destructive" });
+      return;
+    }
+
+    updateQuestionMutation.mutate({
+      id: currentQ.id,
+      payload: {
+        quizId: currentQ.quizId,
+        content: editContent,
+        type: currentQ.type,
+        difficulty: currentQ.difficulty === 'hard' ? 3 : currentQ.difficulty === 'medium' ? 2 : 1, // Mapping if necessary, but PUT expects number for some fields. Actually questions.tsx uses difficulty as string then parseInt
+        points: currentQ.points,
+        answers: editAnswers,
+        imageUrl: editImageUrl || null,
+      }
     });
   };
 
@@ -1160,219 +1230,300 @@ const ActiveQuiz = () => {
 
         {/* Main Content Area - No Card Wrapper */}
         <div className="mb-8">
-          <div className="flex justify-between items-start mb-6">
-            <div className="flex gap-2">
-              <Badge
-                className={`${currentQuestion.difficulty === 'hard' ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' :
-                  currentQuestion.difficulty === 'medium' ? 'bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30' :
-                    'bg-green-500/20 text-green-300 hover:bg-green-500/30'
-                  } border - none transition - colors`}
-              >
-                {currentQuestion.difficulty === 'hard' ? 'Difícil' :
-                  currentQuestion.difficulty === 'medium' ? 'Medio' : 'Fácil'}
-              </Badge>
-            </div>
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm px-4 py-1 rounded-full font-medium shadow-lg shadow-blue-500/20">
-              {currentQuestion.points} puntos
-            </div>
-          </div>
-
-          <div className="mb-8">
-            <h3 className="text-lg font-medium mb-4 text-slate-400">
-              {currentQuestion.type === 'equation'
-                ? 'Resuelve la siguiente ecuación:'
-                : currentQuestion.type === 'text'
-                  ? 'Responde la siguiente pregunta:'
-                  : isDirectInput
-                    ? 'Escribe la respuesta correcta:'
-                    : 'Selecciona la respuesta correcta'}
-            </h3>
-
-            {currentQuestion.imageUrl && (
-              <div className="mb-6 flex justify-center">
-                <ZoomableImage
-                  src={currentQuestion.imageUrl}
-                  alt="Imagen de la pregunta"
-                />
+          {isEditing ? (
+            <div className="space-y-6 bg-slate-900/80 p-6 rounded-2xl border border-blue-500/30 shadow-2xl animate-in fade-in zoom-in duration-300">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-blue-400 flex items-center gap-2">
+                  <Pencil className="h-5 w-5" /> Modo Edición de Pregunta
+                </h3>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={handleCancelEdit} className="text-slate-400 hover:text-white">
+                    <CloseIcon className="h-4 w-4 mr-2" /> Cancelar
+                  </Button>
+                  <Button size="sm" onClick={handleSaveEdit} disabled={updateQuestionMutation.isPending} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20">
+                    {updateQuestionMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                    Guardar Cambios
+                  </Button>
+                </div>
               </div>
-            )}
 
-            {/* Admin: Show Correct Answer */}
-            {session?.userId === 1 && (
-              <div className="mb-6 p-4 bg-green-900/20 border border-green-500/30 rounded-xl text-green-300 text-sm flex items-start gap-3">
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-green-400" />
-                <div className="w-full">
-                  <span className="font-bold block mb-2 text-green-400">Respuesta Correcta (Solo Admin):</span>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-400 flex items-center gap-2 text-xs uppercase tracking-wider font-bold">
+                    Contenido de la pregunta
+                    <span className="text-[10px] lowercase font-normal opacity-70">(usa ¡ para fórmulas)</span>
+                  </Label>
+                  <Textarea
+                    autoFocus
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    className="bg-slate-950 border-slate-700 text-slate-200 text-lg min-h-[120px] focus:border-blue-500/50"
+                    placeholder="Escribe la pregunta..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-slate-400 text-xs uppercase tracking-wider font-bold">URL de la imagen (opcional)</Label>
+                  <Input
+                    value={editImageUrl}
+                    onChange={(e) => setEditImageUrl(e.target.value)}
+                    className="bg-slate-950 border-slate-700 text-slate-200 focus:border-blue-500/50"
+                    placeholder="https://..."
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-slate-400 text-xs uppercase tracking-wider font-bold">Opciones de respuesta</Label>
                   {currentQuestion.type === 'text' ? (
-                    <span className="font-mono bg-slate-950/50 px-2 py-1 rounded border border-green-500/20 block w-full">
-                      {currentQuestion.answers?.map(a => a.content).join(' O ')}
-                    </span>
-                  ) : (
-                    <div className="font-medium space-y-1">
-                      {currentQuestion.answers?.filter((a: any) => a.isCorrect).map((a: any) => (
-                        <div key={a.id} className="flex items-center gap-2">
-                          <span>•</span> <ContentRenderer content={a.content} />
+                    <div className="p-4 bg-slate-950/50 rounded-lg border border-white/5 italic text-slate-500 text-sm">
+                      Las preguntas de tipo texto se califican automáticamente por coincidencia o IA.
+                    </div>
+                  ) : (editAnswers.map((answer, idx) => (
+                    <div key={idx} className="flex gap-3 items-center bg-slate-950/50 p-3 rounded-lg border border-white/5 transition-colors hover:border-white/10">
+                      <div className="flex flex-col items-center gap-1">
+                        <Checkbox
+                          checked={answer.isCorrect}
+                          onCheckedChange={(checked) => {
+                            const newAnsws = [...editAnswers];
+                            newAnsws[idx] = { ...newAnsws[idx], isCorrect: !!checked };
+                            setEditAnswers(newAnsws);
+                          }}
+                          className="data-[state=checked]:bg-green-600 border-slate-600"
+                        />
+                        <span className={`text-[10px] font-bold uppercase ${answer.isCorrect ? 'text-green-500' : 'text-slate-600'}`}>
+                          {answer.isCorrect ? 'Correcta' : 'Inc.'}
+                        </span>
+                      </div>
+                      <Input
+                        value={answer.content}
+                        onChange={(e) => {
+                          const newAnsws = [...editAnswers];
+                          newAnsws[idx] = { ...newAnsws[idx], content: e.target.value };
+                          setEditAnswers(newAnsws);
+                        }}
+                        className="bg-slate-950 border-slate-700 text-slate-200 flex-1 focus:border-blue-500/50"
+                        placeholder={`Opción ${idx + 1}`}
+                      />
+                    </div>
+                  )))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex gap-2">
+                  <Badge
+                    className={`${currentQuestion.difficulty === 'hard' ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' :
+                      currentQuestion.difficulty === 'medium' ? 'bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30' :
+                        'bg-green-500/20 text-green-300 hover:bg-green-500/30'
+                      } border-none transition-colors`}
+                  >
+                    {currentQuestion.difficulty === 'hard' ? 'Difícil' :
+                      currentQuestion.difficulty === 'medium' ? 'Medio' : 'Fácil'}
+                  </Badge>
+                </div>
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm px-4 py-1 rounded-full font-medium shadow-lg shadow-blue-500/20">
+                  {currentQuestion.points} puntos
+                </div>
+              </div>
+
+              <div className="mb-8">
+                <h3 className="text-lg font-medium mb-4 text-slate-400">
+                  {currentQuestion.type === 'equation'
+                    ? 'Resuelve la siguiente ecuación:'
+                    : currentQuestion.type === 'text'
+                      ? 'Responde la siguiente pregunta:'
+                      : isDirectInput
+                        ? 'Escribe la respuesta correcta:'
+                        : 'Selecciona la respuesta correcta'}
+                </h3>
+
+                {currentQuestion.imageUrl && (
+                  <div className="mb-6 flex justify-center">
+                    <ZoomableImage
+                      src={currentQuestion.imageUrl}
+                      alt="Imagen de la pregunta"
+                    />
+                  </div>
+                )}
+
+                {/* Admin: Show Correct Answer */}
+                {session?.userId === 1 && (
+                  <div className="mb-6 p-4 bg-green-900/20 border border-green-500/30 rounded-xl text-green-300 text-sm flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-green-400" />
+                    <div className="w-full">
+                      <span className="font-bold block mb-2 text-green-400">Respuesta Correcta (Solo Admin):</span>
+                      {currentQuestion.type === 'text' ? (
+                        <span className="font-mono bg-slate-950/50 px-2 py-1 rounded border border-green-500/20 block w-full">
+                          {currentQuestion.answers?.map(a => a.content).join(' O ')}
+                        </span>
+                      ) : (
+                        <div className="font-medium space-y-1">
+                          {currentQuestion.answers?.filter((a: any) => a.isCorrect).map((a: any) => (
+                            <div key={a.id} className="flex items-center gap-2">
+                              <span>•</span> <ContentRenderer content={a.content} />
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <QuestionContent content={currentQuestion.content} />
+
+                {hintsRevealed[currentQuestion.id]?.map((hint, index) => (
+                  <div key={index} className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl animate-in fade-in slide-in-from-top-2">
+                    <h4 className="font-medium text-yellow-400 mb-2 flex items-center">
+                      <Lightbulb className="h-4 w-4 mr-2" />
+                      Pista {index + 1}
+                    </h4>
+                    <div className="text-slate-300">
+                      <AIMarkdown content={hint} className="prose-invert [&_*]:text-slate-200" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {currentQuestion.type === 'text' ? (
+                <div className="space-y-4">
+                  <Textarea
+                    value={textAnswers[currentQuestion.id] || ''}
+                    onChange={(e) => !answeredQuestions[currentQuestionIndex] && setTextAnswers({
+                      ...textAnswers,
+                      [currentQuestion.id]: e.target.value
+                    })}
+                    placeholder="Escribe tu respuesta aquí..."
+                    rows={4}
+                    disabled={answeredQuestions[currentQuestionIndex]}
+                    className="bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-600 focus:border-blue-500/50 focus:ring-blue-500/20 resize-none disabled:opacity-50"
+                  />
+                  {answeredQuestions[currentQuestionIndex] && (
+                    <div className="mt-4 p-4 rounded-xl bg-slate-800/50 border border-white/10">
+                      <h4 className="font-medium mb-2 text-slate-400">Tu respuesta:</h4>
+                      <p className="text-slate-200">{textAnswers[currentQuestion.id]}</p>
                     </div>
                   )}
                 </div>
-              </div>
-            )}
-
-            <QuestionContent content={currentQuestion.content} />
-
-            {hintsRevealed[currentQuestion.id]?.map((hint, index) => (
-              <div key={index} className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl animate-in fade-in slide-in-from-top-2">
-                <h4 className="font-medium text-yellow-400 mb-2 flex items-center">
-                  <Lightbulb className="h-4 w-4 mr-2" />
-                  Pista {index + 1}
-                </h4>
-                <div className="text-slate-300">
-                  <AIMarkdown content={hint} className="prose-invert [&_*]:text-slate-200" />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {currentQuestion.type === 'text' ? (
-            <div className="space-y-4">
-              <Textarea
-                value={textAnswers[currentQuestion.id] || ''}
-                onChange={(e) => !answeredQuestions[currentQuestionIndex] && setTextAnswers({
-                  ...textAnswers,
-                  [currentQuestion.id]: e.target.value
-                })}
-                placeholder="Escribe tu respuesta aquí..."
-                rows={4}
-                disabled={answeredQuestions[currentQuestionIndex]}
-                className="bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-600 focus:border-blue-500/50 focus:ring-blue-500/20 resize-none disabled:opacity-50"
-              />
-              {answeredQuestions[currentQuestionIndex] && (
-                <div className="mt-4 p-4 rounded-xl bg-slate-800/50 border border-white/10">
-                  <h4 className="font-medium mb-2 text-slate-400">Tu respuesta:</h4>
-                  <p className="text-slate-200">{textAnswers[currentQuestion.id]}</p>
-                </div>
-              )}
-            </div>
-          ) : isDirectInput ? null : (
-            <div className="grid grid-cols-1 gap-4">
-              {shuffledAnswers.map((answer, index) => {
-                const existingAnswer = studentAnswers.find(sa =>
-                  sa.questionId === currentQuestion.id && sa.answerId === answer.id
-                );
-                const isSelected = selectedAnswerId === answer.id || !!existingAnswer;
-                const isAnswered = answeredQuestions[currentQuestionIndex];
-
-                let variantClass = "bg-slate-800/30 border-white/5 hover:bg-slate-800/60 hover:border-blue-500/30 text-slate-300";
-
-                if (isAnswered) {
-                  if (answer.isCorrect) {
-                    variantClass = "bg-green-500/10 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.1)]";
-                  } else if (isSelected) {
-                    variantClass = "bg-red-500/10 border-red-500/50 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]";
-                  } else {
-                    variantClass = "opacity-60 border-white/5 bg-slate-900/20 text-slate-500";
-                  }
-                } else if (isSelected) {
-                  variantClass = "bg-blue-600/20 border-blue-500 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.15)]";
-                }
-
-                return (
-                  <button
-                    key={answer.id}
-                    onClick={() => !isAnswered && !isReadOnly && handleSelectAnswer(answer.id)}
-                    disabled={isAnswered || isReadOnly}
-                    className={`w-full text-left p-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass} ${isReadOnly ? 'cursor-default opacity-80' : ''}`}
-                  >
-                    <div className="flex items-center gap-4 relative z-10 w-full">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors
-                          ${isSelected || (isAnswered && answer.isCorrect)
-                          ? 'bg-white/10 border-white/20 text-white'
-                          : 'bg-slate-900/50 border-white/10 text-slate-500 group-hover:text-slate-300 group-hover:border-white/20'
-                        }
-                        `}>
-                        {String.fromCharCode(65 + index)}
-                      </div>
-                      <div className={`font-medium flex-1 ${getAnswerSizeClass(answer.content)}`}>
-                        <ContentRenderer content={answer.content} />
-                      </div>
+              ) : isDirectInput ? (
+                <div className="space-y-6 animate-in fade-in zoom-in duration-500">
+                  <div className="relative group">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
+                    <div className="relative">
+                      <Input
+                        ref={inputRef}
+                        value={directResponse}
+                        onChange={(e) => !answeredQuestions[currentQuestionIndex] && setDirectResponse(e.target.value)}
+                        placeholder="Escribe tu respuesta aquí..."
+                        className="bg-slate-900 border-white/10 text-xl py-6 h-auto text-slate-100 placeholder:text-slate-600 focus:ring-blue-500/50 rounded-2xl transition-all"
+                        disabled={answeredQuestions[currentQuestionIndex]}
+                      />
                     </div>
-                    {isAnswered && answer.isCorrect && <CheckCircle2 className="h-6 w-6 text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)] shrink-0 ml-4" />}
-                    {isAnswered && isSelected && !answer.isCorrect && <XCircle className="h-6 w-6 text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] shrink-0 ml-4" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {isDirectInput && !isReadOnly && (
-            <div className="space-y-6 animate-in fade-in zoom-in duration-500">
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
-                <div className="relative">
-                  <Input
-                    ref={inputRef}
-                    value={directResponse}
-                    onChange={(e) => !answeredQuestions[currentQuestionIndex] && setDirectResponse(e.target.value)}
-                    placeholder="Escribe tu respuesta aquí..."
-                    className="bg-slate-900 border-white/10 text-xl py-6 h-auto text-slate-100 placeholder:text-slate-600 focus:ring-blue-500/50 rounded-2xl transition-all"
-                    disabled={answeredQuestions[currentQuestionIndex]}
-                  />
-                </div>
-              </div>
-
-              {!answeredQuestions[currentQuestionIndex] && (
-                <div className="space-y-4">
-                  <MathKeyboard
-                    onInput={handleMathInput}
-                    onDelete={() => {
-                      const input = inputRef.current;
-                      if (!input) {
-                        setDirectResponse(prev => prev.slice(0, -1));
-                        return;
-                      }
-                      const start = input.selectionStart || 0;
-                      const end = input.selectionEnd || 0;
-                      if (start === end) {
-                        setDirectResponse(prev => prev.substring(0, start - 1) + prev.substring(start));
-                        setTimeout(() => {
-                          input.focus();
-                          input.setSelectionRange(start - 1, start - 1);
-                        }, 0);
-                      } else {
-                        setDirectResponse(prev => prev.substring(0, start) + prev.substring(end));
-                        setTimeout(() => {
-                          input.focus();
-                          input.setSelectionRange(start, start);
-                        }, 0);
-                      }
-                    }}
-                    className="max-w-md mx-auto"
-                  />
-
-                </div>
-              )}
-
-              {answeredQuestions[currentQuestionIndex] && (
-                <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center animate-in slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center justify-center gap-3 text-blue-400 mb-2 font-medium">
-                    <Brain className="h-5 w-5" />
-                    Evaluación por IA en progreso...
                   </div>
-                  <p className="text-slate-400 text-sm">Tu respuesta: <span className="text-slate-100 font-mono bg-slate-950 px-2 py-1 rounded ml-2">{directResponse}</span></p>
+
+                  {!answeredQuestions[currentQuestionIndex] && (
+                    <div className="space-y-4">
+                      <MathKeyboard
+                        onInput={handleMathInput}
+                        onDelete={() => {
+                          const input = inputRef.current;
+                          if (!input) {
+                            setDirectResponse(prev => prev.slice(0, -1));
+                            return;
+                          }
+                          const start = input.selectionStart || 0;
+                          const end = input.selectionEnd || 0;
+                          if (start === end) {
+                            setDirectResponse(prev => prev.substring(0, start - 1) + prev.substring(start));
+                            setTimeout(() => {
+                              input.focus();
+                              input.setSelectionRange(start - 1, start - 1);
+                            }, 0);
+                          } else {
+                            setDirectResponse(prev => prev.substring(0, start) + prev.substring(end));
+                            setTimeout(() => {
+                              input.focus();
+                              input.setSelectionRange(start, start);
+                            }, 0);
+                          }
+                        }}
+                        className="max-w-md mx-auto"
+                      />
+                    </div>
+                  )}
+
+                  {answeredQuestions[currentQuestionIndex] && (
+                    <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center animate-in slide-in-from-bottom-4 duration-500">
+                      <div className="flex items-center justify-center gap-3 text-blue-400 mb-2 font-medium">
+                        <Brain className="h-5 w-5" />
+                        Evaluación por IA en progreso...
+                      </div>
+                      <p className="text-slate-400 text-sm">Tu respuesta: <span className="text-slate-100 font-mono bg-slate-950 px-2 py-1 rounded ml-2">{directResponse}</span></p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {shuffledAnswers.map((answer, index) => {
+                    const existingAnswer = studentAnswers.find(sa =>
+                      sa.questionId === currentQuestion.id && sa.answerId === answer.id
+                    );
+                    const isSelected = selectedAnswerId === answer.id || !!existingAnswer;
+                    const isAnswered = answeredQuestions[currentQuestionIndex];
+
+                    let variantClass = "bg-slate-800/30 border-white/5 hover:bg-slate-800/60 hover:border-blue-500/30 text-slate-300";
+
+                    if (isAnswered) {
+                      if (answer.isCorrect) {
+                        variantClass = "bg-green-500/10 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.1)]";
+                      } else if (isSelected) {
+                        variantClass = "bg-red-500/10 border-red-500/50 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]";
+                      } else {
+                        variantClass = "opacity-60 border-white/5 bg-slate-900/20 text-slate-500";
+                      }
+                    } else if (isSelected) {
+                      variantClass = "bg-blue-600/20 border-blue-500 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.15)]";
+                    }
+
+                    return (
+                      <button
+                        key={answer.id}
+                        onClick={() => !isAnswered && !isReadOnly && handleSelectAnswer(answer.id)}
+                        disabled={isAnswered || isReadOnly}
+                        className={`w-full text-left p-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass} ${isReadOnly ? 'cursor-default opacity-80' : ''}`}
+                      >
+                        <div className="flex items-center gap-4 relative z-10 w-full">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors
+                                  ${isSelected || (isAnswered && answer.isCorrect)
+                              ? 'bg-white/10 border-white/20 text-white'
+                              : 'bg-slate-900/50 border-white/10 text-slate-500 group-hover:text-slate-300 group-hover:border-white/20'
+                            }
+                                `}>
+                            {String.fromCharCode(65 + index)}
+                          </div>
+                          <div className={`font-medium flex-1 ${getAnswerSizeClass(answer.content)}`}>
+                            <ContentRenderer content={answer.content} />
+                          </div>
+                        </div>
+                        {isAnswered && answer.isCorrect && <CheckCircle2 className="h-6 w-6 text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)] shrink-0 ml-4" />}
+                        {isAnswered && isSelected && !answer.isCorrect && <XCircle className="h-6 w-6 text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] shrink-0 ml-4" />}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
+
 
         <div className="relative flex flex-wrap justify-between items-center mb-8 gap-3">
           <Button
             variant="outline"
             className="flex items-center border-white/10 text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-900/50 z-10 h-10 px-3 sm:px-4"
             onClick={handlePreviousQuestion}
-            disabled={currentQuestionIndex === 0}
+            disabled={currentQuestionIndex === 0 || isEditing}
           >
             <ArrowLeft className="sm:mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Anterior</span>
@@ -1434,6 +1585,17 @@ const ActiveQuiz = () => {
                 )}
               </Button>
             )}
+            {session?.userId === 1 && (
+              <Button
+                variant="outline"
+                className="flex items-center border-amber-500/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 bg-amber-500/5 h-10 px-3 sm:px-4"
+                onClick={handleStartEdit}
+                disabled={isEditing}
+              >
+                <Pencil className="sm:mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Editar Pregunta</span>
+              </Button>
+            )}
             {session?.canReport && (
               <Button
                 variant="outline"
@@ -1447,7 +1609,7 @@ const ActiveQuiz = () => {
 
             <Button
               onClick={handleNextQuestion}
-              disabled={isNavigating || (
+              disabled={isNavigating || isEditing || (
                 !answeredQuestions[currentQuestionIndex] &&
                 selectedAnswerId === null &&
                 (progress?.responseMode !== 'direct_input' || !directResponse.trim()) &&
