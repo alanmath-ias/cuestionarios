@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { UserMenu } from '@/components/ui/user-menu';
-import { Menu as MenuIcon, X as CloseIcon, Youtube, Instagram, Globe, HelpCircle } from 'lucide-react';
+import { Menu as MenuIcon, X as CloseIcon, Youtube, Instagram, Globe, HelpCircle, Wand2 } from 'lucide-react';
 import { FaTiktok, FaFacebook } from 'react-icons/fa';
 import logo from '@/assets/images/logo.png';
 import { GlobalSearch } from '@/components/ui/global-search';
@@ -87,6 +87,15 @@ export function Header({ user, pendingCount }: HeaderProps) {
                 <li><Link href="/admin/quizzes"><span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Cuestionarios</span></Link></li>
                 <li><Link href="/admin/users"><span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Usuarios</span></Link></li>
                 <li><Link href="/admin/calificar"><span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Calificar</span></Link></li>
+                <li>
+                  <button 
+                    onClick={() => (window as any).openMagicQuiz && (window as any).openMagicQuiz()}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-600/20 to-amber-500/20 border border-amber-500/30 text-amber-400 hover:from-amber-600/30 hover:to-amber-500/30 transition-all group"
+                  >
+                    <Wand2 className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                    <span className="text-xs font-bold">Magia</span>
+                  </button>
+                </li>
               </>
             )}
 

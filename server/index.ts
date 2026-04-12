@@ -126,14 +126,18 @@ app.use((req, res, next) => {
   next();
 });
 
+import { db } from "./db.js";
+import { sql } from "drizzle-orm";
+
 (async () => {
   try {
     await initializeTestData();
   } catch (error) {
-    console.error("Error al inicializar datos:", error);
+    console.error("❌ [Error] Durante el arranque (test data):", error);
   }
 
   registerRoutes(app);
+
 
   // Middleware para servir archivos estáticos en producción
   if (app.get("env") === "development") {

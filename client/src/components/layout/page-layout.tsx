@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Header } from './header';
 import { Footer } from './footer';
 import { z } from 'zod';
+import { MagicQuizDialog } from '../dialogs/MagicQuizDialog';
+import { useState, useEffect } from 'react';
 
 const userSchema = z.object({
   id: z.number(),
@@ -23,7 +25,6 @@ interface PageLayoutProps {
 }
 
 export function PageLayout({ children }: PageLayoutProps) {
-  // Fetch current user
   const { data: user } = useQuery<User | null>({
     queryKey: ['/api/user'],
     queryFn: async (): Promise<User | null> => {
@@ -41,6 +42,21 @@ export function PageLayout({ children }: PageLayoutProps) {
     },
   });
 
+  // Fetch categories for the magic quiz dialog
+  const { data: categories } = useQuery<any[]>({
+    queryKey: ['/api/categories'],
+    enabled: !!user,
+  });
+
+  const [isMagicQuizOpen, setIsMagicQuizOpen] = useState(false);
+
+  useEffect(() => {
+    (window as any).openMagicQuiz = () => setIsMagicQuizOpen(true);
+    return () => {
+      delete (window as any).openMagicQuiz;
+    };
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header user={user} />
@@ -48,6 +64,15 @@ export function PageLayout({ children }: PageLayoutProps) {
       <main className="flex-grow">
         {children}
       </main>
+
+      <MagicQuizDialog 
+        isOpen={isMagicQuizOpen}
+        onClose={() => setIsMagicQuizOpen(false)}
+        categories={categories || []}
+        userId={user?.id || 0}
+        credits={user?.hintCredits || 0}
+        userRole={user?.role}
+      />
 
       <Footer />
     </div>

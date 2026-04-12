@@ -42,6 +42,7 @@ import Calificar from "@/pages/admin/Calificar";
 import subcategories from "./pages/admin/subcategories";
 import RegistrarPadres from "@/pages/admin/RegistrarPadres";
 import ParentDashboard from "@/pages/parent/parentDashboard";
+import AiQuizzesAdmin from '@/pages/admin/ai-quizzes';
 
 import EncuestaPage from '@/pages/EncuestaPage';
 
@@ -324,6 +325,9 @@ function Router() {
       </Route>
       <Route path="/admin/quizzes">
         {() => <AdminProtectedRoute component={QuizzesAdmin} path="/admin/quizzes" />}
+      </Route>
+      <Route path="/admin/ai-quizzes">
+        {() => <AdminProtectedRoute component={AiQuizzesAdmin} path="/admin/ai-quizzes" />}
       </Route>
       <Route path="/admin/users">
         {() => <AdminProtectedRoute component={UsersAdmin} path="/admin/users" />}

@@ -44,7 +44,8 @@ import {
   Sparkles,
   Zap,
   Brain,
-  Loader2
+  Loader2,
+  Wand2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FaWhatsapp } from "react-icons/fa";
@@ -87,6 +88,7 @@ interface QuizWithFeedback {
   feedback?: string;
   isChiqui?: boolean;
   responseMode?: 'multiple_choice' | 'direct_input';
+  isAiGenerated?: boolean;
 }
 
 // Synthetic type for Repasito dialogs (no real DB id needed)
@@ -320,6 +322,7 @@ export default function UserDashboard() {
   const [selectedTraining, setSelectedTraining] = useState<any>(null);
   const [isTrainingDialogOpen, setIsTrainingDialogOpen] = useState(false);
   const [loadingTraining, setLoadingTraining] = useState(false);
+  // Expose function for Header
 
   const handleSelectQuiz = (quiz: QuizWithFeedback) => {
     setSelectedQuiz(quiz);
@@ -468,6 +471,7 @@ export default function UserDashboard() {
   const feedbackQuizzes = useMemo(() => {
     return quizzes?.filter(q => q.feedback && q.feedback.length > 0 && !q.readByStudent) || [];
   }, [quizzes]);
+
 
   const stats = useMemo(() => {
     const avg = uniqueCompletedQuizzes.length > 0
@@ -881,6 +885,21 @@ export default function UserDashboard() {
               <Lightbulb className="w-4 h-4 mr-2" />
               {currentUser?.hintCredits ?? 0} Créditos de Pistas
             </div>
+
+            {/* BOTÓN MÁGICO (IA) */}
+            {currentUser && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => (window as any).openMagicQuiz && (window as any).openMagicQuiz()}
+                className="ml-3 mt-2 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 text-white font-bold text-sm shadow-lg shadow-amber-500/20 group relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                <Wand2 className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                <span>Cuestionario Mágico</span>
+                <Sparkles className="w-3 h-3 text-amber-200 animate-pulse" />
+              </motion.button>
+            )}
           </div>
 
 
@@ -2177,6 +2196,8 @@ export default function UserDashboard() {
           quizzes={quizzes || []}
           username={currentUser?.username || "Estudiante"}
         />
+
+        {/* Magic Quiz IA Dialog */}
 
         {/* Training Summary Dialog */}
         <Dialog open={isTrainingDialogOpen} onOpenChange={setIsTrainingDialogOpen}>

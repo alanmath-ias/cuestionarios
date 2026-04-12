@@ -71,6 +71,7 @@ export interface IStorage {
   getAllSubcategories(): Promise<any[]>;
   getSubcategoriesByCategory(categoryId: number): Promise<any[]>;
   createSubcategory(data: { name: string; categoryId: number; description?: string; youtube_sublink?: string | null }): Promise<any>;
+  getSubcategory(id: number): Promise<any | undefined>;
   deleteSubcategory(id: number): Promise<void>;
   updateSubcategory(id: number, name: string, description?: string, youtube_sublink?: string | null): Promise<void>;
   getQuizzesBySubcategory(subcategoryId: number): Promise<Quiz[]>;
@@ -203,9 +204,10 @@ export class MemStorage implements IStorage {
 
   async getAllSubcategories(): Promise<any[]> { return []; }
   async getSubcategoriesByCategory(categoryId: number): Promise<any[]> { return []; }
-  async createSubcategory(data: any): Promise<any> { throw new Error("Not implemented"); }
+  async createSubcategory(data: { name: string; categoryId: number; description?: string; youtube_sublink?: string | null }): Promise<any> { throw new Error("Not implemented"); }
+  async getSubcategory(id: number): Promise<any | undefined> { return undefined; }
   async deleteSubcategory(id: number): Promise<void> { }
-  async updateSubcategory(id: number, name: string): Promise<void> { }
+  async updateSubcategory(id: number, name: string, description?: string, youtube_sublink?: string | null): Promise<void> { }
   async getQuizzesBySubcategory(subcategoryId: number): Promise<Quiz[]> { return []; }
   async reorderQuizzes(orders: { id: number; sortOrder: number }[]): Promise<void> { }
   async reorderSubcategories(orders: { id: number; sortOrder: number }[]): Promise<void> { }
@@ -486,6 +488,7 @@ export class MemStorage implements IStorage {
       subscriptionPlan: null,
       subscriptionEndDate: null,
       canReport: insertUser.canReport ?? false,
+      canCreateAiQuizzes: (insertUser as any).canCreateAiQuizzes ?? false,
       totalReports: 0
     };
     this.users.set(id, user);
@@ -585,7 +588,9 @@ export class MemStorage implements IStorage {
       isPublic: quiz.isPublic ?? null,
       isVerified: false,
       url: null,
-      sortOrder: quiz.sortOrder ?? 0
+      sortOrder: quiz.sortOrder ?? 0,
+      isAiGenerated: (quiz as any).isAiGenerated ?? false,
+      createdByUserId: (quiz as any).createdByUserId ?? null
     };
 
     this.quizzes.set(id, newQuiz);

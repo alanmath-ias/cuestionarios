@@ -158,6 +158,26 @@ export default function UsersAdmin() {
     },
   });
 
+  const toggleAiPermissionMutation = useMutation({
+    mutationFn: async ({ userId, canCreateAiQuizzes }: { userId: number; canCreateAiQuizzes: boolean }) => {
+      await apiRequest("PATCH", `/api/users/${userId}/ai-permission`, { canCreateAiQuizzes });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Permiso actualizado",
+        description: "El permiso de Cuestionarios Mágicos ha sido actualizado.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const toggleReportPermissionMutation = useMutation({
     mutationFn: async ({ userId, canReport }: { userId: number; canReport: boolean }) => {
       await apiRequest("PATCH", `/api/users/${userId}/report-permission`, { canReport });
@@ -242,6 +262,7 @@ export default function UsersAdmin() {
                   <TableHead className="text-slate-400">Créditos</TableHead>
                   <TableHead className="text-slate-400">Total Reportes</TableHead>
                   <TableHead className="text-slate-400">Permiso Reportar</TableHead>
+                  <TableHead className="text-slate-400">Permiso IA</TableHead>
                   <TableHead className="text-slate-400 text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -308,6 +329,21 @@ export default function UsersAdmin() {
                             });
                           }}
                           className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-red-500 border-2 border-slate-800"
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center">
+                        <Switch
+                          checked={user.canCreateAiQuizzes}
+                          disabled={toggleAiPermissionMutation.isPending}
+                          onCheckedChange={(checked) => {
+                            toggleAiPermissionMutation.mutate({
+                              userId: user.id,
+                              canCreateAiQuizzes: checked,
+                            });
+                          }}
+                          className="data-[state=checked]:bg-amber-500 data-[state=unchecked]:bg-slate-700 border-2 border-slate-800"
                         />
                       </div>
                     </TableCell>

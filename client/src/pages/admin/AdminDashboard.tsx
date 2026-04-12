@@ -13,7 +13,8 @@ import {
   ListChecks,
   BadgeCheck,
   AlertOctagon,
-  FileClock
+  FileClock,
+  Wand2
 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -125,7 +126,7 @@ const AdminDashboard: React.FC = () => {
     <div className="min-h-screen bg-slate-950 text-slate-200 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <Card className="shadow-xl border border-white/10 bg-slate-900/50 backdrop-blur">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -183,6 +184,22 @@ const AdminDashboard: React.FC = () => {
                   </div>
                   <div className={`p-3 rounded-full border ${kpis.pendingReports >= 10 ? 'bg-red-500/20 border-red-500/40' : 'bg-slate-500/10 border-slate-500/20'}`}>
                     <AlertOctagon className={`w-6 h-6 ${kpis.pendingReports >= 10 ? 'text-red-500' : 'text-slate-400'}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/ai-quizzes">
+            <Card className="shadow-xl border border-amber-500/10 bg-slate-900/50 backdrop-blur group hover:border-amber-500/30 transition-all cursor-pointer h-full">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-amber-500/80 uppercase tracking-widest">Cuestionarios IA</p>
+                    <h3 className="text-2xl font-bold text-white mt-1 group-hover:text-amber-400 transition-colors">Gestión Mágica</h3>
+                  </div>
+                  <div className="p-3 bg-amber-500/10 rounded-full border border-amber-500/20 group-hover:rotate-12 transition-transform">
+                    <Wand2 className="w-6 h-6 text-amber-500" />
                   </div>
                 </div>
               </CardContent>
@@ -415,7 +432,13 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 pt-4 border-t border-white/10">
+                <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
+                  <Link to="/admin/ai-quizzes">
+                    <Button variant="outline" className="w-full justify-between bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 border-amber-500/20 shadow-lg shadow-amber-500/5">
+                      Cuestionarios IA
+                      <Wand2 className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
                   <Link to="/admin/users">
                     <Button variant="outline" className="w-full justify-between bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white border-slate-700">
                       Gestionar Usuarios

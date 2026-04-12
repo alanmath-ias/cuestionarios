@@ -79,12 +79,43 @@ type ProgressWithQuiz = typeof studentProgress.$inferSelect & {
 
 
 const publicQuizIds = [278, 279, 280, 281, 282, 283, 285, 286];
+const COST_AI_QUIZ = 10;
 
+// Ayudante para limpiar y parsear JSON de la IA de forma robusta
+function cleanAiJson(content: string) {
+  let cleaned = content.trim();
+  
+  // 1. Eliminar bloques de Markdown si existen
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.replace(/^```json\s*\n?/, '').replace(/\n?```$/, '');
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```\s*\n?/, '').replace(/\n?```$/, '');
+  }
+  
+  cleaned = cleaned.trim();
+
+  // 2. Corregir escapes de barra invertida comunes en LaTeX que rompen JSON.parse
+  // Buscamos barras invertidas que NO estén escapadas y que precedan a caracteres que NO son escapes válidos de JSON
+  // Pero lo más seguro para LaTeX es simplemente asegurar que toda \ se convierta en \\ si no viene ya así
+  // Esta regex detecta barras invertidas solitarias (no seguidas de otra barra u otros caracteres de control)
+  // Nota: DeepSeek suele enviar \frac en lugar de \\frac en el JSON raw.
+  try {
+    return JSON.parse(cleaned);
+  } catch (initialError) {
+    // Si falla el parseo inicial, intentamos una limpieza de escapes de LaTeX
+    // Reemplazamos \ (que no esté ya escapada) por \\
+    const fixedContent = cleaned.replace(/\\(?![\\\/bfnrtu])/g, '\\\\');
+    try {
+      return JSON.parse(fixedContent);
+    } catch (secondError) {
+      console.error("Fallo definitivo en parseo AI JSON:", secondError);
+      throw secondError;
+    }
+  }
+}
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   const apiRouter = express.Router();
-
-
 
   app.use("/api", apiRouter);
 
@@ -835,25 +866,15 @@ Tono: Alentador, profesional y educativo.`;
       }
 
       const data = await response.json();
-      let diagnosisContent = data.choices?.[0]?.message?.content?.trim();
-
-      // Clean up markdown code blocks if present
-      if (diagnosisContent.startsWith('```json')) {
-        diagnosisContent = diagnosisContent.replace(/^```json\n/, '').replace(/\n```$/, '');
-      } else if (diagnosisContent.startsWith('```')) {
-        diagnosisContent = diagnosisContent.replace(/^```\n/, '').replace(/\n```$/, '');
-      }
-
       let diagnosis;
       try {
-        diagnosis = JSON.parse(diagnosisContent);
+        diagnosis = cleanAiJson(data.choices?.[0]?.message?.content || "[]");
         // Ensure it's an array (DeepSeek might wrap it in an object sometimes)
         if (!Array.isArray(diagnosis) && diagnosis.diagnosis) {
           diagnosis = diagnosis.diagnosis;
         }
       } catch (e) {
         console.error("Error parsing AI JSON:", e);
-        // Fallback text if JSON fails
         diagnosis = "Revisa los temas marcados en rojo en el detalle de abajo.";
       }
 
@@ -863,6 +884,162 @@ Tono: Alentador, profesional y educativo.`;
       console.error("[Diagnosis] Error generating diagnosis:", error);
       res.json({
         diagnosis: "Detectamos algunos conceptos que necesitan refuerzo. Con práctica constante y explicaciones claras, subirás de nivel rápidamente."
+      });
+    }
+  });
+
+  // --- ENGINE: GENERADOR MÁGICO DE CUESTIONARIOS IA ---
+  apiRouter.post("/ai/generate-quiz", requireAuth, async (req: Request, res: Response) => {
+    const userId = req.session.userId!;
+    const { categoryId, subcategoryId, topicDescription, questionCount, difficulty, timeLimit } = req.body;
+
+    try {
+      // 1. Verificar permisos y créditos
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
+
+      if (!user.canCreateAiQuizzes && user.role !== 'admin') {
+        return res.status(403).json({ message: "No tienes permiso para crear cuestionarios mágicos. Contacta al administrador." });
+      }
+
+      const COST = 10;
+      if (user.hintCredits < COST) {
+        return res.status(403).json({ message: `Necesitas al menos ${COST} créditos para crear un cuestionario mágico. Tienes ${user.hintCredits}.` });
+      }
+
+      // 2. Preparar el Prompt
+      const category = await storage.getCategory(parseInt(categoryId));
+      const subcategory = subcategoryId ? await storage.getSubcategory(parseInt(subcategoryId)) : null;
+      
+      const difficultyMap: Record<string, string> = {
+        'easy': 'Principiante',
+        'medium': 'Intermedio',
+        'hard': 'Avanzado/Olimpiada'
+      };
+
+      const prompt = `Actúa como un profesor de matemáticas experto y creativo. Crea un cuestionario de alta calidad.
+TEMA: ${topicDescription}
+MATERIA: ${category?.name || 'Matemáticas'}
+SUBTEMA GENERAL: ${subcategory?.name || 'General'}
+DIFICULTAD: ${difficultyMap[difficulty] || 'Intermedio'}
+NÚMERO DE PREGUNTAS: ${questionCount || 10}
+
+REQUISITOS TÉCNICOS:
+1. Usa texto plano para los enunciados y explicaciones. Reserva la notación LaTeX solo para lo que sea estrictamente necesario (fracciones, raíces, potencias, logaritmos o fórmulas complejas).
+2. MUY IMPORTANTE: La apertura y el CIERRE del bloque de LaTeX debe ser EXACTAMENTE el mismo carácter ¡ (no uses ! ni otros símbolos). Ejemplo: ¡\frac{a}{b}¡
+3. Todas las preguntas deben ser de tipo 'multiple_choice' con exactamente 4 opciones.
+4. El lenguaje debe ser claro, educativo y en español.
+5. Las opciones de respuesta deben estar bien pensadas (incluye distractores comunes).
+6. Incluye una breve explicación pedagógica de la respuesta correcta (máximo 2 líneas).
+7. Prioriza ejercicios técnicos directos. Evita enunciados extensos, historias o contextos innecesarios.
+8. Si el tema es complejo, sé conciso para no exceder el límite de respuesta.
+
+DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
+{
+  "title": "Un título creativo para el cuestionario",
+  "description": "Una breve descripción motivadora",
+  "questions": [
+    {
+      "content": "Texto de la pregunta...",
+      "explanation": "Explicación de por qué la respuesta es correcta...",
+      "options": [
+        { "text": "Opción 1", "isCorrect": true },
+        { "text": "Opción 2", "isCorrect": false },
+        { "text": "Opción 3", "isCorrect": false },
+        { "text": "Opción 4", "isCorrect": false }
+      ]
+    }
+  ]
+}`;
+
+      const apiKey = process.env.DEEPSEEK_API_KEY || process.env.VITE_DEEPSEEK_API_KEY;
+      if (!apiKey) throw new Error("DeepSeek API key not configured");
+
+      // 3. Llamada a DeepSeek
+      const aiResponse = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.4,
+          max_tokens: 4000,
+          response_format: { type: 'json_object' }
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        const errText = await aiResponse.text();
+        console.error("DeepSeek API Error:", errText);
+        throw new Error("Error al contactar con el genio de la IA.");
+      }
+
+      const aiData = await aiResponse.json();
+      let quizContent;
+      try {
+        quizContent = cleanAiJson(aiData.choices[0].message.content);
+      } catch (e) {
+        console.error("JSON Parsing Error from AI:", aiData.choices[0].message.content);
+        throw new Error("La IA generó un formato inválido. Por favor intenta de nuevo.");
+      }
+
+      // 4. PERSISTENCIA EN TRANSACCIÓN Y COBRO
+      const result = await db.transaction(async (tx) => {
+        // Descontar créditos
+        await tx.update(users)
+          .set({ hintCredits: user.hintCredits - COST })
+          .where(eq(users.id, userId));
+
+        // Crear el Quiz
+        const [newQuiz] = await tx.insert(quizzes).values({
+          title: quizContent.title,
+          description: quizContent.description || `Generado por IA sobre: ${topicDescription}`,
+          categoryId: parseInt(categoryId),
+          subcategoryId: subcategoryId ? parseInt(subcategoryId) : null,
+          totalQuestions: quizContent.questions.length,
+          timeLimit: (parseInt(timeLimit) || 15) * 60,
+          difficulty: difficulty || 'medium',
+          isPublic: false,
+          isAiGenerated: true,
+          createdByUserId: userId,
+          sortOrder: 999
+        }).returning();
+
+        // Crear Preguntas y Respuestas
+        for (const q of quizContent.questions) {
+          const [createdQuestion] = await tx.insert(questionsTable).values({
+            quizId: newQuiz.id,
+            content: q.content,
+            difficulty: difficulty === 'easy' ? 1 : difficulty === 'hard' ? 3 : 2,
+            type: 'multiple_choice',
+            points: 1,
+            explanation: q.explanation || null
+          }).returning();
+
+          await tx.insert(answers).values(
+            q.options.map((opt: any) => ({
+              questionId: createdQuestion.id,
+              content: opt.text || opt.content,
+              isCorrect: opt.isCorrect
+            }))
+          );
+        }
+        return newQuiz;
+      });
+
+      res.status(201).json({
+        message: "¡Cuestionario mágico creado con éxito!",
+        quizId: result.id,
+        creditsRemaining: user.hintCredits - COST
+      });
+
+    } catch (error) {
+      console.error("Magic Quiz Generation Error:", error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Error inesperado en la generación mágica." 
       });
     }
   });
@@ -944,6 +1121,42 @@ Tono: Alentador, profesional y educativo.`;
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ message: "Error fetching users" });
+    }
+  });
+
+  // Promote AI Quiz to official roadmap (Admin only)
+  apiRouter.patch("/admin/quizzes/:id/promote", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { categoryId, subcategoryId } = req.body;
+
+      if (!categoryId || !subcategoryId) {
+        return res.status(400).json({ message: "Materia y Tema destino son requeridos." });
+      }
+
+      const updatedQuiz = await storage.updateQuiz(parseInt(id), {
+        categoryId: parseInt(categoryId),
+        subcategoryId: parseInt(subcategoryId),
+        isPublic: true,
+        // Optional: you might want to reset the sortOrder to something logical
+      });
+
+      res.json({ message: "Cuestionario promovido con éxito", quiz: updatedQuiz });
+    } catch (error) {
+      console.error("Error promoting quiz:", error);
+      res.status(500).json({ message: "Error al promover el cuestionario." });
+    }
+  });
+
+  // Delete Quiz (Admin only)
+  apiRouter.delete("/admin/quizzes/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteQuiz(parseInt(id));
+      res.json({ message: "Cuestionario eliminado con éxito" });
+    } catch (error) {
+      console.error("Error deleting quiz:", error);
+      res.status(500).json({ message: "Error al eliminar el cuestionario." });
     }
   });
 
@@ -3078,6 +3291,27 @@ Ejemplo de formato:
     }
   });
 
+  apiRouter.patch("/users/:id/ai-permission", requireAdmin, async (req, res) => {
+    const userId = parseInt(req.params.id);
+    const { canCreateAiQuizzes } = req.body;
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    if (typeof canCreateAiQuizzes !== 'boolean') {
+      return res.status(400).json({ message: "canCreateAiQuizzes must be a boolean" });
+    }
+
+    try {
+      const updatedUser = await storage.updateUser(userId, { canCreateAiQuizzes });
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user AI permission:", error);
+      res.status(500).json({ message: "Error updating user AI permission" });
+    }
+  });
+
   // Nuevos endpoints para el Dashboard Refactorizado
   apiRouter.get("/admin/students-at-risk", requireAdmin, async (req, res) => {
     try {
@@ -4546,6 +4780,43 @@ Ejemplo de formato:
     } catch (error) {
       console.error("Stop impersonation error:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Promote AI Quiz to official map
+  app.patch("/api/admin/quizzes/:id/promote", async (req, res) => {
+    if (!req.user || (req.user as any).role !== 'admin') return res.sendStatus(403);
+
+    const { id } = req.params;
+    const { categoryId, subcategoryId } = req.body;
+
+    if (!categoryId || !subcategoryId) {
+      return res.status(400).send("Falta categoría o subcategoría");
+    }
+
+    try {
+      const quizId = parseInt(id);
+      
+      // Update the quiz status
+      const [updatedQuiz] = await db
+        .update(quizzes)
+        .set({
+          categoryId: parseInt(categoryId),
+          subcategoryId: parseInt(subcategoryId),
+          isPublic: true
+        })
+        .where(eq(quizzes.id, quizId))
+        .returning();
+
+      if (!updatedQuiz) return res.status(404).send("Cuestionario no encontrado");
+
+      // Count questions and update totalQuestions for the map to display it correctly
+      const totalQuestions = await storage.getQuestionsByQuiz(quizId).then(qs => qs.length);
+      await db.update(quizzes).set({ totalQuestions }).where(eq(quizzes.id, quizId));
+
+      res.json(updatedQuiz);
+    } catch (error: any) {
+      res.status(500).send(error.message);
     }
   });
 

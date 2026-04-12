@@ -25,6 +25,7 @@ export const users = pgTable("users", {
 	subscriptionEndDate: timestamp("subscription_end_date", { mode: 'string' }),
 	canReport: boolean("can_report").default(false).notNull(),
 	totalReports: integer("total_reports").default(0).notNull(),
+	canCreateAiQuizzes: boolean("can_create_ai_quizzes").default(false).notNull(),
 }, (table) => [
 	unique("users_username_unique").on(table.username),
 ]);
@@ -76,6 +77,8 @@ export const quizzes = pgTable("quizzes", {
 	url: text("url"), // opcional, tipo texto
 	sortOrder: integer("sort_order").default(0),
 	isVerified: boolean("is_verified").default(false),
+	isAiGenerated: boolean("is_ai_generated").default(false),
+	createdByUserId: integer("created_by_user_id"),
 }, (table) => [
 	foreignKey({
 		columns: [table.subcategoryId],
@@ -252,6 +255,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
 	role: true,
 	googleId: true,
 	canReport: true,
+	canCreateAiQuizzes: true,
 }).extend({
 	email: z.string().email("Correo electrónico inválido (ejemplo: usuario@dominio.com)").min(1, "El correo es obligatorio"),
 	username: z.string().min(3, "El nombre de usuario debe tener al menos 3 caracteres"),
@@ -277,6 +281,8 @@ export const insertQuizSchema = createInsertSchema(quizzes).pick({
 	totalQuestions: true,
 	isPublic: true,
 	sortOrder: true,
+	isAiGenerated: true,
+	createdByUserId: true,
 });
 
 

@@ -81,6 +81,21 @@ export class DatabaseStorage implements IStorage {
       .where(eq(subcategories.categoryId, categoryId));
   }
 
+  async getSubcategory(id: number) {
+    const [result] = await this.db
+      .select({
+        id: subcategories.id,
+        name: subcategories.name,
+        description: subcategories.description,
+        categoryId: subcategories.categoryId,
+        youtube_sublink: subcategories.youtube_sublink,
+        sortOrder: subcategories.sortOrder,
+      })
+      .from(subcategories)
+      .where(eq(subcategories.id, id));
+    return result;
+  }
+
   async createSubcategory({ name, categoryId, description, youtube_sublink }: { name: string; categoryId: number; description?: string; youtube_sublink?: string | null }) {
     return this.db
       .insert(subcategories)
@@ -219,6 +234,8 @@ export class DatabaseStorage implements IStorage {
       subcategory: subcategories,
       url: quizzes.url,
       sortOrder: quizzes.sortOrder,
+      isAiGenerated: quizzes.isAiGenerated,
+      createdByUserId: quizzes.createdByUserId,
     })
       .from(quizzes)
       .leftJoin(categories, eq(quizzes.categoryId, categories.id))
@@ -494,6 +511,7 @@ export class DatabaseStorage implements IStorage {
         subcategoryId: quizzes.subcategoryId,
         responseMode: userQuizzes.responseMode,
         progressResponseMode: studentProgress.responseMode,
+        isAiGenerated: quizzes.isAiGenerated,
       })
       .from(quizzes)
       .leftJoin(userQuizzes, and(
@@ -791,20 +809,7 @@ export class DatabaseStorage implements IStorage {
       isMini: boolean | null;
       assignedQuestionIds: unknown;
       responseMode: string;
-      quiz: {
-        id: number;
-        title: string;
-        description: string;
-        categoryId: number;
-        timeLimit: number;
-        difficulty: string;
-        totalQuestions: number;
-        isPublic: boolean | null;
-        subcategoryId: number | null;
-        url: string | null;
-        sortOrder: number | null;
-        isVerified: boolean | null;
-      };
+      quiz: Quiz;
       answers: Array<{
         id: number;
         progressId: number;
@@ -855,7 +860,9 @@ export class DatabaseStorage implements IStorage {
             subcategoryId: true,
             url: true,
             sortOrder: true,
-            isVerified: true
+            isVerified: true,
+            isAiGenerated: true,
+            createdByUserId: true
           }
         },
         answers: {
