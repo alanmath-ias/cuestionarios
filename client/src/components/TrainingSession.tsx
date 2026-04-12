@@ -1,8 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Trophy, Star, Frown, Smile, Sparkles, CheckCircle2, XCircle, ArrowLeft, Target, Clock, Timer, ChevronRight, ChevronLeft, ArrowRight } from "lucide-react";
+import { Loader2, Trophy, Star, Frown, Smile, Sparkles, CheckCircle2, XCircle, ArrowLeft, Target, Clock, Timer, ChevronRight, ChevronLeft, ArrowRight, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ContentRenderer } from "@/components/ContentRenderer";
 import { useToast } from "@/hooks/use-toast";
 import { useTimer } from "@/hooks/use-timer";
@@ -100,6 +110,7 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
     const [rewardLimitReached, setRewardLimitReached] = useState(false);
     const [claimingReward, setClaimingReward] = useState(false);
     const [internalLoading, setInternalLoading] = useState(false);
+    const [showFinishWarning, setShowFinishWarning] = useState(false);
     const claimRewardOnce = useRef(false);
     const { toast } = useToast();
 
@@ -122,6 +133,12 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
 
     const handleClaimReward = async () => {
         const totalPoints = questions.reduce((acc, q) => acc + q.points, 0);
+        const currentScore = answeredQuestions.reduce((sum, a) => {
+            if (!a.isCorrect) return sum;
+            const q = questions.find(question => question.id === a.questionId);
+            return sum + (q?.points || 0);
+        }, 0);
+
         setClaimingReward(true);
         try {
             const response = await fetch("/api/training/reward", {
@@ -129,7 +146,7 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     categoryId,
-                    score,
+                    score: currentScore,
                     totalPoints,
                     totalQuestions: questions.length,
                     answers: answeredQuestions,
@@ -182,14 +199,23 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
             return;
         }
 
-        if (isQuestionAnswered(questions[currentIndex]?.id)) {
+        const currentQuestionId = questions[currentIndex]?.id;
+        const alreadyAnswered = isQuestionAnswered(currentQuestionId);
+
+        if (alreadyAnswered) {
             if (currentIndex < questions.length - 1) {
                 setCurrentIndex(currentIndex + 1);
                 setSelectedOption(null);
                 setShowResult(false);
                 setFeedbackMessage("");
             } else {
-                setQuizCompleted(true);
+                // LAST QUESTION already answered
+                const uniqueAnsweredCount = new Set(answeredQuestions.map(a => a.questionId)).size;
+                if (uniqueAnsweredCount < questions.length) {
+                    setShowFinishWarning(true);
+                } else {
+                    setQuizCompleted(true);
+                }
             }
             return;
         }
@@ -198,17 +224,20 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
             const currentQuestion = questions[currentIndex];
             const isCorrect = currentQuestion.options[selectedOption]?.isCorrect;
 
-            setAnsweredQuestions(prev => [
-                ...prev,
-                {
-                    questionId: currentQuestion.id,
-                    selectedOption,
-                    isCorrect
-                }
-            ]);
+            const newAnswer = {
+                questionId: currentQuestion.id,
+                selectedOption,
+                isCorrect
+            };
 
+            // Update answeredQuestions (ensure unique by ID)
+            setAnsweredQuestions(prev => {
+                const filtered = prev.filter(a => a.questionId !== currentQuestion.id);
+                return [...filtered, newAnswer];
+            });
+
+            // Update score based on correct unique answers
             if (isCorrect) {
-                setScore(prev => prev + currentQuestion.points);
                 setFeedbackMessage(getRandomMessage('correct'));
             } else {
                 setFeedbackMessage(getRandomMessage('incorrect'));
@@ -223,10 +252,43 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                     setShowResult(false);
                     setFeedbackMessage("");
                 } else {
-                    setQuizCompleted(true);
+                    // Check completion for the last question being answered just now
+                    // inside timeout we use the snapshot from when handleNext started
+                    const uniqueAnsweredCountAtStart = new Set(answeredQuestions.map(a => a.questionId)).size;
+                    const finalCount = uniqueAnsweredCountAtStart + (alreadyAnswered ? 0 : 1);
+                    
+                    if (finalCount < questions.length) {
+                        setShowFinishWarning(true);
+                    } else {
+                        setQuizCompleted(true);
+                    }
                 }
             }, 1000);
+        } else if (isAnswered && currentIndex === questions.length - 1) {
+            // Fallback for completion button on last question
+            const uniqueAnsweredCount = new Set(answeredQuestions.map(a => a.questionId)).size;
+            if (uniqueAnsweredCount < questions.length) {
+                setShowFinishWarning(true);
+            } else {
+                setQuizCompleted(true);
+            }
         }
+    };
+
+    const handleForceFinish = () => {
+        // Fill in missing questions as incorrect
+        const answeredIds = new Set(answeredQuestions.map(a => a.questionId));
+        const missingQuestions = questions.filter(q => !answeredIds.has(q.id));
+        
+        const missingAnswers = missingQuestions.map(q => ({
+            questionId: q.id,
+            selectedOption: -1, 
+            isCorrect: false
+        }));
+
+        setAnsweredQuestions(prev => [...prev, ...missingAnswers]);
+        setQuizCompleted(true);
+        setShowFinishWarning(false);
     };
 
     const handleOptionSelect = (index: number) => {
@@ -317,7 +379,12 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
 
     if (quizCompleted && !reviewMode) {
         const totalPoints = questions.reduce((acc, q) => acc + q.points, 0);
-        const percentage = Math.round((score / totalPoints) * 100);
+        const currentScore = answeredQuestions.reduce((sum, a) => {
+            if (!a.isCorrect) return sum;
+            const q = questions.find(question => question.id === a.questionId);
+            return sum + (q?.points || 0);
+        }, 0);
+        const percentage = Math.round((currentScore / totalPoints) * 100);
         const isGoodScore = percentage >= 70;
 
         return (
@@ -339,7 +406,7 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
                                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Puntuación</p>
-                                <p className="text-4xl font-black text-blue-400">{score}<span className="text-xl text-slate-600 ml-1">/{totalPoints}</span></p>
+                                <p className="text-4xl font-black text-blue-400">{currentScore}<span className="text-xl text-slate-600 ml-1">/{totalPoints}</span></p>
                             </div>
                             <div className="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
                                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Precisión</p>
@@ -448,7 +515,10 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                         </div>
                         <div className="h-4 w-px bg-white/10" />
                         <span className="text-sm font-black text-blue-400 px-2 min-w-[50px] text-center">
-                            {score} pts
+                            {answeredQuestions.filter(a => a.isCorrect).reduce((sum, a) => {
+                                const q = questions.find(q => q.id === a.questionId);
+                                return sum + (q?.points || 0);
+                            }, 0)} pts
                         </span>
                     </div>
                 </div>
@@ -552,6 +622,32 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                     })}
                 </div>
             </div>
+
+            {/* Incomplete Quiz Warning Dialog */}
+            <AlertDialog open={showFinishWarning} onOpenChange={setShowFinishWarning}>
+                <AlertDialogContent className="bg-slate-900 border border-white/10 text-slate-200">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-bold flex items-center gap-2 text-yellow-500">
+                            <AlertTriangle className="h-6 w-6" />
+                            Sesión Incompleta
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-slate-400 text-base">
+                            Aún te quedan <span className="text-yellow-500 font-bold">{questions.length - new Set(answeredQuestions.map(a => a.questionId)).size - (selectedOption !== null && !isAnswered ? 1 : 0)}</span> preguntas por responder. ¿Deseas finalizar ahora? Las preguntas no respondidas contarán como incorrectas.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-4">
+                        <AlertDialogCancel className="bg-slate-800 border-white/10 text-slate-300 hover:bg-slate-700 hover:text-white">
+                            Volver
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={handleForceFinish}
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white border-none"
+                        >
+                            Terminar de todos modos
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

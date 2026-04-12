@@ -1106,6 +1106,7 @@ export default function ParentDashboard() {
                                 <div className="flex items-center gap-2 text-xs text-slate-500">
                                   <span>{quiz.difficulty}</span>
                                   {isCompleted && <span className="text-green-400 font-medium">• Completado ({score.toFixed(1)}/10)</span>}
+                                  {!isCompleted && (quiz.progress || 0) > 0 && <span className="text-yellow-500 font-medium">• Progreso: {quiz.progress}</span>}
                                 </div>
                               </div>
                             </div>

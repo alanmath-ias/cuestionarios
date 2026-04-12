@@ -11,6 +11,7 @@ interface QuizCardProps {
   difficulty: string;
   status: 'not_started' | 'in_progress' | 'completed';
   progress?: number;
+  completedQuestions?: number;
   score?: number;
   onStart: () => void;
   onContinue: () => void;
@@ -28,6 +29,7 @@ export function QuizCard({
   difficulty,
   status,
   progress = 0,
+  completedQuestions,
   score,
   onStart,
   onContinue,
@@ -99,7 +101,9 @@ export function QuizCard({
             <span className="ml-2 text-sm text-gray-500">Calificación: {score.toFixed(1)}/10</span>
           )}
           {status === 'in_progress' && (
-            <span className="ml-2 text-sm text-gray-500">Avance: {progress}%</span>
+            <span className="ml-2 text-sm font-medium text-yellow-500">
+              Progreso: {completedQuestions || Math.round((progress * questionCount) / 100)}
+            </span>
           )}
         </div>
         {status === 'not_started' && (

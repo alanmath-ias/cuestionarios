@@ -649,6 +649,7 @@ function QuizList() {
                               difficulty={quiz.difficulty}
                               status={status}
                               progress={progressPercentage}
+                              completedQuestions={quizProgress?.completedQuestions}
                               score={quizProgress?.score}
                               onStart={() => handleQuizAction(quiz.id)}
                               onContinue={() => handleQuizAction(quiz.id)}
@@ -798,6 +799,11 @@ function QuizList() {
                                     Nota: {quizProgress.score.toFixed(1)}/10
                                   </span>
                                 )}
+                                {!isCompleted && (quizProgress?.completedQuestions || 0) > 0 && (
+                                  <span className="text-xs font-medium text-yellow-500 mr-1 opacity-90">
+                                    Progreso: {quizProgress.completedQuestions}
+                                  </span>
+                                )}
                                 <div className="flex gap-2">
                                   {!isCompleted && !searchParams.get('user_id') && (
                                     <Button
@@ -822,7 +828,7 @@ function QuizList() {
                                       }
                                     }}
                                   >
-                                    {isCompleted ? 'Ver Resultados' : 'Comenzar'}
+                                    {isCompleted ? 'Ver Resultados' : (quizProgress?.completedQuestions || 0) > 0 ? 'Continuar' : 'Comenzar'}
                                   </Button>
                                 </div>
                               </div>

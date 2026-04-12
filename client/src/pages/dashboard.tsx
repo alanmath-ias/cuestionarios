@@ -429,13 +429,21 @@ export default function UserDashboard() {
   // Sort categories by ID for consistent display
   const sortedCategories = useMemo(() => {
     if (!categories) return [];
-    return [...categories].sort((a, b) => a.id - b.id);
+    return [...categories]
+      .filter(c => c && typeof c.id === 'number')
+      .sort((a, b) => a.id - b.id);
   }, [categories]);
 
   // --- Data Preparation (Derived State) ---
-  const completedQuizzes = useMemo(() => quizzes?.filter((q) => q.status === "completed") || [], [quizzes]);
+  const completedQuizzes = useMemo(() => {
+    if (!quizzes) return [];
+    return quizzes.filter((q) => q && q.id && q.status === "completed");
+  }, [quizzes]);
 
-  const allPendingQuizzes = useMemo(() => quizzes?.filter((q) => q.status !== "completed") || [], [quizzes]);
+  const allPendingQuizzes = useMemo(() => {
+    if (!quizzes) return [];
+    return quizzes.filter((q) => q && q.id && q.status !== "completed");
+  }, [quizzes]);
 
   const pendingQuizzes = useMemo(() => {
     return allPendingQuizzes.reduce((acc, current) => {
@@ -707,7 +715,9 @@ export default function UserDashboard() {
 
   // Determine last activity and show welcome dialog
   useEffect(() => {
-    if (quizzes && quizzes.length > 0) {
+    if (!currentUser || !quizzes || quizzes.length === 0) return;
+    
+    if (quizzes.length > 0) {
       // Sort by most recent interaction (completedAt or just updated if we had that, but completedAt is what we have for now)
       // For in-progress, we might need to rely on the fact that they are in the list. 
       // Ideally we'd have an 'updatedAt' field. For now, we'll use completedAt for completed ones.
@@ -1647,6 +1657,11 @@ export default function UserDashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {(quiz.completedQuestions || 0) > 0 && (
+                          <span className="text-xs font-medium text-yellow-500/80 mr-2">
+                            Progreso: {quiz.completedQuestions}
+                          </span>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
