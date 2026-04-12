@@ -122,7 +122,7 @@ export function UsernameSetupDialog({ isOpen, user, onSuccess }: UsernameSetupDi
                         ) : (
                             <>
                                 <Rocket className="w-5 h-5 text-purple-500" />
-                                ¡Hola {user.name.split(' ')[0]}!
+                                ¡Hola {(user.name || 'Estudiante').split(' ')[0]}!
                             </>
                         )}
                     </DialogTitle>

@@ -101,7 +101,7 @@ interface RepasistoQuiz {
 }
 
 async function fetchCurrentUser() {
-  const response = await fetch("/api/me", { credentials: "include" });
+  const response = await fetch("/api/user", { credentials: "include" });
   if (!response.ok) throw new Error("No se pudo obtener el usuario");
   return response.json();
 }
@@ -379,7 +379,7 @@ export default function UserDashboard() {
   };
 
   const { data: currentUser, isLoading: loadingUser } = useQuery({
-    queryKey: ["current-user"],
+    queryKey: ["/api/user"],
     queryFn: fetchCurrentUser,
     ...queryOptions,
   });
@@ -715,7 +715,7 @@ export default function UserDashboard() {
 
   // Determine last activity and show welcome dialog
   useEffect(() => {
-    if (!currentUser || !quizzes || quizzes.length === 0) return;
+    if (!currentUser?.id || !quizzes || quizzes.length === 0) return;
     
     if (quizzes.length > 0) {
       // Sort by most recent interaction (completedAt or just updated if we had that, but completedAt is what we have for now)
@@ -767,7 +767,7 @@ export default function UserDashboard() {
 
       // Calculate account age to prevent "Welcome Back" for users who just registered
       // Even if they finished the tour and have activity (diagnostic), they are not "returning" yet.
-      const accountAge = currentUser.createdAt ? new Date().getTime() - new Date(currentUser.createdAt).getTime() : 100000000;
+      const accountAge = currentUser.createdAt ? new Date().getTime() - new Date(currentUser.createdAt).getTime() : 0;
       const isRecentAccount = accountAge < 24 * 60 * 60 * 1000; // 24 hours
 
       // Show ONLY if not seen AND has activity AND is NOT a new user AND account is not recent
@@ -781,7 +781,7 @@ export default function UserDashboard() {
 
   // Separate effect for Onboarding Tour to ensure it runs even if user has no quizzes
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser?.id) {
       const userTourKey = `onboardingTour_${currentUser.id}`;
       const localTourCompleted = localStorage.getItem(userTourKey);
 
@@ -997,7 +997,7 @@ export default function UserDashboard() {
                   <div className="h-10 flex items-center justify-center">
                     <MasteryInsignia
                       categoryId={category.id}
-                      quizzes={quizzes || []}
+                      quizzes={completedQuizzes}
                       onClick={() => setSelectedAwardsCategory(category)}
                       size="lg"
                     />
