@@ -1546,11 +1546,15 @@ DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
     try {
-      const { categoryId, score, totalPoints, totalQuestions, answers, questionsData } = req.body;
-      const finalScore = (score / (totalPoints || 1)) * 10;
+      const { categoryId, score, totalPoints, totalQuestions, answers, questionsData, timeSpent } = req.body;
+      
+      // Calculemos el puntaje basado en la cantidad de aciertos para que coincida con la vista de resultados (9.2 vs 9.0)
+      const correctCount = Array.isArray(answers) ? answers.filter((a: any) => a.isCorrect).length : 0;
+      const totalCount = totalQuestions || (Array.isArray(answers) ? answers.length : 1);
+      const finalScore = (correctCount / (totalCount || 1)) * 10;
       
       // Save detailed result for persistence/review
-      await storage.saveTrainingResult(userId, categoryId, finalScore, totalQuestions || 0, answers || [], questionsData || []);
+      await storage.saveTrainingResult(userId, categoryId, finalScore, totalQuestions || 0, answers || [], questionsData || [], timeSpent);
 
       // Reward logic (3 times per day per category)
       const dailyCount = await storage.getDailyTrainingRewardCount(userId, categoryId);
@@ -1624,7 +1628,7 @@ DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
           status: 'completed' as const,
           score: data.score,
           completedQuestions: data.totalQuestions,
-          timeSpent: 0,
+          timeSpent: data.timeSpent || 0,
           completedAt: data.completedAt?.toISOString() || new Date().toISOString(),
         },
         quiz: {

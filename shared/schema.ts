@@ -404,6 +404,7 @@ export const trainingResults = pgTable("training_results", {
 	totalQuestions: integer("total_questions").notNull(),
 	answers: jsonb("answers").$type<any[]>().notNull(), // { questionId, selectedOption, isCorrect }
 	questionsData: jsonb("questions_data").$type<any[]>().notNull(), // Store shuffled question data
+	timeSpent: integer("time_spent"),
 	completedAt: timestamp("completed_at").defaultNow().notNull(),
 }, (table) => [
 	unique("training_results_user_category_unique").on(table.userId, table.categoryId),

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Loader2, Trophy, Star, Frown, Smile, Sparkles, CheckCircle2, XCircle, ArrowLeft, Target, Clock, Timer, ChevronRight, ChevronLeft, ArrowRight, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,7 @@ interface AnsweredQuestion {
     questionId: number;
     selectedOption: number;
     isCorrect: boolean;
+    timeSpent: number;
 }
 
 interface TrainingSessionProps {
@@ -111,7 +113,9 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
     const [claimingReward, setClaimingReward] = useState(false);
     const [internalLoading, setInternalLoading] = useState(false);
     const [showFinishWarning, setShowFinishWarning] = useState(false);
+    const [lastQuestionTime, setLastQuestionTime] = useState(0);
     const claimRewardOnce = useRef(false);
+    const queryClient = useQueryClient();
     const { toast } = useToast();
 
     // Timer Logic - Count-up Stopwatch from 0
@@ -149,6 +153,7 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                     score: currentScore,
                     totalPoints,
                     totalQuestions: questions.length,
+                    timeSpent: elapsedTime,
                     answers: answeredQuestions,
                     questionsData: questions.map(q => ({
                       id: q.id,
@@ -169,6 +174,12 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                 setCreditsEarned(data.creditsPlus);
                 setRewardLimitReached(data.limitReached);
                 setRewardClaimed(true);
+
+                // Invalidate training-related queries to ensure UI updates instantly
+                queryClient.invalidateQueries({ queryKey: [`/api/results/training/${categoryId}`] });
+                queryClient.invalidateQueries({ queryKey: [`/api/training/last-result/${categoryId}`] });
+                queryClient.invalidateQueries({ queryKey: ["user-quizzes"] });
+                queryClient.invalidateQueries({ queryKey: ["user"] }); // In case credits changed
             }
         } catch (error) {
             console.error("Error al reclamar recompensa:", error);
@@ -224,10 +235,15 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
             const currentQuestion = questions[currentIndex];
             const isCorrect = currentQuestion.options[selectedOption]?.isCorrect;
 
+            const now = elapsedTime;
+            const timeSpentSinceLast = now - lastQuestionTime;
+            setLastQuestionTime(now);
+
             const newAnswer = {
                 questionId: currentQuestion.id,
                 selectedOption,
-                isCorrect
+                isCorrect,
+                timeSpent: timeSpentSinceLast
             };
 
             // Update answeredQuestions (ensure unique by ID)
@@ -243,8 +259,6 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                 setFeedbackMessage(getRandomMessage('incorrect'));
             }
 
-            setShowResult(true);
-
             setTimeout(() => {
                 if (currentIndex < questions.length - 1) {
                     setCurrentIndex(currentIndex + 1);
@@ -252,8 +266,6 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                     setShowResult(false);
                     setFeedbackMessage("");
                 } else {
-                    // Check completion for the last question being answered just now
-                    // inside timeout we use the snapshot from when handleNext started
                     const uniqueAnsweredCountAtStart = new Set(answeredQuestions.map(a => a.questionId)).size;
                     const finalCount = uniqueAnsweredCountAtStart + (alreadyAnswered ? 0 : 1);
                     
@@ -264,8 +276,8 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                     }
                 }
             }, 1000);
-        } else if (isAnswered && currentIndex === questions.length - 1) {
-            // Fallback for completion button on last question
+        } else if (currentIndex === questions.length - 1) {
+            // "Finalizar" button clicked on last question WITHOUT selecting an answer
             const uniqueAnsweredCount = new Set(answeredQuestions.map(a => a.questionId)).size;
             if (uniqueAnsweredCount < questions.length) {
                 setShowFinishWarning(true);
@@ -283,7 +295,8 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
         const missingAnswers = missingQuestions.map(q => ({
             questionId: q.id,
             selectedOption: -1, 
-            isCorrect: false
+            isCorrect: false,
+            timeSpent: 0
         }));
 
         setAnsweredQuestions(prev => [...prev, ...missingAnswers]);
@@ -378,13 +391,10 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
     }
 
     if (quizCompleted && !reviewMode) {
-        const totalPoints = questions.reduce((acc, q) => acc + q.points, 0);
-        const currentScore = answeredQuestions.reduce((sum, a) => {
-            if (!a.isCorrect) return sum;
-            const q = questions.find(question => question.id === a.questionId);
-            return sum + (q?.points || 0);
-        }, 0);
-        const percentage = Math.round((currentScore / totalPoints) * 100);
+        const correctCount = answeredQuestions.filter(a => a.isCorrect).length;
+        const totalCount = questions.length;
+        const displayScore = ((correctCount / (totalCount || 1)) * 10).toFixed(1);
+        const percentage = Math.round((correctCount / (totalCount || 1)) * 100);
         const isGoodScore = percentage >= 70;
 
         return (
@@ -406,7 +416,7 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
                                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Puntuación</p>
-                                <p className="text-4xl font-black text-blue-400">{currentScore}<span className="text-xl text-slate-600 ml-1">/{totalPoints}</span></p>
+                                <p className="text-4xl font-black text-blue-400">{displayScore}<span className="text-xl text-slate-600 ml-1">/10</span></p>
                             </div>
                             <div className="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
                                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Precisión</p>
@@ -456,8 +466,8 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                             >
                                 Reintentar
                             </Button>
-                            <Button variant="ghost" onClick={onExit} className="text-slate-400 hover:text-white h-12 px-8">
-                                Volver al Mapa
+                            <Button variant="ghost" onClick={onExit} className="text-slate-400 hover:text-white hover:bg-slate-800/50 h-12 px-8">
+                                Volver al Inicio
                             </Button>
                         </div>
                     </div>
@@ -558,7 +568,7 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                         {currentQuestion.options.map((option, index) => {
                             const isSelected = isAnswered ? previousAnswer?.selectedOption === index : selectedOption === index;
                             const isCorrect = option.isCorrect;
-                            const showResultLocal = showResult || reviewMode;
+                            const showResultLocal = showResult || reviewMode || isAnswered;
 
                             let btnClass = "bg-slate-900/30 border-white/5 hover:bg-slate-800/60 text-slate-300";
                             if (showResultLocal) {
@@ -593,7 +603,7 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                         <ArrowLeft className="mr-2 h-4 w-4" /> Anterior
                     </Button>
 
-                    <Button onClick={handleNext} disabled={(!reviewMode && selectedOption === null && !isAnswered) || showResult} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-none shadow-xl h-11 px-8 rounded-2xl min-w-[140px] font-bold">
+                    <Button onClick={handleNext} disabled={(!reviewMode && selectedOption === null && !isAnswered && currentIndex !== questions.length - 1) || showResult} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-none shadow-xl h-11 px-8 rounded-2xl min-w-[140px] font-bold">
                         {currentIndex === questions.length - 1 ? (reviewMode ? "Cerrar Revisión" : "Finalizar") : "Siguiente"}
                         <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>

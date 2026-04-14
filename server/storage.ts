@@ -147,7 +147,7 @@ export interface IStorage {
   getChiquiResults(userId: number): Promise<any[]>;
 
   // Training Persistence methods
-  saveTrainingResult(userId: number, categoryId: number, score: number, totalQuestions: number, answers: any[], questionsData: any[]): Promise<void>;
+  saveTrainingResult(userId: number, categoryId: number, score: number, totalQuestions: number, answers: any[], questionsData: any[], timeSpent?: number): Promise<void>;
   getTrainingResult(userId: number, categoryId: number): Promise<any | null>;
   getDailyTrainingRewardCount(userId: number, categoryId: number): Promise<number>;
   saveTrainingHistory(data: any): Promise<void>;

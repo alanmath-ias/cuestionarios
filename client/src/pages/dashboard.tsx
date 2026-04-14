@@ -814,7 +814,7 @@ export default function UserDashboard() {
   const handleTrainingClick = async (categoryId: number, categoryName: string) => {
     setLoadingTraining(true);
     try {
-      const resp = await fetch(`/api/training/last-result/${categoryId}`);
+      const resp = await fetch(`/api/training/last-result/${categoryId}?t=${Date.now()}`);
       if (resp.ok) {
         const data = await resp.json();
         if (data) {
@@ -2278,7 +2278,7 @@ export default function UserDashboard() {
                 <Button 
                   variant="ghost" 
                   onClick={() => setIsTrainingDialogOpen(false)}
-                  className="text-slate-500 hover:text-white mt-2"
+                  className="text-slate-500 hover:text-white hover:bg-slate-800/50 mt-2"
                 >
                   Ahora no
                 </Button>

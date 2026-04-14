@@ -12,3 +12,9 @@ vite.config.ts.*
 # entorno
 .env
 .envproduction
+ 
+# Imágenes y archivos temporales
+/algebra_imagenes/
+/estadistica_imagenes/
+/scratch/
+/*.ts.local

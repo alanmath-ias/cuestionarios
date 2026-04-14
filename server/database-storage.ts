@@ -1894,7 +1894,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Training Persistence methods
-  async saveTrainingResult(userId: number, categoryId: number, score: number, totalQuestions: number, answers: any[], questionsData: any[]): Promise<void> {
+  async saveTrainingResult(userId: number, categoryId: number, score: number, totalQuestions: number, answers: any[], questionsData: any[], timeSpent?: number): Promise<void> {
     await this.db.insert(trainingResults)
       .values({
         userId,
@@ -1903,6 +1903,7 @@ export class DatabaseStorage implements IStorage {
         totalQuestions,
         answers,
         questionsData,
+        timeSpent,
         completedAt: new Date(),
       })
       .onConflictDoUpdate({
@@ -1912,6 +1913,7 @@ export class DatabaseStorage implements IStorage {
           totalQuestions,
           answers,
           questionsData,
+          timeSpent,
           completedAt: new Date(),
         }
       });
