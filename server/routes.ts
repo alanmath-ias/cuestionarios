@@ -894,6 +894,9 @@ Tono: Alentador, profesional y educativo.`;
     const { categoryId, subcategoryId, topicDescription, questionCount, difficulty, timeLimit } = req.body;
 
     try {
+      // 0. Sincronizar secuencias (Escudo contra importaciones manuales)
+      await storage.synchronizeSequences();
+
       // 1. Verificar permisos y créditos
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ message: "Usuario no encontrado" });

@@ -136,9 +136,27 @@ export function MagicQuizDialog({ isOpen, onClose, categories, userId, credits, 
         setLocation(`/quiz/${data.quizId}`);
       }, 500);
     } catch (error: any) {
+      let errorMessage = "Hubo un problema al contactar con la IA.";
+      
+      // Try to extract a clean message if it's a JSON error from apiRequest
+      if (error.message) {
+        try {
+          // apiRequest formats errors as "Status: { JSON }"
+          const jsonPart = error.message.split(": ").slice(1).join(": ");
+          if (jsonPart) {
+            const parsed = JSON.parse(jsonPart);
+            errorMessage = parsed.message || parsed.error || errorMessage;
+          } else {
+            errorMessage = error.message;
+          }
+        } catch (e) {
+          errorMessage = error.message;
+        }
+      }
+
       toast({
         title: "Error mágico",
-        description: error.message || "Hubo un problema al contactar con la IA.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

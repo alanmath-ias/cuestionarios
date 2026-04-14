@@ -151,6 +151,7 @@ export interface IStorage {
   getTrainingResult(userId: number, categoryId: number): Promise<any | null>;
   getDailyTrainingRewardCount(userId: number, categoryId: number): Promise<number>;
   saveTrainingHistory(data: any): Promise<void>;
+  synchronizeSequences(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -790,6 +791,7 @@ export class MemStorage implements IStorage {
   async getTrainingResult(userId: number, categoryId: number): Promise<any | null> { return null; }
   async getDailyTrainingRewardCount(userId: number, categoryId: number): Promise<number> { return 0; }
   async saveTrainingHistory(data: any): Promise<void> { }
+  async synchronizeSequences(): Promise<void> { }
 }
 
 import { DatabaseStorage } from "./database-storage.js";

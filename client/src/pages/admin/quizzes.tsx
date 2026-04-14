@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
@@ -1312,7 +1312,7 @@ export default function QuizzesAdmin() {
                           visibleQuizId={visibleQuizId}
                           setVisibleQuizId={setVisibleQuizId}
                           fetchAssignedUsers={fetchAssignedUsers}
-                          searchQuery={searchQuery}
+                          searchQuery={quizSearchQuery}
                           setSearchQuery={setSearchQuery}
                           allUsers={allUsers}
                           assignedUsers={assignedUsers}
@@ -1364,7 +1364,12 @@ export default function QuizzesAdmin() {
                               className="overflow-hidden bg-slate-900/50 border-t border-white/5"
                             >
                               <div className="px-4 pb-3 pt-2">
-                                <div className="grid grid-cols-1 gap-3 py-3">
+                                <Reorder.Group
+                                  axis="y"
+                                  values={filteredUnclassifiedQuizzes}
+                                  onReorder={quizSearchQuery ? () => { } : updateQuizzesCache}
+                                  className="grid grid-cols-1 gap-3 py-3"
+                                >
                                   <AnimatePresence initial={false}>
                                     {filteredUnclassifiedQuizzes.map((quiz) => (
                                       <DraggableQuizItem
@@ -1376,7 +1381,7 @@ export default function QuizzesAdmin() {
                                         visibleQuizId={visibleQuizId}
                                         setVisibleQuizId={setVisibleQuizId}
                                         fetchAssignedUsers={fetchAssignedUsers}
-                                        searchQuery={searchQuery}
+                                        searchQuery={quizSearchQuery}
                                         setSearchQuery={setSearchQuery}
                                         allUsers={allUsers}
                                         assignedUsers={assignedUsers}
@@ -1386,7 +1391,7 @@ export default function QuizzesAdmin() {
                                       />
                                     ))}
                                   </AnimatePresence>
-                                </div>
+                                </Reorder.Group>
                               </div>
                             </motion.div>
                           )}
@@ -1634,30 +1639,33 @@ export default function QuizzesAdmin() {
                 const sortednodeQuizzes = [...nodeQuizzes].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
                 return (
-                  <Reorder.Group axis="y" values={sortednodeQuizzes} onReorder={searchQuery ? undefined : (updateQuizzesCache as any)}>
-                    <div className="grid grid-cols-1 gap-3">
-                      {sortednodeQuizzes.map((quiz) => (
-                        <DraggableDialogQuizItem
-                          key={quiz.id}
-                          quiz={quiz}
-                          isHighlighted={quiz.id === highlightedQuizId}
-                          openQuickEdit={openQuickEdit}
-                          setLocation={setLocation}
-                          handleManageQuestions={handleManageQuestions}
-                          verifyingId={verifyingId}
-                          setVerifyingId={setVerifyingId}
-                          setVisibleQuizId={setVisibleQuizId}
-                          setAssignmentResponseMode={setAssignmentResponseMode}
-                          fetchAssignedUsers={fetchAssignedUsers}
-                          assignmentResponseMode={assignmentResponseMode}
-                          searchQuery={searchQuery}
-                          setSearchQuery={setSearchQuery}
-                          allUsers={allUsers}
-                          assignedUsers={assignedUsers}
-                          toggleQuizAssignment={toggleQuizAssignment}
-                        />
-                      ))}
-                    </div>
+                  <Reorder.Group
+                    axis="y"
+                    values={sortednodeQuizzes}
+                    onReorder={searchQuery ? () => { } : (updateQuizzesCache as any)}
+                    className="grid grid-cols-1 gap-3"
+                  >
+                    {sortednodeQuizzes.map((quiz) => (
+                      <DraggableDialogQuizItem
+                        key={quiz.id}
+                        quiz={quiz}
+                        isHighlighted={quiz.id === highlightedQuizId}
+                        openQuickEdit={openQuickEdit}
+                        setLocation={setLocation}
+                        handleManageQuestions={handleManageQuestions}
+                        verifyingId={verifyingId}
+                        setVerifyingId={setVerifyingId}
+                        setVisibleQuizId={setVisibleQuizId}
+                        setAssignmentResponseMode={setAssignmentResponseMode}
+                        fetchAssignedUsers={fetchAssignedUsers}
+                        assignmentResponseMode={assignmentResponseMode}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                        allUsers={allUsers}
+                        assignedUsers={assignedUsers}
+                        toggleQuizAssignment={toggleQuizAssignment}
+                      />
+                    ))}
                   </Reorder.Group>
                 );
               })()
@@ -1857,8 +1865,8 @@ const DraggableCategoryItem = React.memo(({
               <div className="px-2 sm:px-4 pb-2 pt-2">
                 <Reorder.Group
                   axis="y"
-                  values={category.subcategories}
-                  onReorder={searchQuery ? undefined : updateSubcategoriesCache}
+                  values={category.subcategories.filter((s: any) => s.quizzes.length > 0)}
+                  onReorder={searchQuery ? () => { } : updateSubcategoriesCache}
                   className="space-y-3 py-2"
                 >
                   {category.subcategories
@@ -2004,7 +2012,7 @@ const DraggableSubcategoryItem = React.memo(({
                 <Reorder.Group
                   axis="y"
                   values={subcategory.quizzes}
-                  onReorder={searchQuery ? undefined : updateQuizzesCache}
+                  onReorder={searchQuery ? () => { } : updateQuizzesCache}
                   className="grid grid-cols-1 gap-3"
                 >
                   <AnimatePresence initial={false}>

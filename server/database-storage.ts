@@ -239,7 +239,8 @@ export class DatabaseStorage implements IStorage {
     })
       .from(quizzes)
       .leftJoin(categories, eq(quizzes.categoryId, categories.id))
-      .leftJoin(subcategories, eq(quizzes.subcategoryId, subcategories.id));
+      .leftJoin(subcategories, eq(quizzes.subcategoryId, subcategories.id))
+      .orderBy(desc(quizzes.id));
 
     return results;
   }
@@ -340,6 +341,7 @@ export class DatabaseStorage implements IStorage {
       // 3. Limpiar progresos y asignaciones
       await tx.delete(studentProgress).where(eq(studentProgress.quizId, id));
       await tx.delete(userQuizzes).where(eq(userQuizzes.quizId, id));
+      await tx.delete(questionReports).where(eq(questionReports.quizId, id));
 
       // 4. Limpiar opciones de respuestas de las preguntas
       await tx.delete(answers).where(
@@ -526,7 +528,8 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(quizFeedback, eq(quizFeedback.progressId, studentProgress.id))
       .where(or(
         isNotNull(userQuizzes.quizId),
-        isNotNull(studentProgress.id)
+        isNotNull(studentProgress.id),
+        and(eq(quizzes.createdByUserId, userId), eq(quizzes.isAiGenerated, true))
       ));
 
     // Deduplicate by quiz id, prioritizing completed status
@@ -1958,5 +1961,21 @@ export class DatabaseStorage implements IStorage {
       hash = hash & hash; // Convert to 32bit integer
     }
     return Math.abs(hash);
+  }
+
+  async synchronizeSequences(): Promise<void> {
+    const tables = ['quizzes', 'questions', 'answers'];
+    try {
+      for (const table of tables) {
+        // Find max ID and update sequence
+        await this.db.execute(sql.raw(`
+          SELECT setval('${table}_id_seq', COALESCE((SELECT MAX(id) FROM ${table}), 1), true);
+        `));
+      }
+      console.log('✅ AI ID Shield: Sequences synchronized successfully');
+    } catch (err) {
+      console.error('❌ AI ID Shield: Error synchronizing sequences:', err);
+      // We don't throw here to avoid blocking the main flow if it's just a sequence hint issue
+    }
   }
 }
