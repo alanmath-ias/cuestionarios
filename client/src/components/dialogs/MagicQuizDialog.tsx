@@ -104,10 +104,11 @@ export function MagicQuizDialog({ isOpen, onClose, categories, userId, credits, 
       return;
     }
 
-    if (credits < 10 && userRole !== 'admin') {
+    const cost = (userId === 1 || userId === 2) ? 0 : 10;
+    if (credits < cost && userRole !== 'admin') {
       toast({
         title: "Créditos insuficientes",
-        description: "Necesitas 10 créditos para usar la magia de la IA.",
+        description: `Necesitas ${cost} créditos para usar la magia de la IA.`,
         variant: "destructive",
       });
       return;
@@ -400,15 +401,20 @@ export function MagicQuizDialog({ isOpen, onClose, categories, userId, credits, 
                 </div>
 
                 {/* Costo */}
-                <div className="pt-2 flex items-center justify-between border-t border-white/5">
-                  <div className="flex items-center gap-2 text-slate-400 text-sm">
-                    <Coins className="h-4 w-4 text-emerald-400" />
-                    <span>Costo: <span className="text-white font-bold">10 créditos</span></span>
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    Tienes: <span className={credits >= 10 ? 'text-emerald-400' : 'text-red-400'}>{credits} créditos</span>
-                  </div>
-                </div>
+                {(() => {
+                  const cost = (userId === 1 || userId === 2) ? 0 : 10;
+                  return (
+                    <div className="pt-2 flex items-center justify-between border-t border-white/5">
+                      <div className="flex items-center gap-2 text-slate-400 text-sm">
+                        <Coins className="h-4 w-4 text-emerald-400" />
+                        <span>Costo: <span className="text-white font-bold">{cost} créditos</span></span>
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        Tienes: <span className={credits >= cost ? 'text-emerald-400' : 'text-red-400'}>{credits} créditos</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </motion.div>
             )
           ) : (
@@ -455,7 +461,7 @@ export function MagicQuizDialog({ isOpen, onClose, categories, userId, credits, 
           {step === 1 && (
             <Button
               onClick={handleGenerate}
-              disabled={isGenerating || (credits < 10 && userRole !== 'admin')}
+              disabled={isGenerating || (credits < ((userId === 1 || userId === 2) ? 0 : 10) && userRole !== 'admin')}
               className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-501 hover:to-amber-500 text-white font-bold shadow-lg shadow-amber-500/20 px-8"
             >
               {isGenerating ? (

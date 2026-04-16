@@ -216,7 +216,7 @@ export default function AiQuizzesAdmin() {
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-100">{quiz.title}</span>
-                        <span className="text-xs text-slate-500 line-clamp-1">{quiz.description}</span>
+                        <span className="text-xs text-slate-500">{quiz.description}</span>
                         <div className="flex gap-2 mt-1.5">
                             <Badge variant="outline" className="text-[10px] bg-slate-800 border-slate-700 text-slate-200">
                                 {quiz.totalQuestions} preguntas
@@ -324,8 +324,13 @@ export default function AiQuizzesAdmin() {
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label>Ubicación Actual</Label>
-              <div className="text-sm p-3 rounded-lg bg-white/5 border border-white/5 text-slate-400">
-                Sugerido para: <span className="text-blue-400 font-medium">{categories?.find(c => c.id === promotingQuiz?.categoryId)?.name || 'Sin categoría'}</span>
+              <div className="text-sm p-3 rounded-lg bg-white/5 border border-white/5 space-y-2">
+                <div className="text-slate-400">
+                  Sugerido para: <span className="text-blue-400 font-medium">{categories?.find(c => c.id === promotingQuiz?.categoryId)?.name || 'Sin categoría'}</span>
+                </div>
+                <div className="text-xs text-slate-500 border-t border-white/5 pt-2 italic">
+                  {promotingQuiz?.description}
+                </div>
               </div>
             </div>
 

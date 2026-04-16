@@ -381,7 +381,7 @@ export class DatabaseStorage implements IStorage {
   async updateUserCredits(id: number, credits: number): Promise<User> {
     const [updatedUser] = await this.db
       .update(users)
-      .set({ hintCredits: credits })
+      .set({ hintCredits: Math.max(0, credits) })
       .where(eq(users.id, id))
       .returning();
 
@@ -1517,7 +1517,7 @@ export class DatabaseStorage implements IStorage {
   async updateUserHintCredits(userId: number, credits: number): Promise<void> {
     await this.db
       .update(users)
-      .set({ hintCredits: credits })
+      .set({ hintCredits: Math.max(0, credits) })
       .where(eq(users.id, userId));
   }
 
@@ -1604,7 +1604,7 @@ export class DatabaseStorage implements IStorage {
         const report = reportList[0];
         if (credits > 0) {
           await tx.update(users)
-            .set({ hintCredits: sql`${users.hintCredits} + ${credits}` })
+            .set({ hintCredits: sql`GREATEST(0, ${users.hintCredits} + ${credits})` })
             .where(eq(users.id, report.userId));
         }
         await tx.update(questionReports).set({ status: 'resolved' }).where(eq(questionReports.id, reportId));
@@ -1800,9 +1800,9 @@ export class DatabaseStorage implements IStorage {
     await this.db.insert(chiquiHistory)
       .values({ userId, categoryId, score, earnedCredits: 1, date: new Date() });
 
-    // 3. Award base credit
+    // 3. Award base credit (Use GREATEST to avoid any accidental negative)
     await this.db.update(users)
-      .set({ hintCredits: sql`${users.hintCredits} + 1` })
+      .set({ hintCredits: sql`GREATEST(0, ${users.hintCredits} + 1)` })
       .where(eq(users.id, userId));
 
     // 4. Compute current streak using LOCAL dates (timezone-safe)
@@ -1862,7 +1862,7 @@ export class DatabaseStorage implements IStorage {
 
       if (bonusCredits > 0) {
         await this.db.update(users)
-          .set({ hintCredits: sql`${users.hintCredits} + ${bonusCredits}` })
+          .set({ hintCredits: sql`GREATEST(0, ${users.hintCredits} + ${bonusCredits})` })
           .where(eq(users.id, userId));
 
         // Mark today's history record with the total earned credits (for UI display)

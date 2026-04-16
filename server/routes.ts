@@ -905,9 +905,9 @@ Tono: Alentador, profesional y educativo.`;
         return res.status(403).json({ message: "No tienes permiso para crear cuestionarios mágicos. Contacta al administrador." });
       }
 
-      const COST = 10;
+      const COST = (userId === 1 || userId === 2) ? 0 : 10;
       if (user.hintCredits < COST) {
-        return res.status(403).json({ message: `Necesitas al menos ${COST} créditos para crear un cuestionario mágico. Tienes ${user.hintCredits}.` });
+        return res.status(403).json({ message: "No tienes suficientes créditos para realizar una creación mágica. ¡Sigue ganando créditos terminando cuestionarios o entrenamientos!" });
       }
 
       // 2. Preparar el Prompt
@@ -996,12 +996,18 @@ DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
           .set({ hintCredits: user.hintCredits - COST })
           .where(eq(users.id, userId));
 
+        // Preparar descripción con sugerencia si existe subcategoría
+        let finalDescription = quizContent.description || `Generado por IA sobre: ${topicDescription}`;
+        if (subcategory) {
+          finalDescription += ` [Tema sugerido: ${subcategory.name}]`;
+        }
+
         // Crear el Quiz
         const [newQuiz] = await tx.insert(quizzes).values({
           title: quizContent.title,
-          description: quizContent.description || `Generado por IA sobre: ${topicDescription}`,
+          description: finalDescription,
           categoryId: parseInt(categoryId),
-          subcategoryId: subcategoryId ? parseInt(subcategoryId) : null,
+          subcategoryId: null, // Siempre NULL para que no aparezca en el mapa hasta ser promovido
           totalQuestions: quizContent.questions.length,
           timeLimit: (parseInt(timeLimit) || 15) * 60,
           difficulty: difficulty || 'medium',
@@ -1562,7 +1568,7 @@ DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
       // Reward logic (3 times per day per category)
       const dailyCount = await storage.getDailyTrainingRewardCount(userId, categoryId);
       let creditsPlus = 0;
-      let limitReached = dailyCount >= 3;
+      let limitReached = userId === 2 ? false : dailyCount >= 3;
 
       if (!limitReached) {
         if (finalScore >= 9) creditsPlus = 5;
@@ -2652,7 +2658,7 @@ Ejemplo de formato:
       // 1. Check Credits (only if not unlocked and not public/guest)
       const cost = hintType === 'super' ? 2 : 1;
       if (userId && !isAlreadyUnlocked && user.hintCredits < cost) {
-        return res.status(403).json({ message: "Insufficient credits", currentCredits: user.hintCredits });
+        return res.status(403).json({ message: "No tienes suficientes créditos para pedir más pistas. ¡Te invitamos a ganar créditos completando cuestionarios o entrenamientos!", currentCredits: user.hintCredits });
       }
 
       // 2. Check Cache
