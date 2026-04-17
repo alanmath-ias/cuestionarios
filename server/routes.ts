@@ -1331,9 +1331,18 @@ Tono: Alentador, profesional y educativo.`;
 
   apiRouter.get("/social/friends", requireAuth, async (req: Request, res: Response) => {
     try {
-      const friends = await storage.getFriends(req.session.userId!);
-      res.json(friends);
+      const userId = req.session.userId!;
+      const friends = await storage.getFriends(userId);
+      
+      const friendsWithStatus = friends.map(f => ({
+        ...f,
+        isOnline: DuelServer.instance?.isUserOnline(f.id) || false
+      }));
+
+      console.log(`🔍 [API] Friends list for user ${userId}:`, friendsWithStatus.map(f => `${f.name}(${f.id}): ${f.isOnline ? 'ON' : 'OFF'}`).join(', '));
+      res.json(friendsWithStatus);
     } catch (error) {
+      console.error("Error fetching friends:", error);
       res.status(500).json({ message: "Error al obtener amigos" });
     }
   });

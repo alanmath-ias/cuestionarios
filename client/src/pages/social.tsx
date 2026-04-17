@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Users, 
@@ -17,7 +17,9 @@ import {
   Trash2,
   AlertCircle,
   Coins,
-  ShieldAlert
+  ShieldAlert,
+  Minus,
+  Plus
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,18 +44,37 @@ import { FriendProfileDialog } from "@/components/social/FriendProfileDialog";
 export default function SocialPage() {
   const [activeTab, setActiveTab] = useState("friends");
   const [searchQuery, setSearchQuery] = useState("");
-  const { sendChallenge } = useDuel();
+  const { sendChallenge, sentChallenges, onlineUsers, setOnlineUsers, revengeRequest, setRevengeRequest } = useDuel();
   const [challengingUser, setChallengingUser] = useState<any>(null);
+  const [topic, setTopic] = useState<string>("");
   const [wager, setWager] = useState<number>(10);
+  const [isRevengeMode, setIsRevengeMode] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Queries
+  // Listen for revenge requests
+  useEffect(() => {
+    if (revengeRequest) {
+      setChallengingUser({ id: revengeRequest.opponentId, name: revengeRequest.opponentName });
+      setWager(10);
+      setIsRevengeMode(true);
+      setRevengeRequest(null); // Clear after handling
+    }
+  }, [revengeRequest, setRevengeRequest]);
+
   const { data: user } = useQuery({ queryKey: ["/api/user"] });
-  const { data: friends, isLoading: loadingFriends } = useQuery<any[]>({
+  const { data: friends = [], isLoading: loadingFriends } = useQuery<any[]>({
     queryKey: ["/api/social/friends"],
   });
+
+  // Sync online status from initial fetch
+  useEffect(() => {
+    if (friends) {
+      const onlineIds = new Set(friends.filter(f => f.isOnline).map(f => f.id));
+      setOnlineUsers(onlineIds);
+    }
+  }, [friends, setOnlineUsers]);
   const { data: pendingRequests, isLoading: loadingRequests } = useQuery<any[]>({
     queryKey: ["/api/social/pending-requests"],
   });
@@ -165,9 +186,9 @@ export default function SocialPage() {
               <span className="text-xs text-slate-500 uppercase font-bold">Créditos</span>
               <span className="text-2xl font-bold text-amber-400">{user?.hintCredits || 0}</span>
             </div>
-            <div className="flex flex-col items-center bg-slate-900/50 border border-white/10 p-4 rounded-2xl">
+            <div className="flex flex-col items-center bg-slate-900/50 border border-white/10 p-4 rounded-2xl shadow-xl shadow-emerald-500/5">
               <span className="text-xs text-slate-500 uppercase font-bold">Victorias</span>
-              <span className="text-2xl font-bold text-emerald-400">0</span>
+              <span className="text-3xl font-black text-emerald-400">{user?.duelWins || 0}</span>
             </div>
           </div>
         </div>
@@ -217,7 +238,7 @@ export default function SocialPage() {
                       key={friend.id} 
                       user={friend} 
                       type="friend" 
-                      onChallenge={(e: any) => { e.stopPropagation(); setChallengingUser(friend); }}
+                      onChallenge={() => setChallengingUser(friend)}
                       onProfile={() => setSelectedProfileId(friend.id)}
                     />
                   ))}
@@ -307,6 +328,7 @@ export default function SocialPage() {
           userId={selectedProfileId}
           isOpen={!!selectedProfileId}
           onClose={() => setSelectedProfileId(null)}
+          onChallenge={(friend) => setChallengingUser(friend)}
         />
 
         {/* Duel Wager Dialog */}
@@ -318,12 +340,28 @@ export default function SocialPage() {
                 LANZAR DESAFÍO
               </DialogTitle>
               <DialogDescription className="text-slate-400">
-                Retarás a <span className="text-white font-bold">{challengingUser?.name}</span> a un duelo matemático rápido.
+                Retarás a <span className="text-blue-400 font-semibold">{challengingUser?.name}</span> a un duelo matemático rápido.
               </DialogDescription>
             </DialogHeader>
 
             <div className="py-6 space-y-6">
-               <div className="flex flex-col items-center gap-4 bg-white/5 p-6 rounded-2xl border border-white/10">
+              {/* Topic/Prompt Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-blue-400" /> Tema o Descripción del Reto
+                </label>
+                <Input 
+                  placeholder="Ej: Fracciones, Ecuaciones de 2do grado, lógica..."
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  className="bg-slate-900/50 border-white/10 rounded-xl h-12 focus:ring-blue-500/50"
+                />
+                <p className="text-[10px] text-slate-500 italic">
+                  *La IA generará preguntas basadas exactamente en lo que escribas aquí.
+                </p>
+              </div>
+
+              <div className="bg-slate-950/40 border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
                   <div className="flex items-center gap-3 text-yellow-500">
                     <Coins className="h-5 w-5" />
                     <span className="text-sm font-bold uppercase tracking-widest">Apuesta de Créditos</span>
@@ -332,19 +370,21 @@ export default function SocialPage() {
                     <Button 
                       variant="outline" 
                       size="icon" 
-                      onClick={() => setWager(Math.max(5, wager - 5))}
-                      className="rounded-xl border-white/10 hover:bg-white/5"
+                      className="h-10 w-10 rounded-xl bg-white/5 border-white/10"
+                      onClick={() => setWager(Math.max(1, wager - 1))}
                     >
-                      -
+                      <Minus className="h-4 w-4" />
                     </Button>
-                    <span className="text-5xl font-black">{wager}</span>
+                    <div className="flex flex-col items-center min-w-[3rem]">
+                      <span className="text-4xl font-black">{wager}</span>
+                    </div>
                     <Button 
                       variant="outline" 
                       size="icon" 
-                      onClick={() => setWager(wager + 5)}
-                      className="rounded-xl border-white/10 hover:bg-white/5"
+                      className="h-10 w-10 rounded-xl bg-white/5 border-white/10"
+                      onClick={() => setWager(wager + 1)}
                     >
-                      +
+                      <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                   <p className="text-[10px] text-slate-500 italic">*El perdedor entregará estos créditos al ganador.</p>
@@ -362,8 +402,10 @@ export default function SocialPage() {
               <Button 
                 className="bg-blue-600 hover:bg-blue-500 px-8 rounded-xl font-bold"
                 onClick={() => {
-                  sendChallenge(challengingUser.id, wager);
+                  sendChallenge(challengingUser.id, wager, topic, isRevengeMode);
+                  setTopic("");
                   setChallengingUser(null);
+                  setIsRevengeMode(false);
                 }}
               >
                 Retar ahora
@@ -376,22 +418,33 @@ export default function SocialPage() {
 }
 
 function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock, onUnblock, onProfile, disabled, status, isBlocker }: any) {
+  const { onlineUsers, sentChallenges } = useDuel();
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ scale: 1.01 }}
-      onClick={onProfile}
-      className={`bg-slate-900/40 border border-white/5 rounded-3xl p-4 flex items-center justify-between group backdrop-blur-sm cursor-pointer hover:bg-slate-900/60 transition-colors ${disabled ? 'pointer-events-none opacity-50' : ''}`}
+      onClick={user.role === 'admin' ? undefined : onProfile}
+      className={`bg-slate-900/40 border border-white/5 rounded-3xl p-4 flex items-center justify-between group backdrop-blur-sm ${user.role === 'admin' ? 'cursor-default' : 'cursor-pointer hover:bg-slate-900/60'} transition-colors ${disabled ? 'pointer-events-none opacity-50' : ''}`}
     >
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xl font-bold">
-          {user.name.charAt(0).toUpperCase()}
+        <div className="relative">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xl font-bold">
+            {user.name.charAt(0).toUpperCase()}
+          </div>
+          {/* Status Dot */}
+          <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-slate-900 ${onlineUsers.has(user.id) ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-slate-600'}`} />
         </div>
         <div>
           <h3 className="font-bold text-slate-100">{user.name}</h3>
           <p className="text-xs text-slate-500">@{user.role === 'admin' ? 'Administrador' : user.username}</p>
+          {user.duelWins > 0 && (
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mt-1 w-fit">
+              <Trophy className="w-3 h-3 text-emerald-400" />
+              <span className="text-[10px] font-black text-emerald-400 leading-none">{user.duelWins}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -410,13 +463,21 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
             >
               <MessageSquare className="w-4 h-4 mr-2" /> Chatear
             </Button>
-            <Button 
-              size="sm" 
-              onClick={(e) => { e.stopPropagation(); onChallenge(); }}
-              className="rounded-xl bg-blue-600 hover:bg-blue-500"
-            >
-              <Sword className="w-4 h-4 mr-2" /> Retar
-            </Button>
+            {user.role !== 'admin' && (
+              <Button 
+                size="sm" 
+                onClick={(e) => { e.stopPropagation(); onChallenge(); }}
+                disabled={sentChallenges.has(user.id)}
+                className={`rounded-xl shadow-lg transition-all duration-300 ${
+                  sentChallenges.has(user.id) 
+                    ? 'bg-slate-800 text-slate-500 cursor-default shadow-none' 
+                    : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/40 hover:shadow-blue-500/50 hover:scale-105 active:scale-95'
+                }`}
+              >
+                <Sword className="w-4 h-4 mr-2" /> 
+                {sentChallenges.has(user.id) ? 'Retado' : 'Retar'}
+              </Button>
+            )}
           </>
         )}
 

@@ -53,13 +53,25 @@ DIFICULTAD: ${difficultyMap[difficulty] || 'Intermedio'}
 NÚMERO DE PREGUNTAS: ${questionCount}
 
 REQUISITOS TÉCNICOS:
-1. Usa texto plano para los enunciados y explicaciones. Reserva la notación LaTeX solo para lo que sea estrictamente necesario (fracciones, raíces, potencias, logaritmos o fórmulas complejas).
-2. MUY IMPORTANTE: La apertura y el CIERRE del bloque de LaTeX debe ser EXACTAMENTE el mismo carácter ¡ (no uses ! ni otros símbolos). Ejemplo: ¡\frac{a}{b}¡
-3. Todas las preguntas deben ser de tipo 'multiple_choice' con exactamente 4 opciones.
-4. El lenguaje debe ser claro, educativo y en español.
-5. Las opciones de respuesta deben estar bien pensadas (incluye distractores comunes).
-6. Incluye una breve explicación pedagógica de la respuesta correcta (máximo 2 líneas).
-7. Prioriza ejercicios técnicos directos. Evita enunciados extensos, historias o contextos innecesarios.
+    Eres un experto en pedagogía matemática y generación de contenido educativo.
+    Tu tarea es generar un cuestionario altamente específico basado en la siguiente descripción proporcionada por el usuario:
+    DESCRIPCIÓN DEL TEMA: "${topicDescription}"
+    
+    REGLAS ESTRICTAS:
+    1. Las preguntas DEBEN ajustarse exactamente al tema: "${topicDescription}".
+    2. Todo el contenido matemático debe usar delimitadores de apertura y cierre ¡¡ (ejemplo: ¡¡x + 2 = 5¡¡).
+    3. NUNCA uses el símbolo $ para fórmulas matemáticas.
+    4. Usa únicamente el símbolo de EURO (€) si se requiere una unidad monetaria.
+    5. No mezcles palabras y números dentro de los delimitadores ¡¡ (ejemplo incorrecto: ¡¡3 Euros¡¡, correcto: ¡¡3¡¡ Euros o ¡¡3¡¡ ¡¡Euros¡¡).
+    6. Cada pregunta debe tener 4 opciones y solo una debe ser la correcta.
+    7. Las explicaciones deben ser claras y en español.
+    
+    Genera ${questionCount} preguntas en formato JSON.
+4. Todas las preguntas deben ser de tipo 'multiple_choice' con exactamente 4 opciones.
+5. El lenguaje debe ser claro, educativo y en español.
+6. Las opciones de respuesta deben estar bien pensadas (incluye distractores comunes).
+7. Incluye una breve explicación pedagógica de la respuesta correcta (máximo 2 líneas).
+8. Prioriza ejercicios técnicos directos. Evita enunciados extensos, historias o contextos innecesarios.
 
 DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
 {

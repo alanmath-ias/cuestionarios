@@ -24,6 +24,10 @@ interface DuelRoom {
   currentQuestionIndex: number;
   questions: any[];
   scores: { [userId: number]: number };
+  topic?: string;
+  failedUserIds: number[];
+  questionStartTime: number;
+  bonusCredits: { [userId: number]: number };
 }
 
 export class DuelServer {
@@ -54,13 +58,39 @@ export class DuelServer {
     }
 
     this.userSockets.set(userId, socket);
-    console.log(`🔌 User ${user.username} (ID: ${userId}) connected to Duels`);
+    console.log(`🔌 [SOCKET] User ${user.username} (ID: ${userId}) connected. Total sockets: ${this.userSockets.size}`);
+
+    // Notify friends that this user is online
+    this.broadcastStatus(userId, true);
 
     socket.on('message', (data) => this.handleMessage(userId, data));
     socket.on('close', () => {
       this.userSockets.delete(userId);
       console.log(`🔌 User ${userId} disconnected`);
+      // Notify friends that this user is offline
+      this.broadcastStatus(userId, false);
     });
+  }
+
+  public isUserOnline(userId: number): boolean {
+    return this.userSockets.has(userId);
+  }
+
+  private async broadcastStatus(userId: number, online: boolean) {
+    try {
+      const friendIds = await storage.getFriendIds(userId);
+      console.log(`📢 [BROADCAST] User ${userId} is now ${online ? 'ONLINE' : 'OFFLINE'}. Notifying friend IDs: [${friendIds.join(', ')}]`);
+      const message = { type: 'social:status_update', payload: { userId, online } };
+      friendIds.forEach(id => {
+        const friendOnline = this.isUserOnline(id);
+        if (friendOnline) {
+          console.log(`   👉 Sending update to friend ${id}`);
+        }
+        this.sendToUser(id, message);
+      });
+    } catch (error) {
+      console.error(`❌ [BROADCAST ERROR] for user ${userId}:`, error);
+    }
   }
 
   private async getUserIdFromRequest(req: any): Promise<number | null> {
@@ -90,7 +120,7 @@ export class DuelServer {
 
       switch (type) {
         case 'duel:challenge':
-          await this.processChallenge(userId, payload);
+          await this.handleChallenge(userId, payload);
           break;
         case 'duel:respond':
           await this.processResponse(userId, payload);
@@ -109,12 +139,17 @@ export class DuelServer {
     }
   }
 
-  private async processChallenge(challengerId: number, payload: { receiverId: number; wager: number; topic?: string }) {
-    const { receiverId, wager, topic } = payload;
+  private async handleChallenge(userId: number, payload: { receiverId: number; wager: number; topic?: string; isRevenge?: boolean }) {
+    const { receiverId: rawReceiverId, wager, topic, isRevenge } = payload;
+    const receiverId = Number(rawReceiverId);
+    const challengerId = userId;
     const challenger = await storage.getUser(challengerId);
     const receiverSocket = this.userSockets.get(receiverId);
 
+    console.log(`📢 [CHALLENGE] From ${challengerId} (${challenger?.name}) to ${receiverId}. Socket found: ${!!receiverSocket}`);
+
     if (!receiverSocket) {
+        console.warn(`⚠️ [CHALLENGE] Target user ${receiverId} not found in socket map. Active users:`, Array.from(this.userSockets.keys()));
         this.sendToUser(challengerId, { type: 'duel:error', payload: { message: 'El oponente no está en línea' } });
         return;
     }
@@ -131,6 +166,7 @@ export class DuelServer {
       receiverId,
       status: 'inviting',
       wager,
+      topic: topic || 'Matemáticas Generales'
     }).returning();
 
     this.sendToUser(receiverId, {
@@ -139,7 +175,8 @@ export class DuelServer {
         duelId: newDuel.id,
         challengerName: challenger!.name,
         wager,
-        topic: topic || 'Matemáticas Generales'
+        topic: topic || 'Matemáticas Generales',
+        isRevenge: !!isRevenge
       }
     });
   }
@@ -152,11 +189,18 @@ export class DuelServer {
 
     if (action === 'reject') {
       await db.update(duels).set({ status: 'cancelled' }).where(eq(duels.id, duelId));
-      this.sendToUser(duelRecord.challengerId, { type: 'duel:rejected', payload: { duelId } });
+      this.sendToUser(duelRecord.challengerId, { type: 'duel:rejected', payload: { duelId, receiverId: duelRecord.receiverId } });
     } else if (action === 'counter') {
       await db.update(duels).set({ wager: wager || duelRecord.wager }).where(eq(duels.id, duelId));
-      this.sendToUser(duelRecord.challengerId, { type: 'duel:countered', payload: { duelId, wager } });
+      // Notify the OTHER player (bidirectional)
+      const targetId = Number(userId === duelRecord.challengerId ? duelRecord.receiverId : duelRecord.challengerId);
+      console.log(`📢 [COUNTER] User ${userId} countered to ${wager}. Notifying user ${targetId}`);
+      this.sendToUser(targetId, { type: 'duel:countered', payload: { duelId, wager: wager || duelRecord.wager } });
     } else if (action === 'accept') {
+      if (wager && wager !== duelRecord.wager) {
+        await db.update(duels).set({ wager }).where(eq(duels.id, duelId));
+        console.log(`📢 [ACCEPT WITH WAGER] Setting wager to ${wager} before starting duel ${duelId}`);
+      }
       await this.startDuel(duelId);
     }
   }
@@ -171,9 +215,9 @@ export class DuelServer {
     this.broadcastToDuel(duelId, { type: 'duel:preparing', payload: { duelId } });
 
     try {
-      // Generate AI Quiz
+      // Generate AI Quiz using the stored topic
       const quizData = await generateAiQuizData({
-        topicDescription: "Duelo de velocidad matemática",
+        topicDescription: duelRecord.topic || "Duelo de velocidad matemática",
         categoryName: "Duelo",
         difficulty: "medium",
         questionCount: 5
@@ -229,21 +273,36 @@ export class DuelServer {
         receiver: { userId: duelRecord.receiverId, socket: this.userSockets.get(duelRecord.receiverId)!, username: receiver!.name },
         status: 'in_progress',
         wager: duelRecord.wager,
+        topic: duelRecord.topic || undefined,
         quizId: result.quizId,
         currentQuestionIndex: 0,
         questions: result.questions,
-        scores: { [duelRecord.challengerId]: 0, [duelRecord.receiverId]: 0 }
+        scores: { [duelRecord.challengerId]: 0, [duelRecord.receiverId]: 0 },
+        failedUserIds: [],
+        questionStartTime: 0,
+        bonusCredits: { [duelRecord.challengerId]: 0, [duelRecord.receiverId]: 0 }
       };
 
       this.activeDuels.set(duelId, room);
       
       // Start!
-      this.broadcastToDuel(duelId, { 
+      this.sendToUser(room.challenger.userId, { 
         type: 'duel:start', 
         payload: { 
             questionsCount: room.questions.length,
             opponentName: room.receiver.username,
-            duelId: room.id
+            duelId: room.id,
+            topic: room.topic
+        } 
+      });
+
+      this.sendToUser(room.receiver.userId, { 
+        type: 'duel:start', 
+        payload: { 
+            questionsCount: room.questions.length,
+            opponentName: room.challenger.username,
+            duelId: room.id,
+            topic: room.topic
         } 
       });
 
@@ -262,10 +321,7 @@ export class DuelServer {
         return;
     }
 
-    // Clear previous timer
-    if (this.duelTimers.has(duelId)) {
-        clearTimeout(this.duelTimers.get(duelId)!);
-    }
+    room.failedUserIds = []; // Reset for new question
 
     const question = room.questions[room.currentQuestionIndex];
     this.broadcastToDuel(duelId, {
@@ -273,19 +329,11 @@ export class DuelServer {
       payload: {
         index: room.currentQuestionIndex,
         content: question.content,
-        options: question.options.map((o: any) => ({ id: o.id, content: o.content })),
-        timeLimit: 20
+        options: question.options.map((o: any) => ({ id: o.id, content: o.content }))
       }
     });
 
-    // Set timeout for this question
-    const timer = setTimeout(() => {
-        this.broadcastToDuel(duelId, { type: 'duel:round_timeout', payload: { index: room.currentQuestionIndex } });
-        room.currentQuestionIndex++;
-        setTimeout(() => this.sendNextQuestion(duelId), 3000);
-    }, 20000);
-
-    this.duelTimers.set(duelId, timer);
+    room.questionStartTime = Date.now();
   }
 
   private async processAnswer(userId: number, payload: { duelId: number; questionIndex: number; answerId: number }) {
@@ -295,21 +343,31 @@ export class DuelServer {
 
     const question = room.questions[questionIndex];
     const answer = question.options.find((o: any) => o.id === answerId);
+    const correctAnswer = question.options.find((o: any) => o.isCorrect);
 
     if (answer?.isCorrect) {
-        // Clear timer since someone answered correctly
-        if (this.duelTimers.has(duelId)) {
-            clearTimeout(this.duelTimers.get(duelId)!);
-            this.duelTimers.delete(duelId);
+        room.scores[userId]++;
+        
+        // Speed Bonus Logic (Updated to 4s)
+        const timeTaken = Date.now() - room.questionStartTime;
+        let speedBonus = false;
+        if (timeTaken < 4000) {
+            speedBonus = true;
+            const opponentId = userId === room.challenger.userId ? room.receiver.userId : room.challenger.userId;
+            room.bonusCredits[userId]++;
+            room.bonusCredits[opponentId]--;
+            console.log(`⚡ [SPEED BONUS] User ${userId} was fast! (+1 credit, -1 from ${opponentId})`);
         }
 
-        room.scores[userId]++;
         this.broadcastToDuel(duelId, {
             type: 'duel:round_result',
             payload: {
                 winnerId: userId,
                 winnerName: userId === room.challenger.userId ? room.challenger.username : room.receiver.username,
-                scores: room.scores
+                scores: room.scores,
+                correctAnswerId: correctAnswer?.id,
+                answerId: answerId,
+                speedBonus: speedBonus
             }
         });
 
@@ -317,8 +375,37 @@ export class DuelServer {
         room.currentQuestionIndex++;
         setTimeout(() => this.sendNextQuestion(duelId), 3000);
     } else {
-        // Just inform the user they were wrong
-        this.sendToUser(userId, { type: 'duel:wrong_answer' });
+        // Inform BOTH that someone failed
+        if (!room.failedUserIds.includes(userId)) {
+            room.failedUserIds.push(userId);
+        }
+
+        this.broadcastToDuel(duelId, { 
+            type: 'duel:answer_feedback', 
+            payload: { 
+                userId, 
+                answerId, 
+                isCorrect: false,
+                userName: userId === room.challenger.userId ? room.challenger.username : room.receiver.username
+            } 
+        });
+
+        // Check if both users have now failed
+        if (room.failedUserIds.length >= 2) {
+            console.log(`🚫 [DUEL] Both users failed question ${questionIndex}. Moving on...`);
+            this.broadcastToDuel(duelId, {
+                type: 'duel:round_result',
+                payload: {
+                    winnerId: null, // No winner this round
+                    scores: room.scores,
+                    correctAnswerId: correctAnswer?.id,
+                    answerId: null
+                }
+            });
+
+            room.currentQuestionIndex++;
+            setTimeout(() => this.sendNextQuestion(duelId), 3000);
+        }
     }
   }
 
@@ -338,15 +425,22 @@ export class DuelServer {
     if (s1 > s2) winnerId = room.challenger.userId;
     else if (s2 > s1) winnerId = room.receiver.userId;
 
-    // Transactional Credit Update
+    // Transactional Credit and Stats Update
     await db.transaction(async (tx) => {
         if (winnerId) {
             const loserId = winnerId === room.challenger.userId ? room.receiver.userId : room.challenger.userId;
+            const winnerBonus = room.bonusCredits[winnerId] || 0;
+            const finalWager = room.wager + winnerBonus;
+
+            // Loser pays credits (base + winner's speed bonuses)
+            await tx.execute(sql`UPDATE users SET hint_credits = hint_credits - ${finalWager} WHERE id = ${loserId}`);
+            // Winner gets credits AND +1 win
+            await tx.execute(sql`UPDATE users SET hint_credits = hint_credits + ${finalWager}, duel_wins = duel_wins + 1 WHERE id = ${winnerId}`);
             
-            // Loser pays
-            await tx.execute(sql`UPDATE users SET hint_credits = hint_credits - ${room.wager} WHERE id = ${loserId}`);
-            // Winner gets
-            await tx.execute(sql`UPDATE users SET hint_credits = hint_credits + ${room.wager} WHERE id = ${winnerId}`);
+            console.log(`🏆 [DUEL END] Winner: ${winnerId} (+${finalWager} credits, +1 win), Loser: ${loserId} (-${finalWager} credits)`);
+            
+            room.wager = finalWager; // Store final amount for broadcast
+            (room as any).winnerBonus = winnerBonus;
         }
 
         await tx.update(duels).set({
@@ -356,11 +450,25 @@ export class DuelServer {
         }).where(eq(duels.id, duelId));
     });
 
+    const winnerName = winnerId ? (winnerId === room.challenger.userId ? room.challenger.username : room.receiver.username) : null;
+    
+    this.broadcastToDuel(duelId, {
+        type: 'duel:end',
+        payload: {
+            winnerId,
+            winnerName,
+            scores: room.scores,
+            wager: room.wager,
+            speedBonuses: (room as any).winnerBonus || 0
+        }
+    });
+
     this.broadcastToDuel(duelId, {
         type: 'duel:end',
         payload: {
             scores: room.scores,
-            winnerId
+            winnerId,
+            wager: room.wager
         }
     });
 

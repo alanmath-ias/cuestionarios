@@ -519,7 +519,8 @@ export class MemStorage implements IStorage {
       subscriptionEndDate: null,
       canReport: insertUser.canReport ?? false,
       canCreateAiQuizzes: (insertUser as any).canCreateAiQuizzes ?? false,
-      totalReports: 0
+      totalReports: 0,
+      duelWins: 0
     };
     this.users.set(id, user);
     return user;

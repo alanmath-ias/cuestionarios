@@ -41,12 +41,14 @@ interface FriendProfileDialogProps {
     userId: number | null;
     isOpen: boolean;
     onClose: () => void;
+    onChallenge: (friend: any) => void;
 }
 
 export const FriendProfileDialog: React.FC<FriendProfileDialogProps> = ({
     userId,
     isOpen,
-    onClose
+    onClose,
+    onChallenge
 }) => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
@@ -163,11 +165,14 @@ export const FriendProfileDialog: React.FC<FriendProfileDialogProps> = ({
                                         </Button>
                                         <Button
                                             size="sm"
-                                            className="rounded-2xl px-6 bg-blue-600 text-white hover:bg-blue-500"
+                                            className="rounded-2xl px-6 bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-900/40 hover:scale-105 active:scale-95 transition-all"
                                             onClick={() => {
-                                                // Assuming sendChallenge is available or handled parent-side
-                                                // If not, we can trigger it similarly or just keep it as is
-                                                // For now, let's just make it look good or keep it simple
+                                                onClose();
+                                                onChallenge({
+                                                    id: profile.user.id,
+                                                    name: profile.user.name,
+                                                    username: profile.user.username
+                                                });
                                             }}
                                         >
                                             <Sword className="w-4 h-4 mr-2" />

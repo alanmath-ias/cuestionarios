@@ -22,6 +22,7 @@ export const users = pgTable("users", {
 	canReport: boolean("can_report").default(false).notNull(),
 	totalReports: integer("total_reports").default(0).notNull(),
 	canCreateAiQuizzes: boolean("can_create_ai_quizzes").default(false).notNull(),
+	duelWins: integer("duel_wins").default(0).notNull(),
 }, (table) => [
 	unique("users_username_unique").on(table.username),
 ]);
@@ -532,6 +533,7 @@ export const duels = pgTable("duels", {
 	id: serial("id").primaryKey(),
 	challengerId: integer("challenger_id").notNull().references(() => users.id, { onDelete: "cascade" }),
 	receiverId: integer("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	topic: text("topic"),
 	status: text("status").notNull(),
 	wager: integer("wager").default(0).notNull(),
 	quizId: integer("quiz_id").references(() => quizzes.id, { onDelete: "set null" }),

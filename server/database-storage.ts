@@ -2064,20 +2064,18 @@ export class DatabaseStorage implements IStorage {
   async getFriends(userId: number): Promise<any[]> {
     // 1. Get real friends (accepted requests)
     const results = await this.db.select({
-      friendshipId: friendships.id,
-      friend: users,
+      id: users.id,
+      username: users.username,
+      name: users.name,
+      role: users.role,
+      friendshipId: friendships.id
     })
     .from(friendships)
     .innerJoin(users, or(
-      and(eq(friendships.userId, userId), eq(friendships.friendId, users.id)),
-      and(eq(friendships.friendId, userId), eq(friendships.userId, users.id))
+      and(eq(friendships.userId, userId), eq(users.id, friendships.friendId)),
+      and(eq(friendships.friendId, userId), eq(users.id, friendships.userId))
     ))
-    .where(and(
-      eq(friendships.status, 'accepted'),
-      or(eq(friendships.userId, userId), eq(friendships.friendId, userId))
-    ));
-
-    const realFriends = results.map(r => r.friend);
+    .where(eq(friendships.status, 'accepted'));
 
     // 2. Get administrators to show as automatic friends (Support)
     const admins = await this.db.select()
@@ -2106,10 +2104,38 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Combine and deduplicate by ID
-    const allFriends = [...realFriends, ...admins, ...chatPartners];
-    const uniqueFriends = Array.from(new Map(allFriends.map(f => [f.id, f])).values());
+    const combined = [...results, ...admins, ...chatPartners];
+    const unique = Array.from(new Map(combined.map(u => [u.id, u])).values());
 
-    return uniqueFriends;
+    return unique;
+  }
+
+  async getFriendIds(userId: number): Promise<number[]> {
+    // 1. Get real friends
+    const friendRelations = await this.db.select()
+      .from(friendships)
+      .where(and(
+        eq(friendships.status, 'accepted'),
+        or(eq(friendships.userId, userId), eq(friendships.friendId, userId))
+      ));
+    
+    let ids = friendRelations.map(f => f.userId === userId ? f.friendId : f.userId);
+
+    // 2. Add administrators (they are friends of everyone)
+    const admins = await this.db.select({ id: users.id })
+      .from(users)
+      .where(and(
+        eq(users.role, 'admin'),
+        sql`${users.id} != ${userId}`
+      ));
+    
+    const adminIds = admins.map(a => a.id);
+    
+    // 3. If currently user is an admin, they should notify everyone they've talked to
+    // (For simplicity and better visibility, let's keep it to real friends + mutual chat partners)
+    // Actually, for a fully interactive social space, if a user is admin, they appear to all.
+    
+    return Array.from(new Set([...ids, ...adminIds]));
   }
 
   async getPendingFriendRequests(userId: number): Promise<any[]> {
