@@ -142,16 +142,16 @@ export function FloatingChat() {
   if (!session) return null;
 
   return (
-    <div className={`fixed bottom-[5.5rem] right-6 z-50 flex flex-col items-end transition-all ${isMobile ? 'right-3' : ''}`}>
+    <div className={`fixed bottom-[5.5rem] right-6 z-[999] flex flex-col items-end transition-all ${isMobile ? 'right-3' : ''}`}>
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="mb-3 w-[92vw] sm:w-96 overflow-hidden max-h-[80vh]"
+            className="mb-3 w-80 sm:w-96 overflow-hidden h-[450px] sm:h-[500px] max-h-[75vh] flex flex-col"
           >
-            <Card className="shadow-2xl border-primary/20 bg-background/95 backdrop-blur-md rounded-2xl sm:rounded-3xl">
+            <Card className="shadow-2xl border-primary/20 bg-background/95 backdrop-blur-md rounded-2xl sm:rounded-3xl flex flex-col h-full w-full overflow-hidden">
               <CardHeader className="p-3 border-b flex flex-row items-center justify-between space-y-0 bg-primary/5">
                 <div className="flex items-center gap-2">
                   {selectedFriend ? (
@@ -180,7 +180,7 @@ export function FloatingChat() {
                   <X className="h-4 w-4" />
                 </Button>
               </CardHeader>
-              <CardContent className="p-0 h-[320px] sm:h-[400px]">
+              <CardContent className="p-0 flex-1 relative overflow-hidden flex flex-col">
                 <ScrollArea className="h-full p-4" ref={scrollRef}>
                   {selectedFriend ? (
                     <div className="space-y-4">
