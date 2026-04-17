@@ -1,21 +1,17 @@
 import { pgTable, foreignKey, serial, text, integer, index, varchar, json, timestamp, boolean, jsonb, unique, uuid, primaryKey, real } from "drizzle-orm/pg-core"
 import { sql, relations } from "drizzle-orm"
-
 import { createInsertSchema } from "drizzle-zod";
-import * as z from "zod";  // ✅ Forma correcta para Zod v3+
+import * as z from "zod";
 import { drizzle } from "drizzle-orm/postgres-js";
-//import * as schema from './schema'; // ✅ corregido con extensión .js
-
-//schema nuevo
 
 export const users = pgTable("users", {
 	id: serial("id").primaryKey().notNull(),
 	username: text("username").notNull(),
-	password: text("password"), // Optional for Google Auth users
+	password: text("password"),
 	name: text("name").notNull(),
 	email: text("email").notNull(),
 	role: text("role").default('student').notNull(),
-	googleId: text("google_id").unique(), // Added for Google Auth
+	googleId: text("google_id").unique(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	hintCredits: integer("hint_credits").default(50).notNull(),
 	tourStatus: jsonb("tour_status").default({}),
@@ -35,7 +31,7 @@ export const categories = pgTable("categories", {
 	name: text().notNull(),
 	description: text().notNull(),
 	colorClass: text("color_class").notNull(),
-	youtubeLink: text("youtube_link"), // Columna sin valores predeterminados
+	youtubeLink: text("youtube_link"),
 	sortOrder: integer("sort_order").default(0),
 });
 
@@ -45,7 +41,7 @@ export const subcategories = pgTable("subcategories", {
 	description: text(),
 	categoryId: integer("category_id").notNull(),
 	colorClass: text("color_class"),
-	youtube_sublink: text("youtube_sublink").default(sql`NULL`), // Usar sql para establecer NULL como valor predeterminado
+	youtube_sublink: text("youtube_sublink").default(sql`NULL`),
 	sortOrder: integer("sort_order").default(0),
 }, (table) => [
 	foreignKey({
@@ -62,7 +58,6 @@ export const session = pgTable("session", {
 }, (table) => [
 	index("IDX_session_expire").using("btree", table.expire.asc().nullsLast().op("timestamp_ops")),
 ]);
-// answers table definition moved below questions to fit reference order
 
 export const quizzes = pgTable("quizzes", {
 	id: serial().primaryKey().notNull(),
@@ -74,7 +69,7 @@ export const quizzes = pgTable("quizzes", {
 	totalQuestions: integer("total_questions").notNull(),
 	isPublic: boolean("is_public").default(false),
 	subcategoryId: integer("subcategory_id"),
-	url: text("url"), // opcional, tipo texto
+	url: text("url"),
 	sortOrder: integer("sort_order").default(0),
 	isVerified: boolean("is_verified").default(false),
 	isAiGenerated: boolean("is_ai_generated").default(false),
@@ -99,8 +94,6 @@ export const studentAnswers = pgTable("student_answers", {
 	hintsUsed: integer("hints_used").default(0).notNull(),
 	aiEvaluation: jsonb("ai_evaluation"),
 });
-
-
 
 export const questions = pgTable("questions", {
 	id: serial().primaryKey().notNull(),
@@ -137,7 +130,6 @@ export const answers = pgTable("answers", {
 	}).onDelete("cascade"),
 ]);
 
-
 export const studentProgress = pgTable("student_progress", {
 	id: serial().primaryKey().notNull(),
 	userId: integer("user_id").notNull(),
@@ -148,12 +140,10 @@ export const studentProgress = pgTable("student_progress", {
 	timeSpent: integer("time_spent"),
 	completedAt: timestamp("completed_at", { mode: 'string' }),
 	hintsUsed: integer("hints_used").default(0).notNull(),
-	isMini: boolean("is_mini").default(false), // Added to sync with DB
-	assignedQuestionIds: jsonb("assigned_question_ids"), // Added to sync with DB
+	isMini: boolean("is_mini").default(false),
+	assignedQuestionIds: jsonb("assigned_question_ids"),
 	responseMode: text("response_mode").default('multiple_choice').notNull(),
 });
-
-
 
 export const quizSubmissions = pgTable("quiz_submissions", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
@@ -245,8 +235,6 @@ export const userQuizzes = pgTable("user_quizzes", {
 	primaryKey({ columns: [table.userId, table.quizId], name: "user_quizzes_pkey" }),
 ]);
 
-
-
 export const insertUserSchema = createInsertSchema(users).pick({
 	username: true,
 	password: true,
@@ -265,17 +253,15 @@ export const insertCategorySchema = createInsertSchema(categories).pick({
 	name: true,
 	description: true,
 	colorClass: true,
-	youtubeLink: true, // Incluye youtubeLink en el esquema
+	youtubeLink: true,
 	sortOrder: true,
 });
-
-
 
 export const insertQuizSchema = createInsertSchema(quizzes).pick({
 	title: true,
 	description: true,
 	categoryId: true,
-	subcategoryId: true, // ← ✅ Agrega esta línea
+	subcategoryId: true,
 	timeLimit: true,
 	difficulty: true,
 	totalQuestions: true,
@@ -285,7 +271,6 @@ export const insertQuizSchema = createInsertSchema(quizzes).pick({
 	createdByUserId: true,
 });
 
-
 export const insertQuestionSchema = createInsertSchema(questions).pick({
 	quizId: true,
 	content: true,
@@ -293,9 +278,8 @@ export const insertQuestionSchema = createInsertSchema(questions).pick({
 	difficulty: true,
 	points: true,
 	variables: true,
-	imageUrl: true, // ✅ Agrega esta línea
+	imageUrl: true,
 });
-
 
 export const insertAnswerSchema = createInsertSchema(answers).pick({
 	questionId: true,
@@ -304,11 +288,8 @@ export const insertAnswerSchema = createInsertSchema(answers).pick({
 	explanation: true,
 });
 
-
 import { InferModel } from "drizzle-orm";
-
 export type Progress = InferModel<typeof studentProgress>;
-
 
 export const insertStudentProgressSchema = createInsertSchema(studentProgress, {
 	completedAt: z.date()
@@ -317,8 +298,6 @@ export const insertStudentProgressSchema = createInsertSchema(studentProgress, {
 		.optional()
 		.transform(val => val === null ? undefined : val)
 }).omit({ id: true });
-
-
 
 export const insertStudentAnswerSchema = createInsertSchema(studentAnswers).pick({
 	progressId: true,
@@ -337,10 +316,9 @@ export const insertUserCategorySchema = createInsertSchema(userCategories).pick(
 	categoryId: true,
 });
 
-
 export const parents = pgTable("parents", {
 	id: serial("id").primaryKey(),
-	name: varchar("name", { length: 100 }).notNull(), // Ej: Ximena
+	name: varchar("name", { length: 100 }).notNull(),
 	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
 	childId: integer("child_id").references(() => users.id, { onDelete: "cascade" }),
 	requestedChildName: varchar("requested_child_name", { length: 100 }),
@@ -352,7 +330,7 @@ export const questionReports = pgTable("question_reports", {
 	questionId: integer("question_id").notNull(),
 	userId: integer("user_id").notNull(),
 	description: text().notNull(),
-	status: text().default("pending").notNull(), // pending, resolved
+	status: text().default("pending").notNull(),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -402,8 +380,8 @@ export const trainingResults = pgTable("training_results", {
 	categoryId: integer("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
 	score: real("score").notNull(),
 	totalQuestions: integer("total_questions").notNull(),
-	answers: jsonb("answers").$type<any[]>().notNull(), // { questionId, selectedOption, isCorrect }
-	questionsData: jsonb("questions_data").$type<any[]>().notNull(), // Store shuffled question data
+	answers: jsonb("answers").$type<any[]>().notNull(),
+	questionsData: jsonb("questions_data").$type<any[]>().notNull(),
 	timeSpent: integer("time_spent"),
 	completedAt: timestamp("completed_at").defaultNow().notNull(),
 }, (table) => [
@@ -418,39 +396,26 @@ export const insertTrainingResultSchema = createInsertSchema(trainingResults);
 export type TrainingResult = typeof trainingResults.$inferSelect;
 export type InsertTrainingResult = z.infer<typeof insertTrainingResultSchema>;
 
-// Types exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
-
 export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
-
 export type Quiz = typeof quizzes.$inferSelect;
 export type InsertQuiz = z.infer<typeof insertQuizSchema>;
-
-//export type Question = typeof questions.$inferSelect;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
-
-
-export type Question = typeof questions.$inferSelect; // Para SELECTs
-export type NewQuestion = typeof questions.$inferInsert; // Para INSERTs
-
+export type Question = typeof questions.$inferSelect;
+export type NewQuestion = typeof questions.$inferInsert;
 export type Answer = typeof answers.$inferSelect;
 export type InsertAnswer = z.infer<typeof insertAnswerSchema>;
-
 export type StudentProgress = typeof studentProgress.$inferSelect;
 export type InsertStudentProgress = z.infer<typeof insertStudentProgressSchema>;
-
 export type StudentAnswer = typeof studentAnswers.$inferSelect;
 export type InsertStudentAnswer = z.infer<typeof insertStudentAnswerSchema>;
-
 export type UserCategory = typeof userCategories.$inferSelect;
 export type InsertUserCategory = z.infer<typeof insertUserCategorySchema>;
-
 export type Subcategory = typeof subcategories.$inferSelect;
 export type Parent = typeof parents.$inferSelect;
 
-// Relations
 export const usersRelations = relations(users, ({ many }) => ({
 	studentProgress: many(studentProgress),
 	quizSubmissions: many(quizSubmissions),
@@ -525,10 +490,6 @@ export const questionReportsRelations = relations(questionReports, ({ one }) => 
 	}),
 }));
 
-
-
-
-
 export const insertQuestionReportSchema = createInsertSchema(questionReports);
 export const selectQuestionReportSchema = createInsertSchema(questionReports);
 export type QuestionReport = z.infer<typeof selectQuestionReportSchema>;
@@ -546,3 +507,118 @@ export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTo
 export const selectPasswordResetTokenSchema = createInsertSchema(passwordResetTokens);
 export type PasswordResetToken = z.infer<typeof selectPasswordResetTokenSchema>;
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
+
+export const friendships = pgTable("friendships", {
+	id: serial("id").primaryKey(),
+	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	friendId: integer("friend_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	status: text("status").default('pending').notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  unique("friendship_unique").on(table.userId, table.friendId),
+]);
+
+export const notifications = pgTable("notifications", {
+	id: serial("id").primaryKey(),
+	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	type: text("type").notNull(),
+	fromId: integer("from_id"),
+	data: jsonb("data"),
+	read: boolean("read").default(false).notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const duels = pgTable("duels", {
+	id: serial("id").primaryKey(),
+	challengerId: integer("challenger_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	receiverId: integer("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	status: text("status").notNull(),
+	wager: integer("wager").default(0).notNull(),
+	quizId: integer("quiz_id").references(() => quizzes.id, { onDelete: "set null" }),
+	scores: jsonb("scores").default({ challenger: 0, receiver: 0 }).notNull(),
+	currentQuestionIndex: integer("current_question_index").default(0),
+	winnerId: integer("winner_id").references(() => users.id, { onDelete: "set null" }),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const messages = pgTable("messages", {
+	id: serial("id").primaryKey(),
+	senderId: integer("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	receiverId: integer("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	content: text("content").notNull(),
+	read: boolean("read").default(false).notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const friendshipsRelations = relations(friendships, ({ one }) => ({
+  user: one(users, {
+    fields: [friendships.userId],
+    references: [users.id],
+    relationName: "user",
+  }),
+  friend: one(users, {
+    fields: [friendships.friendId],
+    references: [users.id],
+    relationName: "friend",
+  }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+  fromUser: one(users, {
+    fields: [notifications.fromId],
+    references: [users.id],
+  }),
+}));
+
+export const duelsRelations = relations(duels, ({ one }) => ({
+  challenger: one(users, {
+    fields: [duels.challengerId],
+    references: [users.id],
+    relationName: "challenger",
+  }),
+  receiver: one(users, {
+    fields: [duels.receiverId],
+    references: [users.id],
+    relationName: "receiver",
+  }),
+  quiz: one(quizzes, {
+    fields: [duels.quizId],
+    references: [quizzes.id],
+  }),
+  winner: one(users, {
+    fields: [duels.winnerId],
+    references: [users.id],
+    relationName: "winner",
+  }),
+}));
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+	sender: one(users, {
+		fields: [messages.senderId],
+		references: [users.id],
+		relationName: "sender",
+	}),
+	receiver: one(users, {
+		fields: [messages.receiverId],
+		references: [users.id],
+		relationName: "receiver",
+	}),
+}));
+
+export const insertFriendshipSchema = createInsertSchema(friendships);
+export const insertNotificationSchema = createInsertSchema(notifications);
+export const insertMessageSchema = createInsertSchema(messages);
+
+export type Friendship = typeof friendships.$inferSelect;
+export type InsertFriendship = typeof friendships.$inferInsert;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+export type Duel = typeof duels.$inferSelect;
+export type InsertDuel = typeof duels.$inferInsert;
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = typeof messages.$inferInsert;

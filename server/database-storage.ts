@@ -10,7 +10,9 @@ import {
   questionReports, type QuestionReport, type InsertQuestionReport,
   passwordResetTokens, type PasswordResetToken, type InsertPasswordResetToken,
   chiquiResults, chiquiHistory, trainingResults, trainingHistory,
-  type TrainingResult, type InsertTrainingResult, type TrainingHistory, type InsertTrainingHistory
+  type TrainingResult, type InsertTrainingResult, type TrainingHistory, type InsertTrainingHistory,
+  friendships, notifications, duels, type Friendship, type Notification,
+  messages, type Message, type InsertMessage
 } from "../shared/schema.js";
 
 import { db, DbClient } from "./db.js";
@@ -1158,20 +1160,25 @@ export class DatabaseStorage implements IStorage {
     return activity;
   }
 
-  async searchUsers(query: string): Promise<User[]> {
+  async searchUsers(query: string, excludeUserId?: number): Promise<User[]> {
     if (!query) return [];
     const searchPattern = `%${query}%`;
+    
+    let conditions = or(
+      ilike(users.name, searchPattern),
+      ilike(users.username, searchPattern),
+      ilike(users.email, searchPattern)
+    );
+
+    if (excludeUserId) {
+      conditions = and(conditions, sql`${users.id} != ${excludeUserId}`);
+    }
+
     return await this.db
       .select()
       .from(users)
-      .where(
-        or(
-          ilike(users.name, searchPattern),
-          ilike(users.username, searchPattern),
-          ilike(users.email, searchPattern)
-        )
-      )
-      .limit(10);
+      .where(conditions)
+      .limit(20);
   }
 
   async searchQuizzes(query: string, userId?: number): Promise<any[]> {
@@ -1964,18 +1971,295 @@ export class DatabaseStorage implements IStorage {
   }
 
   async synchronizeSequences(): Promise<void> {
-    const tables = ['quizzes', 'questions', 'answers'];
-    try {
-      for (const table of tables) {
-        // Find max ID and update sequence
-        await this.db.execute(sql.raw(`
-          SELECT setval('${table}_id_seq', COALESCE((SELECT MAX(id) FROM ${table}), 1), true);
-        `));
+    const tables = [
+      'users', 'categories', 'subcategories', 'quizzes', 'questions',
+      'answers', 'student_progress', 'student_answers', 'quiz_feedback',
+      'user_categories', 'friendships', 'notifications'
+    ];
+
+    for (const table of tables) {
+      try {
+        await this.db.execute(sql`
+          SELECT setval(
+            pg_get_serial_sequence(${table}, 'id'),
+            COALESCE((SELECT MAX(id) FROM ${sql.identifier(table)}), 0) + 1,
+            false
+          )
+        `);
+      } catch (error) {
+        console.error(`Error syncing sequence for table ${table}:`, error);
       }
-      console.log('✅ AI ID Shield: Sequences synchronized successfully');
-    } catch (err) {
-      console.error('❌ AI ID Shield: Error synchronizing sequences:', err);
-      // We don't throw here to avoid blocking the main flow if it's just a sequence hint issue
     }
   }
+
+  // Social/Friendship methods
+  async sendFriendRequest(userId: number, friendId: number): Promise<void> {
+    // Check if already friends or request exists
+    const existing = await this.db.select()
+      .from(friendships)
+      .where(or(
+        and(eq(friendships.userId, userId), eq(friendships.friendId, friendId)),
+        and(eq(friendships.userId, friendId), eq(friendships.friendId, userId))
+      ));
+
+    if (existing.length > 0) {
+      if (existing.some(f => f.status === 'blocked')) {
+        throw new Error("No se puede interactuar con un usuario bloqueado.");
+      }
+      return;
+    }
+
+    await this.db.insert(friendships).values({
+      userId,
+      friendId,
+      status: 'pending'
+    });
+
+    // Create notification for the friend
+    await this.createNotification(friendId, 'friend_request', userId);
+  }
+
+  async blockUser(userId: number, targetId: number): Promise<void> {
+    // Eliminar cualquier relación existente (amistad o solicitud)
+    await this.db.delete(friendships)
+      .where(or(
+        and(eq(friendships.userId, userId), eq(friendships.friendId, targetId)),
+        and(eq(friendships.userId, targetId), eq(friendships.friendId, userId))
+      ));
+
+    // Insertar el bloqueo (el userId es quien bloquea)
+    await this.db.insert(friendships).values({
+      userId,
+      friendId: targetId,
+      status: 'blocked'
+    });
+  }
+
+  async unblockUser(userId: number, targetId: number): Promise<void> {
+    await this.db.delete(friendships)
+      .where(and(
+        eq(friendships.userId, userId),
+        eq(friendships.friendId, targetId),
+        eq(friendships.status, 'blocked')
+      ));
+  }
+
+  async acceptFriendRequest(requestId: number): Promise<void> {
+    const [request] = await this.db.update(friendships)
+      .set({ status: 'accepted' })
+      .where(eq(friendships.id, requestId))
+      .returning();
+
+    if (request) {
+      // Create notification for the person who sent the request
+      await this.createNotification(request.userId, 'friend_request_accepted', request.friendId);
+    }
+  }
+
+  async rejectFriendRequest(requestId: number): Promise<void> {
+    await this.db.delete(friendships)
+      .where(eq(friendships.id, requestId));
+  }
+
+  async getFriends(userId: number): Promise<any[]> {
+    // 1. Get real friends (accepted requests)
+    const results = await this.db.select({
+      friendshipId: friendships.id,
+      friend: users,
+    })
+    .from(friendships)
+    .innerJoin(users, or(
+      and(eq(friendships.userId, userId), eq(friendships.friendId, users.id)),
+      and(eq(friendships.friendId, userId), eq(friendships.userId, users.id))
+    ))
+    .where(and(
+      eq(friendships.status, 'accepted'),
+      or(eq(friendships.userId, userId), eq(friendships.friendId, userId))
+    ));
+
+    const realFriends = results.map(r => r.friend);
+
+    // 2. Get administrators to show as automatic friends (Support)
+    const admins = await this.db.select()
+      .from(users)
+      .where(and(
+        eq(users.role, 'admin'),
+        sql`${users.id} != ${userId}` // Don't show self if admin
+      ));
+
+    // 3. Get anyone who has a chat history with this admin (if userId is admin)
+    const currentUser = await this.getUser(userId);
+    let chatPartners: any[] = [];
+    if (currentUser?.role === 'admin') {
+      const partnersIds = await this.db.select({
+        id: sql<number>`DISTINCT CASE WHEN ${messages.senderId} = ${userId} THEN ${messages.receiverId} ELSE ${messages.senderId} END`
+      })
+      .from(messages)
+      .where(or(eq(messages.senderId, userId), eq(messages.receiverId, userId)));
+
+      if (partnersIds.length > 0) {
+        const ids = partnersIds.map(p => p.id).filter(id => id !== userId);
+        if (ids.length > 0) {
+          chatPartners = await this.db.select().from(users).where(inArray(users.id, ids));
+        }
+      }
+    }
+
+    // Combine and deduplicate by ID
+    const allFriends = [...realFriends, ...admins, ...chatPartners];
+    const uniqueFriends = Array.from(new Map(allFriends.map(f => [f.id, f])).values());
+
+    return uniqueFriends;
+  }
+
+  async getPendingFriendRequests(userId: number): Promise<any[]> {
+    const results = await this.db.select({
+      friendshipId: friendships.id,
+      sender: users,
+      createdAt: friendships.createdAt
+    })
+    .from(friendships)
+    .innerJoin(users, eq(friendships.userId, users.id))
+    .where(and(
+      eq(friendships.friendId, userId),
+      eq(friendships.status, 'pending')
+    ));
+
+    return results;
+  }
+
+  async getFriendships(userId: number): Promise<any[]> {
+    return this.db.select()
+      .from(friendships)
+      .where(or(
+        eq(friendships.userId, userId),
+        eq(friendships.friendId, userId)
+      ));
+  }
+
+  async removeFriend(userId: number, friendId: number): Promise<void> {
+    await this.db.delete(friendships)
+      .where(or(
+        and(eq(friendships.userId, userId), eq(friendships.friendId, friendId)),
+        and(eq(friendships.userId, friendId), eq(friendships.friendId, userId))
+      ));
+  }
+
+  async getWonDuelsCount(userId: number): Promise<number> {
+    const result = await this.db.select({ count: sql<number>`count(*)` })
+      .from(duels)
+      .where(and(
+        eq(duels.winnerId, userId),
+        eq(duels.status, 'finished')
+      ));
+    return Number(result[0]?.count || 0);
+  }
+
+  async getUserAssignedCategories(userId: number): Promise<any[]> {
+    return await this.db.select({
+      id: categories.id,
+      name: categories.name,
+      description: categories.description,
+      colorClass: categories.colorClass,
+    })
+    .from(userCategories)
+    .innerJoin(categories, eq(userCategories.categoryId, categories.id))
+    .where(eq(userCategories.userId, userId));
+  }
+
+
+
+  // Notification methods
+  async getNotifications(userId: number): Promise<Notification[]> {
+    return this.db.select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt))
+      .limit(30);
+  }
+
+  async markNotificationRead(notificationId: number): Promise<void> {
+    await this.db.update(notifications)
+      .set({ read: true })
+      .where(eq(notifications.id, notificationId));
+  }
+
+  async createNotification(userId: number, type: string, fromId?: number, data?: any): Promise<Notification> {
+    const [notification] = await this.db.insert(notifications).values({
+      userId,
+      type,
+      fromId: fromId || null,
+      data: data || null,
+      read: false
+    }).returning();
+    return notification;
+  }
+
+  // Chat methods
+  async saveChatMessage(senderId: number, receiverId: number, content: string): Promise<Message> {
+    const [message] = await this.db.insert(messages).values({
+      senderId,
+      receiverId,
+      content,
+      read: false
+    }).returning();
+    return message;
+  }
+
+  async getChatHistory(userId1: number, userId2: number): Promise<Message[]> {
+    return this.db.select()
+      .from(messages)
+      .where(or(
+        and(eq(messages.senderId, userId1), eq(messages.receiverId, userId2)),
+        and(eq(messages.senderId, userId2), eq(messages.receiverId, userId1))
+      ))
+      .orderBy(asc(messages.createdAt))
+      .limit(50);
+  }
+
+  async markMessagesAsRead(userId: number, friendId: number): Promise<void> {
+    await this.db.update(messages)
+      .set({ read: true })
+      .where(and(
+        eq(messages.senderId, friendId),
+        eq(messages.receiverId, userId),
+        eq(messages.read, false)
+      ));
+  }
+
+  async cleanupOldMessages(): Promise<void> {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    await this.db.delete(messages).where(lt(messages.createdAt, oneWeekAgo));
+  }
+
+  async getUnreadMessageCount(userId: number): Promise<number> {
+    const result = await this.db.select({ count: sql<number>`count(*)` })
+      .from(messages)
+      .where(and(
+        eq(messages.receiverId, userId),
+        eq(messages.read, false)
+      ));
+    return Number(result[0]?.count || 0);
+  }
+
+  async getUnreadMessageCountsBySender(userId: number): Promise<Record<number, number>> {
+    const results = await this.db.select({
+      senderId: messages.senderId,
+      count: sql<number>`count(*)`
+    })
+    .from(messages)
+    .where(and(
+      eq(messages.receiverId, userId),
+      eq(messages.read, false)
+    ))
+    .groupBy(messages.senderId);
+
+    const counts: Record<number, number> = {};
+    results.forEach(r => {
+      counts[Number(r.senderId)] = Number(r.count);
+    });
+    return counts;
+  }
 }
+

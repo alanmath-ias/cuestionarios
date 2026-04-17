@@ -139,6 +139,12 @@ async function fetchAlerts() {
   return res.json();
 }
 
+async function fetchWonDuels() {
+  const res = await fetch("/api/user/won-duels");
+  if (!res.ok) return { count: 0 };
+  return res.json();
+}
+
 async function fetchQuizFeedback(progressId: string) {
   if (!progressId) return null;
   const res = await fetch(`/api/quiz-feedback/${progressId}`);
@@ -377,6 +383,13 @@ export default function UserDashboard() {
     refetchOnMount: true,
     staleTime: 1000 * 60,
   };
+
+  const { data: wonDuelsData } = useQuery({
+    queryKey: ["/api/user/won-duels"],
+    queryFn: fetchWonDuels,
+    staleTime: 5 * 60 * 1000
+  });
+
 
   const { data: currentUser, isLoading: loadingUser } = useQuery({
     queryKey: ["/api/user"],
@@ -2210,6 +2223,8 @@ export default function UserDashboard() {
           category={selectedAwardsCategory}
           quizzes={quizzes || []}
           username={currentUser?.username || "Estudiante"}
+          wonDuels={wonDuelsData?.count || 0}
+          hintCredits={currentUser?.hintCredits || 0}
         />
 
         {/* Magic Quiz IA Dialog */}
@@ -2288,10 +2303,6 @@ export default function UserDashboard() {
         </Dialog>
 
       </div>
-      <FloatingWhatsApp
-        message="Hola, me gustaría cotizar clases de refuerzo para mejorar mi rendimiento en matemáticas."
-        tooltip="Cotizar Clases de Refuerzo"
-      />
     </div >
   );
 }

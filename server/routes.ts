@@ -41,6 +41,8 @@ import passport from "passport";
 import { setupAuth } from "./auth.js";
 import { User as DrizzleUser } from "../shared/schema.js";
 import { sendWelcomeEmail } from "./email-utils.js";
+import { generateAiQuizData, cleanAiJson } from "./ai-utils.js";
+import { DuelServer } from "./duel-server.js";
 
 declare global {
   namespace Express {
@@ -81,43 +83,18 @@ type ProgressWithQuiz = typeof studentProgress.$inferSelect & {
 const publicQuizIds = [278, 279, 280, 281, 282, 283, 285, 286];
 const COST_AI_QUIZ = 10;
 
-// Ayudante para limpiar y parsear JSON de la IA de forma robusta
-function cleanAiJson(content: string) {
-  let cleaned = content.trim();
-  
-  // 1. Eliminar bloques de Markdown si existen
-  if (cleaned.startsWith('```json')) {
-    cleaned = cleaned.replace(/^```json\s*\n?/, '').replace(/\n?```$/, '');
-  } else if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```\s*\n?/, '').replace(/\n?```$/, '');
-  }
-  
-  cleaned = cleaned.trim();
 
-  // 2. Corregir escapes de barra invertida comunes en LaTeX que rompen JSON.parse
-  // Buscamos barras invertidas que NO estén escapadas y que precedan a caracteres que NO son escapes válidos de JSON
-  // Pero lo más seguro para LaTeX es simplemente asegurar que toda \ se convierta en \\ si no viene ya así
-  // Esta regex detecta barras invertidas solitarias (no seguidas de otra barra u otros caracteres de control)
-  // Nota: DeepSeek suele enviar \frac en lugar de \\frac en el JSON raw.
-  try {
-    return JSON.parse(cleaned);
-  } catch (initialError) {
-    // Si falla el parseo inicial, intentamos una limpieza de escapes de LaTeX
-    // Reemplazamos \ (que no esté ya escapada) por \\
-    const fixedContent = cleaned.replace(/\\(?![\\\/bfnrtu])/g, '\\\\');
-    try {
-      return JSON.parse(fixedContent);
-    } catch (secondError) {
-      console.error("Fallo definitivo en parseo AI JSON:", secondError);
-      throw secondError;
-    }
-  }
-}
+// Deprecated: cleanAiJson moved to ai-utils.ts
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   const apiRouter = express.Router();
 
   app.use("/api", apiRouter);
+
+  // Background Tasks
+  setInterval(() => {
+    storage.cleanupOldMessages().catch(err => console.error("Error in message cleanup:", err));
+  }, 1000 * 60 * 60); // Every hour
 
   // Auth Setup
   setupAuth();
@@ -636,6 +613,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  apiRouter.get("/user/won-duels", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const count = await storage.getWonDuelsCount(req.session.userId!);
+      res.json({ count });
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener victorias" });
+    }
+  });
+
   // Update user profile
   // Update user profile
   apiRouter.patch("/user", async (req: Request, res: Response) => {
@@ -910,84 +896,17 @@ Tono: Alentador, profesional y educativo.`;
         return res.status(403).json({ message: "No tienes suficientes créditos para realizar una creación mágica. ¡Sigue ganando créditos terminando cuestionarios o entrenamientos!" });
       }
 
-      // 2. Preparar el Prompt
+      // 2. Generar Datos con IA
       const category = await storage.getCategory(parseInt(categoryId));
       const subcategory = subcategoryId ? await storage.getSubcategory(parseInt(subcategoryId)) : null;
-      
-      const difficultyMap: Record<string, string> = {
-        'easy': 'Principiante',
-        'medium': 'Intermedio',
-        'hard': 'Avanzado/Olimpiada'
-      };
 
-      const prompt = `Actúa como un profesor de matemáticas experto y creativo. Crea un cuestionario de alta calidad.
-TEMA: ${topicDescription}
-MATERIA: ${category?.name || 'Matemáticas'}
-SUBTEMA GENERAL: ${subcategory?.name || 'General'}
-DIFICULTAD: ${difficultyMap[difficulty] || 'Intermedio'}
-NÚMERO DE PREGUNTAS: ${questionCount || 10}
-
-REQUISITOS TÉCNICOS:
-1. Usa texto plano para los enunciados y explicaciones. Reserva la notación LaTeX solo para lo que sea estrictamente necesario (fracciones, raíces, potencias, logaritmos o fórmulas complejas).
-2. MUY IMPORTANTE: La apertura y el CIERRE del bloque de LaTeX debe ser EXACTAMENTE el mismo carácter ¡ (no uses ! ni otros símbolos). Ejemplo: ¡\frac{a}{b}¡
-3. Todas las preguntas deben ser de tipo 'multiple_choice' con exactamente 4 opciones.
-4. El lenguaje debe ser claro, educativo y en español.
-5. Las opciones de respuesta deben estar bien pensadas (incluye distractores comunes).
-6. Incluye una breve explicación pedagógica de la respuesta correcta (máximo 2 líneas).
-7. Prioriza ejercicios técnicos directos. Evita enunciados extensos, historias o contextos innecesarios.
-8. Si el tema es complejo, sé conciso para no exceder el límite de respuesta.
-
-DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
-{
-  "title": "Un título creativo para el cuestionario",
-  "description": "Una breve descripción motivadora",
-  "questions": [
-    {
-      "content": "Texto de la pregunta...",
-      "explanation": "Explicación de por qué la respuesta es correcta...",
-      "options": [
-        { "text": "Opción 1", "isCorrect": true },
-        { "text": "Opción 2", "isCorrect": false },
-        { "text": "Opción 3", "isCorrect": false },
-        { "text": "Opción 4", "isCorrect": false }
-      ]
-    }
-  ]
-}`;
-
-      const apiKey = process.env.DEEPSEEK_API_KEY || process.env.VITE_DEEPSEEK_API_KEY;
-      if (!apiKey) throw new Error("DeepSeek API key not configured");
-
-      // 3. Llamada a DeepSeek
-      const aiResponse = await fetch('https://api.deepseek.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.4,
-          max_tokens: 4000,
-          response_format: { type: 'json_object' }
-        }),
+      const quizContent = await generateAiQuizData({
+        topicDescription,
+        categoryName: category?.name || 'Matemáticas',
+        subcategoryName: subcategory?.name,
+        difficulty,
+        questionCount: questionCount || 10
       });
-
-      if (!aiResponse.ok) {
-        const errText = await aiResponse.text();
-        console.error("DeepSeek API Error:", errText);
-        throw new Error("Error al contactar con el genio de la IA.");
-      }
-
-      const aiData = await aiResponse.json();
-      let quizContent;
-      try {
-        quizContent = cleanAiJson(aiData.choices[0].message.content);
-      } catch (e) {
-        console.error("JSON Parsing Error from AI:", aiData.choices[0].message.content);
-        throw new Error("La IA generó un formato inválido. Por favor intenta de nuevo.");
-      }
 
       // 4. PERSISTENCIA EN TRANSACCIÓN Y COBRO
       const result = await db.transaction(async (tx) => {
@@ -1396,6 +1315,238 @@ DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
       res.status(500).json({ message: "Error verifying payment" });
     }
   });
+
+  // --- SOCIAL & NOTIFICATIONS ---
+
+  apiRouter.get("/social/search", requireAuth, async (req: Request, res: Response) => {
+    const { q } = req.query;
+    if (!q || typeof q !== 'string') return res.json([]);
+    try {
+      const usersFound = await storage.searchUsers(q, req.session.userId!);
+      res.json(usersFound);
+    } catch (error) {
+      res.status(500).json({ message: "Error al buscar usuarios" });
+    }
+  });
+
+  apiRouter.get("/social/friends", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const friends = await storage.getFriends(req.session.userId!);
+      res.json(friends);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener amigos" });
+    }
+  });
+
+  apiRouter.get("/social/pending-requests", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const requests = await storage.getPendingFriendRequests(req.session.userId!);
+      res.json(requests);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener solicitudes" });
+    }
+  });
+
+  apiRouter.get("/social/friendships", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const allFriendships = await storage.getFriendships(req.session.userId!);
+      res.json(allFriendships);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener amistades" });
+    }
+  });
+
+  apiRouter.post("/social/request", requireAuth, async (req: Request, res: Response) => {
+    const { friendId } = req.body;
+    if (!friendId) return res.status(400).json({ message: "ID del amigo requerido" });
+    try {
+      await storage.sendFriendRequest(req.session.userId!, parseInt(friendId));
+      res.json({ message: "Solicitud de amistad enviada" });
+    } catch (error) {
+      res.status(500).json({ message: "Error al enviar solicitud" });
+    }
+  });
+
+  apiRouter.patch("/social/request/:id/accept", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      
+      // Obtenemos la relación antes de borrarla/actualizarla para saber a quién notificar
+      const friendshipsList = await storage.getFriendships(req.session.userId!);
+      const rel = friendshipsList.find(f => f.id === requestId);
+
+      await storage.acceptFriendRequest(requestId);
+      
+      if (DuelServer.instance) {
+        DuelServer.instance.broadcastToUser(req.session.userId!, { type: 'social:refresh' });
+        if (rel) {
+          const senderId = rel.userId === req.session.userId ? rel.friendId : rel.userId;
+          DuelServer.instance.broadcastToUser(senderId, { type: 'social:refresh' });
+        }
+      }
+      res.json({ success: true, message: "Solicitud aceptada" });
+    } catch (error) {
+      res.status(500).json({ message: "Error al aceptar solicitud" });
+    }
+  });
+
+  apiRouter.delete("/social/request/:id/reject", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      
+      const friendshipsList = await storage.getFriendships(req.session.userId!);
+      const rel = friendshipsList.find(f => f.id === requestId);
+
+      await storage.rejectFriendRequest(requestId);
+
+      if (DuelServer.instance) {
+        DuelServer.instance.broadcastToUser(req.session.userId!, { type: 'social:refresh' });
+        if (rel) {
+          const senderId = rel.userId === req.session.userId ? rel.friendId : rel.userId;
+          DuelServer.instance.broadcastToUser(senderId, { type: 'social:refresh' });
+        }
+      }
+      res.json({ success: true, message: "Solicitud rechazada/cancelada" });
+    } catch (error) {
+      res.status(500).json({ message: "Error al rechazar solicitud" });
+    }
+  });
+
+  apiRouter.post("/social/block/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const targetId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      await storage.blockUser(userId, targetId);
+      
+      if (DuelServer.instance) {
+        DuelServer.instance.broadcastToUser(userId, { type: 'social:refresh' });
+        DuelServer.instance.broadcastToUser(targetId, { type: 'social:refresh' });
+      }
+      res.json({ success: true, message: "Usuario bloqueado" });
+    } catch (error) {
+      res.status(500).json({ message: "Error al bloquear usuario" });
+    }
+  });
+
+  apiRouter.delete("/social/unblock/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const targetId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      await storage.unblockUser(userId, targetId);
+      
+      if (DuelServer.instance) {
+        DuelServer.instance.broadcastToUser(userId, { type: 'social:refresh' });
+        DuelServer.instance.broadcastToUser(targetId, { type: 'social:refresh' });
+      }
+      res.json({ success: true, message: "Usuario desbloqueado" });
+    } catch (error) {
+      res.status(500).json({ message: "Error al desbloquear usuario" });
+    }
+  });
+
+  apiRouter.get("/notifications", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const list = await storage.getNotifications(req.session.userId!);
+      res.json(list);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener notificaciones" });
+    }
+  });
+
+  apiRouter.get("/social/profile/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const targetId = parseInt(req.params.id);
+      
+      const user = await storage.getUser(targetId);
+      if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
+
+      const wonDuels = await storage.getWonDuelsCount(targetId);
+      const assignedCategories = await storage.getUserAssignedCategories(targetId);
+      const allProgress = await storage.getQuizzesByUserId(targetId);
+
+      // Check friendship status
+      const userId = req.session.userId!;
+      const friendshipsList = await storage.getFriendships(userId);
+      const friendship = friendshipsList.find(f => (f.userId === targetId || f.friendId === targetId) && f.status === 'accepted');
+
+      res.json({
+        user: {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          hintCredits: user.hintCredits
+        },
+        wonDuels,
+        assignedCategories,
+        allProgress,
+        isFriend: !!friendship
+      });
+    } catch (error) {
+      console.error("Error fetching friend profile:", error);
+      res.status(500).json({ message: "Error al obtener perfil del amigo" });
+    }
+  });
+
+  apiRouter.delete("/social/friends/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const friendId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+
+      await storage.removeFriend(userId, friendId);
+
+      if (DuelServer.instance) {
+        DuelServer.instance.broadcastToUser(userId, { type: 'social:refresh' });
+        DuelServer.instance.broadcastToUser(friendId, { type: 'social:refresh' });
+      }
+
+      res.json({ success: true, message: "Amistad eliminada correctamente" });
+    } catch (error) {
+      console.error("Error removing friend:", error);
+      res.status(500).json({ message: "Error al eliminar amigo" });
+    }
+  });
+
+  apiRouter.get("/social/chat/:friendId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId!;
+      const friendId = parseInt(req.params.friendId);
+
+      const history = await storage.getChatHistory(userId, friendId);
+      await storage.markMessagesAsRead(userId, friendId);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
+      res.status(500).json({ message: "Error al obtener historial de chat" });
+    }
+  });
+
+  apiRouter.get("/user/unread-messages", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const count = await storage.getUnreadMessageCount(req.session.userId!);
+      res.json({ count });
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener mensajes no leídos" });
+    }
+  });
+
+  apiRouter.get("/user/unread-messages/details", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const counts = await storage.getUnreadMessageCountsBySender(req.session.userId!);
+      res.json(counts);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener detalles de mensajes no leídos" });
+    }
+  });
+
+  apiRouter.patch("/notifications/:id/read", requireAuth, async (req: Request, res: Response) => {
+    try {
+      await storage.markNotificationRead(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Error al marcar como leída" });
+    }
+  });
+
   //Obtener el nombre del usuario
   app.get("/api/me", requireAuth, async (req, res) => {
     try {

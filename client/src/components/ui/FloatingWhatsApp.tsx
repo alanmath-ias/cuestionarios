@@ -32,9 +32,9 @@ export function FloatingWhatsApp({
                             className="block"
                         >
                             <div
-                                className="flex items-center justify-center h-16 w-16 rounded-full bg-green-500 hover:bg-green-600 shadow-lg transition-transform hover:scale-110"
+                                className="flex items-center justify-center h-14 w-14 rounded-full bg-green-500 hover:bg-green-600 shadow-lg transition-transform hover:scale-110"
                             >
-                                <FaWhatsapp className="h-10 w-10 text-white" />
+                                <FaWhatsapp className="h-8 w-8 text-white" />
                             </div>
                         </a>
                     </TooltipTrigger>

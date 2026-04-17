@@ -48,6 +48,12 @@ export function PageLayout({ children }: PageLayoutProps) {
     enabled: !!user,
   });
 
+  // Fetch pending friend requests for the badge
+  const { data: pendingRequests } = useQuery<any[]>({
+    queryKey: ['/api/social/pending-requests'],
+    enabled: !!user,
+  });
+
   const [isMagicQuizOpen, setIsMagicQuizOpen] = useState(false);
 
   useEffect(() => {
@@ -59,7 +65,7 @@ export function PageLayout({ children }: PageLayoutProps) {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header user={user} />
+      <Header user={user} pendingCount={pendingRequests?.length || 0} />
 
       <main className="flex-grow">
         {children}

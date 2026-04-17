@@ -70,12 +70,21 @@ app.get('/api/env', (_req, res) => {
 const PgStore = PgSession(session);
 const isProduction = process.env.NODE_ENV === "production";
 
-if (isProduction) {
-  app.set("trust proxy", 1); // trust first proxy
-}
+export const sessionStore = new PgStore({
+  conString: process.env.DATABASE_URL,
+  createTableIfMissing: true,
+  poolOptions: {
+    max: 2, // Reduced from 5 to prevent "too many clients" error
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  },
+  ssl: { rejectUnauthorized: false },
+} as any);
 
-app.use(session({
-  secret: process.env.SESSION_SECRET || "alanmath-secret-key",
+export const sessionSecret = process.env.SESSION_SECRET || "alanmath-secret-key";
+
+export const sessionMiddleware = session({
+  secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -83,17 +92,14 @@ app.use(session({
     sameSite: "lax",
     maxAge: 86400000, // 1 día
   },
-  store: new PgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: true,
-    poolOptions: {
-      max: 2, // Reduced from 5 to prevent "too many clients" error
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    },
-    ssl: { rejectUnauthorized: false },
-  } as any),
-}));
+  store: sessionStore,
+});
+
+if (isProduction) {
+  app.set("trust proxy", 1); // trust first proxy
+}
+
+app.use(sessionMiddleware);
 
 // Middleware de logging
 app.use((req, res, next) => {
@@ -138,10 +144,15 @@ import { sql } from "drizzle-orm";
 
   registerRoutes(app);
 
+  const server = createServer(app);
+  
+  // Initialize Duel WebSocket Server
+  import('./duel-server.js').then(({ DuelServer }) => {
+    new DuelServer(server);
+  });
 
   // Middleware para servir archivos estáticos en producción
   if (app.get("env") === "development") {
-    const server = createServer(app);
     await setupVite(app, server);
     server.listen(5000, 'localhost', () => {
       log(`serving on http://localhost:5000`);
@@ -154,7 +165,7 @@ import { sql } from "drizzle-orm";
       res.sendFile(path.resolve(clientPath, "index.html")); // Devuelve index.html para rutas no manejadas
     });
 
-    app.listen(5000, () => {
+    server.listen(5000, () => {
       log(`Production server running on http://localhost:5000`);
     });
   }

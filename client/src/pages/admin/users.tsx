@@ -16,8 +16,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Trash2, Eye, Search, BookOpen, Coins, LogIn } from "lucide-react";
+import { Loader2, ArrowLeft, Trash2, Eye, Search, BookOpen, Coins, LogIn, Gift, Trophy, ChevronRight, MessageCircle } from "lucide-react";
+import { AwardsDialog } from "@/components/dashboard/AwardsDialog";
+import { motion } from "framer-motion";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -135,6 +138,8 @@ export default function UsersAdmin() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [managingCategoriesUser, setManagingCategoriesUser] = useState<any>(null);
   const [managingCreditsUser, setManagingCreditsUser] = useState<any>(null);
+  const [chestUser, setChestUser] = useState<any>(null);
+  const [selectedAwardsCategory, setSelectedAwardsCategory] = useState<any>(null);
   const [creditsAmount, setCreditsAmount] = useState<string>("");
   const updateCreditsMutation = useMutation({
     mutationFn: async ({ userId, credits }: { userId: number; credits: number }) => {
@@ -196,6 +201,17 @@ export default function UsersAdmin() {
         variant: "destructive",
       });
     },
+  });
+
+  // Query to fetch the full profile for chest viewing
+  const { data: chestProfile, isLoading: loadingChestProfile } = useQuery({
+    queryKey: [`/api/social/profile/${chestUser?.id}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/social/profile/${chestUser.id}`);
+      if (!res.ok) throw new Error("Error fetching profile");
+      return res.json();
+    },
+    enabled: !!chestUser?.id,
   });
 
   if (isLoading) {
@@ -381,6 +397,35 @@ export default function UsersAdmin() {
                         >
                           <BookOpen className="h-4 w-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setChestUser(user)}
+                          title="Ver cofre de tesoros"
+                          className="text-amber-400 hover:text-amber-300 hover:bg-amber-900/20"
+                        >
+                          <Gift className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            window.dispatchEvent(new CustomEvent('open-chat', { 
+                              detail: { 
+                                friend: {
+                                  id: user.id,
+                                  username: user.username,
+                                  name: user.name || user.username,
+                                  role: user.role
+                                } 
+                              } 
+                            }));
+                          }}
+                          title="Chatear con usuario"
+                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                        </Button>
                         {user.id !== 1 && user.id !== 2 && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -478,6 +523,76 @@ export default function UsersAdmin() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        {/* Admin Chest Selection Dialog */}
+        <Dialog open={!!chestUser} onOpenChange={(open) => !open && setChestUser(null)}>
+          <DialogContent className="max-w-md bg-slate-950 border-white/10 backdrop-blur-2xl rounded-[2.5rem] p-0 overflow-hidden shadow-2xl">
+              <DialogHeader className="p-6 pb-2">
+                <DialogTitle className="text-xl font-black text-white uppercase italic tracking-tight">
+                  Cofres de {chestUser?.username}
+                </DialogTitle>
+                <DialogDescription>
+                  Selecciona una materia para ver sus logros.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <ScrollArea className="max-h-[60vh] p-6 pt-2">
+                {loadingChestProfile ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Abriendo almacén...</p>
+                  </div>
+                ) : chestProfile?.assignedCategories && chestProfile.assignedCategories.length > 0 ? (
+                  <div className="space-y-3">
+                    {chestProfile.assignedCategories.map((cat: any) => (
+                      <motion.button
+                        key={cat.id}
+                        whileHover={{ scale: 1.02, x: 5 }}
+                        whileActive={{ scale: 0.98 }}
+                        onClick={() => setSelectedAwardsCategory(cat)}
+                        className="w-full flex items-center justify-between p-5 rounded-[1.8rem] bg-slate-900/40 border border-white/5 hover:bg-slate-900/80 transition-all group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-2xl bg-slate-950 border border-white/5 text-amber-500 group-hover:text-amber-400 transition-colors">
+                            <Trophy className="w-5 h-5" />
+                          </div>
+                          <div className="text-left">
+                            <h5 className="text-sm font-black text-white uppercase italic tracking-tight">{cat.name}</h5>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase">Ver Logros Completos</p>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-white transition-colors" />
+                      </motion.button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-sm text-slate-500 italic">Este usuario no tiene materias asignadas.</p>
+                  </div>
+                )}
+              </ScrollArea>
+              
+              <DialogFooter className="p-6 bg-slate-900/50">
+                <Button variant="ghost" className="w-full" onClick={() => setChestUser(null)}>
+                  Cerrar
+                </Button>
+              </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Awards Dialog for Admin (with full access) */}
+        {selectedAwardsCategory && chestProfile && (
+          <AwardsDialog 
+            isOpen={!!selectedAwardsCategory}
+            onClose={() => setSelectedAwardsCategory(null)}
+            category={selectedAwardsCategory}
+            quizzes={chestProfile.allProgress || []}
+            username={chestUser?.name || chestUser?.username || "Usuario"}
+            wonDuels={chestProfile.wonDuels || 0}
+            hintCredits={chestUser?.hintCredits || 0}
+            isPublicView={false} // Admin has full access
+          />
+        )}
       </div>
     </div>
   );

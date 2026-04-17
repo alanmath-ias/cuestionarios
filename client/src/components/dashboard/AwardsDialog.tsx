@@ -7,7 +7,7 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trophy, Medal, Award, Star, Search, Sparkles, Target, Zap, Gift, CheckCircle2, ChevronRight, Loader2, ArrowLeft, MessageCircle } from 'lucide-react';
+import { Trophy, Medal, Award, Star, Search, Sparkles, Target, Zap, Gift, CheckCircle2, ChevronRight, Loader2, ArrowLeft, MessageCircle, Sword } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MasteryInsignia } from './MasteryInsignia';
 import { Category, Quiz } from '@/types/types';
@@ -21,6 +21,9 @@ interface AwardsDialogProps {
     category: Category | null;
     quizzes: any[]; // User-quizzes with status
     username: string;
+    wonDuels?: number;
+    hintCredits?: number;
+    isPublicView?: boolean;
 }
 
 type DetailType = 'gold_cup' | 'silver_cup' | 'gold_medal' | 'silver_medal' | null;
@@ -30,7 +33,10 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
     onClose,
     category,
     quizzes,
-    username
+    username,
+    wonDuels = 0,
+    hintCredits = 0,
+    isPublicView = false
 }) => {
     const [selectedType, setSelectedType] = useState<DetailType>(null);
 
@@ -97,7 +103,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                             </div>
 
                                             {/* Main Stats Grid */}
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
                                                 <StatCard
                                                     icon={Trophy}
                                                     label="Copa Oro"
@@ -105,7 +111,8 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                     value={stats.goldTrophies}
                                                     color="text-yellow-500"
                                                     delay={0.1}
-                                                    onClick={() => setSelectedType('gold_cup')}
+                                                    onClick={() => !isPublicView && setSelectedType('gold_cup')}
+                                                    disabled={isPublicView}
                                                 />
                                                 <StatCard
                                                     icon={Trophy}
@@ -114,7 +121,8 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                     value={stats.silverTrophies}
                                                     color="text-blue-100"
                                                     delay={0.2}
-                                                    onClick={() => setSelectedType('silver_cup')}
+                                                    onClick={() => !isPublicView && setSelectedType('silver_cup')}
+                                                    disabled={isPublicView}
                                                 />
                                                 <StatCard
                                                     icon={Award}
@@ -123,7 +131,8 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                     value={stats.goldMedals}
                                                     color="text-amber-400"
                                                     delay={0.3}
-                                                    onClick={() => setSelectedType('gold_medal')}
+                                                    onClick={() => !isPublicView && setSelectedType('gold_medal')}
+                                                    disabled={isPublicView}
                                                 />
                                                 <StatCard
                                                     icon={Medal}
@@ -132,7 +141,25 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                     value={stats.silverMedals}
                                                     color="text-slate-400"
                                                     delay={0.4}
-                                                    onClick={() => setSelectedType('silver_medal')}
+                                                    onClick={() => !isPublicView && setSelectedType('silver_medal')}
+                                                    disabled={isPublicView}
+                                                />
+                                                <StatCard
+                                                    icon={Sword}
+                                                    label="Victorias"
+                                                    sublabel="Duelos Ganados"
+                                                    value={wonDuels}
+                                                    color="text-red-400"
+                                                    delay={0.5}
+                                                />
+                                                <StatCard
+                                                    icon={Zap}
+                                                    label="Créditos"
+                                                    sublabel="Disponibles"
+                                                    value={hintCredits}
+                                                    color="text-blue-400"
+                                                    delay={0.6}
+                                                    onClick={isPublicView ? undefined : undefined} // Zap doesn't have onClick anyway in original code but for consistency
                                                 />
                                             </div>
                                         </div>
@@ -183,7 +210,9 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
 
                                             {/* Motivational Footer */}
                                             <div className="text-center space-y-4 pt-4">
-                                                <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.5em]">Toca una medalla para ver detalles</p>
+                                                {!isPublicView && (
+                                                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.5em]">Toca una medalla para ver detalles</p>
+                                                )}
                                                 <button
                                                     onClick={onClose}
                                                     className="bg-slate-900 border border-white/5 hover:bg-slate-800 text-slate-300 px-12 py-4 rounded-full text-xs font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 shadow-2xl"
@@ -210,13 +239,18 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
     );
 };
 
-const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick }: any) => (
+const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick, disabled }: any) => (
     <motion.button
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay, type: 'spring' }}
         onClick={onClick}
-        className="bg-slate-900/60 rounded-[2.2rem] p-5 border border-white/5 flex flex-col items-center gap-1 shadow-2xl group hover:bg-slate-900/80 transition-all border-b-2 border-b-transparent hover:border-b-amber-500/40 active:scale-95"
+        disabled={disabled}
+        className={cn(
+            "bg-slate-900/60 rounded-[2.2rem] p-5 border border-white/5 flex flex-col items-center gap-1 shadow-2xl group transition-all border-b-2 border-b-transparent active:scale-95",
+            !disabled && "hover:bg-slate-900/80 hover:border-b-amber-500/40",
+            disabled && "cursor-default opacity-90"
+        )}
     >
         <div className={cn("relative mb-1", color)}>
             <Icon className="w-7 h-7 drop-shadow-lg" fill="currentColor" fillOpacity={0.15} />
@@ -227,7 +261,9 @@ const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick }:
             <p className={cn("text-[9px] font-black uppercase tracking-widest", color)}>{label}</p>
             <p className="text-[8px] font-bold text-slate-500 uppercase leading-none opacity-60">{sublabel}</p>
         </div>
-        <div className="mt-2 text-[8px] text-amber-500/0 group-hover:text-amber-500/70 font-black uppercase tracking-widest transition-all">Ver Más</div>
+        {!disabled && (
+            <div className="mt-2 text-[8px] text-amber-500/0 group-hover:text-amber-500/70 font-black uppercase tracking-widest transition-all">Ver Más</div>
+        )}
     </motion.button>
 );
 

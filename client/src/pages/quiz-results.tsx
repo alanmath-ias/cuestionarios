@@ -619,11 +619,6 @@ function QuizResults() {
           />
         )}
       </div>
-
-      <FloatingWhatsApp
-        message="Hola, acabo de terminar un cuestionario y me gustaría cotizar clases de refuerzo."
-        tooltip="Cotizar Clases de Refuerzo"
-      />
     </div>
   );
 }

@@ -7,7 +7,10 @@ import {
   studentProgress, StudentProgress, InsertStudentProgress,
   studentAnswers, StudentAnswer, InsertStudentAnswer,
   questionReports, QuestionReport, InsertQuestionReport,
-  passwordResetTokens, PasswordResetToken, InsertPasswordResetToken
+  passwordResetTokens, PasswordResetToken, InsertPasswordResetToken,
+  friendships, Friendship, InsertFriendship,
+  notifications, Notification, InsertNotification,
+  messages, Message, InsertMessage
 } from "../shared/schema.js";
 import { db } from './db.js';
 import { Child } from '../shared/quiz-types.js';
@@ -112,10 +115,16 @@ export interface IStorage {
 
   // Dashboard Analytics
   getStudentsAtRisk(limit?: number): Promise<any[]>;
+  getPendingFriendRequests(userId: number): Promise<any[]>;
+  getFriendships(userId: number): Promise<any[]>;
+  removeFriend(userId: number, friendId: number): Promise<void>;
+  getWonDuelsCount(userId: number): Promise<number>;
+  blockUser(userId: number, targetId: number): Promise<void>;
+  unblockUser(userId: number, targetId: number): Promise<void>;
   getRecentActivity(limit?: number): Promise<any[]>;
 
   // Search methods
-  searchUsers(query: string): Promise<User[]>;
+  searchUsers(query: string, excludeUserId?: number): Promise<User[]>;
   searchQuizzes(query: string): Promise<Quiz[]>;
 
   // Hint methods
@@ -152,6 +161,26 @@ export interface IStorage {
   getDailyTrainingRewardCount(userId: number, categoryId: number): Promise<number>;
   saveTrainingHistory(data: any): Promise<void>;
   synchronizeSequences(): Promise<void>;
+
+  // Social/Friendship methods
+  sendFriendRequest(userId: number, friendId: number): Promise<void>;
+  acceptFriendRequest(requestId: number): Promise<void>;
+  rejectFriendRequest(requestId: number): Promise<void>;
+  getFriends(userId: number): Promise<any[]>;
+  getPendingFriendRequests(userId: number): Promise<any[]>;
+
+  
+  // Notification methods
+  getNotifications(userId: number): Promise<Notification[]>;
+  markNotificationRead(notificationId: number): Promise<void>;
+  createNotification(userId: number, type: string, fromId?: number, data?: any): Promise<Notification>;
+
+  // Chat methods
+  saveChatMessage(senderId: number, receiverId: number, content: string): Promise<Message>;
+  getChatHistory(userId1: number, userId2: number): Promise<Message[]>;
+  markMessagesAsRead(userId: number, friendId: number): Promise<void>;
+  cleanupOldMessages(): Promise<void>;
+  getUnreadMessageCount(userId: number): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
@@ -249,7 +278,7 @@ export class MemStorage implements IStorage {
   async getStudentsAtRisk(limit: number = 5): Promise<any[]> { return []; }
   async getRecentActivity(limit: number = 10): Promise<any[]> { return []; }
 
-  async searchUsers(query: string): Promise<User[]> { return []; }
+  async searchUsers(query: string, excludeUserId?: number): Promise<User[]> { return []; }
   async searchQuizzes(query: string): Promise<Quiz[]> { return []; }
 
 
@@ -787,11 +816,38 @@ export class MemStorage implements IStorage {
   async getChiquiResults(userId: number): Promise<any[]> { return []; }
 
   // Training Persistence methods
-  async saveTrainingResult(userId: number, categoryId: number, score: number, totalQuestions: number, answers: any[], questionsData: any[]): Promise<void> { }
+  async saveTrainingResult(userId: number, categoryId: number, score: number, totalQuestions: number, answers: any[], questionsData: any[], timeSpent?: number): Promise<void> { }
   async getTrainingResult(userId: number, categoryId: number): Promise<any | null> { return null; }
   async getDailyTrainingRewardCount(userId: number, categoryId: number): Promise<number> { return 0; }
   async saveTrainingHistory(data: any): Promise<void> { }
   async synchronizeSequences(): Promise<void> { }
+
+  // Social/Friendship methods
+  async sendFriendRequest(userId: number, friendId: number): Promise<void> { }
+  async acceptFriendRequest(requestId: number): Promise<void> { }
+  async rejectFriendRequest(requestId: number): Promise<void> { }
+  async getFriends(userId: number): Promise<any[]> { return []; }
+  async getPendingFriendRequests(userId: number): Promise<any[]> { return []; }
+  async getFriendships(userId: number): Promise<any[]> { return []; }
+  async removeFriend(userId: number, friendId: number): Promise<void> { }
+  async getWonDuelsCount(userId: number): Promise<number> { return 0; }
+  async blockUser(userId: number, targetId: number): Promise<void> { }
+  async unblockUser(userId: number, targetId: number): Promise<void> { }
+
+  
+  // Notification methods
+  async getNotifications(userId: number): Promise<Notification[]> { return []; }
+  async markNotificationRead(notificationId: number): Promise<void> { }
+  async createNotification(userId: number, type: string, fromId?: number, data?: any): Promise<Notification> {
+    throw new Error("Method not implemented.");
+  }
+
+  // Chat methods
+  async saveChatMessage(senderId: number, receiverId: number, content: string): Promise<Message> { throw new Error("Method not implemented."); }
+  async getChatHistory(userId1: number, userId2: number): Promise<Message[]> { return []; }
+  async markMessagesAsRead(userId: number, friendId: number): Promise<void> { }
+  async cleanupOldMessages(): Promise<void> { }
+  async getUnreadMessageCount(userId: number): Promise<number> { return 0; }
 }
 
 import { DatabaseStorage } from "./database-storage.js";

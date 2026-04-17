@@ -18,6 +18,7 @@ import QuestionsAdmin from "@/pages/admin/questions";
 import UsersAdmin from "@/pages/admin/users";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import HistoryPage from "@/pages/history";
+import SocialPage from "@/pages/social";
 import { PageLayout } from "@/components/layout/page-layout";
 import { useQuery } from "@tanstack/react-query";
 import { User } from "@/types/types";
@@ -56,6 +57,10 @@ import LandingPage from "@/pages/landing-page";
 import SubscriptionPage from "@/pages/subscription";
 import PaymentSuccessPage from "@/pages/payment-success";
 import PaymentFailurePage from "@/pages/payment-failure";
+import { DuelProvider } from "@/hooks/use-duel";
+import { DuelOverlay } from "@/components/social/DuelOverlay";
+import { FloatingChat } from "@/components/chat/FloatingChat";
+import { FloatingWhatsApp } from "@/components/ui/FloatingWhatsApp";
 
 
 //Protectroute que permite el ingreso a cuestionarios publicos:
@@ -306,6 +311,9 @@ function Router() {
       <Route path="/history">
         {() => <ProtectedRoute component={HistoryPage} path="/history" />}
       </Route>
+      <Route path="/social">
+        {() => <ProtectedRoute component={SocialPage} path="/social" />}
+      </Route>
       <Route path="/subscription">
         {() => <ProtectedRoute component={SubscriptionPage} path="/subscription" />}
       </Route>
@@ -413,9 +421,17 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <ImpersonationBanner />
-      <Toaster />
+      <DuelProvider>
+        <Router />
+        <ImpersonationBanner />
+        <Toaster />
+        <DuelOverlay />
+        <FloatingChat />
+        <FloatingWhatsApp 
+          message="Hola, me gustaría saber más sobre las clases y servicios de AlanMath."
+          tooltip="Soporte y Clases"
+        />
+      </DuelProvider>
     </QueryClientProvider>
   );
 }
