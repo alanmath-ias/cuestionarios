@@ -129,10 +129,12 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         setDuel(prev => prev ? { ...prev, lastFeedback: payload } : null);
         break;
       case 'duel:round_result':
-        toast({
-            title: payload.winnerName + " acertó!",
-            description: "Prepárate para la siguiente...",
-        });
+        if (payload.winnerId) {
+          toast({
+              title: "⚡ " + payload.winnerName + " acertó!",
+              description: "Prepárate para la siguiente...",
+          });
+        }
         setDuel(prev => ({ 
             ...prev, 
             scores: payload.scores, 
@@ -140,6 +142,8 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
                 userId: payload.winnerId, 
                 userName: payload.winnerName, 
                 answerId: payload.answerId, 
+                correctAnswerId: payload.correctAnswerId,
+                speedBonus: payload.speedBonus,
                 isCorrect: true 
             } 
         }));

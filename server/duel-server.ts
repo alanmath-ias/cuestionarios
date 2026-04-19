@@ -468,15 +468,6 @@ export class DuelServer {
         }
     });
 
-    this.broadcastToDuel(duelId, {
-        type: 'duel:end',
-        payload: {
-            scores: room.scores,
-            winnerId,
-            wager: room.wager
-        }
-    });
-
     this.activeDuels.delete(duelId);
   }
 
