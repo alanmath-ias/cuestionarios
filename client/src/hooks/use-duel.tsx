@@ -232,6 +232,10 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           queryClient.invalidateQueries({ queryKey: ["/api/social/pending-requests"] });
           queryClient.invalidateQueries({ queryKey: ["/api/social/friendships"] });
           break;
+      case 'duel:sync':
+          setIsPreparing(false);
+          setDuel(payload);
+          break;
       case 'chat:receive':
           setLastChatMessage(payload);
           queryClient.invalidateQueries({ queryKey: ["/api/social/chat", Number(payload.senderId)] });

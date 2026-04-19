@@ -66,6 +66,15 @@ export class DuelServer {
     // Notify friends that this user is online
     this.broadcastStatus(userId, true);
 
+    // RECOVERY: Check if user has an active duel and sync state immediately
+    for (const room of this.activeDuels.values()) {
+        if (room.challenger.userId === userId || room.receiver.userId === userId) {
+            console.log(`🔄 [SYNC] User ${userId} reconnected to active duel ${room.id}. Sending sync state...`);
+            this.sendSyncState(userId, room);
+            break;
+        }
+    }
+
     socket.on('message', (data) => this.handleMessage(userId, data));
     socket.on('close', () => {
       this.userSockets.delete(userId);
@@ -596,5 +605,28 @@ export class DuelServer {
             }
         });
     }
+  }
+
+  private sendSyncState(userId: number, room: DuelRoom) {
+    const isChallenger = room.challenger.userId === userId;
+    const opponentName = isChallenger ? room.receiver.username : room.challenger.username;
+
+    const payload = {
+        duelId: room.id,
+        status: room.status,
+        opponentName,
+        questionsCount: room.questions.length,
+        currentQuestion: {
+            index: room.currentQuestionIndex,
+            content: room.questions[room.currentQuestionIndex]?.content || "",
+            options: room.questions[room.currentQuestionIndex]?.options || []
+        },
+        scores: room.scores,
+        topic: room.topic,
+        history: room.history,
+        wager: room.wager
+    };
+
+    this.sendToUser(userId, { type: 'duel:sync', payload });
   }
 }

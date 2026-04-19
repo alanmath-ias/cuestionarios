@@ -27,18 +27,21 @@ const SpeedClock = memo(({ questionIndex, lastFeedback, onExpire }: {
         let intervalId: any;
         const start = Date.now();
         
-        // Slight delay to sync with question animation
+        // Dynamic delay: First question needs more time for entrance animations + math engine cold start
+        const startDelay = questionIndex === 0 ? 1800 : 400;
+        
         const timeoutId = setTimeout(() => {
             intervalId = setInterval(() => {
                 const elapsed = Date.now() - start;
-                const remaining = Math.max(0, totalMs - elapsed);
+                const adjustedElapsed = Math.max(0, elapsed - startDelay);
+                const remaining = Math.max(0, totalMs - adjustedElapsed);
                 setMsLeft(remaining);
                 if (remaining <= 0) {
                     clearInterval(intervalId);
                     if (onExpire) onExpire();
                 }
-            }, 60); // 60ms is plenty for the text display
-        }, 400);
+            }, 60);
+        }, startDelay);
 
         return () => {
             clearTimeout(timeoutId);
