@@ -110,7 +110,8 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           questionsCount: payload.questionsCount,
           currentQuestion: { index: 0, content: '', options: [] },
           scores: {},
-          topic: payload.topic
+          topic: payload.topic,
+          allWrongAnswers: [],
         });
         setInvite(null);
         break;
@@ -122,11 +123,20 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         setDuel(prev => prev ? { 
             ...prev, 
             currentQuestion: payload,
-            lastFeedback: undefined
+            lastFeedback: undefined,
+            allWrongAnswers: [],   // clear per-round wrong answers on each new question
         } : null);
         break;
       case 'duel:answer_feedback':
-        setDuel(prev => prev ? { ...prev, lastFeedback: payload } : null);
+        // Accumulate wrong answers so multiple failures stay visible
+        setDuel(prev => prev ? { 
+            ...prev, 
+            lastFeedback: payload,
+            allWrongAnswers: [
+                ...(prev.allWrongAnswers || []),
+                { userId: payload.userId, answerId: payload.answerId, userName: payload.userName }
+            ]
+        } : null);
         break;
       case 'duel:round_result':
         if (payload.winnerId) {

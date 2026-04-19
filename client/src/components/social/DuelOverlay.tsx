@@ -26,24 +26,33 @@ export function DuelOverlay() {
     if (invite) setCounterWager(invite.wager);
   }, [invite]);
 
-  // Timer per question
+  // Timer per question — delayed 400ms so question renders before clock starts
   useEffect(() => {
     if (duel?.status === 'in_progress' && duel.currentQuestion) {
       setTimeLeft(4000);
       setBonusActive(true);
       setFrozenAt(null);
       setSpeedBonusFlash(null);
-      const start = Date.now();
-      const interval = setInterval(() => {
-        const elapsed = Date.now() - start;
-        const remaining = Math.max(0, 4000 - elapsed);
-        setTimeLeft(remaining);
-        if (remaining <= 0) {
-          setBonusActive(false);
-          clearInterval(interval);
-        }
-      }, 50);
-      return () => clearInterval(interval);
+
+      let intervalId: ReturnType<typeof setInterval>;
+      // Wait for question to be visible before starting countdown
+      const startDelay = setTimeout(() => {
+        const start = Date.now();
+        intervalId = setInterval(() => {
+          const elapsed = Date.now() - start;
+          const remaining = Math.max(0, 4000 - elapsed);
+          setTimeLeft(remaining);
+          if (remaining <= 0) {
+            setBonusActive(false);
+            clearInterval(intervalId);
+          }
+        }, 50);
+      }, 400);
+
+      return () => {
+        clearTimeout(startDelay);
+        clearInterval(intervalId);
+      };
     }
   }, [duel?.currentQuestion?.index, duel?.status]);
 
@@ -74,37 +83,57 @@ export function DuelOverlay() {
   // ─── Option styling helper ─────────────────────────────────────────────────
   const getOptionStyle = (option: any) => {
     const fb = duel?.lastFeedback;
+    const wrongs = duel?.allWrongAnswers || [];
     const isSelectedByMe = selectedOptionId === option.id;
-    const isSelectedByOpponent = fb && fb.answerId === option.id && fb.userId !== myId;
+    const isWrongAnswer = wrongs.some((w: any) => w.answerId === option.id);
 
-    if (!fb) {
-      // No feedback yet
+    if (!fb && wrongs.length === 0) {
+      // No feedback at all yet
       if (isSelectedByMe) return "bg-blue-600/40 border-blue-400 ring-2 ring-blue-400/50 text-white";
       return "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 text-white cursor-pointer";
     }
 
-    // After feedback: highlight correct answer always (from round_result)
-    const correctId = (fb as any).correctAnswerId;
+    // Determine correct answer (from round_result correctAnswerId, or from correct feedback)
+    const correctId = (fb as any)?.correctAnswerId;
     const isCorrect = correctId
       ? option.id === correctId
-      : (fb.answerId === option.id && fb.isCorrect);
+      : (fb?.answerId === option.id && fb?.isCorrect);
 
     if (isCorrect) {
       return "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)]";
     }
-    if (fb.answerId === option.id && !fb.isCorrect) {
+    // Show red for any option that was answered wrong (accumulated across both players)
+    if (isWrongAnswer) {
       return "bg-red-700/60 border-red-500 text-red-200 shadow-[0_0_10px_rgba(239,68,68,0.3)]";
     }
     if (isSelectedByMe) return "bg-slate-700/50 border-slate-500 text-slate-300";
     return "bg-white/3 border-white/5 text-slate-500";
   };
 
+  // Returns who answered this specific option (could be me or opponent or both)
   const getWhoAnswered = (option: any) => {
+    const wrongs = duel?.allWrongAnswers || [];
     const fb = duel?.lastFeedback;
-    if (!fb || fb.answerId !== option.id) return null;
-    const isMe = fb.userId === myId;
-    const isOpp = fb.userId !== myId;
-    return { isMe, isOpp, name: fb.userName || duel?.opponentName };
+
+    // Check if this option is the correct one answered by winner
+    const correctId = (fb as any)?.correctAnswerId;
+    const isCorrect = correctId
+      ? option.id === correctId
+      : (fb?.answerId === option.id && fb?.isCorrect);
+
+    // Who in allWrongAnswers chose this option?
+    const wrongBy = wrongs.filter((w: any) => w.answerId === option.id);
+
+    // Winner (correct answer from round_result has userId set)
+    const isWinnerAnswer = isCorrect && fb?.userId && fb.userId !== null;
+
+    const meWrong = wrongBy.some((w: any) => w.userId === myId);
+    const oppWrong = wrongBy.some((w: any) => w.userId !== myId);
+    const oppCorrect = isWinnerAnswer && fb?.userId !== myId;
+    const meCorrect = isWinnerAnswer && fb?.userId === myId;
+
+    if (!meWrong && !oppWrong && !oppCorrect && !meCorrect) return null;
+    return { meWrong, oppWrong, oppCorrect, meCorrect, name: fb?.userName || duel?.opponentName };
   };
 
   return (
@@ -176,27 +205,36 @@ export function DuelOverlay() {
 
                     {isNegotiating && (
                       <div className="flex items-center justify-center gap-4 mt-3">
-                        <Button size="icon" variant="outline" className="h-9 w-9 rounded-full border-white/20" onClick={() => setCounterWager(Math.max(1, counterWager - 1))}>
-                          <Minus className="h-4 w-4" />
-                        </Button>
+                        <button
+                          className="h-10 w-10 rounded-full bg-slate-600 hover:bg-amber-500 text-white flex items-center justify-center border border-slate-500 hover:border-amber-400 transition-all active:scale-95"
+                          onClick={() => setCounterWager(Math.max(1, counterWager - 1))}
+                        >
+                          <Minus className="h-5 w-5" />
+                        </button>
                         <span className="text-2xl font-black w-12 text-center">{counterWager}</span>
-                        <Button size="icon" variant="outline" className="h-9 w-9 rounded-full border-white/20" onClick={() => setCounterWager(counterWager + 1)}>
-                          <Plus className="h-4 w-4" />
-                        </Button>
+                        <button
+                          className="h-10 w-10 rounded-full bg-slate-600 hover:bg-amber-500 text-white flex items-center justify-center border border-slate-500 hover:border-amber-400 transition-all active:scale-95"
+                          onClick={() => setCounterWager(counterWager + 1)}
+                        >
+                          <Plus className="h-5 w-5" />
+                        </button>
                       </div>
                     )}
                   </div>
 
                   {isNegotiating ? (
-                    <div className="flex flex-wrap gap-3 justify-center">
-                      <Button className="bg-green-600 hover:bg-green-700 text-base px-6 py-5 rounded-xl font-bold" onClick={() => respondToInvite(invite.duelId, 'accept', counterWager)}>
-                        ACEPTAR CON {counterWager} CRÉDITOS
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      <Button className="bg-green-600 hover:bg-green-700 text-sm px-5 py-4 rounded-xl font-bold" onClick={() => respondToInvite(invite.duelId, 'accept', counterWager)}>
+                        ACEPTAR CON {counterWager}
                       </Button>
-                      <Button variant="outline" className="bg-amber-600/20 border-amber-500/30 hover:bg-amber-600/30 text-base px-6 py-5 rounded-xl" onClick={() => respondToInvite(invite.duelId, 'counter', counterWager)}>
+                      <Button variant="outline" className="bg-amber-600/20 border-amber-500/30 hover:bg-amber-600/30 text-sm px-5 py-4 rounded-xl" onClick={() => respondToInvite(invite.duelId, 'counter', counterWager)}>
                         CONTRA-OFERTAR
                       </Button>
-                      <Button variant="ghost" className="text-slate-400 text-base px-6 py-5 rounded-xl" onClick={() => setIsNegotiating(false)}>
-                        CANCELAR
+                      <Button variant="ghost" className="text-red-400 hover:text-red-300 hover:bg-red-400/10 text-sm px-5 py-4 rounded-xl border border-red-900/20" onClick={() => respondToInvite(invite.duelId, 'reject')}>
+                        RECHAZAR
+                      </Button>
+                      <Button variant="link" className="text-slate-500 text-xs w-full mt-1" onClick={() => setIsNegotiating(false)}>
+                        VOLVER ATRÁS
                       </Button>
                     </div>
                   ) : (
@@ -341,7 +379,11 @@ export function DuelOverlay() {
                         return (
                           <button
                             key={option.id}
-                            disabled={selectedOptionId !== null || !!fb}
+                          disabled={
+                              selectedOptionId !== null ||        // I already clicked visually
+                              (!!fb && fb.isCorrect) ||          // round over (someone correct)
+                              (duel.allWrongAnswers || []).some((w: any) => w.userId === myId) // I already failed this round
+                            }
                             className={`relative flex items-center gap-3 py-3 px-4 rounded-2xl border transition-all duration-200 ${styleClass} disabled:cursor-not-allowed`}
                             onClick={() => {
                               setSelectedOptionId(option.id);
@@ -357,7 +399,7 @@ export function DuelOverlay() {
                             }`}>
                               {isCorrectOption && fb ? (
                                 <CheckCircle2 className="h-4 w-4 text-white" />
-                              ) : fb?.answerId === option.id && !fb?.isCorrect ? (
+                              ) : (duel.allWrongAnswers || []).some((w: any) => w.answerId === option.id) ? (
                                 <XCircle className="h-4 w-4 text-red-300" />
                               ) : (
                                 <div className={`w-2 h-2 rounded-full ${selectedOptionId === option.id ? 'bg-white' : 'bg-slate-600'}`} />
@@ -369,19 +411,31 @@ export function DuelOverlay() {
                               <ContentRenderer content={option.content} />
                             </span>
 
-                            {/* Who answered badge */}
+                            {/* Who answered badge — visible and color-coded */}
                             {whoAnswered && (
-                              <div className="flex flex-col gap-1 items-end">
-                                {whoAnswered.isMe && (
-                                  <span className="text-[9px] font-black uppercase bg-blue-500 text-white px-2 py-0.5 rounded-full">TÚ</span>
+                              <div className="flex flex-col gap-1 items-end ml-2">
+                                {whoAnswered.meCorrect && (
+                                  <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                                    className="text-xs font-black uppercase px-3 py-1 rounded-full whitespace-nowrap bg-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                                    ✓ TÚ
+                                  </motion.span>
                                 )}
-                                {whoAnswered.isOpp && (
-                                  <motion.span
-                                    initial={{ scale: 0.5, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    className="text-[9px] font-black uppercase bg-white text-slate-900 px-2 py-0.5 rounded-full max-w-[80px] truncate"
-                                  >
-                                    {whoAnswered.name}
+                                {whoAnswered.meWrong && (
+                                  <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                                    className="text-xs font-black uppercase px-3 py-1 rounded-full whitespace-nowrap bg-orange-600 text-white">
+                                    ✗ TÚ
+                                  </motion.span>
+                                )}
+                                {whoAnswered.oppCorrect && (
+                                  <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                                    className="text-xs font-black px-3 py-1 rounded-full max-w-[110px] truncate whitespace-nowrap bg-yellow-400 text-slate-900 shadow-[0_0_12px_rgba(234,179,8,0.6)]">
+                                    ⚡ {whoAnswered.name}
+                                  </motion.span>
+                                )}
+                                {whoAnswered.oppWrong && (
+                                  <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                                    className="text-xs font-black px-3 py-1 rounded-full max-w-[110px] truncate whitespace-nowrap bg-orange-600 text-white">
+                                    ✗ {whoAnswered.name}
                                   </motion.span>
                                 )}
                               </div>
