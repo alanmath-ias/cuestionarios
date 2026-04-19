@@ -10,11 +10,13 @@ import { ContentRenderer } from "@/components/ContentRenderer";
 import confetti from 'canvas-confetti';
 
 export function DuelOverlay() {
-  const { duel, invite, respondToInvite, submitAnswer, isPreparing, setRevengeRequest, resetDuel } = useDuel();
+  const { duel, invite, respondToInvite, submitAnswer, isPreparing, setRevengeRequest, resetDuel, leaveResults } = useDuel();
   const { session } = useSession();
   const [counterWager, setCounterWager] = useState<number>(0);
   const [isNegotiating, setIsNegotiating] = useState(false);
   const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [reviewIndex, setReviewIndex] = useState(0);
 
   // Speed bonus bar
   const [timeLeft, setTimeLeft] = useState(4000);
@@ -224,8 +226,8 @@ export function DuelOverlay() {
 
                   {isNegotiating ? (
                     <div className="flex flex-wrap gap-2 justify-center">
-                      <Button className="bg-green-600 hover:bg-green-700 text-sm px-5 py-4 rounded-xl font-bold" onClick={() => respondToInvite(invite.duelId, 'accept', counterWager)}>
-                        ACEPTAR CON {counterWager}
+                      <Button className="bg-green-600 hover:bg-green-700 text-sm px-5 py-4 rounded-xl font-bold" onClick={() => respondToInvite(invite.duelId, 'accept', invite.wager)}>
+                        ACEPTAR CON {invite.wager}
                       </Button>
                       <Button variant="outline" className="bg-amber-600/20 border-amber-500/30 hover:bg-amber-600/30 text-sm px-5 py-4 rounded-xl" onClick={() => respondToInvite(invite.duelId, 'counter', counterWager)}>
                         CONTRA-OFERTAR
@@ -361,7 +363,7 @@ export function DuelOverlay() {
                     </AnimatePresence>
 
                     {/* Question Text */}
-                    <div className="text-base font-bold text-white mb-3 leading-snug text-center px-1">
+                    <div className="text-base font-bold text-white mb-2 leading-tight tracking-tight text-center px-1">
                       <ContentRenderer content={duel.currentQuestion.content} />
                     </div>
 
@@ -407,7 +409,7 @@ export function DuelOverlay() {
                             </div>
 
                             {/* Answer text */}
-                            <span className="text-sm font-semibold flex-1 text-left">
+                            <span className="text-base font-bold flex-1 text-left leading-tight">
                               <ContentRenderer content={option.content} />
                             </span>
 
@@ -470,98 +472,234 @@ export function DuelOverlay() {
           )}
 
           {/* ── RESULTS ────────────────────────────────────────────────── */}
-          {duel && duel.status === 'finished' && (
+          {duel && duel.status === 'finished' && !isReviewing && (
             <motion.div
               key="results"
               initial={{ scale: 0.8, y: 50, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1, transition: { type: "spring", damping: 15 } }}
-              className="bg-slate-900/95 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl text-center text-white relative overflow-hidden"
+              className="bg-slate-900/95 border border-white/10 p-0 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl text-center text-white relative overflow-hidden max-h-[96vh] flex flex-col"
               onViewportEnter={() => {
                 if (duel.finalResults?.winnerId === myId) {
                   confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#fbbf24', '#22c55e', '#3b82f6'] });
                 }
               }}
             >
-              <div className={`absolute -top-20 -left-20 w-72 h-72 ${duel.finalResults?.winnerId === myId ? 'bg-green-500/20' : 'bg-red-500/20'} blur-[100px] rounded-full`} />
+              <div className={`absolute -top-20 -left-20 w-72 h-72 ${duel.finalResults?.winnerId === myId ? 'bg-green-500/20' : 'bg-red-500/20'} blur-[100px] rounded-full pointer-events-none`} />
 
-              <div className="relative z-10">
-                {duel.finalResults?.winnerId === myId ? (
-                  <div className="flex flex-col items-center">
-                    <div className="h-28 w-28 rounded-[2rem] bg-gradient-to-br from-yellow-400 to-amber-600 p-1 mb-5 rotate-12 shadow-[0_0_40px_rgba(251,191,36,0.35)]">
-                      <div className="h-full w-full rounded-[1.8rem] bg-slate-900 flex items-center justify-center">
-                        <Trophy className="h-14 w-14 text-yellow-500 drop-shadow-lg" />
-                      </div>
-                    </div>
-                    <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-yellow-600 uppercase tracking-tighter mb-4 italic">
-                      ¡DOMINACIÓN TOTAL!
-                    </h2>
-                    <div className="bg-green-500/10 border border-green-500/30 px-6 py-4 rounded-2xl mb-4 w-full max-w-xs">
-                      <p className="text-green-400 font-black text-3xl mb-1">+{duel.finalResults.wager} CRÉDITOS</p>
-                      {duel.finalResults.speedBonuses > 0 && (
-                        <div className="flex items-center gap-2 justify-center mt-1">
-                          <Zap className="h-3.5 w-3.5 text-yellow-400" />
-                          <p className="text-yellow-400 text-xs font-black uppercase tracking-tight">
-                            {duel.finalResults.speedBonuses} bonus de velocidad incluido{duel.finalResults.speedBonuses > 1 ? 's' : ''}
-                          </p>
+              <div className="flex-1 overflow-y-auto p-5 sm:p-7 custom-scrollbar pb-0">
+                <div className="relative z-10">
+                  {duel.finalResults?.winnerId === myId ? (
+                    <div className="flex flex-col items-center">
+                      <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-600 p-1 mb-3 rotate-12 shadow-[0_0_20px_rgba(251,191,36,0.3)]">
+                        <div className="h-full w-full rounded-[0.9rem] bg-slate-900 flex items-center justify-center">
+                          <Trophy className="h-10 w-10 text-yellow-500 drop-shadow-lg" />
                         </div>
-                      )}
-                      <p className="text-green-500/60 text-[10px] font-bold uppercase tracking-widest mt-1">Botín Asegurado</p>
+                      </div>
+                      <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-yellow-600 uppercase tracking-tighter mb-2 italic">
+                        ¡DOMINACIÓN TOTAL!
+                      </h2>
+                      <div className="bg-green-500/10 border border-green-500/30 px-5 py-3 rounded-2xl mb-3 w-full max-w-[240px]">
+                        <p className="text-green-400 font-black text-2xl mb-0.5">+{duel.finalResults.wager} CRÉDITOS</p>
+                        {duel.finalResults.speedBonuses > 0 && (
+                          <div className="flex items-center gap-1.5 justify-center">
+                            <Zap className="h-3 w-3 text-yellow-400" />
+                            <p className="text-yellow-400 text-[9px] font-black uppercase tracking-tight">
+                              {duel.finalResults.speedBonuses} bonus speed
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-slate-400 max-w-[280px] text-xs leading-snug">
+                        Has demostrado tu superioridad intelectual. Tus arcas crecen y tu honor se eleva.
+                      </p>
                     </div>
-                    <p className="text-slate-400 max-w-sm text-sm leading-relaxed">
-                      Has demostrado tu superioridad intelectual. Tus arcas crecen y tu honor se eleva.
-                    </p>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-red-600 to-red-900 p-1 mb-3 -rotate-12 shadow-[0_0_20px_rgba(239,68,68,0.15)]">
+                        <div className="h-full w-full rounded-[0.9rem] bg-slate-900 flex items-center justify-center">
+                          <ShieldAlert className="h-10 w-10 text-red-500" />
+                        </div>
+                      </div>
+                      <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-b from-red-200 to-red-700 uppercase tracking-tighter mb-2 italic">
+                        CAÍDA EN COMBATE
+                      </h2>
+                      <div className="bg-red-500/10 border border-red-500/20 px-5 py-3 rounded-2xl mb-3 w-full max-w-[240px]">
+                        <p className="text-red-400 font-black text-2xl mb-0.5">-{duel.finalResults?.wager} CRÉDITOS</p>
+                        {duel.finalResults?.speedBonuses > 0 && (
+                          <div className="flex items-center gap-1.5 justify-center">
+                            <Zap className="h-3 w-3 text-yellow-400" />
+                            <p className="text-yellow-400/80 text-[9px] font-black uppercase tracking-tight">
+                              Rival ganó {duel.finalResults.speedBonuses} extra ⚡
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-slate-400 max-w-[280px] text-xs leading-snug">
+                        Solo el conocimiento te permitirá recuperar lo perdido. Prepárate y reclama tu honor.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-5 sm:p-7 pt-2 flex flex-col gap-2 w-full max-w-xs mx-auto flex-shrink-0">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setReviewIndex(0);
+                    setIsReviewing(true);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-500 text-white text-base py-5 font-black rounded-2xl border-b-4 border-blue-900 active:border-0 active:translate-y-1 transition-all"
+                >
+                  REVISAR DETALLES
+                </Button>
+
+                {duel.finalResults?.winnerId !== myId && (
+                  <Button
+                    onClick={() => {
+                      const oppId = Number(Object.keys(duel.scores).find(id => Number(id) !== myId));
+                      setRevengeRequest({
+                        opponentId: oppId,
+                        opponentName: duel.opponentName
+                      });
+                      leaveResults(duel.duelId);
+                    }}
+                    className="bg-red-600 hover:bg-red-500 text-white text-base py-5 font-black rounded-2xl border-b-4 border-red-800 active:border-0 active:translate-y-1 transition-all"
+                  >
+                    SOLICITAR REVANCHA
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  onClick={() => leaveResults(duel.duelId)}
+                  className="text-slate-500 hover:text-white hover:bg-white/5 py-2 rounded-2xl font-bold text-[11px] uppercase tracking-widest"
+                >
+                  SALIR DE LA ARENA
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── REVIEW MODE ── */}
+          {duel && duel.status === 'finished' && isReviewing && (
+            <motion.div
+              key="review"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-slate-900 border border-blue-500/30 rounded-[2.5rem] shadow-2xl p-0 w-full max-w-2xl overflow-hidden relative max-h-[96vh] flex flex-col"
+            >
+              <div className="flex items-center justify-between p-4 px-6 border-b border-white/5 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                        <Swords className="h-4 w-4 text-blue-400" />
+                    </div>
+                  <h2 className="text-lg font-black text-white uppercase italic tracking-tight">REVISIÓN DE ARENA</h2>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setIsReviewing(false)} className="rounded-full hover:bg-white/5 h-8 w-8">
+                  <X className="h-4 w-4 text-slate-500" />
+                </Button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+                {duel.history && duel.history[reviewIndex] ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 mb-2">
+                        <span>PREGUNTA {reviewIndex + 1} DE {duel.history.length}</span>
+                        <span className="text-blue-400">TEMA: {duel.topic || "Matemáticas"}</span>
+                    </div>
+
+                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5 min-h-[60px] flex items-center justify-center text-center mb-3">
+                        <div className="text-[15px] text-white font-bold leading-tight tracking-tight">
+                            <ContentRenderer content={duel.history[reviewIndex].content} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2">
+                        {duel.history[reviewIndex].options.map((option: any) => {
+                          const isError = !option.isCorrect && (option.selections?.length || 0) > 0;
+                          return (
+                            <div
+                              key={option.id}
+                              className={`relative flex items-center gap-3 py-1.5 px-3 rounded-xl border transition-all ${
+                                option.isCorrect 
+                                  ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-100 shadow-[0_0_15px_rgba(16,185,129,0.1)]" 
+                                  : isError
+                                    ? "bg-red-500/20 border-red-500/40 text-red-100"
+                                    : "bg-white/5 border-white/5 text-slate-400"
+                              }`}
+                            >
+                              <div className={`h-6 w-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                  option.isCorrect ? "bg-emerald-500 text-white" : isError ? "bg-red-500 text-white" : "bg-slate-800 text-slate-600"
+                              }`}>
+                                  {option.isCorrect ? (
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                  ) : isError ? (
+                                    <XCircle className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <div className="h-1.5 w-1.5 rounded-full bg-current" />
+                                  )}
+                              </div>
+                              
+                              <span className="text-base font-bold flex-1 leading-tight">
+                                <ContentRenderer content={option.content} />
+                              </span>
+
+                              {/* Who chose this? */}
+                              <div className="flex gap-1">
+                              {option.selections && option.selections.map((sel: any) => (
+                                  <Badge 
+                                      key={sel.userId}
+                                      className={`px-2 py-0.5 text-[10px] uppercase font-black tracking-tighter rounded-full ${
+                                          sel.userId === myId 
+                                              ? "bg-blue-500 text-white" 
+                                              : "bg-yellow-500 text-slate-900"
+                                      }`}
+                                  >
+                                      {sel.userId === myId ? "TÚ" : sel.username}
+                                  </Badge>
+                              ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center">
-                    <div className="h-28 w-28 rounded-[2rem] bg-gradient-to-br from-red-600 to-red-900 p-1 mb-5 -rotate-12 shadow-[0_0_40px_rgba(239,68,68,0.2)]">
-                      <div className="h-full w-full rounded-[1.8rem] bg-slate-900 flex items-center justify-center">
-                        <ShieldAlert className="h-14 w-14 text-red-500" />
-                      </div>
-                    </div>
-                    <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-red-200 to-red-700 uppercase tracking-tighter mb-4 italic">
-                      CAÍDA EN COMBATE
-                    </h2>
-                    <div className="bg-red-500/10 border border-red-500/20 px-6 py-4 rounded-2xl mb-4 w-full max-w-xs">
-                      <p className="text-red-400 font-black text-3xl mb-1">-{duel.finalResults?.wager} CRÉDITOS</p>
-                      {duel.finalResults?.speedBonuses > 0 && (
-                        <div className="flex items-center gap-2 justify-center mt-1">
-                          <Zap className="h-3.5 w-3.5 text-yellow-400" />
-                          <p className="text-yellow-400/80 text-xs font-black uppercase tracking-tight">
-                            Tu rival ganó {duel.finalResults.speedBonuses} crédito{duel.finalResults.speedBonuses > 1 ? 's' : ''} extra por velocidad ⚡
-                          </p>
-                        </div>
-                      )}
-                      <p className="text-red-600/60 text-[10px] font-bold uppercase tracking-widest mt-1">Saldo Perdido</p>
-                    </div>
-                    <p className="text-slate-400 max-w-sm text-sm leading-relaxed">
-                      Solo el conocimiento te permitirá recuperar lo perdido. Prepárate, estudia y reclama tu honor.
-                    </p>
+                  <div className="py-20 text-center">
+                    <Loader2 className="h-10 w-10 text-slate-700 animate-spin mx-auto mb-4" />
+                    <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Sin historial disponible</p>
                   </div>
                 )}
+              </div>
 
-                <div className="flex flex-col gap-3 mt-6 w-full max-w-xs mx-auto">
-                  {duel.finalResults?.winnerId !== myId && (
+              <div className="p-4 bg-slate-900 border-t border-white/5 flex-shrink-0">
+                  <div className="flex items-center justify-between gap-3">
                     <Button
-                      onClick={() => {
-                        setRevengeRequest({
-                          opponentId: Number(Object.keys(duel.scores).find(id => Number(id) !== myId)),
-                          opponentName: duel.opponentName
-                        });
-                        resetDuel();
-                      }}
-                      className="bg-red-600 hover:bg-red-500 text-white text-lg py-6 font-black rounded-2xl shadow-[0_8px_16px_rgba(220,38,38,0.3)] border-b-4 border-red-800 active:border-0 active:translate-y-1 transition-all"
+                      variant="outline"
+                      disabled={reviewIndex === 0}
+                      onClick={() => setReviewIndex(reviewIndex - 1)}
+                      className="flex-1 bg-slate-800 border-white/5 hover:bg-slate-700 h-10 rounded-xl text-sm font-bold"
                     >
-                      SOLICITAR REVANCHA
+                      ANTERIOR
                     </Button>
-                  )}
+                    <Button
+                      variant="outline"
+                      disabled={reviewIndex === (duel.history?.length || 0) - 1}
+                      onClick={() => setReviewIndex(reviewIndex + 1)}
+                      className="flex-1 bg-slate-800 border-white/5 hover:bg-slate-700 h-10 rounded-xl text-sm font-bold"
+                    >
+                      SIGUIENTE
+                    </Button>
+                  </div>
                   <Button
                     variant="ghost"
-                    onClick={() => window.location.reload()}
-                    className="text-slate-500 hover:text-white hover:bg-white/5 py-3 rounded-2xl font-bold text-sm"
+                    size="sm"
+                    onClick={() => setIsReviewing(false)}
+                    className="w-full text-slate-500 font-bold uppercase text-[9px] tracking-widest mt-2"
                   >
-                    SALIR DE LA ARENA
+                    VOLVER A RESULTADOS
                   </Button>
-                </div>
               </div>
             </motion.div>
           )}

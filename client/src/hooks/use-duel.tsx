@@ -35,6 +35,7 @@ interface DuelContextType {
   setRevengeRequest: (req: { opponentId: number; opponentName: string } | null) => void;
   refreshStats: () => void;
   resetDuel: () => void;
+  leaveResults: (duelId: number) => void;
 }
 
 const DuelContext = createContext<DuelContextType | null>(null);
@@ -163,6 +164,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
             ...prev, 
             status: 'finished', 
             finalResults: payload,
+            history: payload.history, // Match history for review
             lastFeedback: undefined // Clear feedback on end
         }));
         // Invalidate queries to refresh credits and wins
@@ -271,6 +273,10 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     setRevengeRequest,
     refreshStats,
     resetDuel: () => setDuel(null),
+    leaveResults: (duelId: number) => {
+      socket?.send(JSON.stringify({ type: 'duel:leave_results', payload: { duelId } }));
+      setDuel(null);
+    }
   };
 
   return (

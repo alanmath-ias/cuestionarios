@@ -2288,5 +2288,23 @@ export class DatabaseStorage implements IStorage {
     });
     return counts;
   }
+
+  async cleanupArenaQuizzes(): Promise<void> {
+    console.log("🧹 [CLEANUP] Starting arena quizzes cleanup...");
+    const matches = await this.db.select({ id: quizzes.id })
+      .from(quizzes)
+      .where(and(
+        gte(quizzes.id, 523),
+        eq(quizzes.timeLimit, 300),
+        eq(quizzes.totalQuestions, 5)
+      ));
+
+    console.log(`🧹 [CLEANUP] Found ${matches.length} quizzes to purge.`);
+
+    for (const match of matches) {
+      await this.deleteQuiz(match.id);
+    }
+    console.log("🧹 [CLEANUP] Done.");
+  }
 }
 

@@ -134,6 +134,7 @@ app.use((req, res, next) => {
 
 import { db } from "./db.js";
 import { sql } from "drizzle-orm";
+import { storage } from "./storage.js";
 
 (async () => {
   try {

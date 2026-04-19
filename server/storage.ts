@@ -181,6 +181,7 @@ export interface IStorage {
   markMessagesAsRead(userId: number, friendId: number): Promise<void>;
   cleanupOldMessages(): Promise<void>;
   getUnreadMessageCount(userId: number): Promise<number>;
+  cleanupArenaQuizzes(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -849,6 +850,7 @@ export class MemStorage implements IStorage {
   async markMessagesAsRead(userId: number, friendId: number): Promise<void> { }
   async cleanupOldMessages(): Promise<void> { }
   async getUnreadMessageCount(userId: number): Promise<number> { return 0; }
+  async cleanupArenaQuizzes(): Promise<void> { }
 }
 
 import { DatabaseStorage } from "./database-storage.js";

@@ -28,6 +28,9 @@ interface DuelRoom {
   failedUserIds: number[];
   questionStartTime: number;
   bonusCredits: { [userId: number]: number };
+  history: any[];
+  participantsGone: Set<number>;
+  currentRoundAnswers: { userId: number; answerId: number }[];
 }
 
 export class DuelServer {
@@ -130,6 +133,9 @@ export class DuelServer {
           break;
         case 'chat:send':
           await this.processChatMessage(userId, payload);
+          break;
+        case 'duel:leave_results':
+          await this.handleLeaveResults(userId, payload);
           break;
         default:
           console.warn(`Unknown message type: ${type}`);
@@ -234,7 +240,7 @@ export class DuelServer {
           difficulty: 'medium',
           isPublic: false,
           isAiGenerated: true,
-          createdByUserId: duelRecord.challengerId
+          createdByUserId: null
         }).returning();
 
         const questionsWithIds = [];
@@ -280,7 +286,10 @@ export class DuelServer {
         scores: { [duelRecord.challengerId]: 0, [duelRecord.receiverId]: 0 },
         failedUserIds: [],
         questionStartTime: 0,
-        bonusCredits: { [duelRecord.challengerId]: 0, [duelRecord.receiverId]: 0 }
+        bonusCredits: { [duelRecord.challengerId]: 0, [duelRecord.receiverId]: 0 },
+        history: [],
+        participantsGone: new Set(),
+        currentRoundAnswers: []
       };
 
       this.activeDuels.set(duelId, room);
@@ -327,6 +336,7 @@ export class DuelServer {
     }
 
     room.failedUserIds = []; // Reset for new question
+    room.currentRoundAnswers = []; // Reset selections
 
     const question = room.questions[room.currentQuestionIndex];
     this.broadcastToDuel(duelId, {
@@ -349,6 +359,9 @@ export class DuelServer {
     const question = room.questions[questionIndex];
     const answer = question.options.find((o: any) => o.id === answerId);
     const correctAnswer = question.options.find((o: any) => o.isCorrect);
+
+    // Track this selection
+    room.currentRoundAnswers.push({ userId, answerId });
 
     if (answer?.isCorrect) {
         room.scores[userId]++;
@@ -374,6 +387,22 @@ export class DuelServer {
                 answerId: answerId,
                 speedBonus: speedBonus
             }
+        });
+
+        // Save to history
+        room.history.push({
+            content: question.content,
+            options: question.options.map((o: any) => ({
+                id: o.id,
+                content: o.content,
+                isCorrect: o.isCorrect,
+                selections: room.currentRoundAnswers
+                    .filter(ans => ans.answerId === o.id)
+                    .map(ans => ({
+                        userId: ans.userId,
+                        username: ans.userId === room.challenger.userId ? room.challenger.username : room.receiver.username
+                    }))
+            }))
         });
 
         // Delay before next question
@@ -406,6 +435,22 @@ export class DuelServer {
                     correctAnswerId: correctAnswer?.id,
                     answerId: null
                 }
+            });
+
+            // Save to history (even if both failed)
+            room.history.push({
+                content: question.content,
+                options: question.options.map((o: any) => ({
+                    id: o.id,
+                    content: o.content,
+                    isCorrect: o.isCorrect,
+                    selections: room.currentRoundAnswers
+                        .filter(ans => ans.answerId === o.id)
+                        .map(ans => ({
+                            userId: ans.userId,
+                            username: ans.userId === room.challenger.userId ? room.challenger.username : room.receiver.username
+                        }))
+                }))
             });
 
             room.currentQuestionIndex++;
@@ -464,9 +509,36 @@ export class DuelServer {
             winnerName,
             scores: room.scores,
             wager: room.wager,
-            speedBonuses: (room as any).winnerBonus || 0
+            speedBonuses: (room as any).winnerBonus || 0,
+            history: room.history
         }
     });
+
+    // We NO LONGER delete from activeDuels immediately.
+    // We wait for both to leave or a timeout.
+  }
+
+  private async handleLeaveResults(userId: number, payload: { duelId: number }) {
+    const { duelId } = payload;
+    const room = this.activeDuels.get(duelId);
+    if (!room) return;
+
+    room.participantsGone.add(userId);
+    console.log(`👋 [DUEL] User ${userId} left results. Gone: ${room.participantsGone.size}/2`);
+
+    if (room.participantsGone.size >= 2) {
+        await this.cleanupDuelQuiz(duelId);
+    }
+  }
+
+  private async cleanupDuelQuiz(duelId: number) {
+    const room = this.activeDuels.get(duelId);
+    if (!room) return;
+
+    if (room.quizId) {
+        console.log(`🧹 [CLEANUP] Deleting ephemeral quiz ${room.quizId} for finished duel ${duelId}`);
+        await storage.deleteQuiz(room.quizId);
+    }
 
     this.activeDuels.delete(duelId);
   }
