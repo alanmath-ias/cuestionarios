@@ -129,6 +129,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         } : null);
         break;
       case 'duel:answer_feedback':
+        setIsPreparing(false); // Safety
         // Accumulate wrong answers so multiple failures stay visible
         setDuel(prev => prev ? { 
             ...prev, 
@@ -140,6 +141,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         } : null);
         break;
       case 'duel:round_result':
+        setIsPreparing(false); // Safety
         if (payload.winnerId) {
           toast({
               title: "⚡ " + payload.winnerName + " acertó!",
