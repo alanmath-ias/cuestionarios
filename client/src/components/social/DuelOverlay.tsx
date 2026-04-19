@@ -203,10 +203,10 @@ export function DuelOverlay() {
               key="arena"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-slate-900/90 border border-blue-500/30 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl w-full"
+              className="bg-slate-900/90 border border-blue-500/30 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl w-full max-h-[90vh] overflow-y-auto"
             >
               {/* Header: Spectacular Scoreboard */}
-              <div className="relative p-6 pt-10 flex flex-col items-center">
+              <div className="relative p-3 pt-5 flex flex-col items-center">
                 {/* Visual glow backdrop for the score */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-blue-500/10 blur-[60px] rounded-full pointer-events-none" />
                 
@@ -254,7 +254,7 @@ export function DuelOverlay() {
               </div>
 
               {/* Game Surface */}
-              <div className="p-8 min-h-[400px] flex flex-col items-center justify-center">
+              <div className="p-4 flex flex-col items-center justify-center">
                 {duel.currentQuestion ? (
                   <motion.div 
                     key={duel.currentQuestion.index}
@@ -285,7 +285,7 @@ export function DuelOverlay() {
                         )}
                     </div>
 
-                    <div className="text-2xl font-bold text-white mb-10 leading-relaxed flex justify-center">
+                    <div className="text-xl font-bold text-white mb-4 leading-normal flex justify-center">
                         <ContentRenderer content={duel.currentQuestion.content} />
                     </div>
 

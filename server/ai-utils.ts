@@ -94,20 +94,35 @@ DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
   const apiKey = process.env.DEEPSEEK_API_KEY || process.env.VITE_DEEPSEEK_API_KEY;
   if (!apiKey) throw new Error("DeepSeek API key not configured");
 
-  const aiResponse = await fetch('https://api.deepseek.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.4,
-      max_tokens: 4000,
-      response_format: { type: 'json_object' }
-    }),
-  });
+  // Hard timeout: 25s — production reverse proxies often cut connections at 30s
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+  let aiResponse: Response;
+  try {
+    aiResponse = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.4,
+        max_tokens: 4000,
+        response_format: { type: 'json_object' }
+      }),
+      signal: controller.signal,
+    });
+  } catch (fetchError: any) {
+    clearTimeout(timeoutId);
+    if (fetchError.name === 'AbortError') {
+      throw new Error('La IA tardó demasiado. Intenta de nuevo.');
+    }
+    throw fetchError;
+  }
+  clearTimeout(timeoutId);
 
   if (!aiResponse.ok) {
     const errText = await aiResponse.text();

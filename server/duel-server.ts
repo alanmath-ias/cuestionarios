@@ -310,7 +310,12 @@ export class DuelServer {
 
     } catch (error) {
       console.error('Failed to generate duel quiz:', error);
-      this.broadcastToDuel(duelId, { type: 'duel:error', payload: { message: 'Error al generar el duelo. Intenta de nuevo.' } });
+      // Mark duel as cancelled in DB
+      await db.update(duels).set({ status: 'cancelled' }).where(eq(duels.id, duelId));
+      // Notify both users directly by ID (room may not be in activeDuels yet)
+      const errorMsg = { type: 'duel:error', payload: { message: 'Error al generar el duelo. Intenta de nuevo.' } };
+      this.sendToUser(duelRecord.challengerId, errorMsg);
+      this.sendToUser(duelRecord.receiverId, errorMsg);
     }
   }
 
