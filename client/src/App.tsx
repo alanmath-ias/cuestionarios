@@ -59,6 +59,7 @@ import PaymentSuccessPage from "@/pages/payment-success";
 import PaymentFailurePage from "@/pages/payment-failure";
 import { DuelProvider } from "@/hooks/use-duel";
 import { DuelOverlay } from "@/components/social/DuelOverlay";
+import { ChallengeDialog } from "@/components/social/ChallengeDialog";
 import { FloatingChat } from "@/components/chat/FloatingChat";
 import { FloatingWhatsApp } from "@/components/ui/FloatingWhatsApp";
 
@@ -426,6 +427,7 @@ function App() {
         <ImpersonationBanner />
         <Toaster />
         <DuelOverlay />
+        <ChallengeDialog />
         <FloatingChat />
         <FloatingWhatsApp 
           message="Hola, me gustaría saber más sobre las clases y servicios de AlanMath."

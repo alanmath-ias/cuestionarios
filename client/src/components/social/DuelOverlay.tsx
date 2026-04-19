@@ -114,7 +114,19 @@ const SpeedClock = memo(({ questionIndex, lastFeedback, onExpire }: {
 });
 
 export function DuelOverlay() {
-  const { duel, invite, respondToInvite, submitAnswer, isPreparing, setRevengeRequest, resetDuel, leaveResults } = useDuel();
+  const { 
+    duel, 
+    invite, 
+    respondToInvite, 
+    submitAnswer, 
+    isPreparing, 
+    resetDuel, 
+    leaveResults,
+    setChallengingUser,
+    setChallengeWager,
+    setChallengeTopic,
+    setIsRevengeMode
+  } = useDuel();
   const { session } = useSession();
   const [counterWager, setCounterWager] = useState<number>(0);
   const [isNegotiating, setIsNegotiating] = useState(false);
@@ -368,7 +380,20 @@ export function DuelOverlay() {
               <div className="p-6 bg-black/20 flex flex-col gap-2">
                 <Button onClick={() => { setReviewIndex(0); setIsReviewing(true); }} className="bg-blue-600 hover:bg-blue-500 py-6 font-black rounded-2xl text-lg">REVISAR DETALLES</Button>
                 {duel.finalResults?.winnerId !== myId && (
-                  <Button onClick={() => { const oppId = Number(Object.keys(duel.scores).find(id => Number(id) !== myId)); setRevengeRequest({ opponentId: oppId, opponentName: duel.opponentName }); leaveResults(duel.duelId); }} className="bg-red-600 hover:bg-red-500 py-6 font-black rounded-2xl text-lg">SOLICITAR REVANCHA</Button>
+                  <button 
+                    onClick={() => { 
+                      const oppIds = Object.keys(duel.scores).filter(id => Number(id) !== myId);
+                      const oppId = Number(oppIds[0]);
+                      setChallengingUser({ id: oppId, name: duel.opponentName });
+                      setChallengeWager(10);
+                      setChallengeTopic("");
+                      setIsRevengeMode(true);
+                      leaveResults(duel.duelId); 
+                    }} 
+                    className="w-full bg-red-600 hover:bg-red-500 text-white font-black py-6 rounded-2xl text-lg transition-all active:scale-95 shadow-lg shadow-red-900/20"
+                  >
+                    SOLICITAR REVANCHA
+                  </button>
                 )}
                 <Button variant="ghost" onClick={() => leaveResults(duel.duelId)} className="text-slate-500 py-4 font-bold uppercase text-[10px] tracking-widest">SALIR DE LA ARENA</Button>
               </div>

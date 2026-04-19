@@ -43,25 +43,21 @@ import { FriendProfileDialog } from "@/components/social/FriendProfileDialog";
 
 export default function SocialPage() {
   const [activeTab, setActiveTab] = useState("friends");
+  const { 
+    sendChallenge, 
+    sentChallenges, 
+    onlineUsers, 
+    setOnlineUsers, 
+    setChallengingUser,
+    setChallengeWager,
+    setChallengeTopic,
+    setIsRevengeMode 
+  } = useDuel();
+
   const [searchQuery, setSearchQuery] = useState("");
-  const { sendChallenge, sentChallenges, onlineUsers, setOnlineUsers, revengeRequest, setRevengeRequest } = useDuel();
-  const [challengingUser, setChallengingUser] = useState<any>(null);
-  const [topic, setTopic] = useState<string>("");
-  const [wager, setWager] = useState<number>(10);
-  const [isRevengeMode, setIsRevengeMode] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // Listen for revenge requests
-  useEffect(() => {
-    if (revengeRequest) {
-      setChallengingUser({ id: revengeRequest.opponentId, name: revengeRequest.opponentName });
-      setWager(10);
-      setIsRevengeMode(true);
-      setRevengeRequest(null); // Clear after handling
-    }
-  }, [revengeRequest, setRevengeRequest]);
 
   const { data: user } = useQuery({ queryKey: ["/api/user"] });
   const { data: friends = [], isLoading: loadingFriends } = useQuery<any[]>({
@@ -328,97 +324,27 @@ export default function SocialPage() {
           userId={selectedProfileId}
           isOpen={!!selectedProfileId}
           onClose={() => setSelectedProfileId(null)}
-          onChallenge={(friend) => setChallengingUser(friend)}
+          onChallenge={(friend) => {
+            setChallengingUser({ id: friend.id, name: friend.name });
+            setChallengeWager(10);
+            setChallengeTopic("");
+            setIsRevengeMode(false);
+          }}
         />
 
-        {/* Duel Wager Dialog */}
-        <Dialog open={!!challengingUser} onOpenChange={(open) => !open && setChallengingUser(null)}>
-          <DialogContent className="bg-slate-900 border-white/10 text-white shadow-2xl shadow-blue-900/20">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-2xl font-black text-blue-400">
-                <Sword className="h-6 w-6" />
-                LANZAR DESAFÍO
-              </DialogTitle>
-              <DialogDescription className="text-slate-400">
-                Retarás a <span className="text-blue-400 font-semibold">{challengingUser?.name}</span> a un duelo matemático rápido.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="py-6 space-y-6">
-              {/* Topic/Prompt Input */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-blue-400" /> Tema o Descripción del Reto
-                </label>
-                <Input 
-                  placeholder="Ej: Fracciones, Ecuaciones de 2do grado, lógica..."
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  className="bg-slate-900/50 border-white/10 rounded-xl h-12 focus:ring-blue-500/50"
-                />
-                <p className="text-[10px] text-slate-500 italic">
-                  *La IA generará preguntas basadas exactamente en lo que escribas aquí.
-                </p>
-              </div>
-
-              <div className="bg-slate-950/40 border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
-                  <div className="flex items-center gap-3 text-yellow-500">
-                    <Coins className="h-5 w-5" />
-                    <span className="text-sm font-bold uppercase tracking-widest">Apuesta de Créditos</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-10 w-10 rounded-xl bg-white/5 border-white/10"
-                      onClick={() => setWager(Math.max(1, wager - 1))}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <div className="flex flex-col items-center min-w-[3rem]">
-                      <span className="text-4xl font-black">{wager}</span>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-10 w-10 rounded-xl bg-white/5 border-white/10"
-                      onClick={() => setWager(wager + 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <p className="text-[10px] text-slate-500 italic">*El perdedor entregará estos créditos al ganador.</p>
-               </div>
-            </div>
-
-            <DialogFooter>
-              <Button 
-                variant="ghost" 
-                onClick={() => setChallengingUser(null)}
-                className="text-slate-400 hover:text-white"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                className="bg-blue-600 hover:bg-blue-500 px-8 rounded-xl font-bold"
-                onClick={() => {
-                  sendChallenge(challengingUser.id, wager, topic, isRevengeMode);
-                  setTopic("");
-                  setChallengingUser(null);
-                  setIsRevengeMode(false);
-                }}
-              >
-                Retar ahora
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     );
 }
 
 function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock, onUnblock, onProfile, disabled, status, isBlocker }: any) {
-  const { onlineUsers, sentChallenges } = useDuel();
+  const { 
+    onlineUsers, 
+    sentChallenges, 
+    setChallengingUser, 
+    setChallengeWager, 
+    setChallengeTopic, 
+    setIsRevengeMode 
+  } = useDuel();
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -466,7 +392,13 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
             {user.role !== 'admin' && (
               <Button 
                 size="sm" 
-                onClick={(e) => { e.stopPropagation(); onChallenge(); }}
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  setChallengingUser({ id: user.id, name: user.name });
+                  setChallengeWager(10);
+                  setChallengeTopic("");
+                  setIsRevengeMode(false);
+                }}
                 disabled={sentChallenges.has(user.id)}
                 className={`rounded-xl shadow-lg transition-all duration-300 ${
                   sentChallenges.has(user.id) 

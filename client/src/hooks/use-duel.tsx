@@ -31,8 +31,15 @@ interface DuelContextType {
   isPreparing: boolean;
   onlineUsers: Set<number>;
   setOnlineUsers: React.Dispatch<React.SetStateAction<Set<number>>>;
-  revengeRequest: { opponentId: number; opponentName: string } | null;
-  setRevengeRequest: (req: { opponentId: number; opponentName: string } | null) => void;
+  // Global Challenge Dialog state
+  challengingUser: { id: number; name: string } | null;
+  setChallengingUser: (user: { id: number; name: string } | null) => void;
+  challengeWager: number;
+  setChallengeWager: (wager: number) => void;
+  challengeTopic: string;
+  setChallengeTopic: (topic: string) => void;
+  isRevengeMode: boolean;
+  setIsRevengeMode: (mode: boolean) => void;
   refreshStats: () => void;
   resetDuel: () => void;
   leaveResults: (duelId: number) => void;
@@ -53,7 +60,13 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
   const [sentChallenges, setSentChallenges] = useState<Set<number>>(new Set());
   const [isPreparing, setIsPreparing] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Set<number>>(new Set());
-  const [revengeRequest, setRevengeRequest] = useState<{ opponentId: number; opponentName: string } | null>(null);
+  
+  // High-level Challenge Dialog State
+  const [challengingUser, setChallengingUser] = useState<{ id: number; name: string } | null>(null);
+  const [challengeWager, setChallengeWager] = useState<number>(10);
+  const [challengeTopic, setChallengeTopic] = useState<string>("");
+  const [isRevengeMode, setIsRevengeMode] = useState(false);
+
   const reconnectTimeout = useRef<any>(null);
 
   const connect = useCallback(() => {
@@ -271,8 +284,14 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     isPreparing,
     onlineUsers,
     setOnlineUsers,
-    revengeRequest,
-    setRevengeRequest,
+    challengingUser,
+    setChallengingUser,
+    challengeWager,
+    setChallengeWager,
+    challengeTopic,
+    setChallengeTopic,
+    isRevengeMode,
+    setIsRevengeMode,
     refreshStats,
     resetDuel: () => setDuel(null),
     leaveResults: (duelId: number) => {
