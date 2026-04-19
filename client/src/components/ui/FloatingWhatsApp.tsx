@@ -1,11 +1,11 @@
 import { FaWhatsapp } from 'react-icons/fa';
-import { Button } from '@/components/ui/button';
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useSession } from '@/hooks/useSession';
 
 interface FloatingWhatsAppProps {
     message?: string;
@@ -16,6 +16,11 @@ export function FloatingWhatsApp({
     message = 'Hola, me interesa saber más sobre las clases en línea y los eBooks de AlanMath.',
     tooltip = 'Clases y eBooks'
 }: FloatingWhatsAppProps) {
+    const { session } = useSession();
+
+    // Only show for authenticated users (same behavior as FloatingChat)
+    if (!session) return null;
+
     const phoneNumber = '573208056799';
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;

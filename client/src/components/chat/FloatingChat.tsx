@@ -209,7 +209,7 @@ export function FloatingChat() {
   return (
     <div className={`fixed bottom-[5.5rem] right-6 z-[999] flex flex-col items-end transition-all ${isMobile ? "right-3" : ""}`}>
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && session && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -256,7 +256,7 @@ export function FloatingChat() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(false)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setIsOpen(false); setSelectedFriend(null); }}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -388,7 +388,15 @@ export function FloatingChat() {
           className={`h-14 w-14 rounded-full shadow-2xl transition-all duration-300 ${
             isOpen ? "bg-destructive hover:bg-destructive/90" : "bg-primary hover:bg-primary/90"
           }`}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            if (isOpen) {
+              // Closing: reset to friend list so next open shows contacts
+              setIsOpen(false);
+              setSelectedFriend(null);
+            } else {
+              setIsOpen(true);
+            }
+          }}
         >
           {isOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
         </Button>

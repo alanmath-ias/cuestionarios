@@ -44,7 +44,7 @@ export function useSession() {
     };
 
     checkSession();
-  }, []);
+  }, [location]);
 
   return { session, loading };
 }
