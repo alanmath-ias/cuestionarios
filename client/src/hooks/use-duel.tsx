@@ -203,6 +203,8 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           break;
       case 'chat:receive':
           setLastChatMessage(payload);
+          queryClient.invalidateQueries({ queryKey: ["/api/social/chat", Number(payload.senderId)] });
+          queryClient.invalidateQueries({ queryKey: ["/api/social/chat", Number(payload.receiverId)] });
           queryClient.invalidateQueries({ queryKey: ["/api/user/unread-messages"] });
           queryClient.invalidateQueries({ queryKey: ["/api/user/unread-messages/details"] });
           break;

@@ -2233,14 +2233,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getChatHistory(userId1: number, userId2: number): Promise<Message[]> {
-    return this.db.select()
+    const recent = await this.db.select()
       .from(messages)
       .where(or(
         and(eq(messages.senderId, userId1), eq(messages.receiverId, userId2)),
         and(eq(messages.senderId, userId2), eq(messages.receiverId, userId1))
       ))
-      .orderBy(asc(messages.createdAt))
+      .orderBy(desc(messages.createdAt))  // newest first
       .limit(50);
+    return recent.reverse();              // then flip back to chronological order
   }
 
   async markMessagesAsRead(userId: number, friendId: number): Promise<void> {
