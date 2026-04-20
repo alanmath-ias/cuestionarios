@@ -33,6 +33,10 @@ export function ChallengeDialog() {
   if (!challengingUser) return null;
 
   const handleChallenge = () => {
+    if (!challengeTopic.trim()) {
+      // Si el tema está vacío, no permitimos el envío
+      return;
+    }
     sendChallenge(challengingUser.id, challengeWager, challengeTopic, isRevengeMode);
     setChallengingUser(null);
     setChallengeTopic("");
@@ -56,13 +60,13 @@ export function ChallengeDialog() {
           {/* Topic/Prompt Input */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-blue-400" /> Tema o Descripción del Reto
+              <MessageSquare className="w-4 h-4 text-blue-400" /> Tema o Descripción del Reto <span className="text-red-500 font-bold">*</span>
             </label>
             <Input 
               placeholder="Ej: Fracciones, Ecuaciones de 2do grado, lógica..."
               value={challengeTopic}
               onChange={(e) => setChallengeTopic(e.target.value)}
-              className="bg-slate-900/50 border-white/10 rounded-xl h-12 focus:ring-blue-500/50"
+              className={`bg-slate-900/50 border-white/10 rounded-xl h-12 focus:ring-blue-500/50 transition-all ${!challengeTopic.trim() ? 'border-orange-500/30' : 'border-blue-500/20'}`}
               autoFocus
             />
             <p className="text-[10px] text-slate-500 italic">
@@ -109,8 +113,9 @@ export function ChallengeDialog() {
             Cancelar
           </Button>
           <Button 
-            className="bg-blue-600 hover:bg-blue-500 px-8 rounded-xl font-bold h-12"
+            className={`${!challengeTopic.trim() ? 'bg-slate-700 cursor-not-allowed grayscale' : 'bg-blue-600 hover:bg-blue-500'} px-8 rounded-xl font-bold h-12 transition-all`}
             onClick={handleChallenge}
+            disabled={!challengeTopic.trim()}
           >
             {isRevengeMode ? 'Enviar Revancha' : 'Retar ahora'}
           </Button>
