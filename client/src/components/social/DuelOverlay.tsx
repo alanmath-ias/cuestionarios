@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, memo } from "react";
 import { useDuel } from "@/hooks/use-duel";
 import { useSession } from "@/hooks/useSession";
 import { motion, AnimatePresence } from "framer-motion";
-import { Swords, Trophy, X, ShieldAlert, Cpu, Coins, Zap, Loader2, Minus, Plus, CheckCircle2, XCircle, Brain, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { Swords, Trophy, X, ShieldAlert, Cpu, Coins, Zap, Loader2, Minus, Plus, CheckCircle2, XCircle, Brain, Sparkles, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -523,7 +523,15 @@ export function DuelOverlay() {
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setIsReviewing(false)} className="w-full text-slate-500 font-bold uppercase text-[9px] tracking-widest">VOLVER A RESULTADOS</Button>
+                  <Button 
+                    variant="outline" 
+                    size="default" 
+                    onClick={() => setIsReviewing(false)} 
+                    className="w-full bg-slate-800/80 border-blue-500/30 text-white hover:bg-blue-600/20 h-10 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-black/20"
+                  >
+                    <ArrowLeft className="mr-2 h-3.5 w-3.5 text-blue-400" />
+                    VOLVER A RESULTADOS
+                  </Button>
               </div>
             </motion.div>
           )}

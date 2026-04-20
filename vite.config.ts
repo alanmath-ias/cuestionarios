@@ -4,12 +4,25 @@ import react from "@vitejs/plugin-react";
 import themePlugin from "@replit/vite-plugin-shadcn-theme-json";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import fs from "fs";
 
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Leemos la versión generada para asegurar sincronía perfecta
+let buildVersion = Date.now().toString();
+try {
+  const versionFile = path.resolve(__dirname, "client/public/version.json");
+  if (fs.existsSync(versionFile)) {
+    const data = JSON.parse(fs.readFileSync(versionFile, "utf-8"));
+    buildVersion = data.version;
+  }
+} catch (e) {
+  console.warn("⚠️ Could not read version.json, using fallback", e);
+}
 
 export default defineConfig({
   plugins: [
@@ -27,7 +40,7 @@ export default defineConfig({
       : []),
   ],
   define: {
-    'import.meta.env.VITE_BUILD_ID': JSON.stringify(Date.now().toString()),
+    'import.meta.env.VITE_BUILD_ID': JSON.stringify(buildVersion),
   },
   resolve: {
     alias: {
