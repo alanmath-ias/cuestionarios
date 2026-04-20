@@ -131,6 +131,7 @@ export function DuelOverlay() {
     setIsRevengeMode
   } = useDuel();
   const { session } = useSession();
+  const myId = session?.userId;
   const [counterWager, setCounterWager] = useState<number>(0);
   const [isNegotiating, setIsNegotiating] = useState(false);
   const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
@@ -141,8 +142,10 @@ export function DuelOverlay() {
   const [speedBonusFlash, setSpeedBonusFlash] = useState<string | null>(null);
   const [prepStep, setPrepStep] = useState(0);
 
-  // Sync safety: if duel is in progress, we shouldn't show "Preparing"
+  // Sync safety: must be check before any other calculations
   const actualPreparing = isPreparing && (!duel || duel.status !== 'in_progress');
+
+  // ─── EFFECTS (Must all be above ANY return) ────────────────────────────────
 
   // Cycle through preparing steps every 4.5 seconds
   useEffect(() => {
@@ -183,9 +186,21 @@ export function DuelOverlay() {
     }
   }, [duel?.status, duel?.duelId]);
 
+  // ─── EARLY RETURN ───
   if (!duel && !invite && !actualPreparing) return null;
 
-  const myId = session?.userId!;
+  // ─── DERIVED STATE (Safe after hooks and early return) ───
+  const isSpectator = !!duel?.isSpectator;
+  const challengerName = duel?.challengerName || 'Retador';
+  const receiverName = duel?.receiverName || 'Oponente';
+
+  // Extract scores and names for cleaner JSX
+  const scores = duel?.scores || {};
+  const challengerScore = isSpectator ? (scores[duel?.challenger?.userId] || 0) : 0;
+  const myScore = (myId && scores[myId]) || 0;
+  const receiverScore = isSpectator ? (scores[duel?.receiver?.userId] || 0) : 0;
+  const oppScore = (myId ? Object.entries(scores).find(([id]) => Number(id) !== myId)?.[1] : 0) || 0;
+  const receiverNameLabel = isSpectator ? (duel?.receiver?.username || 'Oponente') : (duel?.opponentName || 'Oponente');
 
   // ─── Option styling helper ─────────────────────────────────────────────────
   const getOptionStyle = (option: any) => {
@@ -236,8 +251,10 @@ export function DuelOverlay() {
           {actualPreparing && (
             <motion.div
               key="preparing-container"
-              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }}
-              className="bg-slate-900/90 border border-blue-500/30 p-4 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] shadow-[0_0_50px_rgba(30,58,138,0.5)] backdrop-blur-2xl flex flex-col items-center text-center max-w-lg mx-auto"
+              initial={{ opacity: 0, scale: 0.9 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 1.1 }}
+              className="bg-slate-900/90 border border-blue-500/30 p-4 sm:p-10 rounded-3xl shadow-xl backdrop-blur-2xl flex flex-col items-center text-center max-w-lg mx-auto"
             >
               <AnimatePresence mode="wait">
                 {prepStep === 0 && (
@@ -343,23 +360,53 @@ export function DuelOverlay() {
           {/* ── GAME ARENA ─────────────────────────────────────────────── */}
           {duel && duel.status === 'in_progress' && !actualPreparing && (
             <motion.div key="arena" initial={{ scale: 0.98, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-slate-900/95 border border-blue-500/20 rounded-3xl shadow-2xl w-full overflow-hidden">
-              <div className="relative px-4 pt-4 pb-2 flex flex-col items-center">
+              {/* Header with Spectator Info */}
+              <div className="flex items-center justify-between relative z-20 w-full px-6 pt-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <Swords className="h-4 w-4 text-blue-400" />
+                  <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">
+                    {isSpectator ? "Monitoreo" : "Arena"}
+                  </span>
+                </div>
+                {isSpectator && <Badge className="bg-indigo-600 text-white animate-pulse text-[10px] h-5">MODO OBSERVADOR</Badge>}
+                <Button variant="ghost" size="icon" onClick={() => isSpectator ? resetDuel() : null} className="h-6 w-6 text-slate-500 hover:text-white transition-colors">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="relative px-4 pb-2 flex flex-col items-center">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-20 bg-blue-500/5 blur-[40px] rounded-full" />
                 <div className="flex items-center justify-between relative z-10 w-full px-4">
                   <div className="flex flex-col items-center flex-1">
-                    <span className="text-[9px] text-blue-400 font-black uppercase mb-1">TÚ</span>
-                    <motion.span key={duel.scores[myId]} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-2xl sm:text-4xl font-black text-white">{duel.scores[myId] || 0}</motion.span>
+                    <span className="text-[9px] text-blue-400 font-black uppercase mb-1 truncate max-w-[80px]">
+                        {isSpectator ? (duel?.challenger?.username || 'Retador') : 'TÚ'}
+                    </span>
+                    <motion.span 
+                        key={isSpectator ? `challenger-${challengerScore}` : `me-${myScore}`} 
+                        initial={{ scale: 1.4 }} 
+                        animate={{ scale: 1 }} 
+                        className="text-2xl sm:text-4xl font-black text-white"
+                    >
+                        {isSpectator ? challengerScore : myScore}
+                    </motion.span>
                   </div>
                   
                   {/* CENTRAL SPEED CLOCK */}
                   <div className="px-2 sm:px-6">
-                    <SpeedClock questionIndex={duel.currentQuestion?.index ?? 0} lastFeedback={duel.lastFeedback} />
+                    <SpeedClock questionIndex={duel?.currentQuestion?.index ?? 0} lastFeedback={duel?.lastFeedback} />
                   </div>
 
                   <div className="flex flex-col items-center flex-1">
-                    <span className="text-[9px] text-red-400 font-black uppercase mb-1 truncate max-w-[60px] sm:max-w-[80px]">{duel.opponentName}</span>
-                    <motion.span key={String(Object.entries(duel.scores).find(([id]) => parseInt(id) !== myId)?.[1] ?? 0)} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-2xl sm:text-4xl font-black text-white">
-                      {(Object.entries(duel.scores).find(([id]) => parseInt(id) !== myId)?.[1] as number) || 0}
+                    <span className="text-[9px] text-red-400 font-black uppercase mb-1 truncate max-w-[60px] sm:max-w-[80px]">
+                        {isSpectator ? receiverNameLabel : (duel?.opponentName || 'Oponente')}
+                    </span>
+                    <motion.span 
+                        key={isSpectator ? `receiver-${receiverScore}` : `opp-${oppScore}`} 
+                        initial={{ scale: 1.4 }} 
+                        animate={{ scale: 1 }} 
+                        className="text-2xl sm:text-4xl font-black text-white"
+                    >
+                      {isSpectator ? receiverScore : oppScore}
                     </motion.span>
                   </div>
                 </div>
@@ -392,9 +439,13 @@ export function DuelOverlay() {
                         return (
                           <button
                             key={option.id}
-                            disabled={selectedOptionId !== null || (!!duel.lastFeedback && duel.lastFeedback.isCorrect) || (duel.allWrongAnswers || []).some((w: any) => w.userId === myId)}
-                            className={`relative flex items-center gap-3 py-3 px-4 rounded-2xl border transition-all ${styleClass}`}
-                            onClick={() => { setSelectedOptionId(option.id); submitAnswer(duel.duelId, duel.currentQuestion.index, option.id); }}
+                            disabled={isSpectator || selectedOptionId !== null || (!!duel.lastFeedback && duel.lastFeedback.isCorrect) || (duel.allWrongAnswers || []).some((w: any) => w.userId === myId)}
+                            className={`relative flex items-center gap-3 py-3 px-4 rounded-2xl border transition-all ${isSpectator ? 'cursor-default' : ''} ${styleClass}`}
+                            onClick={() => { 
+                                if (isSpectator) return;
+                                setSelectedOptionId(option.id); 
+                                submitAnswer(duel.duelId, duel.currentQuestion.index, option.id); 
+                            }}
                           >
                             <div className="h-6 w-6 rounded-lg flex-shrink-0 flex items-center justify-center bg-black/20">
                               {who?.meCorrect || who?.oppCorrect ? <CheckCircle2 className="h-4 w-4" /> : (who?.meWrong || who?.oppWrong) ? <XCircle className="h-4 w-4 text-red-300" /> : <div className="w-1.5 h-1.5 rounded-full bg-white/20" />}
@@ -429,7 +480,15 @@ export function DuelOverlay() {
               onViewportEnter={() => { if (duel.finalResults?.winnerId === myId) confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 }, colors: ['#fbbf24', '#22c55e'] }); }}
             >
               <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex flex-col items-center">
-                {duel.finalResults?.winnerId === myId ? (
+                {isSpectator ? (
+                   <>
+                    <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-indigo-400 to-indigo-600 p-1 mb-4"><div className="h-full w-full rounded-xl bg-slate-900 flex items-center justify-center"><CheckCircle2 className="h-10 w-10 text-indigo-500" /></div></div>
+                    <h2 className="text-3xl font-black text-indigo-400 uppercase italic tracking-tighter mb-2">DUELO FINALIZADO</h2>
+                    <div className="bg-indigo-500/10 border border-indigo-500/30 px-6 py-4 rounded-3xl mb-4">
+                        <p className="text-indigo-400 font-black text-2xl">Visualización de Observador</p>
+                    </div>
+                   </>
+                ) : duel.finalResults?.winnerId === myId ? (
                   <>
                     <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-600 p-1 mb-4 rotate-12"><div className="h-full w-full rounded-xl bg-slate-900 flex items-center justify-center"><Trophy className="h-10 w-10 text-yellow-500" /></div></div>
                     <h2 className="text-3xl font-black text-yellow-400 uppercase italic tracking-tighter mb-2">¡VICTORIA TOTAL!</h2>
@@ -450,9 +509,10 @@ export function DuelOverlay() {
               </div>
               <div className="p-6 bg-black/20 flex flex-col gap-2">
                 <Button onClick={() => { setReviewIndex(0); setIsReviewing(true); }} className="bg-blue-600 hover:bg-blue-500 py-6 font-black rounded-2xl text-lg">REVISAR DETALLES</Button>
-                {duel.finalResults?.winnerId !== myId && (
+                {(!isSpectator && duel?.finalResults?.winnerId !== myId) && (
                   <button 
                     onClick={() => { 
+                      if (!duel) return;
                       const oppIds = Object.keys(duel.scores).filter(id => Number(id) !== myId);
                       const oppId = Number(oppIds[0]);
                       const oppName = duel.opponentName;
@@ -471,7 +531,7 @@ export function DuelOverlay() {
                     SOLICITAR REVANCHA
                   </button>
                 )}
-                <Button variant="ghost" onClick={() => leaveResults(duel.duelId)} className="text-slate-500 py-4 font-bold uppercase text-[10px] tracking-widest">SALIR DE LA ARENA</Button>
+                <Button variant="ghost" onClick={() => isSpectator ? resetDuel() : leaveResults(duel?.duelId || 0)} className="text-slate-500 py-4 font-bold uppercase text-[10px] tracking-widest">SALIR DE LA ARENA</Button>
               </div>
             </motion.div>
           )}

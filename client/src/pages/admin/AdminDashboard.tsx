@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { DuelMonitor } from "@/components/admin/DuelMonitor";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -210,6 +211,9 @@ const AdminDashboard: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Columna Izquierda: Requieren Atención y Pendientes */}
           <div className="lg:col-span-2 space-y-8">
+            
+            {/* Monitor de Duelos en Tiempo Real */}
+            <DuelMonitor />
 
             {/* Envíos Pendientes (Prioridad Alta) */}
             <Card className="border border-white/10 bg-slate-900 shadow-xl">

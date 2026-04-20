@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from './useSession';
 import { useToast } from './use-toast';
@@ -33,6 +33,8 @@ interface DuelContextType {
   refreshStats: () => void;
   resetDuel: () => void;
   leaveResults: (duelId: number) => void;
+  activeDuels: any[];
+  spectateDuel: (duelId: number) => void;
 }
 
 const DuelContext = createContext<DuelContextType | null>(null);
@@ -56,6 +58,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
   const [challengeWager, setChallengeWager] = useState<number>(10);
   const [challengeTopic, setChallengeTopic] = useState<string>("");
   const [isRevengeMode, setIsRevengeMode] = useState(false);
+  const [activeDuels, setActiveDuels] = useState<any[]>([]);
 
   const reconnectTimeout = useRef<any>(null);
 
@@ -246,6 +249,9 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           queryClient.invalidateQueries({ queryKey: ["/api/user/unread-messages"] });
           queryClient.invalidateQueries({ queryKey: ["/api/user/unread-messages/details"] });
           break;
+      case 'admin:duel_list':
+          setActiveDuels(payload);
+          break;
     }
   };
 
@@ -278,7 +284,18 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     queryClient.invalidateQueries({ queryKey: ["/api/user"] });
   }, [queryClient]);
 
-  const value = {
+  const resetDuel = useCallback(() => setDuel(null), []);
+  
+  const leaveResults = useCallback((duelId: number) => {
+    socket?.send(JSON.stringify({ type: 'duel:leave_results', payload: { duelId } }));
+    setDuel(null);
+  }, [socket]);
+
+  const spectateDuel = useCallback((duelId: number) => {
+    socket?.send(JSON.stringify({ type: 'admin:spectate', payload: { duelId } }));
+  }, [socket]);
+
+  const value = useMemo(() => ({
     duel,
     invite,
     sendChallenge,
@@ -300,12 +317,17 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     isRevengeMode,
     setIsRevengeMode,
     refreshStats,
-    resetDuel: () => setDuel(null),
-    leaveResults: (duelId: number) => {
-      socket?.send(JSON.stringify({ type: 'duel:leave_results', payload: { duelId } }));
-      setDuel(null);
-    }
-  };
+    resetDuel,
+    leaveResults,
+    activeDuels,
+    spectateDuel
+  }), [
+    duel, invite, sendChallenge, respondToInvite, submitAnswer, 
+    sendMessage, lastChatMessage, isConnected, sentChallenges, 
+    isPreparing, onlineUsers, challengingUser, challengeWager, 
+    challengeTopic, isRevengeMode, refreshStats, resetDuel, 
+    leaveResults, activeDuels, spectateDuel
+  ]);
 
   return (
     <DuelContext.Provider value={value}>

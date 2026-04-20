@@ -31,12 +31,14 @@ interface DuelRoom {
   history: any[];
   participantsGone: Set<number>;
   currentRoundAnswers: { userId: number; answerId: number }[];
+  spectators: Set<WebSocket>;
 }
 
 export class DuelServer {
   public static instance: DuelServer | null = null;
   private wss: WebSocketServer;
   private userSockets: Map<number, WebSocket> = new Map();
+  private adminSockets: Set<WebSocket> = new Set();
   private activeDuels: Map<number, DuelRoom> = new Map();
   private duelTimers: Map<number, NodeJS.Timeout> = new Map();
 
@@ -89,6 +91,11 @@ export class DuelServer {
     socket.on('pong', () => { (socket as any).isAlive = true; });
 
     this.userSockets.set(userId, socket);
+    if (user.role === 'admin') {
+        this.adminSockets.add(socket);
+        console.log(`🛡️ [ADMIN] Admin ${user.username} connected. Total admin sockets: ${this.adminSockets.size}`);
+        this.broadcastDuelListToAdmins();
+    }
     console.log(`🔌 [SOCKET] User ${user.username} (ID: ${userId}) connected. Total sockets: ${this.userSockets.size}`);
 
     // Notify friends that this user is online
@@ -103,10 +110,19 @@ export class DuelServer {
         }
     }
 
-    socket.on('message', (data) => this.handleMessage(userId, data));
+    socket.on('message', (data: string) => {
+      try {
+        const message = JSON.parse(data);
+        this.handleMessage(userId, message, socket);
+      } catch (e) {
+        console.error('[WS] Parse error:', e);
+      }
+    });
+
     socket.on('close', () => {
+      console.log(`🔌 [SOCKET] User ${user.username} (ID: ${userId}) disconnected`);
       this.userSockets.delete(userId);
-      console.log(`🔌 User ${userId} disconnected`);
+      this.adminSockets.delete(socket);
       // Notify friends that this user is offline
       this.broadcastStatus(userId, false);
     });
@@ -153,17 +169,19 @@ export class DuelServer {
     });
   }
 
-  private async handleMessage(userId: number, data: any) {
-    try {
-      const message = JSON.parse(data.toString());
-      const { type, payload } = message;
+  private async handleMessage(userId: number, message: any, socket: WebSocket) {
+    const { type, payload } = message;
 
+    try {
       switch (type) {
-        case 'duel:challenge':
-          await this.handleChallenge(userId, payload);
-          break;
-        case 'duel:respond':
-          await this.processResponse(userId, payload);
+      case 'duel:challenge':
+        await this.handleChallenge(userId, payload);
+        break;
+      case 'admin:spectate':
+        await this.handleAdminSpectate(userId, payload, socket);
+        break;
+      case 'duel:respond':
+        await this.processResponse(userId, payload);
           break;
         case 'duel:submit_answer':
           await this.processAnswer(userId, payload);
@@ -222,6 +240,8 @@ export class DuelServer {
         isRevenge: !!isRevenge
       }
     });
+
+    this.broadcastDuelListToAdmins();
   }
 
   private async processResponse(userId: number, payload: { duelId: number; action: 'accept' | 'reject' | 'counter'; wager?: number }) {
@@ -256,6 +276,7 @@ export class DuelServer {
     await db.update(duels).set({ status: 'ready' }).where(eq(duels.id, duelId));
 
     this.broadcastToDuel(duelId, { type: 'duel:preparing', payload: { duelId } });
+    this.broadcastDuelListToAdmins();
 
     try {
       // Generate AI Quiz using the stored topic
@@ -326,10 +347,12 @@ export class DuelServer {
         bonusCredits: { [duelRecord.challengerId]: 0, [duelRecord.receiverId]: 0 },
         history: [],
         participantsGone: new Set(),
-        currentRoundAnswers: []
+        currentRoundAnswers: [],
+        spectators: new Set()
       };
 
       this.activeDuels.set(duelId, room);
+      this.broadcastDuelListToAdmins();
       
       // Start!
       this.sendToUser(room.challenger.userId, { 
@@ -386,6 +409,7 @@ export class DuelServer {
     });
 
     room.questionStartTime = Date.now();
+    this.broadcastDuelListToAdmins();
   }
 
   private async processAnswer(userId: number, payload: { duelId: number; questionIndex: number; answerId: number }) {
@@ -425,6 +449,8 @@ export class DuelServer {
                 speedBonus: speedBonus
             }
         });
+
+        this.broadcastDuelListToAdmins();
 
         // Save to history
         room.history.push({
@@ -553,6 +579,7 @@ export class DuelServer {
 
     // Mark room as finished in memory so recovery won't re-send stale state
     room.status = 'finished';
+    this.broadcastDuelListToAdmins();
 
     // Safety timeout: cleanup even if nobody calls leaveResults
     setTimeout(() => this.cleanupDuelQuiz(duelId), 120_000);
@@ -584,6 +611,7 @@ export class DuelServer {
     }
 
     this.activeDuels.delete(duelId);
+    this.broadcastDuelListToAdmins();
   }
 
   private async processChatMessage(senderId: number, payload: { receiverId: number; content: string }) {
@@ -630,6 +658,14 @@ export class DuelServer {
     if (room) {
       this.sendToUser(room.challenger.userId, message);
       this.sendToUser(room.receiver.userId, message);
+      
+      // Also send to spectators
+      const messageStr = JSON.stringify(message);
+      room.spectators.forEach(ws => {
+          if (ws.readyState === WebSocket.OPEN) {
+              ws.send(messageStr);
+          }
+      });
     } else {
         // Fallback for negotiation where room isn't in memory yet
         db.query.duels.findFirst({ where: eq(duels.id, duelId) }).then(duel => {
@@ -662,5 +698,74 @@ export class DuelServer {
     };
 
     this.sendToUser(userId, { type: 'duel:sync', payload });
+  }
+
+  private broadcastDuelListToAdmins() {
+    if (this.adminSockets.size === 0) return;
+
+    const duelList = Array.from(this.activeDuels.values()).map(room => ({
+        id: room.id,
+        challengerName: room.challenger.username,
+        receiverName: room.receiver.username,
+        status: room.status,
+        topic: room.topic,
+        wager: room.wager,
+        currentQuestionIndex: room.currentQuestionIndex,
+        questionsCount: room.questions.length,
+        scores: room.scores
+    }));
+
+    const message = JSON.stringify({ type: 'admin:duel_list', payload: duelList });
+    let sentCount = 0;
+    this.adminSockets.forEach(ws => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(message);
+            sentCount++;
+        }
+    });
+
+    if (sentCount > 0) {
+        console.log(`📡 [ADMIN] Broadcasted active duel list to ${sentCount} admins`);
+    }
+  }
+
+  private async handleAdminSpectate(userId: number, payload: { duelId: number }, socket: WebSocket) {
+    const user = await storage.getUser(userId);
+    if (!user || user.role !== 'admin') return;
+
+    const { duelId } = payload;
+    const room = this.activeDuels.get(duelId);
+    if (!room) return;
+
+    room.spectators.add(socket);
+    console.log(`👁️ [SPECTATE] Admin ${user.username} started spectating duel ${duelId}`);
+    
+    // Send initial state to the spectator
+    this.sendSyncStateToSpectator(socket, room);
+  }
+
+  private sendSyncStateToSpectator(socket: WebSocket, room: DuelRoom) {
+    const payload = {
+        duelId: room.id,
+        status: room.status,
+        opponentName: room.receiver.username, // Just for UI structure, they see both anyway
+        challengerName: room.challenger.username,
+        receiverName: room.receiver.username,
+        questionsCount: room.questions.length,
+        currentQuestion: {
+            index: room.currentQuestionIndex,
+            content: room.questions[room.currentQuestionIndex]?.content || "",
+            options: room.questions[room.currentQuestionIndex]?.options || []
+        },
+        scores: room.scores,
+        topic: room.topic,
+        history: room.history,
+        wager: room.wager,
+        isSpectator: true
+    };
+
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'duel:sync', payload }));
+    }
   }
 }
