@@ -14,18 +14,8 @@ interface DuelContextType {
   sendChallenge: (receiverId: number, wager: number, topic?: string, isRevenge?: boolean) => void;
   respondToInvite: (duelId: number, action: 'accept' | 'reject' | 'counter', wager?: number) => void;
   submitAnswer: (duelId: number, questionIndex: number, answerId: number) => void;
-  currentQuestion: {
-    index: number;
-    content: string;
-    options: any[];
-  } | null;
-  lastFeedback?: {
-    userId: number;
-    userName: string;
-    answerId: number;
-    isCorrect: boolean;
-  };
-  scores: Record<number, number>;
+  sendMessage: (receiverId: number, content: string) => void;
+  lastChatMessage: any;
   isConnected: boolean;
   sentChallenges: Set<number>;
   isPreparing: boolean;
@@ -111,12 +101,13 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
 
     switch (type) {
       case 'duel:invited':
-        // If we are looking at a results screen, clear it so the invitation shows up clean
-        setDuel(prev => (prev?.status === 'finished' ? null : prev));
+        // Always clear any stale duel state when a new invitation arrives
+        setDuel(null);
         setInvite(payload);
         break;
       case 'duel:start':
         setIsPreparing(false);
+        setInvite(null); // Ensure invite banner is gone before setting new duel
         setDuel({
           status: 'in_progress',
           duelId: payload.duelId,
@@ -127,14 +118,13 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           topic: payload.topic,
           allWrongAnswers: [],
         });
-        setInvite(null);
         break;
       case 'duel:preparing':
         setIsPreparing(true);
         break;
       case 'duel:question':
         setIsPreparing(false);
-        setDuel(prev => prev ? { 
+        setDuel((prev: any) => prev ? { 
             ...prev, 
             currentQuestion: payload,
             lastFeedback: undefined,
@@ -144,7 +134,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
       case 'duel:answer_feedback':
         setIsPreparing(false); // Safety
         // Accumulate wrong answers so multiple failures stay visible
-        setDuel(prev => prev ? { 
+        setDuel((prev: any) => prev ? { 
             ...prev, 
             lastFeedback: payload,
             allWrongAnswers: [
@@ -161,7 +151,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
               description: "Prepárate para la siguiente...",
           });
         }
-        setDuel(prev => ({ 
+        setDuel((prev: any) => ({ 
             ...prev, 
             scores: payload.scores, 
             lastFeedback: { 
@@ -175,7 +165,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         }));
         break;
       case 'duel:end':
-        setDuel(prev => ({ 
+        setDuel((prev: any) => ({ 
             ...prev, 
             status: 'finished', 
             finalResults: payload,
@@ -207,7 +197,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           break;
       case 'duel:countered':
           // The other user wants to negotiate
-          setInvite(prev => prev ? { ...prev, wager: payload.wager } : { 
+          setInvite((prev: any) => prev ? { ...prev, wager: payload.wager } : { 
               duelId: payload.duelId, 
               wager: payload.wager, 
               challengerName: "Oponente", 

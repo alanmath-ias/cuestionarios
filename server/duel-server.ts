@@ -66,9 +66,9 @@ export class DuelServer {
     // Notify friends that this user is online
     this.broadcastStatus(userId, true);
 
-    // RECOVERY: Check if user has an active duel and sync state immediately
+    // RECOVERY: Check if user has an active IN-PROGRESS duel and sync state immediately
     for (const room of this.activeDuels.values()) {
-        if (room.challenger.userId === userId || room.receiver.userId === userId) {
+        if ((room.challenger.userId === userId || room.receiver.userId === userId) && room.status === 'in_progress') {
             console.log(`🔄 [SYNC] User ${userId} reconnected to active duel ${room.id}. Sending sync state...`);
             this.sendSyncState(userId, room);
             break;
@@ -363,7 +363,7 @@ export class DuelServer {
   private async processAnswer(userId: number, payload: { duelId: number; questionIndex: number; answerId: number }) {
     const { duelId, questionIndex, answerId } = payload;
     const room = this.activeDuels.get(duelId);
-    if (!room || room.currentQuestionIndex !== questionIndex) return;
+    if (!room || room.status !== 'in_progress' || room.currentQuestionIndex !== questionIndex) return;
 
     const question = room.questions[questionIndex];
     const answer = question.options.find((o: any) => o.id === answerId);
@@ -523,14 +523,20 @@ export class DuelServer {
         }
     });
 
-    // We NO LONGER delete from activeDuels immediately.
-    // We wait for both to leave or a timeout.
+    // Mark room as finished in memory so recovery won't re-send stale state
+    room.status = 'finished';
+
+    // Safety timeout: cleanup even if nobody calls leaveResults
+    setTimeout(() => this.cleanupDuelQuiz(duelId), 120_000);
   }
 
   private async handleLeaveResults(userId: number, payload: { duelId: number }) {
     const { duelId } = payload;
     const room = this.activeDuels.get(duelId);
     if (!room) return;
+
+    // Only process finished rooms
+    if (room.status !== 'finished') return;
 
     room.participantsGone.add(userId);
     console.log(`👋 [DUEL] User ${userId} left results. Gone: ${room.participantsGone.size}/2`);

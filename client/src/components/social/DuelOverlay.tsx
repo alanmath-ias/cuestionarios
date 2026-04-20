@@ -162,6 +162,14 @@ export function DuelOverlay() {
     setSelectedOptionId(null);
   }, [duel?.currentQuestion?.index]);
 
+  // Reset review state when duel resets or a new duel starts
+  useEffect(() => {
+    if (!duel || duel.status === 'in_progress') {
+      setIsReviewing(false);
+      setReviewIndex(0);
+    }
+  }, [duel?.status, duel?.duelId]);
+
   if (!duel && !invite && !actualPreparing) return null;
 
   const myId = session?.userId!;
@@ -295,8 +303,8 @@ export function DuelOverlay() {
 
                   <div className="flex flex-col items-center flex-1">
                     <span className="text-[9px] text-red-400 font-black uppercase mb-1 truncate max-w-[80px]">{duel.opponentName}</span>
-                    <motion.span key={Object.entries(duel.scores).find(([id]) => parseInt(id) !== myId)?.[1]} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-4xl font-black text-white">
-                      {Object.entries(duel.scores).find(([id]) => parseInt(id) !== myId)?.[1] || 0 as any}
+                    <motion.span key={String(Object.entries(duel.scores).find(([id]) => parseInt(id) !== myId)?.[1] ?? 0)} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-4xl font-black text-white">
+                      {(Object.entries(duel.scores).find(([id]) => parseInt(id) !== myId)?.[1] as number) || 0}
                     </motion.span>
                   </div>
                 </div>
@@ -307,7 +315,7 @@ export function DuelOverlay() {
               </div>
 
               <div className="px-5 pb-5 mt-2">
-                {duel.currentQuestion && (
+                {duel.currentQuestion && duel.currentQuestion.options?.length > 0 ? (
                   <motion.div key={duel.currentQuestion.index} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
                     <AnimatePresence>
                       {speedBonusFlash && (
@@ -348,6 +356,11 @@ export function DuelOverlay() {
                       })}
                     </div>
                   </motion.div>
+                ) : (
+                  <div className="py-10 flex flex-col items-center">
+                    <Loader2 className="h-10 w-10 animate-spin text-blue-400 mb-4" />
+                    <p className="text-slate-400 text-sm font-bold">Preparando preguntas...</p>
+                  </div>
                 )}
               </div>
             </motion.div>
@@ -387,11 +400,16 @@ export function DuelOverlay() {
                     onClick={() => { 
                       const oppIds = Object.keys(duel.scores).filter(id => Number(id) !== myId);
                       const oppId = Number(oppIds[0]);
-                      setChallengingUser({ id: oppId, name: duel.opponentName });
-                      setChallengeWager(10);
-                      setChallengeTopic("");
-                      setIsRevengeMode(true);
-                      leaveResults(duel.duelId); 
+                      const oppName = duel.opponentName;
+                      // First: fully close the current duel
+                      leaveResults(duel.duelId);
+                      // Then: open revenge dialog after duel state is cleared
+                      setTimeout(() => {
+                        setChallengingUser({ id: oppId, name: oppName });
+                        setChallengeWager(10);
+                        setChallengeTopic("");
+                        setIsRevengeMode(true);
+                      }, 50);
                     }} 
                     className="w-full bg-red-600 hover:bg-red-500 text-white font-black py-6 rounded-2xl text-lg transition-all active:scale-95 shadow-lg shadow-red-900/20"
                   >
