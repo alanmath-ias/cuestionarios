@@ -66,22 +66,35 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     const wsUrl = `${protocol}//${window.location.host}/ws/duels`;
     const ws = new WebSocket(wsUrl);
 
+    let lastMessageTime = Date.now();
+    const heartbeatCheck = setInterval(() => {
+      // If we haven't heard from the server in 20s, the socket is likely "dead" (intermediary proxy cut it)
+      if (Date.now() - lastMessageTime > 20000) {
+        console.warn('⚠️ [SOCKET] No messages in 20s. Forcing reconnect...');
+        clearInterval(heartbeatCheck);
+        ws.close();
+      }
+    }, 5000);
+
     ws.onopen = () => {
       console.log('✅ Duel WebSocket connected');
       setIsConnected(true);
+      lastMessageTime = Date.now();
     };
 
     ws.onmessage = (event) => {
+      lastMessageTime = Date.now();
       const message: DuelMessage = JSON.parse(event.data);
       handleWsMessage(message);
     };
 
     ws.onclose = () => {
       console.log('❌ Duel WebSocket disconnected');
+      clearInterval(heartbeatCheck);
       setIsConnected(false);
       setSocket(null);
-      // Attempt reconnect after 5 seconds
-      reconnectTimeout.current = setTimeout(connect, 5000);
+      // Attempt reconnect after 2 seconds (faster than 5s)
+      reconnectTimeout.current = setTimeout(connect, 2000);
     };
 
     setSocket(ws);

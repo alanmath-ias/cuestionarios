@@ -236,9 +236,9 @@ export function DuelOverlay() {
           )}
 
           {/* ── INVITATION / NEGOTIATION ───────────────────────────────── */}
-          {invite && !actualPreparing && (
-            <motion.div key="invite" initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.9, y: -20, opacity: 0 }}>
-              <Card className="bg-slate-900 border-amber-500/30 p-8 shadow-2xl text-white overflow-hidden relative">
+          {invite && !actualPreparing && (!duel || duel.status === 'finished') && (
+            <motion.div key="invite" initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.9, y: -20, opacity: 0 }} className="px-2">
+              <Card className="bg-slate-900 border-amber-500/30 p-4 sm:p-8 shadow-2xl text-white overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-8 opacity-10"><Swords className="w-40 h-40 text-amber-500" /></div>
                 <div className="relative z-10 flex flex-col items-center text-center">
                   <div className="h-16 w-16 rounded-full bg-amber-500/20 flex items-center justify-center mb-5 border border-amber-500/50">
@@ -293,17 +293,17 @@ export function DuelOverlay() {
                 <div className="flex items-center justify-between relative z-10 w-full px-4">
                   <div className="flex flex-col items-center flex-1">
                     <span className="text-[9px] text-blue-400 font-black uppercase mb-1">TÚ</span>
-                    <motion.span key={duel.scores[myId]} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-4xl font-black text-white">{duel.scores[myId] || 0}</motion.span>
+                    <motion.span key={duel.scores[myId]} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-2xl sm:text-4xl font-black text-white">{duel.scores[myId] || 0}</motion.span>
                   </div>
                   
                   {/* CENTRAL SPEED CLOCK */}
-                  <div className="px-6">
+                  <div className="px-2 sm:px-6">
                     <SpeedClock questionIndex={duel.currentQuestion?.index ?? 0} lastFeedback={duel.lastFeedback} />
                   </div>
 
                   <div className="flex flex-col items-center flex-1">
-                    <span className="text-[9px] text-red-400 font-black uppercase mb-1 truncate max-w-[80px]">{duel.opponentName}</span>
-                    <motion.span key={String(Object.entries(duel.scores).find(([id]) => parseInt(id) !== myId)?.[1] ?? 0)} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-4xl font-black text-white">
+                    <span className="text-[9px] text-red-400 font-black uppercase mb-1 truncate max-w-[60px] sm:max-w-[80px]">{duel.opponentName}</span>
+                    <motion.span key={String(Object.entries(duel.scores).find(([id]) => parseInt(id) !== myId)?.[1] ?? 0)} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-2xl sm:text-4xl font-black text-white">
                       {(Object.entries(duel.scores).find(([id]) => parseInt(id) !== myId)?.[1] as number) || 0}
                     </motion.span>
                   </div>

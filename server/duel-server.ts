@@ -44,7 +44,25 @@ export class DuelServer {
     DuelServer.instance = this;
     this.wss = new WebSocketServer({ server, path: '/ws/duels' });
     this.wss.on('connection', this.handleConnection.bind(this));
+    this.startHeartbeat();
     console.log('🚀 Duel WebSocket Server initialized at /ws/duels');
+  }
+
+  private startHeartbeat() {
+    setInterval(() => {
+      this.userSockets.forEach((ws, userId) => {
+        if ((ws as any).isAlive === false) {
+          console.log(`💀 [HEARTBEAT] Dead socket detected: user ${userId}. Terminating.`);
+          this.userSockets.delete(userId);
+          return ws.terminate();
+        }
+
+        (ws as any).isAlive = false;
+        ws.ping();
+        // Send application-level ping to ensure client JS updates lastMessageTime
+        ws.send(JSON.stringify({ type: 'ping' }));
+      });
+    }, 15000);
   }
 
   private async handleConnection(socket: WebSocket, req: any) {
@@ -59,6 +77,16 @@ export class DuelServer {
       socket.close(1008, 'User not found');
       return;
     }
+
+    // Close old socket if it exists to avoid "ghost" sessions
+    const oldSocket = this.userSockets.get(userId);
+    if (oldSocket && oldSocket.readyState === WebSocket.OPEN) {
+      console.log(`🔄 [SOCKET] Closing stale socket for user ${user.username} (ID: ${userId})`);
+      oldSocket.terminate();
+    }
+
+    (socket as any).isAlive = true;
+    socket.on('pong', () => { (socket as any).isAlive = true; });
 
     this.userSockets.set(userId, socket);
     console.log(`🔌 [SOCKET] User ${user.username} (ID: ${userId}) connected. Total sockets: ${this.userSockets.size}`);
