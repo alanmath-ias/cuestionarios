@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, memo } from "react";
 import { useDuel } from "@/hooks/use-duel";
 import { useSession } from "@/hooks/useSession";
 import { motion, AnimatePresence } from "framer-motion";
-import { Swords, Trophy, X, ShieldAlert, Cpu, Coins, Zap, Loader2, Minus, Plus, CheckCircle2, XCircle } from "lucide-react";
+import { Swords, Trophy, X, ShieldAlert, Cpu, Coins, Zap, Loader2, Minus, Plus, CheckCircle2, XCircle, Brain, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -139,13 +139,26 @@ export function DuelOverlay() {
 
   // Speed bonus effects
   const [speedBonusFlash, setSpeedBonusFlash] = useState<string | null>(null);
+  const [prepStep, setPrepStep] = useState(0);
+
+  // Sync safety: if duel is in progress, we shouldn't show "Preparing"
+  const actualPreparing = isPreparing && (!duel || duel.status !== 'in_progress');
+
+  // Cycle through preparing steps every 4.5 seconds
+  useEffect(() => {
+    if (!actualPreparing) {
+      setPrepStep(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setPrepStep(prev => (prev + 1) % 4);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [actualPreparing]);
 
   useEffect(() => {
     if (invite) setCounterWager(invite.wager);
   }, [invite]);
-
-  // Sync safety: if duel is in progress, we shouldn't show "Preparing"
-  const actualPreparing = isPreparing && (!duel || duel.status !== 'in_progress');
 
   // Freeze effects when round ends
   useEffect(() => {
@@ -222,16 +235,58 @@ export function DuelOverlay() {
           {/* ── PREPARING ──────────────────────────────────────────────── */}
           {actualPreparing && (
             <motion.div
-              key="preparing"
+              key="preparing-container"
               initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }}
-              className="bg-slate-900/90 border border-blue-500/30 p-10 rounded-[2.5rem] shadow-2xl backdrop-blur-xl flex flex-col items-center text-center"
+              className="bg-slate-900/90 border border-blue-500/30 p-4 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] shadow-[0_0_50px_rgba(30,58,138,0.5)] backdrop-blur-2xl flex flex-col items-center text-center max-w-lg mx-auto"
             >
-              <div className="relative mb-6">
-                <div className="h-20 w-20 rounded-full border-4 border-t-blue-500 border-white/5 animate-spin" />
-                <Cpu className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-9 w-9 text-blue-400 animate-pulse" />
+              <AnimatePresence mode="wait">
+                {prepStep === 0 && (
+                  <motion.div key="p0" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="flex flex-col items-center">
+                    <div className="relative mb-6">
+                      <div className="h-20 w-20 rounded-full border-4 border-t-blue-500 border-white/5 animate-spin" />
+                      <Cpu className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-9 w-9 text-blue-400 animate-pulse" />
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-black text-white uppercase italic tracking-tighter mb-3 bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Preparando la Batalla</h2>
+                    <p className="text-slate-400 max-w-xs text-xs sm:text-sm">AlanMath está diseñando un desafío único para ti. ¡Demuestra tu nivel!</p>
+                  </motion.div>
+                )}
+
+                {prepStep === 1 && (
+                  <motion.div key="p1" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="flex flex-col items-center">
+                    <div className="h-20 w-20 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+                      <Zap className="h-10 w-10 text-amber-400 animate-bounce" />
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-black text-amber-400 uppercase italic tracking-tighter mb-3">¡Roba Créditos!</h2>
+                    <p className="text-slate-300 max-w-xs text-xs sm:text-sm">Si respondes <b>rápido y bien</b>, le robas un crédito automáticamente a tu rival.</p>
+                  </motion.div>
+                )}
+
+                {prepStep === 2 && (
+                  <motion.div key="p2" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="flex flex-col items-center">
+                    <div className="h-20 w-20 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+                      <ShieldAlert className="h-10 w-10 text-red-400 animate-pulse" />
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-black text-red-500 uppercase italic tracking-tighter mb-3">No te Precipites</h2>
+                    <p className="text-slate-300 max-w-xs text-xs sm:text-sm">Si fallas, quedarás <b>bloqueado</b> y tu oponente tendrá tiempo libre para resolver.</p>
+                  </motion.div>
+                )}
+
+                {prepStep === 3 && (
+                  <motion.div key="p3" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="flex flex-col items-center">
+                    <div className="h-20 w-20 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+                      <Brain className="h-10 w-10 text-emerald-400" />
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-black text-emerald-400 uppercase italic tracking-tighter mb-3">AlanMath dice...</h2>
+                    <p className="text-slate-300 max-w-xs text-xs sm:text-sm">"Lee bien la pregunta. La precisión es la madre de la maestría. ¡Tú puedes!"</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
+              <div className="mt-8 flex gap-2">
+                {[0, 1, 2, 3].map(i => (
+                  <div key={i} className={`h-1 rounded-full transition-all duration-500 ${prepStep === i ? 'w-8 bg-blue-500' : 'w-2 bg-white/10'}`} />
+                ))}
               </div>
-              <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-3">Preparando el Campo de Batalla</h2>
-              <p className="text-slate-400 max-w-sm text-sm">¡AlanMath está preparando el duelo! Demuestra quién es el mejor en este desafío.</p>
             </motion.div>
           )}
 
@@ -329,7 +384,7 @@ export function DuelOverlay() {
                       )}
                     </AnimatePresence>
 
-                    <div className="text-base font-bold text-white mb-4 leading-tight text-center"><ContentRenderer content={duel.currentQuestion.content} /></div>
+                    <div className="text-base font-bold text-white mb-4 leading-tight text-center"><ContentRenderer content={duel.currentQuestion.content} tight={true} /></div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {duel.currentQuestion.options.map((option: any) => {
                         const styleClass = getOptionStyle(option);
@@ -344,7 +399,7 @@ export function DuelOverlay() {
                             <div className="h-6 w-6 rounded-lg flex-shrink-0 flex items-center justify-center bg-black/20">
                               {who?.meCorrect || who?.oppCorrect ? <CheckCircle2 className="h-4 w-4" /> : (who?.meWrong || who?.oppWrong) ? <XCircle className="h-4 w-4 text-red-300" /> : <div className="w-1.5 h-1.5 rounded-full bg-white/20" />}
                             </div>
-                            <span className="text-base font-bold flex-1 text-left leading-tight"><ContentRenderer content={option.content} /></span>
+                            <span className="text-base font-bold flex-1 text-left leading-tight"><ContentRenderer content={option.content} tight={true} /></span>
                             {who && (
                               <div className="flex flex-col gap-1 items-end ml-1">
                                 {(who.meCorrect || who.meWrong) && <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${who.meCorrect ? 'bg-blue-500' : 'bg-orange-600'}`}>TÚ</span>}
@@ -439,7 +494,7 @@ export function DuelOverlay() {
                           return (
                             <div key={option.id} className={`relative flex items-center gap-3 py-1.5 px-3 rounded-xl border transition-all ${option.isCorrect ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-100 shadow-[0_0_15px_rgba(16,185,129,0.1)]" : isError ? "bg-red-500/20 border-red-500/40 text-red-100" : "bg-white/5 border-white/5 text-slate-400"}`}>
                               <div className={`h-6 w-6 rounded-lg flex items-center justify-center flex-shrink-0 ${option.isCorrect ? "bg-emerald-500 text-white" : isError ? "bg-red-500 text-white" : "bg-slate-800 text-slate-600"}`}>{option.isCorrect ? <CheckCircle2 className="h-3.5 w-3.5" /> : isError ? <XCircle className="h-3.5 w-3.5" /> : <div className="h-1.5 w-1.5 rounded-full bg-current" />}</div>
-                              <span className="text-base font-bold flex-1 leading-tight"><ContentRenderer content={option.content} /></span>
+                              <span className="text-base font-bold flex-1 leading-tight"><ContentRenderer content={option.content} tight={true} /></span>
                               <div className="flex gap-1">{option.selections && option.selections.map((sel: any) => <Badge key={sel.userId} className={`px-2 py-0.5 text-[10px] uppercase font-black tracking-tighter rounded-full ${sel.userId === myId ? "bg-blue-500 text-white" : "bg-yellow-500 text-slate-900"}`}>{sel.userId === myId ? "TÚ" : sel.username}</Badge>)}</div>
                             </div>
                           );
@@ -448,10 +503,25 @@ export function DuelOverlay() {
                   </div>
                 ) : <div className="py-20 text-center"><Loader2 className="h-10 w-10 text-slate-700 animate-spin mx-auto mb-4" /><p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Sin historial disponible</p></div>}
               </div>
-              <div className="p-4 bg-slate-900 border-t border-white/5 flex flex-col gap-2">
+              <div className="p-4 bg-slate-900 border-t border-white/10 flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-3">
-                    <Button variant="outline" disabled={reviewIndex === 0} onClick={() => setReviewIndex(reviewIndex - 1)} className="flex-1 bg-slate-800 h-10 rounded-xl text-sm font-bold">ANTERIOR</Button>
-                    <Button variant="outline" disabled={reviewIndex === (duel.history?.length || 0) - 1} onClick={() => setReviewIndex(reviewIndex + 1)} className="flex-1 bg-slate-800 h-10 rounded-xl text-sm font-bold">SIGUIENTE</Button>
+                    <Button 
+                      variant="outline" 
+                      disabled={reviewIndex === 0} 
+                      onClick={() => setReviewIndex(reviewIndex - 1)} 
+                      className="flex-1 bg-slate-800 border-white/10 text-white hover:bg-slate-700 h-11 rounded-xl text-xs font-black tracking-widest transition-all"
+                    >
+                      <ChevronLeft className="mr-2 h-4 w-4" />
+                      ANTERIOR
+                    </Button>
+                    <Button 
+                      disabled={reviewIndex === (duel.history?.length || 0) - 1} 
+                      onClick={() => setReviewIndex(reviewIndex + 1)} 
+                      className="flex-1 bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 h-11 rounded-xl text-xs font-black tracking-widest transition-all active:scale-95"
+                    >
+                      SIGUIENTE
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => setIsReviewing(false)} className="w-full text-slate-500 font-bold uppercase text-[9px] tracking-widest">VOLVER A RESULTADOS</Button>
               </div>

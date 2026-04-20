@@ -26,6 +26,9 @@ export default defineConfig({
         ]
       : []),
   ],
+  define: {
+    'import.meta.env.VITE_BUILD_ID': JSON.stringify(Date.now().toString()),
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "client/src"),

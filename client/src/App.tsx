@@ -62,6 +62,7 @@ import { DuelOverlay } from "@/components/social/DuelOverlay";
 import { ChallengeDialog } from "@/components/social/ChallengeDialog";
 import { FloatingChat } from "@/components/chat/FloatingChat";
 import { FloatingWhatsApp } from "@/components/ui/FloatingWhatsApp";
+import { VersionMonitor } from "@/components/layout/VersionMonitor";
 
 
 //Protectroute que permite el ingreso a cuestionarios publicos:
@@ -433,6 +434,7 @@ function App() {
           message="Hola, me gustaría saber más sobre las clases y servicios de AlanMath."
           tooltip="Soporte y Clases"
         />
+        <VersionMonitor />
       </DuelProvider>
     </QueryClientProvider>
   );

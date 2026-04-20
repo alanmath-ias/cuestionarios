@@ -6,10 +6,16 @@ interface MathDisplayProps {
   math: string;
   display?: boolean;
   className?: string;
-  inline?: boolean; // Agrega la propiedad inline como opcional
+  inline?: boolean; 
+  marginClassName?: string; // Propiedad opcional para controlar el margen
 }
 
-export function MathDisplay({ math, display = false, className = '' }: MathDisplayProps) {
+export function MathDisplay({ 
+  math, 
+  display = false, 
+  className = '', 
+  marginClassName = 'my-4' // Por defecto mantenemos el original
+}: MathDisplayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,7 +38,7 @@ export function MathDisplay({ math, display = false, className = '' }: MathDispl
   return (
     <div
       ref={containerRef}
-      className={`math ${display ? 'block my-4' : 'inline'} ${className}`}
+      className={`math ${display ? `block ${marginClassName}` : 'inline'} ${className}`}
     />
   );
 }

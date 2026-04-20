@@ -4,14 +4,16 @@ import { MathDisplay } from '@/components/ui/math-display';
 interface ContentRendererProps {
     content: string;
     className?: string;
+    tight?: boolean; // Nueva propiedad para modo compacto
 }
 
-export const ContentRenderer = React.memo(function ContentRenderer({ content, className }: ContentRendererProps) {
-    // Split by ¡...¡, ¡¡...¡¡, $...$, or $$...$$ to handle math content
-    const parts = content.split(/((?:¡+|\\?\$+).*?(?:¡+|\\?\$+))/g);
+export const ContentRenderer = React.memo(function ContentRenderer({ content, className, tight = false }: ContentRendererProps) {
+    // Solo normalizamos saltos de línea si el modo 'tight' está activo
+    const normalizedContent = tight ? content.replace(/\n\n+/g, '\n') : content;
+    const parts = normalizedContent.split(/((?:¡+|\\?\$+).*?(?:¡+|\\?\$+))/g);
 
     return (
-        <div className={className}>
+        <div className={`content-renderer ${tight ? 'leading-tight' : 'leading-relaxed'} ${className}`}>
             {parts.map((part, index) => {
                 const trimmedPart = part.trim();
                 // Check if the part is wrapped in delimiters
@@ -27,6 +29,7 @@ export const ContentRenderer = React.memo(function ContentRenderer({ content, cl
                                     math={equation.trim()}
                                     display={startDelim.length >= 2 || startDelim.includes('$$')}
                                     className="inline-block"
+                                    marginClassName={tight ? 'my-1' : 'my-4'}
                                 />
                             </span>
                         );
