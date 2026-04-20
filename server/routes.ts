@@ -1368,11 +1368,41 @@ Tono: Alentador, profesional y educativo.`;
   apiRouter.post("/social/request", requireAuth, async (req: Request, res: Response) => {
     const { friendId } = req.body;
     if (!friendId) return res.status(400).json({ message: "ID del amigo requerido" });
+    
+    const targetId = parseInt(friendId);
+    const userId = req.session.userId!;
+
     try {
-      await storage.sendFriendRequest(req.session.userId!, parseInt(friendId));
+      // 1. Verificar si ya existe una solicitud inversa (de friendId hacia userId)
+      //    Si existe, la aceptamos automáticamente en lugar de crear una nueva.
+      const friendshipsList = await storage.getFriendships(userId);
+      const reverseRequest = friendshipsList.find(f => 
+        f.userId === targetId && f.friendId === userId && f.status === 'pending'
+      );
+
+      if (reverseRequest) {
+        console.log(`[SOCIAL] Auto-accepting request from ${targetId} to ${userId}`);
+        await storage.acceptFriendRequest(reverseRequest.id);
+        
+        if (DuelServer.instance) {
+          DuelServer.instance.broadcastToUser(userId, { type: 'social:refresh' });
+          DuelServer.instance.broadcastToUser(targetId, { type: 'social:refresh' });
+        }
+        return res.json({ message: "¡Ahora son amigos!", accepted: true });
+      }
+
+      // 2. Si no hay solicitud inversa, enviamos una normal
+      await storage.sendFriendRequest(userId, targetId);
+      
+      // Notificar al destinatario mediante WebSocket si está online
+      if (DuelServer.instance) {
+        DuelServer.instance.broadcastToUser(targetId, { type: 'social:refresh' });
+      }
+
       res.json({ message: "Solicitud de amistad enviada" });
-    } catch (error) {
-      res.status(500).json({ message: "Error al enviar solicitud" });
+    } catch (error: any) {
+      console.error("Error in social/request:", error);
+      res.status(500).json({ message: error.message || "Error al enviar solicitud" });
     }
   });
 

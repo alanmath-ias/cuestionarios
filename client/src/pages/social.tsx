@@ -59,7 +59,7 @@ export default function SocialPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: user } = useQuery({ queryKey: ["/api/user"] });
+  const { data: user } = useQuery<any>({ queryKey: ["/api/user"] });
   const { data: friends = [], isLoading: loadingFriends } = useQuery<any[]>({
     queryKey: ["/api/social/friends"],
   });
@@ -99,6 +99,7 @@ export default function SocialPage() {
       toast({ title: "Solicitud enviada", description: "Espera a que tu amigo la acepte." });
       queryClient.invalidateQueries({ queryKey: ["/api/social/friendships"] });
       queryClient.invalidateQueries({ queryKey: ["/api/social/pending-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/search"] });
     },
     onError: (error: Error) => {
       toast({ 
@@ -259,9 +260,9 @@ export default function SocialPage() {
                       key={req.friendshipId} 
                       user={req.sender} 
                       type="request"
-                      onAccept={(e: any) => { e.stopPropagation(); acceptRequestMutation.mutate(req.friendshipId); }}
-                      onReject={(e: any) => { e.stopPropagation(); rejectRequestMutation.mutate(req.friendshipId); }}
-                      onBlock={(e: any) => { e.stopPropagation(); blockMutation.mutate(req.sender.id); }}
+                      onAccept={() => acceptRequestMutation.mutate(req.friendshipId)}
+                      onReject={() => rejectRequestMutation.mutate(req.friendshipId)}
+                      onBlock={() => blockMutation.mutate(req.sender.id)}
                       onProfile={() => setSelectedProfileId(req.sender.id)}
                     />
                   ))}
@@ -296,9 +297,9 @@ export default function SocialPage() {
                           key={u.id} 
                           user={u} 
                           type="search" 
-                          onAdd={(e: any) => { e.stopPropagation(); sendRequestMutation.mutate(u.id); }}
-                          onBlock={(e: any) => { e.stopPropagation(); blockMutation.mutate(u.id); }}
-                          onUnblock={(e: any) => { e.stopPropagation(); unblockMutation.mutate(u.id); }}
+                          onAdd={() => sendRequestMutation.mutate(u.id)}
+                          onBlock={() => blockMutation.mutate(u.id)}
+                          onUnblock={() => unblockMutation.mutate(u.id)}
                           onProfile={() => setSelectedProfileId(u.id)}
                           disabled={isFriend || isPending}
                           status={relationship?.status || 'none'}
