@@ -1124,7 +1124,15 @@ export class DuelServer {
           payload: {
               challengeId,
               questionsCount: questionsList.length,
-              topic: room.topic || "Cuestionario"
+              topic: room.topic || "Cuestionario",
+              players: Array.from(room.players.values()).map(p => ({
+                  userId: p.userId,
+                  username: p.username,
+                  status: p.status,
+                  score: p.score,
+                  pointsHandicap: p.pointsHandicap,
+                  timeHandicap: p.timeHandicap
+              }))
           }
       };
 

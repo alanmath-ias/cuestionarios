@@ -317,8 +317,8 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
               questionsCount: payload.questionsCount,
               topic: payload.topic,
               currentQuestion: { index: 0, content: '', options: [] },
-              players: [],
-              scores: {}
+              players: payload.players || [],
+              scores: payload.players?.reduce((acc: any, p: any) => ({ ...acc, [p.userId]: p.score }), {}) || {}
           });
           break;
       case 'managed:question':
