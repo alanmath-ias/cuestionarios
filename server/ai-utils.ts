@@ -63,15 +63,14 @@ REQUISITOS TÉCNICOS:
     3. NUNCA uses el símbolo $ para fórmulas matemáticas.
     4. Usa únicamente el símbolo de EURO (€) si se requiere una unidad monetaria.
     5. No mezcles palabras y números dentro de los delimitadores ¡¡ (ejemplo incorrecto: ¡¡3 Euros¡¡, correcto: ¡¡3¡¡ Euros o ¡¡3¡¡ ¡¡Euros¡¡).
-    6. Cada pregunta debe tener 4 opciones y solo una debe ser la correcta.
-    7. Las explicaciones deben ser claras y en español.
     
     Genera ${questionCount} preguntas en formato JSON.
-4. Todas las preguntas deben ser de tipo 'multiple_choice' con exactamente 4 opciones.
-5. El lenguaje debe ser claro, educativo y en español.
-6. Las opciones de respuesta deben estar bien pensadas (incluye distractores comunes).
-7. Incluye una breve explicación pedagógica de la respuesta correcta (máximo 2 líneas).
-8. Prioriza ejercicios técnicos directos. Evita enunciados extensos, historias o contextos innecesarios.
+6.  **ALEATORIZACIÓN CRÍTICA**: La posición de la respuesta correcta (isCorrect: true) DEBE SER ALEATORIA para cada pregunta (no siempre la primera, ni siempre la misma posición).
+7.  Todas las preguntas deben ser de tipo 'multiple_choice' con exactamente 4 opciones.
+8.  El lenguaje debe ser claro, educativo y en español.
+9.  Las opciones de respuesta deben estar bien pensadas (incluye distractores comunes).
+10. Incluye una breve explicación pedagógica de la respuesta correcta (máximo 2 líneas).
+11. Prioriza ejercicios técnicos directos. Evita enunciados extensos, historias o contextos innecesarios.
 
 DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
 {
@@ -82,10 +81,10 @@ DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
       "content": "Texto de la pregunta...",
       "explanation": "Explicación de por qué la respuesta es correcta...",
       "options": [
-        { "text": "Opción 1", "isCorrect": true },
-        { "text": "Opción 2", "isCorrect": false },
-        { "text": "Opción 3", "isCorrect": false },
-        { "text": "Opción 4", "isCorrect": false }
+        { "text": "Distractor 1", "isCorrect": false },
+        { "text": "Distractor 2", "isCorrect": false },
+        { "text": "Respuesta Correcta", "isCorrect": true },
+        { "text": "Distractor 3", "isCorrect": false }
       ]
     }
   ]
@@ -109,7 +108,7 @@ DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.4,
+        temperature: 0.5,
         max_tokens: 4000,
         response_format: { type: 'json_object' }
       }),

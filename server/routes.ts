@@ -947,8 +947,11 @@ Tono: Alentador, profesional y educativo.`;
             explanation: q.explanation || null
           }).returning();
 
+          // BARAJAR OPCIONES (Fail-safe contra sesgo de la IA)
+          const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+
           await tx.insert(answers).values(
-            q.options.map((opt: any) => ({
+            shuffledOptions.map((opt: any) => ({
               questionId: createdQuestion.id,
               content: opt.text || opt.content,
               isCorrect: opt.isCorrect

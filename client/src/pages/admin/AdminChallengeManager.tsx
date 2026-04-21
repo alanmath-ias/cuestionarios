@@ -481,7 +481,7 @@ export default function AdminChallengeManager() {
                                                                     p.status === 'abandoned' ? 'bg-red-500 ring-red-500/20' : 'bg-slate-700 ring-slate-700/20 animate-pulse'
                                                                 }`} />
                                                             <div>
-                                                                <p className="font-black text-lg text-white tracking-tight">{p.username}</p>
+                                                                <p className="font-medium text-lg text-white tracking-tight">{p.username}</p>
                                                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                                                     {p.status === 'ready' ? 'LISTO' : p.status === 'abandoned' ? 'ABANDONÓ' : 'ESPERANDO...'}
                                                                 </p>

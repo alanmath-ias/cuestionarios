@@ -411,10 +411,12 @@ export class DuelServer {
             explanation: q.explanation
           }).returning();
           
+          const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+          
           const createdAnswers = await tx.insert(answers).values(
-            q.options.map((opt: any) => ({
+            shuffledOptions.map((opt: any) => ({
               questionId: createdQ.id,
-              content: opt.text,
+              content: opt.text || opt.content,
               isCorrect: opt.isCorrect
             }))
           ).returning();
@@ -1106,7 +1108,11 @@ export class DuelServer {
               difficulty: "medium",
               questionCount: 8
           });
-          questionsList = quizData.questions;
+          // BARAJAR OPCIONES
+          questionsList = quizData.questions.map((q: any) => ({
+              ...q,
+              options: [...q.options].sort(() => Math.random() - 0.5)
+          }));
       }
 
       room.questions = questionsList;
