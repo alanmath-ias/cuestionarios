@@ -411,12 +411,12 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
       {type === "friend" && (user.wins > 0 || user.losses > 0) && (
         <div className="hidden sm:flex items-center gap-4 mx-6 px-4 py-1.5 bg-slate-950/30 border border-white/5 rounded-xl group-hover:bg-slate-950/50 transition-colors">
           <div className="flex flex-col items-center">
-            <span className="text-[7px] font-black text-emerald-500 uppercase tracking-tighter">Ganes</span>
+            <span className="text-[7px] font-black text-emerald-500 uppercase tracking-tighter">Victorias</span>
             <span className="text-sm font-black text-emerald-400 italic leading-none">{user.wins}V</span>
           </div>
           <div className="h-4 w-px bg-white/5" />
           <div className="flex flex-col items-center">
-            <span className="text-[7px] font-black text-rose-500 uppercase tracking-tighter">Pérdidas</span>
+            <span className="text-[7px] font-black text-rose-500 uppercase tracking-tighter">Derrotas</span>
             <span className="text-sm font-black text-rose-400 italic leading-none">{user.losses}D</span>
           </div>
         </div>

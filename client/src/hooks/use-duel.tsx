@@ -11,7 +11,7 @@ interface DuelMessage {
 interface DuelContextType {
   duel: any;
   invite: any;
-  sendChallenge: (receiverId: number, wager: number, topic?: string, isRevenge?: boolean, handicap?: any) => void;
+  sendChallenge: (receiverId: number, wager: number, topic?: string, isRevenge?: boolean, handicap?: any, receiverName?: string) => void;
   respondToInvite: (duelId: number, action: 'accept' | 'reject' | 'counter', wager?: number, handicap?: any) => void;
   submitAnswer: (duelId: number, questionIndex: number, answerId: number) => void;
   sendMessage: (receiverId: number, content: string) => void;
@@ -37,6 +37,11 @@ interface DuelContextType {
   leaveResults: (duelId: number) => void;
   activeDuels: any[];
   spectateDuel: (duelId: number) => void;
+  sentChallengeInfo: any | null;
+  setSentChallengeInfo: (info: any | null) => void;
+  isResponding: boolean;
+  speedBonus: boolean;
+  setSpeedBonus: (val: boolean) => void;
 }
 
 const DuelContext = createContext<DuelContextType | null>(null);
@@ -54,6 +59,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
   const [sentChallenges, setSentChallenges] = useState<Set<number>>(new Set());
   const [isPreparing, setIsPreparing] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Set<number>>(new Set());
+  const [speedBonus, setSpeedBonus] = useState<boolean>(false);
   
   // High-level Challenge Dialog State
   const [challengingUser, setChallengingUser] = useState<{ id: number; name: string } | null>(null);
@@ -62,6 +68,8 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
   const [challengeHandicap, setChallengeHandicap] = useState<{ type: 'points' | 'time' | 'none', value: number, targetId: number | null }>({ type: 'none', value: 0, targetId: null });
   const [isRevengeMode, setIsRevengeMode] = useState(false);
   const [activeDuels, setActiveDuels] = useState<any[]>([]);
+  const [sentChallengeInfo, setSentChallengeInfo] = useState<any | null>(null);
+  const [isResponding, setIsResponding] = useState(false);
 
   const reconnectTimeout = useRef<any>(null);
 
@@ -130,7 +138,9 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         break;
       case 'duel:start':
         setIsPreparing(false);
+        setIsResponding(false);
         setInvite(null); // Ensure invite banner is gone before setting new duel
+        setSentChallengeInfo(null); // Clear waiting state
         setDuel({
           status: 'in_progress',
           duelId: payload.duelId,
@@ -148,6 +158,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         break;
       case 'duel:question':
         setIsPreparing(false);
+        setSpeedBonus(false); // Reset speed bonus flag for new round
         setDuel((prev: any) => prev ? { 
             ...prev, 
             currentQuestion: payload,
@@ -188,6 +199,11 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
                 isCorrect: true 
             } 
         }));
+
+        if (payload.speedBonus) {
+            setSpeedBonus(true);
+            setTimeout(() => setSpeedBonus(false), 3500);
+        }
         break;
       case 'duel:end':
         setDuel((prev: any) => ({ 
@@ -202,6 +218,8 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         break;
       case 'duel:error':
         setIsPreparing(false);
+        setIsResponding(false);
+        setSentChallengeInfo(null);
         toast({
           title: "Error en el duelo",
           description: payload.message,
@@ -209,8 +227,11 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         });
         break;
       case 'duel:rejected':
-          toast({ title: "Reto rechazado", description: "El oponente no aceptó el duelo." });
+          toast({ title: "Reto rechazado", description: "El desafío ha sido cancelado o rechazado." });
           setDuel(null);
+          setSentChallengeInfo(null);
+          setInvite(null);
+          setIsResponding(false);
           // Remove from sent challenges
           if (payload.receiverId) {
              setSentChallenges(prev => {
@@ -223,6 +244,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
       case 'duel:countered':
           // The other user wants to negotiate
           setDuel(null); // Safety
+          setIsResponding(false);
           setInvite((prev: any) => ({
               ...(prev || {}),
               duelId: payload.duelId,
@@ -270,18 +292,36 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const sendChallenge = (receiverId: number, wager: number, topic?: string, isRevenge?: boolean, handicap?: any) => {
+  const sendChallenge = async (receiverId: number, wager: number, topic?: string, isRevenge?: boolean, handicap?: any, receiverName?: string) => {
+    // Clear any stale duel results first so the waiting card shows
+    setDuel(null);
+    setInvite(null);
+
+    // Optimistic set for immediate UI feedback.
+    
     socket?.send(JSON.stringify({ type: 'duel:challenge', payload: { receiverId, wager, topic, isRevenge, handicap } }));
     setSentChallenges(prev => new Set(prev).add(receiverId));
-    toast({ 
-        title: isRevenge ? "Revancha enviada" : "Reto enviado", 
-        description: "Esperando respuesta de tu amigo..." 
+    
+    // Set informative state for the waiting screen
+    setSentChallengeInfo({
+        receiverId,
+        receiverName: receiverName || "tu amigo",
+        wager,
+        topic: topic || "Matemáticas Generales",
+        handicap,
+        isRevenge
     });
+
+    // We don't show toast anymore as we show the big card
   };
 
   const respondToInvite = (duelId: number, action: 'accept' | 'reject' | 'counter', wager?: number, handicap?: any) => {
+    setIsResponding(true);
     socket?.send(JSON.stringify({ type: 'duel:respond', payload: { duelId, action, wager, handicap } }));
-    if (action !== 'counter') setInvite(null);
+    if (action !== 'counter') {
+        setInvite(null);
+        setSentChallengeInfo(null);
+    }
   };
 
   const submitAnswer = (duelId: number, questionIndex: number, answerId: number) => {
@@ -300,14 +340,15 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
   }, [queryClient]);
 
   const resetDuel = useCallback(() => {
-    if (duel?.duelId) {
+    if (duel?.duelId && !duel.isSpectator) {
         socket?.send(JSON.stringify({ type: 'duel:abandon', payload: { duelId: duel.duelId } }));
     } else if (invite?.duelId) {
         socket?.send(JSON.stringify({ type: 'duel:abandon', payload: { duelId: invite.duelId } }));
     }
     setDuel(null);
     setInvite(null);
-  }, [socket, duel?.duelId, invite?.duelId]);
+    setSentChallengeInfo(null);
+  }, [socket, duel?.duelId, duel?.isSpectator, invite?.duelId]);
   
   const leaveResults = useCallback((duelId: number) => {
     socket?.send(JSON.stringify({ type: 'duel:leave_results', payload: { duelId } }));
@@ -350,13 +391,19 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     resetDuel,
     leaveResults,
     activeDuels,
-    spectateDuel
+    spectateDuel,
+    sentChallengeInfo,
+    setSentChallengeInfo,
+    isResponding,
+    speedBonus,
+    setSpeedBonus
   }), [
     duel, invite, sendChallenge, respondToInvite, submitAnswer, 
     sendMessage, lastChatMessage, isConnected, sentChallenges, 
     isPreparing, onlineUsers, challengingUser, challengeWager, 
     challengeTopic, challengeHandicap, isRevengeMode, refreshStats, resetDuel, 
-    leaveResults, activeDuels, spectateDuel
+    leaveResults, activeDuels, spectateDuel, sentChallengeInfo, isResponding,
+    speedBonus
   ]);
 
   return (

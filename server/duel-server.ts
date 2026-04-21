@@ -267,7 +267,9 @@ export class DuelServer {
 
     if (action === 'reject') {
       await db.update(duels).set({ status: 'cancelled' }).where(eq(duels.id, duelId));
-      this.sendToUser(duelRecord.challengerId, { type: 'duel:rejected', payload: { duelId, receiverId: duelRecord.receiverId } });
+      const message = { type: 'duel:rejected', payload: { duelId, receiverId: duelRecord.receiverId } };
+      this.sendToUser(duelRecord.challengerId, message);
+      this.sendToUser(duelRecord.receiverId, message);
     } else if (action === 'counter') {
       await db.update(duels).set({ 
         wager: wager !== undefined ? wager : duelRecord.wager,
@@ -578,7 +580,7 @@ export class DuelServer {
     }
   }
 
-  private async finishDuel(duelId: number) {
+  private async finishDuel(duelId: number, forcedWinnerId?: number) {
     if (this.duelTimers.has(duelId)) {
         clearTimeout(this.duelTimers.get(duelId)!);
         this.duelTimers.delete(duelId);
@@ -589,10 +591,12 @@ export class DuelServer {
 
     const s1 = room.scores[room.challenger.userId];
     const s2 = room.scores[room.receiver.userId];
-    let winnerId = null;
+    let winnerId = forcedWinnerId || null;
     
-    if (s1 > s2) winnerId = room.challenger.userId;
-    else if (s2 > s1) winnerId = room.receiver.userId;
+    if (!forcedWinnerId) {
+        if (s1 > s2) winnerId = room.challenger.userId;
+        else if (s2 > s1) winnerId = room.receiver.userId;
+    }
 
     // Transactional Credit and Stats Update
     await db.transaction(async (tx) => {
@@ -682,19 +686,31 @@ export class DuelServer {
     const { duelId } = payload;
     const room = this.activeDuels.get(duelId);
     
-    // 1. Mark in DB as cancelled if it was still active/negotiating
-    await db.update(duels).set({ status: 'cancelled' }).where(or(eq(duels.id, duelId), eq(duels.status, 'negotiating')));
-
     if (room) {
-        console.log(`👋 [ABANDON] User ${userId} abandoned duel ${duelId}. Cleaning up.`);
+        // If it's just a spectator leaving, don't destroy the room or notify players
+        const userSocket = this.userSockets.get(userId);
+        if (userSocket && room.spectators.has(userSocket)) {
+            room.spectators.delete(userSocket);
+            console.log(`👁️ [SPECTATE] Admin ${userId} stopped spectating room ${duelId}`);
+            return;
+        }
+
+        console.log(`👋 [ABANDON] User ${userId} abandoned duel ${duelId}.`);
+
+        if (room.status === 'in_progress') {
+            const winnerId = userId === room.challenger.userId ? room.receiver.userId : room.challenger.userId;
+            console.log(`🏳️ [FORCED WIN] Awarding victory to ${winnerId} because ${userId} left.`);
+            await this.finishDuel(duelId, winnerId);
+            return;
+        }
         
-        // Notify other player that it's cancelled/finished
+        await db.update(duels).set({ status: 'cancelled' }).where(eq(duels.id, duelId));
+        
         this.broadcastToDuel(duelId, { 
             type: 'duel:error', 
             payload: { message: 'El oponente ha abandonado el duelo.' } 
         });
         
-        // Cleanup room from memory
         room.status = 'finished';
         this.activeDuels.delete(duelId);
         this.broadcastDuelListToAdmins();

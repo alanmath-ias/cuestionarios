@@ -56,7 +56,7 @@ export function ChallengeDialog() {
       };
     }
 
-    sendChallenge(challengingUser.id, challengeWager, challengeTopic, isRevengeMode, handicapPayload);
+    sendChallenge(challengingUser.id, challengeWager, challengeTopic, isRevengeMode, handicapPayload, challengingUser.name);
     setChallengingUser(null);
     setChallengeTopic("");
     setChallengeHandicap({ type: 'none', value: 0, targetId: null });
