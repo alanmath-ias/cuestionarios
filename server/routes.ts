@@ -1036,11 +1036,10 @@ Tono: Alentador, profesional y educativo.`;
     }
   });
 
-  // Get all users (Admin only)
-  apiRouter.get("/users", requireAdmin, async (req: Request, res: Response) => {
+  // Get all users (Admin only) - Legacy and New Aliases
+  const getAllUsersHandler = async (req: Request, res: Response) => {
     try {
       const users = await storage.getUsers();
-      // Return users without passwords
       const safeUsers = users.map(user => {
         const { password: _, ...userWithoutPassword } = user;
         return userWithoutPassword;
@@ -1050,7 +1049,10 @@ Tono: Alentador, profesional y educativo.`;
       console.error("Error fetching users:", error);
       res.status(500).json({ message: "Error fetching users" });
     }
-  });
+  };
+
+  apiRouter.get("/users", requireAdmin, getAllUsersHandler);
+  apiRouter.get("/admin/users", requireAdmin, getAllUsersHandler);
 
   // Promote AI Quiz to official roadmap (Admin only)
   apiRouter.patch("/admin/quizzes/:id/promote", requireAdmin, async (req: Request, res: Response) => {

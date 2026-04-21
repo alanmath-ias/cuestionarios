@@ -19,6 +19,7 @@ import UsersAdmin from "@/pages/admin/users";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import HistoryPage from "@/pages/history";
 import SocialPage from "@/pages/social";
+import AdminChallengeManager from "@/pages/admin/AdminChallengeManager";
 import { PageLayout } from "@/components/layout/page-layout";
 import { useQuery } from "@tanstack/react-query";
 import { User } from "@/types/types";
@@ -356,6 +357,9 @@ function Router() {
       </Route>
       <Route path="/admin/send-email">
         {() => <AdminProtectedRoute component={SendEmail} path="/admin/send-email" />}
+      </Route>
+      <Route path="/admin/challenge-manager">
+        {() => <AdminProtectedRoute component={AdminChallengeManager} path="/admin/challenge-manager" />}
       </Route>
 
       <Route path="/admin/AdminDashboard">

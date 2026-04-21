@@ -10,7 +10,9 @@ import {
   passwordResetTokens, PasswordResetToken, InsertPasswordResetToken,
   friendships, Friendship, InsertFriendship,
   notifications, Notification, InsertNotification,
-  messages, Message, InsertMessage
+  messages, Message, InsertMessage,
+  managedChallenges, ManagedChallenge, InsertManagedChallenge,
+  managedChallengeParticipants, ManagedChallengeParticipant, InsertManagedChallengeParticipant
 } from "../shared/schema.js";
 import { db } from './db.js';
 import { Child } from '../shared/quiz-types.js';
@@ -183,6 +185,17 @@ export interface IStorage {
   cleanupOldMessages(): Promise<void>;
   getUnreadMessageCount(userId: number): Promise<number>;
   cleanupArenaQuizzes(): Promise<void>;
+  
+  // Managed Challenge methods
+  createManagedChallenge(challenge: InsertManagedChallenge): Promise<ManagedChallenge>;
+  getManagedChallenge(id: number): Promise<ManagedChallenge | undefined>;
+  updateManagedChallenge(id: number, data: Partial<ManagedChallenge>): Promise<ManagedChallenge>;
+  getManagedChallengesByAdmin(adminId: number): Promise<ManagedChallenge[]>;
+  addParticipantToChallenge(participant: InsertManagedChallengeParticipant): Promise<ManagedChallengeParticipant>;
+  getParticipantsByChallenge(challengeId: number): Promise<any[]>;
+  updateParticipantStatus(participantId: number, status: string): Promise<void>;
+  updateParticipantScore(challengeId: number, userId: number, score: number): Promise<void>;
+  getManagedChallengeWithParticipants(id: number): Promise<any>;
 }
 
 export class MemStorage implements IStorage {
@@ -201,6 +214,8 @@ export class MemStorage implements IStorage {
   private answerId: number;
   private progressId: number;
   private studentAnswerId: number;
+  private managedChallengeId: number;
+  private participantId: number;
 
   constructor() {
     this.users = new Map();
@@ -218,6 +233,8 @@ export class MemStorage implements IStorage {
     this.answerId = 1;
     this.progressId = 1;
     this.studentAnswerId = 1;
+    this.managedChallengeId = 1;
+    this.participantId = 1;
 
     // Initialize with sample data
     this.initializeData();
@@ -794,6 +811,17 @@ export class MemStorage implements IStorage {
   }
   async updateQuestionHints(questionId: number, hints: any): Promise<void> { }
   async updateUserTourStatus(userId: number, tourType: string): Promise<void> { }
+
+  // Managed Challenge Methods (Stub)
+  async createManagedChallenge(challenge: InsertManagedChallenge): Promise<ManagedChallenge> { throw new Error("Method not implemented."); }
+  async getManagedChallenge(id: number): Promise<ManagedChallenge | undefined> { return undefined; }
+  async updateManagedChallenge(id: number, data: Partial<ManagedChallenge>): Promise<ManagedChallenge> { throw new Error("Method not implemented."); }
+  async getManagedChallengesByAdmin(adminId: number): Promise<ManagedChallenge[]> { return []; }
+  async addParticipantToChallenge(participant: InsertManagedChallengeParticipant): Promise<ManagedChallengeParticipant> { throw new Error("Method not implemented."); }
+  async getParticipantsByChallenge(challengeId: number): Promise<any[]> { return []; }
+  async updateParticipantStatus(participantId: number, status: string): Promise<void> { }
+  async updateParticipantScore(challengeId: number, userId: number, score: number): Promise<void> { }
+  async getManagedChallengeWithParticipants(id: number): Promise<any> { return null; }
 
   // Question Reports
   async createQuestionReport(report: InsertQuestionReport): Promise<QuestionReport> { throw new Error("Method not implemented."); }

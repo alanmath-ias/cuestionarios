@@ -11,8 +11,12 @@ import {
   passwordResetTokens, type PasswordResetToken, type InsertPasswordResetToken,
   chiquiResults, chiquiHistory, trainingResults, trainingHistory,
   type TrainingResult, type InsertTrainingResult, type TrainingHistory, type InsertTrainingHistory,
-  friendships, notifications, duels, type Friendship, type Notification,
-  messages, type Message, type InsertMessage
+  notifications, type Notification, notificationsRelations,
+  duels, friendships,
+  messages, type Message, type InsertMessage,
+  managedChallenges, managedChallengeParticipants,
+  type ManagedChallenge, type InsertManagedChallenge,
+  type ManagedChallengeParticipant, type InsertManagedChallengeParticipant
 } from "../shared/schema.js";
 
 import { db, DbClient } from "./db.js";
@@ -1971,14 +1975,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async synchronizeSequences(): Promise<void> {
-    const tables = [
-      'users', 'categories', 'subcategories', 'quizzes', 'questions',
-      'answers', 'student_progress', 'student_answers', 'quiz_feedback',
-      'user_categories', 'friendships', 'notifications'
-    ];
+    try {
+      const tables = [
+        'users', 'categories', 'subcategories', 'quizzes', 'questions', 'answers',
+        'student_progress', 'student_answers', 'quiz_feedback', 'friendships',
+        'notifications', 'duels', 'messages', 'managed_challenges', 'managed_challenge_participants'
+      ];
 
-    for (const table of tables) {
-      try {
+      for (const table of tables) {
         await this.db.execute(sql`
           SELECT setval(
             pg_get_serial_sequence(${table}, 'id'),
@@ -1986,10 +1990,84 @@ export class DatabaseStorage implements IStorage {
             false
           )
         `);
-      } catch (error) {
-        console.error(`Error syncing sequence for table ${table}:`, error);
       }
+    } catch (error) {
+      console.error("Error synchronizing sequences:", error);
     }
+  }
+
+  // Managed Challenge Methods
+  async createManagedChallenge(challenge: InsertManagedChallenge): Promise<ManagedChallenge> {
+    const [result] = await this.db.insert(managedChallenges).values(challenge).returning();
+    return result;
+  }
+
+  async getManagedChallenge(id: number): Promise<ManagedChallenge | undefined> {
+    const [result] = await this.db.select().from(managedChallenges).where(eq(managedChallenges.id, id));
+    return result;
+  }
+
+  async updateManagedChallenge(id: number, data: Partial<ManagedChallenge>): Promise<ManagedChallenge> {
+    const [result] = await this.db.update(managedChallenges)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(managedChallenges.id, id))
+      .returning();
+    return result;
+  }
+
+  async getManagedChallengesByAdmin(adminId: number): Promise<ManagedChallenge[]> {
+    return this.db.select().from(managedChallenges)
+      .where(eq(managedChallenges.adminId, adminId))
+      .orderBy(desc(managedChallenges.createdAt));
+  }
+
+  async addParticipantToChallenge(participant: InsertManagedChallengeParticipant): Promise<ManagedChallengeParticipant> {
+    const [result] = await this.db.insert(managedChallengeParticipants).values(participant).returning();
+    return result;
+  }
+
+  async getParticipantsByChallenge(challengeId: number): Promise<any[]> {
+    return this.db.select({
+      id: managedChallengeParticipants.id,
+      challengeId: managedChallengeParticipants.challengeId,
+      userId: managedChallengeParticipants.userId,
+      status: managedChallengeParticipants.status,
+      score: managedChallengeParticipants.score,
+      rank: managedChallengeParticipants.rank,
+      pointsHandicap: managedChallengeParticipants.pointsHandicap,
+      timeHandicap: managedChallengeParticipants.timeHandicap,
+      finishedAt: managedChallengeParticipants.finishedAt,
+      user: {
+        id: users.id,
+        name: users.name,
+        username: users.username
+      }
+    })
+      .from(managedChallengeParticipants)
+      .innerJoin(users, eq(managedChallengeParticipants.userId, users.id))
+      .where(eq(managedChallengeParticipants.challengeId, challengeId));
+  }
+
+  async updateParticipantStatus(participantId: number, status: string): Promise<void> {
+    await this.db.update(managedChallengeParticipants)
+      .set({ status })
+      .where(eq(managedChallengeParticipants.id, participantId));
+  }
+
+  async updateParticipantScore(challengeId: number, userId: number, score: number): Promise<void> {
+    await this.db.update(managedChallengeParticipants)
+      .set({ score, finishedAt: new Date() })
+      .where(and(
+        eq(managedChallengeParticipants.challengeId, challengeId),
+        eq(managedChallengeParticipants.userId, userId)
+      ));
+  }
+
+  async getManagedChallengeWithParticipants(id: number): Promise<any> {
+    const challenge = await this.getManagedChallenge(id);
+    if (!challenge) return null;
+    const participants = await this.getParticipantsByChallenge(id);
+    return { ...challenge, participants };
   }
 
   // Social/Friendship methods

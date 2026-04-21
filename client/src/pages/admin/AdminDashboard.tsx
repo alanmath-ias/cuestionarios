@@ -14,7 +14,8 @@ import {
   BadgeCheck,
   AlertOctagon,
   FileClock,
-  Wand2
+  Wand2,
+  Sword
 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -127,80 +128,95 @@ const AdminDashboard: React.FC = () => {
     <div className="min-h-screen bg-slate-950 text-slate-200 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <Card className="shadow-xl border border-white/10 bg-slate-900/50 backdrop-blur">
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-400">Cuestionarios Asignados</p>
-                  <h3 className="text-3xl font-bold text-blue-400 mt-2">{kpis.totalAssigned}</h3>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Asignados</p>
+                  <h3 className="text-2xl font-black text-blue-400 mt-1">{kpis.totalAssigned}</h3>
                 </div>
-                <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/20">
-                  <ClipboardList className="w-6 h-6 text-blue-400" />
+                <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <ClipboardList className="w-5 h-5 text-blue-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="shadow-xl border border-white/10 bg-slate-900/50 backdrop-blur">
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-400">Completados</p>
-                  <h3 className="text-3xl font-bold text-green-400 mt-2">{kpis.completed}</h3>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Completados</p>
+                  <h3 className="text-2xl font-black text-green-400 mt-1">{kpis.completed}</h3>
                 </div>
-                <div className="p-3 bg-green-500/10 rounded-full border border-green-500/20">
-                  <ListChecks className="w-6 h-6 text-green-400" />
+                <div className="p-2 bg-green-500/10 rounded-lg border border-green-500/20">
+                  <ListChecks className="w-5 h-5 text-green-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="shadow-xl border border-white/10 bg-slate-900/50 backdrop-blur">
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-400">Pendientes por Revisar</p>
-                  <h3 className="text-3xl font-bold text-yellow-400 mt-2">{kpis.pendingReview}</h3>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Revisión</p>
+                  <h3 className="text-2xl font-black text-yellow-400 mt-1">{kpis.pendingReview}</h3>
                 </div>
-                <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/20">
-                  <BadgeCheck className="w-6 h-6 text-yellow-400" />
+                <div className="p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                  <BadgeCheck className="w-5 h-5 text-yellow-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Link href="/admin/reports">
-            {/* Reportes Pendientes con Alarma */}
-            <Card className={`shadow-xl border border-white/10 bg-slate-900/50 backdrop-blur ${kpis.pendingReports >= 10 ? 'animate-pulse border-red-500/50' : ''}`}>
-              <CardContent className="p-6">
+          <Link href="/admin/reports" className="block">
+            <Card className={`shadow-xl border border-white/10 bg-slate-900/50 backdrop-blur group hover:border-red-500/30 transition-all cursor-pointer h-full ${kpis.pendingReports >= 10 ? 'animate-pulse border-red-500/50' : ''}`}>
+              <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className={`text-sm font-medium ${kpis.pendingReports >= 10 ? 'text-red-400' : 'text-slate-400'}`}>
-                      Reportes Pendientes
+                    <p className={`text-[10px] uppercase tracking-wider font-bold ${kpis.pendingReports >= 10 ? 'text-red-400' : 'text-slate-500'}`}>
+                      Reportes
                     </p>
-                    <h3 className={`text-3xl font-bold mt-2 ${kpis.pendingReports >= 10 ? 'text-red-500' : 'text-slate-200'}`}>
+                    <h3 className={`text-2xl font-black mt-1 ${kpis.pendingReports >= 10 ? 'text-red-500' : 'text-slate-200'}`}>
                       {kpis.pendingReports}
                     </h3>
                   </div>
-                  <div className={`p-3 rounded-full border ${kpis.pendingReports >= 10 ? 'bg-red-500/20 border-red-500/40' : 'bg-slate-500/10 border-slate-500/20'}`}>
-                    <AlertOctagon className={`w-6 h-6 ${kpis.pendingReports >= 10 ? 'text-red-500' : 'text-slate-400'}`} />
+                  <div className={`p-2 rounded-lg border ${kpis.pendingReports >= 10 ? 'bg-red-500/20 border-red-500/40' : 'bg-slate-500/10 border-slate-500/20'}`}>
+                    <AlertOctagon className={`w-5 h-5 ${kpis.pendingReports >= 10 ? 'text-red-500' : 'text-slate-400'}`} />
                   </div>
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          <Link href="/admin/ai-quizzes">
+          <Link href="/admin/challenge-manager" className="block">
             <Card className="shadow-xl border border-amber-500/10 bg-slate-900/50 backdrop-blur group hover:border-amber-500/30 transition-all cursor-pointer h-full">
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-amber-500/80 uppercase tracking-widest">Cuestionarios IA</p>
-                    <h3 className="text-2xl font-bold text-white mt-1 group-hover:text-amber-400 transition-colors">Gestión Mágica</h3>
+                    <p className="text-[10px] uppercase tracking-wider font-bold text-amber-500/80">Retos</p>
+                    <h3 className="text-lg font-black text-white mt-1 group-hover:text-amber-400 transition-colors leading-tight">Grupales</h3>
                   </div>
-                  <div className="p-3 bg-amber-500/10 rounded-full border border-amber-500/20 group-hover:rotate-12 transition-transform">
-                    <Wand2 className="w-6 h-6 text-amber-500" />
+                  <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20 group-hover:rotate-12 transition-transform">
+                    <Sword className="w-5 h-5 text-amber-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/ai-quizzes" className="block">
+            <Card className="shadow-xl border border-amber-500/10 bg-slate-900/50 backdrop-blur group hover:border-amber-500/30 transition-all cursor-pointer h-full">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider font-bold text-amber-500/80">Mágico</p>
+                    <h3 className="text-lg font-black text-white mt-1 group-hover:text-amber-400 transition-colors leading-tight">Gestión</h3>
+                  </div>
+                  <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20 group-hover:rotate-12 transition-transform">
+                    <Wand2 className="w-5 h-5 text-amber-500" />
                   </div>
                 </div>
               </CardContent>
@@ -437,6 +453,12 @@ const AdminDashboard: React.FC = () => {
                   ))}
                 </div>
                 <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
+                  <Link to="/admin/challenge-manager">
+                    <Button className="w-full justify-between bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-lg shadow-amber-500/20">
+                      Retos Grupales
+                      <Sword className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
                   <Link to="/admin/ai-quizzes">
                     <Button variant="outline" className="w-full justify-between bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 border-amber-500/20 shadow-lg shadow-amber-500/5">
                       Cuestionarios IA

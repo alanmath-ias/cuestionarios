@@ -551,6 +551,35 @@ export const duels = pgTable("duels", {
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const managedChallenges = pgTable("managed_challenges", {
+	id: serial("id").primaryKey(),
+	adminId: integer("admin_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	quizId: integer("quiz_id").references(() => quizzes.id, { onDelete: "set null" }),
+	aiTopic: text("ai_topic"),
+	status: text("status").notNull().default('pending'), // 'pending', 'ready', 'in_progress', 'finished'
+	wager: integer("wager").default(0).notNull(),
+	creditsMode: text("credits_mode").notNull().default('redistribute'), // 'redistribute' or 'system_pay'
+	prizeConfig: jsonb("prize_config").$type<{
+		winners: { 1: number; 2?: number; 3?: number };
+		losers: { [userId: number]: number };
+	}>(),
+	winnerIds: jsonb("winner_ids").$type<number[]>().default([]),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const managedChallengeParticipants = pgTable("managed_challenge_participants", {
+	id: serial("id").primaryKey(),
+	challengeId: integer("challenge_id").notNull().references(() => managedChallenges.id, { onDelete: "cascade" }),
+	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	status: text("status").notNull().default('pending'), // 'pending', 'ready', 'abandoned'
+	score: integer("score").default(0).notNull(),
+	rank: integer("rank"),
+	pointsHandicap: integer("points_handicap").default(0).notNull(),
+	timeHandicap: integer("time_handicap").default(0).notNull(),
+	finishedAt: timestamp("finished_at"),
+});
+
 export const messages = pgTable("messages", {
 	id: serial("id").primaryKey(),
 	senderId: integer("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -619,6 +648,29 @@ export const messagesRelations = relations(messages, ({ one }) => ({
 	}),
 }));
 
+export const managedChallengesRelations = relations(managedChallenges, ({ one, many }) => ({
+  admin: one(users, {
+    fields: [managedChallenges.adminId],
+    references: [users.id],
+  }),
+  quiz: one(quizzes, {
+    fields: [managedChallenges.quizId],
+    references: [quizzes.id],
+  }),
+  participants: many(managedChallengeParticipants),
+}));
+
+export const managedChallengeParticipantsRelations = relations(managedChallengeParticipants, ({ one }) => ({
+  challenge: one(managedChallenges, {
+    fields: [managedChallengeParticipants.challengeId],
+    references: [managedChallenges.id],
+  }),
+  user: one(users, {
+    fields: [managedChallengeParticipants.userId],
+    references: [users.id],
+  }),
+}));
+
 export const insertFriendshipSchema = createInsertSchema(friendships);
 export const insertNotificationSchema = createInsertSchema(notifications);
 export const insertMessageSchema = createInsertSchema(messages);
@@ -631,3 +683,7 @@ export type Duel = typeof duels.$inferSelect;
 export type InsertDuel = typeof duels.$inferInsert;
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = typeof messages.$inferInsert;
+export type ManagedChallenge = typeof managedChallenges.$inferSelect;
+export type InsertManagedChallenge = typeof managedChallenges.$inferInsert;
+export type ManagedChallengeParticipant = typeof managedChallengeParticipants.$inferSelect;
+export type InsertManagedChallengeParticipant = typeof managedChallengeParticipants.$inferInsert;

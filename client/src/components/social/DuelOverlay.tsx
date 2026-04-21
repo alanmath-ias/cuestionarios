@@ -133,7 +133,12 @@ export function DuelOverlay() {
     spectateDuel,
     sentChallengeInfo,
     isResponding,
-    speedBonus
+    speedBonus,
+    managedChallenge,
+    managedInvite,
+    respondToManagedInvite,
+    submitManagedAnswer,
+    startManagedChallenge
   } = useDuel();
   const { session } = useSession();
   const myId = session?.userId;
@@ -192,6 +197,7 @@ export function DuelOverlay() {
 
   // Time handicap effect
   useEffect(() => {
+    // Normal Duel
     if (duel?.status === 'in_progress' && duel.handicap?.type === 'time') {
         const isBeneficiary = duel.handicap.targetId === myId;
         if (!isBeneficiary) {
@@ -199,10 +205,19 @@ export function DuelOverlay() {
             const timer = setTimeout(() => setBlurActive(false), duel.handicap.value * 1000);
             return () => clearTimeout(timer);
         }
-    } else {
-        setBlurActive(false);
+    } 
+    // Managed Challenge
+    else if (managedChallenge?.status === 'in_progress') {
+        const me = managedChallenge.players?.find((p: any) => Number(p.userId) === Number(myId));
+        if (me && me.timeHandicap > 0 && managedChallenge.currentQuestionIndex === 0) {
+            setBlurActive(true);
+            const timer = setTimeout(() => setBlurActive(false), me.timeHandicap * 1000);
+            return () => clearTimeout(timer);
+        }
     }
-  }, [duel?.currentQuestion?.index, duel?.status, duel?.handicap, myId]);
+    
+    setBlurActive(false);
+  }, [duel?.currentQuestion?.index, duel?.status, duel?.handicap, managedChallenge?.currentQuestionIndex, managedChallenge?.status, myId]);
 
   // Reset review state when duel resets or a new duel starts
   useEffect(() => {
@@ -241,12 +256,12 @@ export function DuelOverlay() {
     return {
         type: localHandicap.type,
         value: Math.abs(localHandicap.value),
-        targetId: localHandicap.value > 0 ? opponentId : myId
+        targetId: localHandicap.value > 0 ? Number(opponentId) : Number(myId)
     };
   };
 
   // ─── EARLY RETURN ───
-  if (!duel && !invite && !actualPreparing && !sentChallengeInfo) return null;
+  if (!duel && !invite && !actualPreparing && !sentChallengeInfo && !managedInvite && !managedChallenge) return null;
 
   // ─── DERIVED STATE (Safe after hooks and early return) ───
   const isSpectator = !!duel?.isSpectator;
@@ -257,16 +272,36 @@ export function DuelOverlay() {
   const scores = duel?.scores || {};
   const challengerId = Number(duel?.challenger?.userId);
   const receiverId = Number(duel?.receiver?.userId);
-  const challengerScore = isSpectator ? (scores[challengerId] || 0) : 0;
   const myNumberId = Number(myId);
-  const myScore = scores[myNumberId] || 0;
-  const receiverScore = isSpectator ? (scores[receiverId] || 0) : 0;
+
+  // Managed Challenge Helpers
+  const managedMe = managedChallenge?.players?.find((p: any) => p.userId === myNumberId);
+  const managedOther = managedChallenge?.players?.find((p: any) => p.userId !== myNumberId);
+  const isManaged = !!managedChallenge;
+
+  const myScore = isManaged ? (managedMe?.score || 0) : (scores[myNumberId] || 0);
+
+  // For Arena View
+  const challengerScore = isManaged 
+    ? (isSpectator ? (managedChallenge.players?.[0]?.score || 0) : 0) // Simplified for now
+    : (isSpectator ? (scores[challengerId] || 0) : 0);
+    
+  const receiverScore = isManaged
+    ? (isSpectator ? (managedChallenge.players?.[1]?.score || 0) : 0)
+    : (isSpectator ? (scores[receiverId] || 0) : 0);
   
   // Find opponent score for player view
-  const oppScore = (myNumberId ? Object.entries(scores).find(([id]) => Number(id) !== myNumberId)?.[1] : 0) || 0;
+  const oppScore = isManaged
+    ? (managedOther?.score || 0)
+    : ((myNumberId ? Object.entries(scores).find(([id]) => Number(id) !== myNumberId)?.[1] : 0) || 0);
   
-  const receiverNameLabel = isSpectator ? (duel?.receiver?.username || 'Oponente') : (duel?.opponentName || 'Oponente');
-  const challengerNameLabel = isSpectator ? (duel?.challenger?.username || 'Retador') : 'Tú';
+  const receiverNameLabel = isManaged
+    ? (isSpectator ? (managedChallenge.players?.[1]?.username || 'Jugador 2') : (managedOther?.username || 'Oponente'))
+    : (isSpectator ? (duel?.receiver?.username || 'Oponente') : (duel?.opponentName || 'Oponente'));
+
+  const challengerNameLabel = isManaged
+    ? (isSpectator ? (managedChallenge.players?.[0]?.username || 'Jugador 1') : 'Tú')
+    : (isSpectator ? (duel?.challenger?.username || 'Retador') : 'Tú');
 
   // ─── Option styling helper ─────────────────────────────────────────────────
   const getOptionStyle = (option: any) => {
@@ -312,6 +347,134 @@ export function DuelOverlay() {
 
       <div className="relative z-10 w-full max-w-2xl pointer-events-auto">
         <AnimatePresence mode="wait">
+
+          {/* ── MANAGED GROUP INVITATION ─────────────────────────────── */}
+          {managedInvite && !managedChallenge && (
+            <motion.div key="managed-invite" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="px-4">
+               <Card className="bg-slate-900 border-amber-500/30 p-8 shadow-2xl rounded-[2.5rem] text-center">
+                  <div className="h-16 w-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Trophy className="h-8 w-8 text-amber-500" />
+                  </div>
+                  <h2 className="text-3xl font-black text-amber-400 uppercase italic mb-2 tracking-tighter">¡RETO ADMINISTRADO!</h2>
+                  <p className="text-slate-400 mb-6 text-sm">
+                    <span className="text-white font-bold">{managedInvite.adminName}</span> te ha invitado a un reto grupal de <span className="text-amber-200">{managedInvite.topic}</span>.
+                  </p>
+
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-6">
+                    <p className="text-[10px] font-black uppercase text-slate-500 mb-3">Premios y Reglas</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col items-center">
+                            <Coins className="h-4 w-4 text-amber-500 mb-1" />
+                            <span className="text-sm font-bold">{managedInvite.wager} Pts</span>
+                            <span className="text-[8px] text-slate-500 uppercase">Apuesta Base</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <Zap className="h-4 w-4 text-blue-400 mb-1" />
+                            <span className="text-sm font-bold uppercase">{managedInvite.creditsMode === 'system_pay' ? 'Premio Sistema' : 'Robo de Puntos'}</span>
+                            <span className="text-[8px] text-slate-500 uppercase">Modo Créditos</span>
+                        </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 justify-center">
+                    <Button 
+                        className="bg-green-600 hover:bg-green-700 font-bold px-8 h-12 rounded-xl"
+                        onClick={() => respondToManagedInvite(managedInvite.challengeId, 'accept')}
+                    >
+                        ACEPTAR RETO
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        className="text-red-400 hover:bg-red-400/10 rounded-xl"
+                        onClick={() => respondToManagedInvite(managedInvite.challengeId, 'abandon')}
+                    >
+                        CANCELAR
+                    </Button>
+                  </div>
+               </Card>
+            </motion.div>
+          )}
+
+          {/* ── MANAGED GAME ARENA ───────────────────────────────────── */}
+          {managedChallenge && managedChallenge.status === 'in_progress' && (
+            <motion.div key="managed-arena" initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-slate-950/90 border border-amber-500/20 rounded-[2.5rem] shadow-2xl p-6 sm:p-8 flex flex-col w-full">
+                {/* Multi-player Scoreboard */}
+                <div className="flex flex-wrap justify-center gap-4 mb-8">
+                    {managedChallenge.players?.map((p: any) => (
+                        <div key={p.userId} className={`flex flex-col items-center px-4 py-2 rounded-2xl border transition-all ${p.userId === myId ? 'bg-blue-500/20 border-blue-500/50' : 'bg-white/5 border-white/5 grayscale opacity-60'}`}>
+                            <span className="text-[9px] font-black uppercase text-slate-400 mb-1">{p.username}</span>
+                            <span className="text-xl font-black text-white">{managedChallenge.scores?.[p.userId] || 0}</span>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex flex-col items-center mb-6">
+                    <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 mb-2 px-3 py-1 uppercase tracking-widest text-[9px] font-black">
+                        Pregunta {(managedChallenge.currentQuestion?.index ?? 0) + 1} / {managedChallenge.questionsCount}
+                    </Badge>
+                    <div className="text-xl font-bold text-white text-center leading-tight max-w-lg">
+                        <ContentRenderer content={managedChallenge.currentQuestion?.content || ""} tight={true} />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4">
+                    {managedChallenge.currentQuestion?.options?.map((opt: any) => (
+                        <Button 
+                            key={opt.id}
+                            variant="outline"
+                            className="bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 h-auto py-4 px-6 rounded-2xl group transition-all text-left justify-start"
+                            disabled={managedChallenge.myStatus === 'finished'}
+                            onClick={() => submitManagedAnswer(managedChallenge.challengeId, managedChallenge.currentQuestion.index, opt.id)}
+                        >
+                            <div className="h-6 w-6 rounded-lg bg-black/20 flex items-center justify-center mr-3 group-hover:bg-amber-500 transition-colors">
+                                <span className="text-xs font-black text-slate-400 group-hover:text-amber-950">•</span>
+                            </div>
+                            <span className="text-sm font-bold text-slate-200"><ContentRenderer content={opt.content} tight={true} /></span>
+                        </Button>
+                    ))}
+                </div>
+                
+                {managedChallenge.myStatus === 'finished' && (
+                    <div className="mt-4 flex flex-col items-center gap-4 py-8 rounded-[2rem] bg-amber-500/10 border border-amber-500/20 animate-in fade-in zoom-in">
+                        <Loader2 className="h-8 w-8 animate-spin text-amber-500 mb-2" />
+                        <h4 className="text-xl font-black text-amber-400">¡HAS TERMINADO!</h4>
+                        <p className="text-slate-400 text-sm">Espera a que los demás finalicen para ver los resultados.</p>
+                        <div className="flex items-center gap-2 mt-4">
+                            <span className="text-xs text-slate-500 uppercase tracking-widest">Tu puntaje final:</span>
+                            <Badge className="bg-amber-500 text-slate-950 font-black">{managedChallenge.scores?.[myId!] || 0} PUNTOS</Badge>
+                        </div>
+                    </div>
+                )}
+            </motion.div>
+          )}
+
+          {/* ── MANAGED RESULTS ─────────────────────────────────────── */}
+          {managedChallenge && managedChallenge.status === 'finished' && (
+              <motion.div key="managed-results" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-slate-900 border border-amber-500/30 p-8 rounded-[2.5rem] shadow-2xl text-center max-w-xl mx-auto">
+                    <Trophy className="h-16 w-16 text-yellow-500 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]" />
+                    <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-6">RESULTADOS DEL RETO</h2>
+
+                    <div className="space-y-3 mb-8">
+                        {managedChallenge.results?.rankings?.map((r: any, idx: number) => (
+                            <div key={r.id} className={`flex items-center justify-between p-4 rounded-2xl border ${idx === 0 ? 'bg-amber-500/20 border-amber-500/40' : 'bg-white/5 border-white/5'}`}>
+                                <div className="flex items-center gap-4">
+                                    <span className={`text-xl font-black ${idx === 0 ? 'text-amber-500' : 'text-slate-500'}`}>#{idx + 1}</span>
+                                    <span className="font-bold text-slate-100">{r.username}</span>
+                                </div>
+                                <span className="font-black text-white">{r.score} Pts</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    <Button 
+                        className="w-full bg-slate-100 hover:bg-white text-slate-950 font-bold h-12 rounded-xl"
+                        onClick={() => window.location.href = '/dashboard'}
+                    >
+                        CERRAR ARENA
+                    </Button>
+              </motion.div>
+          )}
+
 
           {/* ── PREPARING ──────────────────────────────────────────────── */}
           {actualPreparing && (
@@ -405,13 +568,13 @@ export function DuelOverlay() {
                             <ShieldAlert className="h-3 w-3" />
                             <div className="flex flex-col items-start leading-tight">
                                 <span className="text-lg font-black uppercase">
-                                    {sentChallengeInfo.handicap?.type !== 'none' 
+                                    {(sentChallengeInfo.handicap && sentChallengeInfo.handicap.type !== 'none')
                                         ? `+${sentChallengeInfo.handicap.value} ${sentChallengeInfo.handicap.type === 'points' ? 'Pts' : 'Seg'}` 
                                         : 'Nula'}
                                 </span>
-                                {sentChallengeInfo.handicap?.type !== 'none' && (
+                                {(sentChallengeInfo.handicap && sentChallengeInfo.handicap.type !== 'none') && (
                                     <span className="text-[7px] font-black text-purple-400/60 uppercase -mt-1">
-                                        {sentChallengeInfo.handicap.targetId === myId ? 'Para ti' : 'Para oponente'}
+                                        {Number(sentChallengeInfo.handicap.targetId) === Number(myId) ? 'Para ti' : 'Para oponente'}
                                     </span>
                                 )}
                             </div>
@@ -550,7 +713,7 @@ export function DuelOverlay() {
                         >
                           <span className="text-[10px] opacity-90 uppercase font-black tracking-widest leading-none">Aceptar Desafío</span>
                           <span className="text-[11px] font-black leading-tight">
-                            {invite.wager} Créditos {invite.handicap?.type !== 'none' ? `+ Ventaja ${invite.handicap.value} ${invite.handicap.type === 'points' ? 'PTS' : 'SEG'} para ${invite.handicap.targetId === myId ? 'ti' : (invite.handicap.targetId === Number(invite.challengerId) ? invite.challengerName : invite.receiverName)}` : ''}
+                            {invite.wager} Créditos {(invite.handicap && invite.handicap.type !== 'none') ? `+ Ventaja ${invite.handicap.value} ${invite.handicap.type === 'points' ? 'PTS' : 'SEG'} para ${invite.handicap.targetId === myId ? 'ti' : (invite.handicap.targetId === Number(invite.challengerId) ? invite.challengerName : invite.receiverName)}` : ''}
                           </span>
                         </Button>
                         <Button variant="outline" className="bg-amber-600/20 border-amber-500/30 font-bold py-3 px-6 rounded-xl hover:bg-amber-600/30 transition-all" onClick={() => respondToInvite(invite.duelId, 'counter', counterWager, getHandicapPayload())}>SOLO CONTRA-OFERTAR</Button>

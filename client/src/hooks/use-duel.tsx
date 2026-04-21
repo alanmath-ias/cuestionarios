@@ -42,6 +42,15 @@ interface DuelContextType {
   isResponding: boolean;
   speedBonus: boolean;
   setSpeedBonus: (val: boolean) => void;
+  // Managed Group Challenges
+  managedChallenge: any;
+  managedInvite: any;
+  createManagedChallenge: (payload: any) => void;
+  respondToManagedInvite: (challengeId: number, action: 'accept' | 'abandon') => void;
+  startManagedChallenge: (challengeId: number) => void;
+  submitManagedAnswer: (challengeId: number, questionIndex: number, answerId: number) => void;
+  spectateManagedChallenge: (challengeId: number) => void;
+  activeManagedChallenges: any[];
 }
 
 const DuelContext = createContext<DuelContextType | null>(null);
@@ -70,6 +79,11 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
   const [activeDuels, setActiveDuels] = useState<any[]>([]);
   const [sentChallengeInfo, setSentChallengeInfo] = useState<any | null>(null);
   const [isResponding, setIsResponding] = useState(false);
+  
+  // Managed Challenges State
+  const [managedChallenge, setManagedChallenge] = useState<any>(null);
+  const [managedInvite, setManagedInvite] = useState<any>(null);
+  const [activeManagedChallenges, setActiveManagedChallenges] = useState<any[]>([]);
 
   const reconnectTimeout = useRef<any>(null);
 
@@ -82,9 +96,9 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
 
     let lastMessageTime = Date.now();
     const heartbeatCheck = setInterval(() => {
-      // If we haven't heard from the server in 20s, the socket is likely "dead" (intermediary proxy cut it)
-      if (Date.now() - lastMessageTime > 20000) {
-        console.warn('⚠️ [SOCKET] No messages in 20s. Forcing reconnect...');
+      // If we haven't heard from the server in 30s, the socket is likely "dead"
+      if (Date.now() - lastMessageTime > 30000) {
+        console.warn('⚠️ [SOCKET] No messages in 30s. Forcing reconnect...');
         clearInterval(heartbeatCheck);
         ws.close();
       }
@@ -289,6 +303,52 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
       case 'admin:duel_list':
           setActiveDuels(payload);
           break;
+      case 'admin:managed_list':
+          setActiveManagedChallenges(payload);
+          break;
+      case 'managed:invited':
+          setManagedInvite(payload);
+          break;
+      case 'managed:started':
+          setManagedInvite(null);
+          setManagedChallenge({
+              status: 'in_progress',
+              challengeId: payload.challengeId,
+              questionsCount: payload.questionsCount,
+              topic: payload.topic,
+              currentQuestion: { index: 0, content: '', options: [] },
+              players: [],
+              scores: {}
+          });
+          break;
+      case 'managed:question':
+          setManagedChallenge((prev: any) => prev ? { ...prev, currentQuestion: payload } : null);
+          break;
+      case 'managed:player_update':
+          setManagedChallenge((prev: any) => {
+              if (!prev) return null;
+              const newPlayers = [...(prev.players || [])];
+              const idx = newPlayers.findIndex(p => p.userId === payload.userId);
+              if (idx >= 0) newPlayers[idx] = { ...newPlayers[idx], status: payload.status };
+              else newPlayers.push({ userId: payload.userId, status: payload.status, username: payload.username });
+              return { ...prev, players: newPlayers };
+          });
+          break;
+      case 'managed:player_progress':
+          setManagedChallenge((prev: any) => {
+              if (!prev) return null;
+              const newScores = { ...(prev.scores || {}) };
+              newScores[payload.userId] = payload.score;
+              return { ...prev, scores: newScores };
+          });
+          break;
+      case 'managed:results':
+          setManagedChallenge((prev: any) => ({ ...prev, status: 'finished', results: payload }));
+          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+          break;
+      case 'managed:sync':
+          setManagedChallenge(payload);
+          break;
     }
   };
 
@@ -297,9 +357,12 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     setDuel(null);
     setInvite(null);
 
-    // Optimistic set for immediate UI feedback.
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        toast({ title: "Conexión pérdida", description: "No se pudo enviar el reto. Reintentando...", variant: "destructive" });
+        return;
+    }
     
-    socket?.send(JSON.stringify({ type: 'duel:challenge', payload: { receiverId, wager, topic, isRevenge, handicap } }));
+    socket.send(JSON.stringify({ type: 'duel:challenge', payload: { receiverId, wager, topic, isRevenge, handicap } }));
     setSentChallenges(prev => new Set(prev).add(receiverId));
     
     // Set informative state for the waiting screen
@@ -364,6 +427,28 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     socket?.send(JSON.stringify({ type: 'admin:spectate', payload: { duelId } }));
   }, [socket]);
 
+  // Managed Challenge Actions
+  const createManagedChallenge = (payload: any) => {
+      socket?.send(JSON.stringify({ type: 'managed:create', payload }));
+  };
+
+  const respondToManagedInvite = (challengeId: number, action: 'accept' | 'abandon') => {
+      socket?.send(JSON.stringify({ type: 'managed:respond', payload: { challengeId, action } }));
+      if (action === 'abandon') setManagedInvite(null);
+  };
+
+  const startManagedChallenge = (challengeId: number) => {
+      socket?.send(JSON.stringify({ type: 'managed:start', payload: { challengeId } }));
+  };
+
+  const submitManagedAnswer = (challengeId: number, questionIndex: number, answerId: number) => {
+      socket?.send(JSON.stringify({ type: 'managed:submit_answer', payload: { challengeId, questionIndex, answerId } }));
+  };
+
+  const spectateManagedChallenge = (challengeId: number) => {
+      socket?.send(JSON.stringify({ type: 'managed:spectate', payload: { challengeId } }));
+  };
+
   const value = useMemo(() => ({
     duel,
     invite,
@@ -396,14 +481,24 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     setSentChallengeInfo,
     isResponding,
     speedBonus,
-    setSpeedBonus
+    setSpeedBonus,
+    managedChallenge,
+    managedInvite,
+    createManagedChallenge,
+    respondToManagedInvite,
+    startManagedChallenge,
+    submitManagedAnswer,
+    spectateManagedChallenge,
+    activeManagedChallenges
   }), [
     duel, invite, sendChallenge, respondToInvite, submitAnswer, 
     sendMessage, lastChatMessage, isConnected, sentChallenges, 
     isPreparing, onlineUsers, challengingUser, challengeWager, 
     challengeTopic, challengeHandicap, isRevengeMode, refreshStats, resetDuel, 
     leaveResults, activeDuels, spectateDuel, sentChallengeInfo, isResponding,
-    speedBonus
+    speedBonus, managedChallenge, managedInvite, createManagedChallenge,
+    respondToManagedInvite, startManagedChallenge, submitManagedAnswer,
+    spectateManagedChallenge, activeManagedChallenges
   ]);
 
   return (
