@@ -542,6 +542,11 @@ export const duels = pgTable("duels", {
 	scores: jsonb("scores").default({ challenger: 0, receiver: 0 }).notNull(),
 	currentQuestionIndex: integer("current_question_index").default(0),
 	winnerId: integer("winner_id").references(() => users.id, { onDelete: "set null" }),
+	handicap: jsonb("handicap").$type<{
+		type: 'points' | 'time' | 'none';
+		value: number;
+		targetId: number;
+	}>(),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

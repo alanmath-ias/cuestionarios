@@ -160,31 +160,75 @@ export function DuelOverlay() {
   }, [actualPreparing]);
 
   useEffect(() => {
-    if (invite) setCounterWager(invite.wager);
-  }, [invite]);
-
-  // Freeze effects when round ends
-  useEffect(() => {
-    if (duel?.lastFeedback) {
-      if (duel.lastFeedback.speedBonus && duel.lastFeedback.userName) {
-        setSpeedBonusFlash(duel.lastFeedback.userName);
-        setTimeout(() => setSpeedBonusFlash(null), 2500);
-      }
+    if (invite) {
+        setCounterWager(invite.wager);
+        if (invite.handicap) {
+            // Convert server payload back to our bilateral format (-V for self benefit, +V for opponent benefit)
+            const isSelfBenefit = invite.handicap.targetId === myId;
+            setLocalHandicap({
+                type: invite.handicap.type,
+                value: isSelfBenefit ? -invite.handicap.value : invite.handicap.value
+            });
+        } else {
+            setLocalHandicap({ type: 'none', value: 0 });
+        }
     }
-  }, [duel?.lastFeedback]);
+  }, [invite, myId]);
 
-  // Clear selection when question changes
+  const [localHandicap, setLocalHandicap] = useState<{ type: 'points' | 'time' | 'none', value: number }>({ type: 'none', value: 0 });
+
+  const updateHandicap = (val: number) => {
+    const limit = localHandicap.type === 'points' ? 3 : 15;
+    const nextVal = Math.max(-limit, Math.min(limit, val));
+    setLocalHandicap({ ...localHandicap, value: nextVal });
+  };
+
+  const [blurActive, setBlurActive] = useState(false);
+
+  // Time handicap effect
   useEffect(() => {
-    setSelectedOptionId(null);
-  }, [duel?.currentQuestion?.index]);
+    if (duel?.status === 'in_progress' && duel.handicap?.type === 'time') {
+        const isBeneficiary = duel.handicap.targetId === myId;
+        if (!isBeneficiary) {
+            setBlurActive(true);
+            const timer = setTimeout(() => setBlurActive(false), duel.handicap.value * 1000);
+            return () => clearTimeout(timer);
+        }
+    } else {
+        setBlurActive(false);
+    }
+  }, [duel?.currentQuestion?.index, duel?.status, duel?.handicap, myId]);
 
   // Reset review state when duel resets or a new duel starts
   useEffect(() => {
     if (!duel || duel.status === 'in_progress') {
       setIsReviewing(false);
       setReviewIndex(0);
+      setSelectedOptionId(null);
     }
   }, [duel?.status, duel?.duelId]);
+
+  // IMPORTANT: Reset choice on every new question to avoid "Freeze"
+  useEffect(() => {
+    if (duel?.status === 'in_progress') {
+      setSelectedOptionId(null);
+    }
+  }, [duel?.currentQuestion?.index]);
+
+  const getHandicapPayload = () => {
+    if (!localHandicap || localHandicap.type === 'none' || localHandicap.value === 0) return null;
+    
+    // Determine who is the "opponent" relative to me
+    const challengerId = Number(invite?.challengerId);
+    const receiverId = Number(invite?.receiverId);
+    const opponentId = myId === challengerId ? receiverId : challengerId;
+
+    return {
+        type: localHandicap.type,
+        value: Math.abs(localHandicap.value),
+        targetId: localHandicap.value > 0 ? opponentId : myId
+    };
+  };
 
   // ─── EARLY RETURN ───
   if (!duel && !invite && !actualPreparing) return null;
@@ -196,11 +240,18 @@ export function DuelOverlay() {
 
   // Extract scores and names for cleaner JSX
   const scores = duel?.scores || {};
-  const challengerScore = isSpectator ? (scores[duel?.challenger?.userId] || 0) : 0;
-  const myScore = (myId && scores[myId]) || 0;
-  const receiverScore = isSpectator ? (scores[duel?.receiver?.userId] || 0) : 0;
-  const oppScore = (myId ? Object.entries(scores).find(([id]) => Number(id) !== myId)?.[1] : 0) || 0;
+  const challengerId = Number(duel?.challenger?.userId);
+  const receiverId = Number(duel?.receiver?.userId);
+  const challengerScore = isSpectator ? (scores[challengerId] || 0) : 0;
+  const myNumberId = Number(myId);
+  const myScore = scores[myNumberId] || 0;
+  const receiverScore = isSpectator ? (scores[receiverId] || 0) : 0;
+  
+  // Find opponent score for player view
+  const oppScore = (myNumberId ? Object.entries(scores).find(([id]) => Number(id) !== myNumberId)?.[1] : 0) || 0;
+  
   const receiverNameLabel = isSpectator ? (duel?.receiver?.username || 'Oponente') : (duel?.opponentName || 'Oponente');
+  const challengerNameLabel = isSpectator ? (duel?.challenger?.username || 'Retador') : 'Tú';
 
   // ─── Option styling helper ─────────────────────────────────────────────────
   const getOptionStyle = (option: any) => {
@@ -320,27 +371,83 @@ export function DuelOverlay() {
                     {invite.isRevenge ? '¡PEDIDO DE REVANCHA!' : '¡DESAFÍO RECIBIDO!'}
                   </h2>
                   <p className="text-slate-400 mb-6 text-sm">
-                    <span className="text-white font-bold">{invite.challengerName}</span> te ha retado a un duelo de <span className="text-amber-200">{invite.topic}</span>.
+                    <span className="text-white font-bold">{myId === Number(invite.challengerId) ? invite.receiverName : invite.challengerName}</span> 
+                    {myId === Number(invite.challengerId) ? ' ha actualizado las condiciones para un duelo de ' : ' te ha retado a un duelo de '}
+                    <span className="text-amber-200">{invite.topic}</span>.
                   </p>
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-5 w-full max-w-xs mb-6 text-center">
-                    <div className="flex items-center justify-center gap-3 mb-3">
-                      <Coins className="h-5 w-5 text-yellow-500" />
-                      <span className="text-4xl font-black">{isNegotiating ? counterWager : invite.wager}</span>
-                      <span className="text-slate-500 font-bold uppercase text-xs">Créditos</span>
-                    </div>
-                    {isNegotiating && (
-                      <div className="flex items-center justify-center gap-4 mt-3">
-                        <button className="h-10 w-10 rounded-full bg-slate-600 hover:bg-amber-500 text-white flex items-center justify-center transition-all" onClick={() => setCounterWager(Math.max(1, counterWager - 1))}><Minus /></button>
-                        <span className="text-2xl font-black w-12">{counterWager}</span>
-                        <button className="h-10 w-10 rounded-full bg-slate-600 hover:bg-amber-500 text-white flex items-center justify-center transition-all" onClick={() => setCounterWager(counterWager + 1)}><Plus /></button>
+                  <div className="grid grid-cols-2 gap-4 w-full max-w-sm mb-4">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-2 text-yellow-500">
+                        <Coins className="h-4 w-4" />
+                        <span className="text-[10px] font-black uppercase tracking-wider">Apuesta</span>
                       </div>
-                    )}
+                      <div className="flex items-center justify-center gap-3">
+                        {isNegotiating && <button className="h-6 w-6 rounded-lg bg-slate-700 hover:bg-amber-500 flex items-center justify-center" onClick={() => setCounterWager(Math.max(1, counterWager - 1))}><Minus className="h-3 w-3" /></button>}
+                        <span className="text-2xl font-black">{isNegotiating ? counterWager : invite.wager}</span>
+                        {isNegotiating && <button className="h-6 w-6 rounded-lg bg-slate-700 hover:bg-amber-500 flex items-center justify-center" onClick={() => setCounterWager(counterWager + 1)}><Plus className="h-3 w-3" /></button>}
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-2 text-purple-400">
+                        <ShieldAlert className="h-4 w-4" />
+                        <span className="text-[10px] font-black uppercase tracking-wider">Ventaja</span>
+                      </div>
+                      {isNegotiating ? (
+                        <div className="flex bg-black/20 p-1 rounded-lg gap-1">
+                          <button onClick={() => setLocalHandicap({...localHandicap, type: 'points', value: 0})} className={`flex-1 text-[8px] font-black py-1 rounded transition-all ${localHandicap.type === 'points' ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}>PTS</button>
+                          <button onClick={() => setLocalHandicap({...localHandicap, type: 'time', value: 0})} className={`flex-1 text-[8px] font-black py-1 rounded transition-all ${localHandicap.type === 'time' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}>SEG</button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-2">
+                           <span className="text-xl font-black uppercase">{invite.handicap ? (invite.handicap.type === 'points' ? 'Puntos' : 'Tiempo') : 'Nula'}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  <AnimatePresence>
+                    {isNegotiating && localHandicap.type !== 'none' && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="w-full max-w-sm overflow-hidden mb-6">
+                            <div className="bg-slate-950/40 border border-white/5 rounded-2xl p-4">
+                                <div className="flex items-center justify-between gap-4">
+                                     <div className="flex flex-col items-center flex-1 min-w-0">
+                                         <span className="text-[8px] font-black text-slate-500 mb-1 uppercase truncate w-full text-center">TÚ</span>
+                                         <div className={`w-full py-1.5 rounded-lg border flex items-center justify-center ${localHandicap.value < 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
+                                             <span className="text-lg font-black">{localHandicap.value < 0 ? Math.abs(localHandicap.value) : 0}{localHandicap.type === 'time' && localHandicap.value < 0 ? 's' : ''}</span>
+                                         </div>
+                                     </div>
+                                     <div className="flex items-center gap-2 mt-4 shrink-0">
+                                         <button className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700" onClick={() => updateHandicap(localHandicap.value - 1)}><Minus className="h-3 w-3" /></button>
+                                         <button className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700" onClick={() => updateHandicap(localHandicap.value + 1)}><Plus className="h-3 w-3" /></button>
+                                     </div>
+                                     <div className="flex flex-col items-center flex-1 min-w-0">
+                                         <span className="text-[8px] font-black text-slate-500 mb-1 uppercase truncate w-full text-center">{myId === Number(invite.challengerId) ? invite.receiverName : invite.challengerName}</span>
+                                         <div className={`w-full py-1.5 rounded-lg border flex items-center justify-center ${localHandicap.value > 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
+                                             <span className="text-lg font-black">{localHandicap.value > 0 ? Math.abs(localHandicap.value) : 0}{localHandicap.type === 'time' && localHandicap.value > 0 ? 's' : ''}</span>
+                                         </div>
+                                     </div>
+                                  </div>
+                            </div>
+                        </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {!isNegotiating && invite.handicap && (
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2 mb-6">
+                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+                           {invite.handicap.targetId === myId 
+                            ? `¡Ventaja para ti: +${invite.handicap.value} ${invite.handicap.type === 'points' ? 'pts' : 'seg'}!` 
+                            : `Ventaja para oponente: +${invite.handicap.value} ${invite.handicap.type === 'points' ? 'pts' : 'seg'}`}
+                        </p>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap gap-2 justify-center">
                     {isNegotiating ? (
                       <>
-                        <Button className="bg-green-600 hover:bg-green-700 font-bold" onClick={() => respondToInvite(invite.duelId, 'accept', invite.wager)}>ACEPTAR CON {invite.wager}</Button>
-                        <Button variant="outline" className="bg-amber-600/20 border-amber-500/30" onClick={() => respondToInvite(invite.duelId, 'counter', counterWager)}>CONTRA-OFERTAR</Button>
+                        <Button className="bg-green-600 hover:bg-green-700 font-bold" onClick={() => respondToInvite(invite.duelId, 'accept')}>ACEPTAR PROPUESTA RECIBIDA</Button>
+                        <Button variant="outline" className="bg-amber-600/20 border-amber-500/30" onClick={() => respondToInvite(invite.duelId, 'counter', counterWager, getHandicapPayload())}>SOLO CONTRA-OFERTAR</Button>
                         <Button variant="ghost" className="text-red-400" onClick={() => respondToInvite(invite.duelId, 'reject')}>RECHAZAR</Button>
                         <Button variant="link" className="text-slate-500 text-xs w-full" onClick={() => setIsNegotiating(false)}>VOLVER ATRÁS</Button>
                       </>
@@ -369,7 +476,7 @@ export function DuelOverlay() {
                   </span>
                 </div>
                 {isSpectator && <Badge className="bg-indigo-600 text-white animate-pulse text-[10px] h-5">MODO OBSERVADOR</Badge>}
-                <Button variant="ghost" size="icon" onClick={() => isSpectator ? resetDuel() : null} className="h-6 w-6 text-slate-500 hover:text-white transition-colors">
+                <Button variant="ghost" size="icon" onClick={() => resetDuel()} className="h-6 w-6 text-slate-500 hover:text-white transition-colors">
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -379,7 +486,7 @@ export function DuelOverlay() {
                 <div className="flex items-center justify-between relative z-10 w-full px-4">
                   <div className="flex flex-col items-center flex-1">
                     <span className="text-[9px] text-blue-400 font-black uppercase mb-1 truncate max-w-[80px]">
-                        {isSpectator ? (duel?.challenger?.username || 'Retador') : 'TÚ'}
+                        {isSpectator ? challengerNameLabel : 'TÚ'}
                     </span>
                     <motion.span 
                         key={isSpectator ? `challenger-${challengerScore}` : `me-${myScore}`} 
@@ -398,7 +505,7 @@ export function DuelOverlay() {
 
                   <div className="flex flex-col items-center flex-1">
                     <span className="text-[9px] text-red-400 font-black uppercase mb-1 truncate max-w-[60px] sm:max-w-[80px]">
-                        {isSpectator ? receiverNameLabel : (duel?.opponentName || 'Oponente')}
+                        {receiverNameLabel}
                     </span>
                     <motion.span 
                         key={isSpectator ? `receiver-${receiverScore}` : `opp-${oppScore}`} 
@@ -416,7 +523,23 @@ export function DuelOverlay() {
                 </div>
               </div>
 
-              <div className="px-5 pb-5 mt-2">
+              <div className="px-5 pb-5 mt-2 relative">
+                {/* Handicap Notification Message */}
+                <AnimatePresence>
+                    {blurActive && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -10 }} 
+                            animate={{ opacity: 1, y: 0 }} 
+                            exit={{ opacity: 0 }}
+                            className="absolute -top-6 left-0 right-0 flex justify-center z-30 pointer-events-none"
+                        >
+                            <Badge className="bg-red-500/90 text-white border-0 shadow-lg shadow-red-500/20 font-black px-4 py-1 animate-pulse">
+                                <ShieldAlert className="w-3.5 h-3.5 mr-2" /> VENTJA DE TIEMPO DEL RIVAL
+                            </Badge>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 {duel.currentQuestion && duel.currentQuestion.options?.length > 0 ? (
                   <motion.div key={duel.currentQuestion.index} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
                     <AnimatePresence>
@@ -431,15 +554,19 @@ export function DuelOverlay() {
                       )}
                     </AnimatePresence>
 
-                    <div className="text-base font-bold text-white mb-4 leading-tight text-center"><ContentRenderer content={duel.currentQuestion.content} tight={true} /></div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {/* Question Content with Blur Effect */}
+                    <div className={`text-base font-bold text-white mb-4 leading-tight text-center transition-all duration-700 ${blurActive ? 'blur-xl grayscale opacity-30 select-none scale-95 pointer-events-none' : ''}`}>
+                        <ContentRenderer content={duel.currentQuestion.content} tight={true} />
+                    </div>
+
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2 transition-all duration-700 ${blurActive ? 'opacity-20 pointer-events-none grayscale' : ''}`}>
                       {duel.currentQuestion.options.map((option: any) => {
                         const styleClass = getOptionStyle(option);
                         const who = getWhoAnswered(option);
                         return (
                           <button
                             key={option.id}
-                            disabled={isSpectator || selectedOptionId !== null || (!!duel.lastFeedback && duel.lastFeedback.isCorrect) || (duel.allWrongAnswers || []).some((w: any) => w.userId === myId)}
+                            disabled={isSpectator || selectedOptionId !== null || (!!duel.lastFeedback && (duel.lastFeedback as any).isCorrect) || (duel.allWrongAnswers || []).some((w: any) => Number(w.userId) === Number(myId)) || blurActive}
                             className={`relative flex items-center gap-3 py-3 px-4 rounded-2xl border transition-all ${isSpectator ? 'cursor-default' : ''} ${styleClass}`}
                             onClick={() => { 
                                 if (isSpectator) return;
