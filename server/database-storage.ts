@@ -2061,6 +2061,21 @@ export class DatabaseStorage implements IStorage {
       .where(eq(friendships.id, requestId));
   }
 
+  async updateFriendshipScore(friendshipId: number, winnerId: number): Promise<void> {
+    const [friendship] = await this.db.select().from(friendships).where(eq(friendships.id, friendshipId));
+    if (!friendship) return;
+
+    if (friendship.userId === winnerId) {
+      await this.db.update(friendships)
+        .set({ userWins: friendship.userWins + 1 })
+        .where(eq(friendships.id, friendshipId));
+    } else if (friendship.friendId === winnerId) {
+      await this.db.update(friendships)
+        .set({ friendWins: friendship.friendWins + 1 })
+        .where(eq(friendships.id, friendshipId));
+    }
+  }
+
   async getFriends(userId: number): Promise<any[]> {
     // 1. Get real friends (accepted requests)
     const results = await this.db.select({
@@ -2068,7 +2083,11 @@ export class DatabaseStorage implements IStorage {
       username: users.username,
       name: users.name,
       role: users.role,
-      friendshipId: friendships.id
+      friendshipId: friendships.id,
+      rowUserId: friendships.userId,
+      rowFriendId: friendships.friendId,
+      userWins: friendships.userWins,
+      friendWins: friendships.friendWins
     })
     .from(friendships)
     .innerJoin(users, or(
@@ -2098,15 +2117,51 @@ export class DatabaseStorage implements IStorage {
       if (partnersIds.length > 0) {
         const ids = partnersIds.map(p => p.id).filter(id => id !== userId);
         if (ids.length > 0) {
-          chatPartners = await this.db.select().from(users).where(inArray(users.id, ids));
+          chatPartners = await this.db.select({
+            id: users.id,
+            username: users.username,
+            name: users.name,
+            role: users.role
+          })
+          .from(users)
+          .where(and(
+             inArray(users.id, ids),
+             eq(users.role, 'student') // Only students as partners for admins
+          ));
         }
       }
     }
 
-    // Combine and deduplicate by ID
-    const combined = [...results, ...admins, ...chatPartners];
-    const unique = Array.from(new Map(combined.map(u => [u.id, u])).values());
+    // Combine and format results
+    const combined = [
+        ...results.map(r => ({
+            ...r,
+            wins: r.rowUserId === userId ? r.userWins : r.friendWins,
+            losses: r.rowUserId === userId ? r.friendWins : r.userWins,
+            type: 'friend'
+        })),
+        ...admins.map(a => ({
+            id: a.id,
+            username: a.username,
+            name: a.name,
+            role: a.role,
+            type: 'admin',
+            wins: 0,
+            losses: 0
+        })),
+        ...chatPartners.map(p => ({
+            id: p.id,
+            username: p.username,
+            name: p.name,
+            role: p.role,
+            type: 'chat_partner',
+            wins: 0,
+            losses: 0
+        }))
+    ];
 
+    // Remove duplicates by ID (admin might also be a real friend)
+    const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
     return unique;
   }
 

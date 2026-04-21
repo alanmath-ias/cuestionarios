@@ -1508,6 +1508,9 @@ Tono: Alentador, profesional y educativo.`;
       const friendshipsList = await storage.getFriendships(userId);
       const friendship = friendshipsList.find(f => (f.userId === targetId || f.friendId === targetId) && f.status === 'accepted');
 
+      const wins = friendship ? (friendship.userId === userId ? friendship.userWins : friendship.friendWins) : 0;
+      const losses = friendship ? (friendship.userId === userId ? friendship.friendWins : friendship.userWins) : 0;
+
       res.json({
         user: {
           id: user.id,
@@ -1518,7 +1521,8 @@ Tono: Alentador, profesional y educativo.`;
         wonDuels,
         assignedCategories,
         allProgress,
-        isFriend: !!friendship
+        isFriend: !!friendship,
+        personalRecord: { wins, losses }
       });
     } catch (error) {
       console.error("Error fetching friend profile:", error);

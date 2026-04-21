@@ -9,6 +9,7 @@ import {
   X, 
   UserCheck, 
   Sword, 
+  Swords,
   Trophy,
   History,
   MessageSquare,
@@ -55,6 +56,7 @@ export default function SocialPage() {
   } = useDuel();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [friendsFilter, setFriendsFilter] = useState("");
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -63,6 +65,15 @@ export default function SocialPage() {
   const { data: friends = [], isLoading: loadingFriends } = useQuery<any[]>({
     queryKey: ["/api/social/friends"],
   });
+
+  const filteredFriends = useMemo(() => {
+    if (!friendsFilter) return friends;
+    const q = friendsFilter.toLowerCase();
+    return friends.filter(f => 
+      f.name.toLowerCase().includes(q) || 
+      f.username.toLowerCase().includes(q)
+    );
+  }, [friends, friendsFilter]);
 
   // Sync online status from initial fetch
   useEffect(() => {
@@ -229,16 +240,34 @@ export default function SocialPage() {
                   actionLabel="Buscar Amigos"
                 />
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {friends?.map((friend) => (
-                    <UserCard 
-                      key={friend.id} 
-                      user={friend} 
-                      type="friend" 
-                      onChallenge={() => setChallengingUser(friend)}
-                      onProfile={() => setSelectedProfileId(friend.id)}
+                <div className="space-y-6">
+                  {/* Local Search Bar */}
+                  <div className="relative group max-w-md">
+                    <div className="absolute inset-0 bg-blue-500/10 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity rounded-full" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4 transition-colors group-focus-within:text-blue-400" />
+                    <Input 
+                      placeholder="Filtrar amigos por nombre..." 
+                      value={friendsFilter}
+                      onChange={(e) => setFriendsFilter(e.target.value)}
+                      className="pl-11 py-5 bg-slate-900/40 border-white/5 rounded-2xl text-sm focus:ring-blue-500/50 backdrop-blur-md placeholder:text-slate-600"
                     />
-                  ))}
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    {filteredFriends.length > 0 ? (
+                      filteredFriends.map((friend) => (
+                        <UserCard 
+                          key={friend.id} 
+                          user={friend} 
+                          type="friend" 
+                          onChallenge={() => setChallengingUser(friend)}
+                          onProfile={() => setSelectedProfileId(friend.id)}
+                        />
+                      ))
+                    ) : (
+                      <div className="text-center p-12 text-slate-500">No se encontraron amigos que coincidan con la búsqueda.</div>
+                    )}
+                  </div>
                 </div>
               )}
             </TabsContent>
@@ -254,7 +283,7 @@ export default function SocialPage() {
                   description="Aquí verás las invitaciones de amistad que recibas."
                 />
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
                   {pendingRequests?.map((req) => (
                     <UserCard 
                       key={req.friendshipId} 
@@ -286,7 +315,7 @@ export default function SocialPage() {
                 {searching ? (
                   <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-slate-500" /></div>
                 ) : searchResults && searchResults.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="flex flex-col gap-2">
                    {searchResults.map((u) => {
                      const relationship = allFriendships?.find(f => f.userId === u.id || f.friendId === u.id);
                      const isFriend = relationship?.status === 'accepted';
@@ -346,36 +375,55 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
     setChallengeTopic, 
     setIsRevengeMode 
   } = useDuel();
+
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ scale: 1.01 }}
+      whileHover={{ x: 5, backgroundColor: "rgba(30, 41, 59, 0.6)" }}
       onClick={user.role === 'admin' ? undefined : onProfile}
-      className={`bg-slate-900/40 border border-white/5 rounded-3xl p-4 flex items-center justify-between group backdrop-blur-sm ${user.role === 'admin' ? 'cursor-default' : 'cursor-pointer hover:bg-slate-900/60'} transition-colors ${disabled ? 'pointer-events-none opacity-50' : ''}`}
+      className={`bg-slate-900/40 border border-white/5 rounded-2xl p-3 px-5 flex items-center justify-between group backdrop-blur-sm ${user.role === 'admin' ? 'cursor-default' : 'cursor-pointer'} transition-all ${disabled ? 'pointer-events-none opacity-50' : ''}`}
     >
-      <div className="flex items-center gap-4">
-        <div className="relative">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xl font-bold">
+      {/* Left: Avatar & Identity */}
+      <div className="flex items-center gap-4 flex-1 min-w-0">
+        <div className="relative flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-lg font-bold">
             {user.name.charAt(0).toUpperCase()}
           </div>
-          {/* Status Dot */}
-          <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-slate-900 ${onlineUsers.has(user.id) ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-slate-600'}`} />
+          <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-slate-900 ${onlineUsers.has(user.id) ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-slate-600'}`} />
         </div>
-        <div>
-          <h3 className="font-bold text-slate-100">{user.name}</h3>
-          <p className="text-xs text-slate-500">@{user.role === 'admin' ? 'Administrador' : user.username}</p>
-          {user.duelWins > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mt-1 w-fit">
-              <Trophy className="w-3 h-3 text-emerald-400" />
-              <span className="text-[10px] font-black text-emerald-400 leading-none">{user.duelWins}</span>
-            </div>
-          )}
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h3 className="font-bold text-slate-100 truncate leading-tight">{user.name}</h3>
+            {user.duelWins > 0 && (
+              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20" title="Victorias globales">
+                <Trophy className="w-2.5 h-2.5 text-emerald-400" />
+                <span className="text-[9px] font-black text-emerald-400 leading-none">{user.duelWins}</span>
+              </div>
+            )}
+          </div>
+          <p className="text-[10px] text-slate-500 truncate">@{user.role === 'admin' ? 'Administrador' : user.username}</p>
         </div>
       </div>
 
-      <div className="flex gap-2">
+      {/* Middle: Compact Record (Desktop only) */}
+      {type === "friend" && (user.wins > 0 || user.losses > 0) && (
+        <div className="hidden sm:flex items-center gap-4 mx-6 px-4 py-1.5 bg-slate-950/30 border border-white/5 rounded-xl group-hover:bg-slate-950/50 transition-colors">
+          <div className="flex flex-col items-center">
+            <span className="text-[7px] font-black text-emerald-500 uppercase tracking-tighter">Ganes</span>
+            <span className="text-sm font-black text-emerald-400 italic leading-none">{user.wins}V</span>
+          </div>
+          <div className="h-4 w-px bg-white/5" />
+          <div className="flex flex-col items-center">
+            <span className="text-[7px] font-black text-rose-500 uppercase tracking-tighter">Pérdidas</span>
+            <span className="text-sm font-black text-rose-400 italic leading-none">{user.losses}D</span>
+          </div>
+        </div>
+      )}
+
+      {/* Right: Actions */}
+      <div className="flex items-center gap-2">
         {type === "friend" && (
           <>
             <Button 
@@ -383,12 +431,11 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
               variant="outline"
               onClick={(e) => { 
                 e.stopPropagation(); 
-                // Custom event to open chat
                 window.dispatchEvent(new CustomEvent('open-chat', { detail: { friend: user } }));
               }}
-              className="rounded-xl border-blue-500/50 text-blue-400 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors"
+              className="rounded-xl border-blue-500/20 bg-blue-500/5 text-blue-400 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all h-9 px-3 text-xs font-bold"
             >
-              <MessageSquare className="w-4 h-4 mr-2" /> Chatear
+              <MessageSquare className="w-3.5 h-3.5 mr-1.5" /> Chatear
             </Button>
             {user.role !== 'admin' && (
               <Button 
@@ -401,13 +448,13 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
                   setIsRevengeMode(false);
                 }}
                 disabled={sentChallenges.has(user.id)}
-                className={`rounded-xl shadow-lg transition-all duration-300 ${
+                className={`rounded-xl shadow-lg transition-all duration-300 h-9 px-3 text-xs font-bold ${
                   sentChallenges.has(user.id) 
                     ? 'bg-slate-800 text-slate-500 cursor-default shadow-none' 
-                    : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/40 hover:shadow-blue-500/50 hover:scale-105 active:scale-95'
+                    : 'bg-blue-600 hover:bg-blue-500 shadow-blue-950/20 active:scale-95'
                 }`}
               >
-                <Sword className="w-4 h-4 mr-2" /> 
+                <Sword className="w-3.5 h-3.5 mr-1.5" /> 
                 {sentChallenges.has(user.id) ? 'Retado' : 'Retar'}
               </Button>
             )}
@@ -415,68 +462,47 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
         )}
 
         {type === "request" && (
-          <>
+          <div className="flex gap-2">
             <Button 
-              size="icon" 
+              size="sm"
               variant="default" 
               onClick={(e) => { e.stopPropagation(); onAccept(); }}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-500"
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-500 h-9 px-4 font-bold text-xs"
             >
-              <Check className="w-4 h-4" />
+              <Check className="w-3.5 h-3.5 mr-1.5" /> Aceptar
             </Button>
             <Button 
-              size="icon" 
+              size="icon"
               variant="destructive" 
               onClick={(e) => { e.stopPropagation(); onReject(); }}
-              className="rounded-xl"
+              className="rounded-xl h-9 w-9"
               title="Rechazar"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </Button>
-            <Button 
-               size="icon" 
-               variant="secondary" 
-               onClick={(e) => { e.stopPropagation(); onBlock(); }}
-               className="rounded-xl bg-slate-800 text-slate-400 hover:text-red-400"
-               title="Bloquear"
-             >
-               <ShieldAlert className="w-4 h-4" />
-             </Button>
-          </>
+          </div>
         )}
 
          {type === "search" && (
            <div className="flex gap-2">
-             {status === "blocked" ? (
-               isBlocker ? (
-                 <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); onUnblock(); }} className="rounded-xl border-red-500/50 text-red-500 hover:bg-red-500/10">
-                   Desbloquear
-                 </Button>
+             <Button 
+               size="sm"
+               onClick={(e) => { e.stopPropagation(); onAdd(); }}
+               disabled={disabled}
+               className={`rounded-xl h-9 px-4 font-bold text-xs transition-all ${disabled ? 'bg-slate-800' : 'bg-slate-100 text-slate-950 hover:bg-white'}`}
+             >
+               {status === "accepted" ? (
+                 <><UserCheck className="w-3.5 h-3.5 mr-1.5" /> Amigo</>
+               ) : status === "pending" ? (
+                 <><Clock className="w-3.5 h-3.5 mr-1.5" /> Pendiente</>
                ) : (
-                 <Badge variant="outline" className="text-slate-500 border-slate-800">Bloqueado</Badge>
-               )
-             ) : (
-               <>
-                 <Button 
-                   size="sm" 
-                   onClick={(e) => { e.stopPropagation(); onAdd(); }}
-                   disabled={disabled}
-                   className={`rounded-xl ${disabled ? 'bg-slate-800' : 'bg-slate-200 text-slate-900 hover:bg-white'}`}
-                 >
-                   {status === "accepted" ? (
-                     <><UserCheck className="w-4 h-4 mr-2" /> Amigo</>
-                   ) : status === "pending" ? (
-                     <><Clock className="w-4 h-4 mr-2" /> Pendiente</>
-                   ) : (
-                     <><UserPlus className="w-4 h-4 mr-2" /> Agregar</>
-                   )}
-                 </Button>
-                 {status !== "accepted" && status !== "pending" && (
-                   <Button size="icon" variant="ghost" onClick={onBlock} title="Bloquear" className="rounded-xl text-slate-500 hover:text-red-400">
-                     <ShieldAlert className="w-4 h-4" />
-                   </Button>
-                 )}
-               </>
+                 <><UserPlus className="w-3.5 h-3.5 mr-1.5" /> Agregar</>
+               )}
+             </Button>
+             {status !== "accepted" && status !== "pending" && (
+               <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); onBlock(); }} title="Bloquear" className="rounded-xl text-slate-500 hover:text-red-400 h-9 w-9 hover:bg-red-500/10">
+                 <ShieldAlert className="w-3.5 h-3.5" />
+               </Button>
              )}
            </div>
          )}

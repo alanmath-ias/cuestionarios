@@ -289,7 +289,12 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
   const leaveResults = useCallback((duelId: number) => {
     socket?.send(JSON.stringify({ type: 'duel:leave_results', payload: { duelId } }));
     setDuel(null);
-  }, [socket]);
+    // Invalidate queries to refresh rankings and social status
+    queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/social/pending-requests"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/social/friendships"] });
+  }, [socket, queryClient]);
 
   const spectateDuel = useCallback((duelId: number) => {
     socket?.send(JSON.stringify({ type: 'admin:spectate', payload: { duelId } }));

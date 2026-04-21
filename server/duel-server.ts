@@ -5,8 +5,8 @@ import { sessionStore, sessionSecret } from './index.js';
 import { storage } from './storage.js';
 import { generateAiQuizData } from './ai-utils.js';
 import { db } from './db.js';
-import { users, duels, quizzes, questions as questionsTable, answers } from '../shared/schema.js';
-import { eq, sql } from 'drizzle-orm';
+import { users, duels, quizzes, questions as questionsTable, answers, friendships } from '../shared/schema.js';
+import { eq, sql, or, and } from 'drizzle-orm';
 
 interface DuelPlayer {
   userId: number;
@@ -561,6 +561,27 @@ export class DuelServer {
             scores: room.scores,
             winnerId
         }).where(eq(duels.id, duelId));
+
+        // Update friendship persistent score
+        if (winnerId) {
+          const u1 = room.challenger.userId;
+          const u2 = room.receiver.userId;
+          const [rel] = await tx.select().from(friendships).where(
+            or(
+              and(eq(friendships.userId, u1), eq(friendships.friendId, u2)),
+              and(eq(friendships.userId, u2), eq(friendships.friendId, u1))
+            )
+          );
+
+          if (rel && rel.status === 'accepted') {
+            if (rel.userId === winnerId) {
+              await tx.update(friendships).set({ userWins: rel.userWins + 1 }).where(eq(friendships.id, rel.id));
+            } else {
+              await tx.update(friendships).set({ friendWins: rel.friendWins + 1 }).where(eq(friendships.id, rel.id));
+            }
+            console.log(`📈 [SOCIAL] Updated friendship ${rel.id} score for winner ${winnerId}`);
+          }
+        }
     });
 
     const winnerName = winnerId ? (winnerId === room.challenger.userId ? room.challenger.username : room.receiver.username) : null;

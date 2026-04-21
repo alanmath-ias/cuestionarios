@@ -139,6 +139,24 @@ export const FriendProfileDialog: React.FC<FriendProfileDialogProps> = ({
                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Créditos</span>
                                         </div>
                                     </div>
+
+                                    {/* Personal Record vs Friend */}
+                                    {profile.isFriend && (
+                                      <div className="mt-4 bg-gradient-to-br from-blue-900/40 to-purple-900/40 p-4 rounded-3xl border border-white/10 flex items-center justify-between shadow-xl shadow-blue-500/5">
+                                        <div className="text-left pl-2">
+                                          <div className="flex items-center gap-2">
+                                            <Trophy className="w-4 h-4 text-emerald-400" />
+                                            <span className="text-xs font-black text-slate-300 uppercase tracking-wider">Historial vs Ti</span>
+                                          </div>
+                                          <p className="text-2xl font-black text-white mt-1 italic tracking-tighter">
+                                            <span className="text-emerald-400">{profile.personalRecord.wins}V</span> - <span className="text-rose-400">{profile.personalRecord.losses}D</span>
+                                          </p>
+                                        </div>
+                                        <div className="pr-2">
+                                          <Sword className="w-10 h-10 text-white/10 rotate-12" />
+                                        </div>
+                                      </div>
+                                    )}
                                     
                                     <div className="flex justify-center gap-3">
                                         <Button
@@ -193,7 +211,7 @@ export const FriendProfileDialog: React.FC<FriendProfileDialogProps> = ({
                                                 <motion.button
                                                     key={cat.id}
                                                     whileHover={{ scale: 1.02, x: 5 }}
-                                                    whileActive={{ scale: 0.98 }}
+                                                    whileTap={{ scale: 0.98 }}
                                                     onClick={() => {
                                                         setSelectedCategory(cat);
                                                         setIsAwardsOpen(true);

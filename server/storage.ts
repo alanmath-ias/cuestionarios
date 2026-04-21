@@ -118,6 +118,7 @@ export interface IStorage {
   getPendingFriendRequests(userId: number): Promise<any[]>;
   getFriendships(userId: number): Promise<any[]>;
   removeFriend(userId: number, friendId: number): Promise<void>;
+  updateFriendshipScore(friendshipId: number, winnerId: number): Promise<void>;
   getWonDuelsCount(userId: number): Promise<number>;
   blockUser(userId: number, targetId: number): Promise<void>;
   unblockUser(userId: number, targetId: number): Promise<void>;
@@ -832,6 +833,7 @@ export class MemStorage implements IStorage {
   async getPendingFriendRequests(userId: number): Promise<any[]> { return []; }
   async getFriendships(userId: number): Promise<any[]> { return []; }
   async removeFriend(userId: number, friendId: number): Promise<void> { }
+  async updateFriendshipScore(friendshipId: number, winnerId: number): Promise<void> { }
   async getWonDuelsCount(userId: number): Promise<number> { return 0; }
   async blockUser(userId: number, targetId: number): Promise<void> { }
   async unblockUser(userId: number, targetId: number): Promise<void> { }

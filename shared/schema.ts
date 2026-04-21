@@ -514,6 +514,8 @@ export const friendships = pgTable("friendships", {
 	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
 	friendId: integer("friend_id").notNull().references(() => users.id, { onDelete: "cascade" }),
 	status: text("status").default('pending').notNull(),
+	userWins: integer("user_wins").default(0).notNull(),
+	friendWins: integer("friend_wins").default(0).notNull(),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   unique("friendship_unique").on(table.userId, table.friendId),
