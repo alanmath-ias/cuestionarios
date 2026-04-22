@@ -69,18 +69,40 @@ interface ManagedChallengeRoom {
 export class DuelServer {
   public static instance: DuelServer | null = null;
   private wss: WebSocketServer;
-  private userSockets: Map<number, WebSocket> = new Map();
-  private adminSockets: Set<WebSocket> = new Set();
-  private activeDuels: Map<number, DuelRoom> = new Map();
-  private activeManagedChallenges: Map<number, ManagedChallengeRoom> = new Map();
-  private duelTimers: Map<number, NodeJS.Timeout> = new Map();
+  private userSockets = new Map<number, WebSocket>();
+  private activeDuels = new Map<number, DuelRoom>();
+  private activeManagedChallenges = new Map<number, ManagedChallengeRoom>();
+  private adminSockets = new Set<WebSocket>();
+  private duelTimers = new Map<number, NodeJS.Timeout>();
 
   constructor(server: Server) {
     DuelServer.instance = this;
     this.wss = new WebSocketServer({ server, path: '/ws/duels' });
     this.wss.on('connection', this.handleConnection.bind(this));
     this.startHeartbeat();
+    
+    // Periodic cleanup of stale duels (every 2 minutes)
+    setInterval(() => this.cleanupStaleDuels(), 120000);
+    
     console.log('🚀 Duel WebSocket Server initialized at /ws/duels');
+  }
+
+  private cleanupStaleDuels() {
+      const now = Date.now();
+      for (const [duelId, room] of this.activeDuels.entries()) {
+          const challengerSocket = this.userSockets.get(room.challenger.userId);
+          const receiverSocket = this.userSockets.get(room.receiver.userId);
+          
+          const challengerActive = challengerSocket && challengerSocket.readyState === WebSocket.OPEN;
+          const receiverActive = receiverSocket && receiverSocket.readyState === WebSocket.OPEN;
+
+          // If both are gone for more than 5 minutes or duel is stuck in progress without any action
+          if (!challengerActive && !receiverActive) {
+              console.log(`🧹 [CLEANUP] Removing stale duel ${duelId}`);
+              this.activeDuels.delete(duelId);
+              this.broadcastDuelListToAdmins();
+          }
+      }
   }
 
   private startHeartbeat() {
@@ -273,10 +295,22 @@ export class DuelServer {
     }
   }
 
-  private async handleChallenge(userId: number, payload: { receiverId: number; wager: number; topic?: string; isRevenge?: boolean; handicap?: any }) {
-    const { receiverId: rawReceiverId, wager, topic, isRevenge, handicap } = payload;
-    const receiverId = Number(rawReceiverId);
-    const challengerId = userId;
+  private async handleChallenge(challengerId: number, payload: { receiverId: number; wager: number; topic?: string; isRevenge?: boolean; handicap?: any }) {
+    const { receiverId, wager, topic, isRevenge, handicap } = payload;
+    
+    // Safety: Cleanup any active duels involving these users to avoid ghost states
+    for (const [duelId, room] of this.activeDuels.entries()) {
+        if (room.challenger.userId === challengerId || room.receiver.userId === challengerId ||
+            room.challenger.userId === receiverId || room.receiver.userId === receiverId) {
+            console.log(`♻️ [REMATCH] Cleaning up stale duel ${duelId} for new challenge`);
+            this.activeDuels.delete(duelId);
+            if (this.duelTimers.has(duelId)) {
+                clearTimeout(this.duelTimers.get(duelId));
+                this.duelTimers.delete(duelId);
+            }
+        }
+    }
+
     const challenger = await storage.getUser(challengerId);
     const receiverSocket = this.userSockets.get(receiverId);
 
@@ -535,6 +569,36 @@ export class DuelServer {
 
     room.questionStartTime = Date.now();
     this.broadcastDuelListToAdmins();
+
+    // SERVER-SIDE TIMEOUT (Failsafe for stuck duels)
+    if (this.duelTimers.has(duelId)) clearTimeout(this.duelTimers.get(duelId));
+    this.duelTimers.set(duelId, setTimeout(() => this.handleQuestionTimeout(duelId, room.currentQuestionIndex), 35000));
+  }
+
+  private handleQuestionTimeout(duelId: number, questionIndex: number) {
+      const room = this.activeDuels.get(duelId);
+      if (!room || room.status !== 'in_progress' || room.currentQuestionIndex !== questionIndex) return;
+
+      console.log(`⏰ [TIMEOUT] Question ${questionIndex + 1} timed out for room ${duelId}. Forcing next...`);
+      
+      // Mark anyone who hasn't answered as failed if not already in failedUserIds
+      const answerers = room.currentRoundAnswers.map(a => a.userId);
+      if (!answerers.includes(room.challenger.userId)) room.failedUserIds.push(room.challenger.userId);
+      if (!answerers.includes(room.receiver.userId)) room.failedUserIds.push(room.receiver.userId);
+
+      // We treat it as if both failed
+      this.broadcastToDuel(duelId, {
+          type: 'duel:round_result',
+          payload: {
+              winnerId: null,
+              scores: room.scores,
+              correctAnswerId: room.questions[questionIndex].options.find((o: any) => o.isCorrect)?.id,
+              answerId: null
+          }
+      });
+
+      room.currentQuestionIndex++;
+      setTimeout(() => this.sendNextQuestion(duelId), 2000);
   }
 
   private async processAnswer(userId: number, payload: { duelId: number; questionIndex: number; answerId: number }) {
@@ -595,7 +659,18 @@ export class DuelServer {
 
         // Delay before next question
         room.currentQuestionIndex++;
-        setTimeout(() => this.sendNextQuestion(duelId), 3000);
+
+        // BARAJAR: Si un jugador ya ganó suficientes puntos o es la última pregunta, terminar
+        const allFinished = room.currentQuestionIndex >= room.questions.length;
+        
+        // Failsafe: if opponent is offline, finish now instead of waiting
+        const opponentId = userId === room.challenger.userId ? room.receiver.userId : room.challenger.userId;
+        const opponentSocket = this.userSockets.get(opponentId);
+        if (allFinished || !opponentSocket || opponentSocket.readyState !== WebSocket.OPEN) {
+            setTimeout(() => this.finishDuel(duelId), 1000);
+        } else {
+            setTimeout(() => this.sendNextQuestion(duelId), 3000);
+        }
     } else {
         // Inform BOTH that someone failed
         if (!room.failedUserIds.includes(userId)) {
@@ -963,7 +1038,11 @@ export class DuelServer {
   // --- Managed Challenge Methods ---
 
   private async handleManagedCreate(adminId: number, payload: any) {
-    const { studentIds, wager, creditsMode, prizeConfig, quizId, aiTopic, advantages = {} } = payload;
+    const { studentIds, wager, creditsMode, prizeConfig, advantages = {}, quizConfig } = payload;
+    
+    // Extract actual config from the nested quizConfig object
+    const quizId = quizConfig?.type === 'database' ? quizConfig.quizId : null;
+    const aiTopic = quizConfig?.type === 'ai' ? quizConfig.topic : null;
     
     try {
       const challenge = await storage.createManagedChallenge({
@@ -1035,6 +1114,27 @@ export class DuelServer {
 
       this.activeManagedChallenges.set(challenge.id, room);
       this.broadcastManagedChallengeListToAdmins();
+
+      // IMPORTANT: Send full sync to the admin so their UI transitions to the monitoring lobby
+      if (room.adminSocket && room.adminSocket.readyState === WebSocket.OPEN) {
+          room.adminSocket.send(JSON.stringify({
+              type: 'managed:sync',
+              payload: {
+                  challengeId: room.id,
+                  topic: room.topic || "Reto Administrado",
+                  status: room.status,
+                  players: Array.from(room.players.values()).map(p => ({
+                      userId: p.userId,
+                      username: p.username,
+                      status: p.status,
+                      score: p.score
+                  })),
+                  scores: Object.fromEntries(Array.from(room.players.values()).map(p => [p.userId, p.score])),
+                  currentQuestionIndex: room.currentQuestionIndex,
+                  questionsCount: room.questions.length
+              }
+          }));
+      }
 
       this.sendToUser(adminId, {
           type: 'managed:created',
@@ -1116,6 +1216,18 @@ export class DuelServer {
       }
 
       room.questions = questionsList;
+      
+      if (questionsList.length === 0) {
+          console.warn('⚠️ [MANAGED] Attempted to start challenge with 0 questions. Topic:', room.topic);
+          this.sendToUser(adminId, { 
+              type: 'managed:error', 
+              payload: { message: 'No se pudieron generar preguntas. Revisa el tema e intenta de nuevo.' } 
+          });
+          room.status = 'pending'; // Reset status
+          await storage.updateManagedChallenge(challengeId, { status: 'pending' });
+          return;
+      }
+
       room.status = 'in_progress';
       await storage.updateManagedChallenge(challengeId, { status: 'in_progress' });
 

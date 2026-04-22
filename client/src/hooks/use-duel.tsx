@@ -308,6 +308,11 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           break;
       case 'managed:invited':
           setManagedInvite(payload);
+          toast({
+              title: "¡RETO DEL PROFESOR!",
+              description: `${payload.adminName} te ha invitado a un reto de ${payload.topic}.`,
+              variant: "default"
+          });
           break;
       case 'managed:started':
           setManagedInvite(null);
@@ -353,33 +358,43 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendChallenge = async (receiverId: number, wager: number, topic?: string, isRevenge?: boolean, handicap?: any, receiverName?: string) => {
-    // Clear any stale duel results first so the waiting card shows
+    // CRITICAL: Fully wipe all duel related states before a new challenge
     setDuel(null);
     setInvite(null);
+    setSentChallengeInfo(null);
+    setManagedInvite(null);
+    setIsPreparing(false);
+    setIsResponding(false);
 
     if (!socket || socket.readyState !== WebSocket.OPEN) {
-        toast({ title: "Conexión pérdida", description: "No se pudo enviar el reto. Reintentando...", variant: "destructive" });
-        return;
+      toast({
+        title: "Error de conexión",
+        description: "No se pudo conectar al servidor de duelos.",
+        variant: "destructive",
+      });
+      return;
     }
+
+    const payload = { receiverId, wager, topic, isRevenge, handicap };
+    socket.send(JSON.stringify({ type: 'duel:challenge', payload }));
     
-    socket.send(JSON.stringify({ type: 'duel:challenge', payload: { receiverId, wager, topic, isRevenge, handicap } }));
     setSentChallenges(prev => new Set(prev).add(receiverId));
-    
-    // Set informative state for the waiting screen
+
+    // Save info for the "Sent Challenge" card
     setSentChallengeInfo({
         receiverId,
-        receiverName: receiverName || "tu amigo",
+        receiverName: receiverName || "Oponente",
+        topic: topic || "Matemáticas",
         wager,
-        topic: topic || "Matemáticas Generales",
-        handicap,
-        isRevenge
+        handicap: handicap || { type: 'none', value: 0 }
     });
-
-    // We don't show toast anymore as we show the big card
   };
 
   const respondToInvite = (duelId: number, action: 'accept' | 'reject' | 'counter', wager?: number, handicap?: any) => {
     setIsResponding(true);
+    if (action === 'accept') {
+        setIsPreparing(true);
+    }
     socket?.send(JSON.stringify({ type: 'duel:respond', payload: { duelId, action, wager, handicap } }));
     if (action !== 'counter') {
         setInvite(null);

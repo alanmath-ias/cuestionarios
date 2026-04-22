@@ -609,7 +609,7 @@ export default function AdminChallengeManager() {
                                 value={[advantages[editingStudent?.id || 0]?.timeDelay || 0]}
                                 min={0}
                                 max={quizType === 'ai' ? 60 : 300}
-                                step={5}
+                                step={1}
                                 onValueChange={([val]) => {
                                     if (!editingStudent) return;
                                     setAdvantages({

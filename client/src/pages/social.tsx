@@ -58,6 +58,7 @@ export default function SocialPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [friendsFilter, setFriendsFilter] = useState("");
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
+  const [showOfflineDialog, setShowOfflineDialog] = useState<{ isOpen: boolean; name: string }>({ isOpen: false, name: "" });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -260,8 +261,14 @@ export default function SocialPage() {
                           key={friend.id} 
                           user={friend} 
                           type="friend" 
-                          onChallenge={() => setChallengingUser(friend)}
-                          onProfile={() => setSelectedProfileId(friend.id)}
+                           onChallenge={() => {
+                             if (!onlineUsers.has(friend.id)) {
+                               setShowOfflineDialog({ isOpen: true, name: friend.name });
+                             } else {
+                               setChallengingUser(friend);
+                             }
+                           }}
+                           onProfile={() => setSelectedProfileId(friend.id)}
                         />
                       ))
                     ) : (
@@ -355,6 +362,10 @@ export default function SocialPage() {
           isOpen={!!selectedProfileId}
           onClose={() => setSelectedProfileId(null)}
           onChallenge={(friend) => {
+            if (!onlineUsers.has(friend.id)) {
+                setShowOfflineDialog({ isOpen: true, name: friend.name });
+                return;
+            }
             setChallengingUser({ id: friend.id, name: friend.name });
             setChallengeWager(10);
             setChallengeTopic("");
@@ -362,6 +373,31 @@ export default function SocialPage() {
           }}
         />
 
+        {/* Offline Friend Alert Dialog */}
+        <Dialog open={showOfflineDialog.isOpen} onOpenChange={(open) => setShowOfflineDialog(prev => ({ ...prev, isOpen: open }))}>
+          <DialogContent className="bg-slate-900 border-white/10 text-white rounded-3xl sm:max-w-md">
+            <DialogHeader className="flex flex-col items-center text-center">
+              <div className="h-16 w-16 rounded-3xl bg-blue-500/10 flex items-center justify-center mb-4">
+                <Clock className="w-8 h-8 text-blue-400" />
+              </div>
+              <DialogTitle className="text-2xl font-black uppercase tracking-tighter italic">¡Ups! {showOfflineDialog.name} no anda por aquí</DialogTitle>
+              <DialogDescription className="text-slate-400 text-sm mt-2">
+                Parece que tu amigo no está conectado en este momento. Escríbele un mensaje para ponerte de acuerdo o espera a que esté en línea para retarlo.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex-row gap-2 sm:justify-center mt-4">
+              <Button 
+                className="flex-1 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold uppercase text-[10px] tracking-widest py-6"
+                onClick={() => {
+                  setShowOfflineDialog(prev => ({ ...prev, isOpen: false }));
+                  // Open chat logic could go here if needed
+                }}
+              >
+                ENTENDIDO
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
 }
@@ -442,10 +478,13 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
                 size="sm" 
                 onClick={(e) => { 
                   e.stopPropagation(); 
-                  setChallengingUser({ id: user.id, name: user.name });
-                  setChallengeWager(10);
-                  setChallengeTopic("");
-                  setIsRevengeMode(false);
+                  if (!onlineUsers.has(user.id)) {
+                    // This is handled in the parent via state but we need a callback or just use the same handler pattern
+                    // For simplicity in this functional component, I'll use a direct check if I can access the state
+                    // Wait, this is a sub-component. I should pass a handler down or use a global-ish state.
+                    // Actually, let's just make onChallenge in the parent handle it.
+                  }
+                  onChallenge(user); 
                 }}
                 disabled={sentChallenges.has(user.id)}
                 className={`rounded-xl shadow-lg transition-all duration-300 h-9 px-3 text-xs font-bold ${

@@ -69,8 +69,9 @@ REQUISITOS TÉCNICOS:
 7.  Todas las preguntas deben ser de tipo 'multiple_choice' con exactamente 4 opciones.
 8.  El lenguaje debe ser claro, educativo y en español.
 9.  Las opciones de respuesta deben estar bien pensadas (incluye distractores comunes).
-10. Incluye una breve explicación pedagógica de la respuesta correcta (máximo 2 líneas).
-11. Prioriza ejercicios técnicos directos. Evita enunciados extensos, historias o contextos innecesarios.
+10. **UNICIDAD OBLIGATORIA**: Los textos de las 4 opciones deben ser COMPLETAMENTE distintos entre sí. Nunca repitas el mismo valor o texto.
+11. Incluye una breve explicación pedagógica de la respuesta correcta (máximo 2 líneas).
+12. Prioriza ejercicios técnicos directos. Evita enunciados extensos, historias o contextos innecesarios.
 
 DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
 {

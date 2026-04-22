@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, memo } from "react";
 import { useDuel } from "@/hooks/use-duel";
 import { useSession } from "@/hooks/useSession";
 import { motion, AnimatePresence } from "framer-motion";
-import { Swords, Trophy, X, ShieldAlert, Cpu, Coins, Zap, Loader2, Minus, Plus, CheckCircle2, XCircle, Brain, Sparkles, ChevronLeft, ChevronRight, ArrowLeft, Clock, Skull } from "lucide-react";
+import { Swords, Trophy, X, ShieldAlert, Cpu, Coins, Zap, Loader2, Minus, Plus, CheckCircle2, XCircle, Brain, Sparkles, ChevronLeft, ChevronRight, ArrowLeft, Clock, Skull, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -341,6 +341,16 @@ export function DuelOverlay() {
     return { meWrong, oppWrong, oppCorrect, meCorrect, name: fb?.userName || duel?.opponentName };
   };
 
+  // ─── RENDERING GUARDS ───────────────────────────────────────────────────
+  // If we are admin and it's a managed challenge, we don't show the overlay 
+  // (unless spectating, but that's a future feature. For now, clear the blur).
+  const isAdminManaging = session?.role === 'admin' && !!managedChallenge;
+  
+  // Only show the overlay if there is something ACTIVE and VISIBLE to the user
+  const hasContent = !!invite || !!managedInvite || !!sentChallengeInfo || (!!duel && !duel.closed) || (!!managedChallenge && !isAdminManaging) || isPreparing;
+
+  if (!hasContent) return null;
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 pointer-events-none">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950/85 backdrop-blur-md pointer-events-auto" />
@@ -348,52 +358,8 @@ export function DuelOverlay() {
       <div className="relative z-10 w-full max-w-2xl pointer-events-auto">
         <AnimatePresence mode="wait">
 
-          {/* ── MANAGED GROUP INVITATION ─────────────────────────────── */}
-          {managedInvite && !managedChallenge && (
-            <motion.div key="managed-invite" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="px-4">
-               <Card className="bg-slate-900 border-amber-500/30 p-8 shadow-2xl rounded-[2.5rem] text-center">
-                  <div className="h-16 w-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Trophy className="h-8 w-8 text-amber-500" />
-                  </div>
-                  <h2 className="text-3xl font-black text-amber-400 uppercase italic mb-2 tracking-tighter">¡RETO ADMINISTRADO!</h2>
-                  <p className="text-slate-400 mb-6 text-sm">
-                    <span className="text-white font-bold">{managedInvite.adminName}</span> te ha invitado a un reto grupal de <span className="text-amber-200">{managedInvite.topic}</span>.
-                  </p>
+          {/* ── MANAGED GROUP INVITATION (DELETED REDUNDANT) ── */}
 
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-6">
-                    <p className="text-[10px] font-black uppercase text-slate-500 mb-3">Premios y Reglas</p>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="flex flex-col items-center">
-                            <Coins className="h-4 w-4 text-amber-500 mb-1" />
-                            <span className="text-sm font-bold">{managedInvite.wager} Pts</span>
-                            <span className="text-[8px] text-slate-500 uppercase">Apuesta Base</span>
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <Zap className="h-4 w-4 text-blue-400 mb-1" />
-                            <span className="text-sm font-bold uppercase">{managedInvite.creditsMode === 'system_pay' ? 'Premio Sistema' : 'Robo de Puntos'}</span>
-                            <span className="text-[8px] text-slate-500 uppercase">Modo Créditos</span>
-                        </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 justify-center">
-                    <Button 
-                        className="bg-green-600 hover:bg-green-700 font-bold px-8 h-12 rounded-xl"
-                        onClick={() => respondToManagedInvite(managedInvite.challengeId, 'accept')}
-                    >
-                        ACEPTAR RETO
-                    </Button>
-                    <Button 
-                        variant="ghost" 
-                        className="text-red-400 hover:bg-red-400/10 rounded-xl"
-                        onClick={() => respondToManagedInvite(managedInvite.challengeId, 'abandon')}
-                    >
-                        CANCELAR
-                    </Button>
-                  </div>
-               </Card>
-            </motion.div>
-          )}
 
           {/* ── MANAGED GAME ARENA ───────────────────────────────────── */}
           {managedChallenge && managedChallenge.status === 'in_progress' && (
@@ -601,6 +567,60 @@ export function DuelOverlay() {
                   </div>
                 </div>
               </Card>
+            </motion.div>
+          )}
+
+          {/* ── MANAGED CHALLENGE INVITATION ─────────────────────────────── */}
+          {managedInvite && !actualPreparing && (!duel || duel.status === 'finished') && (
+            <motion.div key="managed-invite" initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.9, y: -20, opacity: 0 }} className="px-2 relative">
+                <Card className="bg-slate-950 border-purple-500/30 p-8 shadow-[0_0_50px_rgba(168,85,247,0.2)] text-white overflow-hidden relative rounded-[2.5rem]">
+                    <div className="absolute top-0 right-0 p-8 opacity-5"><Brain className="w-48 h-48 text-purple-400" /></div>
+                    <div className="relative z-10 flex flex-col items-center text-center">
+                        <div className="h-20 w-20 rounded-full bg-purple-500/20 flex items-center justify-center mb-6 border border-purple-500/40 shadow-lg">
+                            <Sparkles className="h-10 w-10 text-purple-400 animate-pulse" />
+                        </div>
+                        <h2 className="text-3xl font-black mb-2 uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-indigo-400 italic">
+                            RETO DEL PROFESOR
+                        </h2>
+                        <p className="text-slate-400 mb-8 text-sm">
+                            <span className="text-white font-bold">{managedInvite.adminName}</span> te invita a participar en un reto especial de <span className="text-purple-300 font-bold uppercase">{managedInvite.topic}</span>.
+                        </p>
+
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-8 w-full max-w-xs flex items-center justify-around">
+                            <div className="text-center">
+                                <span className="text-[10px] font-black uppercase text-slate-500 block mb-1">Premio</span>
+                                <div className="flex items-center gap-1.5 text-yellow-500 justify-center">
+                                    <Coins className="h-4 w-4" />
+                                    <span className="text-xl font-black">{managedInvite.wager}</span>
+                                </div>
+                            </div>
+                            <div className="w-px h-8 bg-white/10" />
+                            <div className="text-center">
+                                <span className="text-[10px] font-black uppercase text-slate-500 block mb-1">Rivalidad</span>
+                                <div className="flex items-center gap-1.5 text-blue-400 justify-center">
+                                    <Users className="h-4 w-4" />
+                                    <span className="text-xl font-black">{managedInvite.participantIds?.length || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3 w-full max-w-[280px]">
+                            <Button 
+                                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-6 py-7 rounded-2xl font-black text-lg uppercase tracking-tight shadow-xl shadow-purple-900/40 active:scale-95 transition-all"
+                                onClick={() => respondToManagedInvite(managedInvite.challengeId, 'accept')}
+                            >
+                                ¡ACEPTAR Y ENTRAR!
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                className="text-slate-500 hover:text-red-400 hover:bg-red-400/10 font-bold uppercase text-[10px] tracking-widest h-10"
+                                onClick={() => respondToManagedInvite(managedInvite.challengeId, 'abandon')}
+                            >
+                                IGNORAR RETO
+                            </Button>
+                        </div>
+                    </div>
+                </Card>
             </motion.div>
           )}
 
@@ -880,7 +900,7 @@ export function DuelOverlay() {
           )}
 
           {/* ── RESULTS ────────────────────────────────────────────────── */}
-          {duel && duel.status === 'finished' && !isReviewing && (
+          {duel && duel.status === 'finished' && !isReviewing && duel.finalResults && (
             <motion.div
               key="results" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               className="bg-slate-900/98 border border-white/10 p-0 rounded-[2.5rem] shadow-2xl text-center text-white overflow-hidden max-h-[96vh] flex flex-col"
