@@ -82,10 +82,10 @@ DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
       "content": "Texto de la pregunta...",
       "explanation": "Explicación de por qué la respuesta es correcta...",
       "options": [
-        { "text": "Distractor 1", "isCorrect": false },
-        { "text": "Distractor 2", "isCorrect": false },
-        { "text": "Respuesta Correcta", "isCorrect": true },
-        { "text": "Distractor 3", "isCorrect": false }
+        { "content": "Distractor 1", "isCorrect": false },
+        { "content": "Distractor 2", "isCorrect": false },
+        { "content": "Respuesta Correcta", "isCorrect": true },
+        { "content": "Distractor 3", "isCorrect": false }
       ]
     }
   ]

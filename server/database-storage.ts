@@ -2015,10 +2015,17 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getManagedChallengesByAdmin(adminId: number): Promise<ManagedChallenge[]> {
-    return this.db.select().from(managedChallenges)
+  async getManagedChallengesByAdmin(adminId: number): Promise<any[]> {
+    const challenges = await this.db.select().from(managedChallenges)
       .where(eq(managedChallenges.adminId, adminId))
       .orderBy(desc(managedChallenges.createdAt));
+
+    const results = [];
+    for (const challenge of challenges) {
+      const participants = await this.getParticipantsByChallenge(challenge.id);
+      results.push({ ...challenge, participants });
+    }
+    return results;
   }
 
   async addParticipantToChallenge(participant: InsertManagedChallengeParticipant): Promise<ManagedChallengeParticipant> {
@@ -2068,6 +2075,18 @@ export class DatabaseStorage implements IStorage {
     if (!challenge) return null;
     const participants = await this.getParticipantsByChallenge(id);
     return { ...challenge, participants };
+  }
+
+  async deleteManagedChallenge(id: number): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      // 1. Delete participants first
+      await tx.delete(managedChallengeParticipants)
+        .where(eq(managedChallengeParticipants.challengeId, id));
+      
+      // 2. Delete the challenge
+      await tx.delete(managedChallenges)
+        .where(eq(managedChallenges.id, id));
+    });
   }
 
   // Social/Friendship methods

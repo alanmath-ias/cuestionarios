@@ -86,7 +86,7 @@ export function Header({ user, pendingCount }: HeaderProps) {
                 <Link href="/social">
                   <span className={`text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 ${location === '/social' ? 'text-blue-400 font-bold' : ''}`}>
                     Amigos
-                    {pendingCount > 0 && (
+                    {!!pendingCount && pendingCount > 0 && (
                       <span className="flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-red-500 text-[10px] font-black text-white shadow-lg shadow-red-500/40 animate-bounce">
                         {pendingCount}
                       </span>
@@ -99,6 +99,7 @@ export function Header({ user, pendingCount }: HeaderProps) {
             {isAdmin && (
               <>
                 <li><Link href="/admin/quizzes"><span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Cuestionarios</span></Link></li>
+                <li><Link href="/admin/challenge-manager"><span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Retos</span></Link></li>
                 <li><Link href="/admin/users"><span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Usuarios</span></Link></li>
                 <li><Link href="/admin/calificar"><span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Calificar</span></Link></li>
                 <li>

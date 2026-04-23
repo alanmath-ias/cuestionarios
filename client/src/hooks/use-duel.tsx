@@ -40,10 +40,10 @@ interface DuelContextType {
   sentChallengeInfo: any | null;
   setSentChallengeInfo: (info: any | null) => void;
   isResponding: boolean;
-  speedBonus: boolean;
-  setSpeedBonus: (val: boolean) => void;
+  speedBonusFlash: string | null;
   // Managed Group Challenges
   managedChallenge: any;
+  setManagedChallenge: React.Dispatch<React.SetStateAction<any>>;
   managedInvite: any;
   createManagedChallenge: (payload: any) => void;
   respondToManagedInvite: (challengeId: number, action: 'accept' | 'abandon') => void;
@@ -51,6 +51,7 @@ interface DuelContextType {
   submitManagedAnswer: (challengeId: number, questionIndex: number, answerId: number) => void;
   spectateManagedChallenge: (challengeId: number) => void;
   activeManagedChallenges: any[];
+  socket: WebSocket | null;
 }
 
 const DuelContext = createContext<DuelContextType | null>(null);
@@ -68,7 +69,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
   const [sentChallenges, setSentChallenges] = useState<Set<number>>(new Set());
   const [isPreparing, setIsPreparing] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Set<number>>(new Set());
-  const [speedBonus, setSpeedBonus] = useState<boolean>(false);
+  const [speedBonusFlash, setSpeedBonusFlash] = useState<string | null>(null);
   
   // High-level Challenge Dialog State
   const [challengingUser, setChallengingUser] = useState<{ id: number; name: string } | null>(null);
@@ -172,7 +173,6 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         break;
       case 'duel:question':
         setIsPreparing(false);
-        setSpeedBonus(false); // Reset speed bonus flag for new round
         setDuel((prev: any) => prev ? { 
             ...prev, 
             currentQuestion: payload,
@@ -215,8 +215,8 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         }));
 
         if (payload.speedBonus) {
-            setSpeedBonus(true);
-            setTimeout(() => setSpeedBonus(false), 3500);
+            setSpeedBonusFlash(payload.winnerName);
+            setTimeout(() => setSpeedBonusFlash(null), 3500);
         }
         break;
       case 'duel:end':
@@ -316,6 +316,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           break;
       case 'managed:started':
           setManagedInvite(null);
+          setIsPreparing(true); // Trigger rotating tips transition
           setManagedChallenge({
               status: 'in_progress',
               challengeId: payload.challengeId,
@@ -325,9 +326,6 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
               players: payload.players || [],
               scores: payload.players?.reduce((acc: any, p: any) => ({ ...acc, [p.userId]: p.score }), {}) || {}
           });
-          break;
-      case 'managed:question':
-          setManagedChallenge((prev: any) => prev ? { ...prev, currentQuestion: payload } : null);
           break;
       case 'managed:player_update':
           setManagedChallenge((prev: any) => {
@@ -353,6 +351,45 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           break;
       case 'managed:sync':
           setManagedChallenge(payload);
+          break;
+      case 'managed:preparing':
+          setIsPreparing(true);
+          break;
+      case 'managed:question':
+          setIsPreparing(false);
+          setManagedChallenge((prev: any) => prev ? { 
+              ...prev, 
+              currentQuestion: { ...payload, startTime: Date.now() },
+              scores: payload.scores || prev.scores,
+              lastFeedback: undefined,
+              allWrongAnswers: []
+          } : null);
+          break;
+      case 'managed:answer_feedback':
+          setManagedChallenge((prev: any) => prev ? { 
+              ...prev, 
+              scores: payload.scores || prev.scores,
+              lastFeedback: payload,
+              allWrongAnswers: payload.isCorrect ? [] : [
+                  ...(prev.allWrongAnswers || []),
+                  { userId: payload.userId, answerId: payload.answerId, userName: payload.userName || "Alguien" }
+              ]
+          } : null);
+          break;
+      case 'managed:round_result':
+          setIsPreparing(false);
+          setManagedChallenge((prev: any) => prev ? { 
+              ...prev, 
+              scores: payload.scores, 
+              lastFeedback: payload 
+          } : null);
+          break;
+      case 'managed:completed':
+          setManagedChallenge((prev: any) => prev ? { ...prev, myStatus: 'finished' } : null);
+          break;
+      case 'managed:speed_bonus':
+          setSpeedBonusFlash(payload.userName);
+          setTimeout(() => setSpeedBonusFlash(null), 3000);
           break;
     }
   };
@@ -428,15 +465,20 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     setSentChallengeInfo(null);
   }, [socket, duel?.duelId, duel?.isSpectator, invite?.duelId]);
   
-  const leaveResults = useCallback((duelId: number) => {
-    socket?.send(JSON.stringify({ type: 'duel:leave_results', payload: { duelId } }));
-    setDuel(null);
+  const leaveResults = useCallback((id: number) => {
+    // Determine if it's a regular duel or a managed challenge
+    if (managedChallenge && managedChallenge.challengeId === id) {
+        setManagedChallenge(null);
+    } else {
+        socket?.send(JSON.stringify({ type: 'duel:leave_results', payload: { duelId: id } }));
+        setDuel(null);
+    }
     // Invalidate queries to refresh rankings and social status
     queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
     queryClient.invalidateQueries({ queryKey: ["/api/social/pending-requests"] });
     queryClient.invalidateQueries({ queryKey: ["/api/social/friendships"] });
-  }, [socket, queryClient]);
+  }, [socket, queryClient, managedChallenge]);
 
   const spectateDuel = useCallback((duelId: number) => {
     socket?.send(JSON.stringify({ type: 'admin:spectate', payload: { duelId } }));
@@ -447,10 +489,11 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
       socket?.send(JSON.stringify({ type: 'managed:create', payload }));
   };
 
-  const respondToManagedInvite = (challengeId: number, action: 'accept' | 'abandon') => {
-      socket?.send(JSON.stringify({ type: 'managed:respond', payload: { challengeId, action } }));
-      if (action === 'abandon') setManagedInvite(null);
-  };
+   const respondToManagedInvite = (challengeId: number, action: 'accept' | 'abandon') => {
+       if (action === 'accept') setIsResponding(true);
+       socket?.send(JSON.stringify({ type: 'managed:respond', payload: { challengeId, action } }));
+       if (action === 'abandon') setManagedInvite(null);
+   };
 
   const startManagedChallenge = (challengeId: number) => {
       socket?.send(JSON.stringify({ type: 'managed:start', payload: { challengeId } }));
@@ -463,6 +506,17 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
   const spectateManagedChallenge = (challengeId: number) => {
       socket?.send(JSON.stringify({ type: 'managed:spectate', payload: { challengeId } }));
   };
+
+  // AUTO-JOIN EFFECT: If a student refreshes and there is an active/pending managed challenge, notify them or sync
+  useEffect(() => {
+      if (!user || user.role === 'admin' || !isConnected || !activeManagedChallenges.length || managedChallenge || managedInvite) return;
+      
+      const pending = activeManagedChallenges.find(c => c.status === 'pending' || c.status === 'in_progress');
+      if (pending) {
+          console.log(`📡 [AUTO-JOIN] Student joining active managed challenge ${pending.id}`);
+          socket?.send(JSON.stringify({ type: 'managed:spectate', payload: { challengeId: pending.id } }));
+      }
+  }, [user, isConnected, activeManagedChallenges, managedChallenge, managedInvite]);
 
   const value = useMemo(() => ({
     duel,
@@ -495,25 +549,26 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     sentChallengeInfo,
     setSentChallengeInfo,
     isResponding,
-    speedBonus,
-    setSpeedBonus,
+    speedBonusFlash,
     managedChallenge,
+    setManagedChallenge,
     managedInvite,
     createManagedChallenge,
     respondToManagedInvite,
     startManagedChallenge,
     submitManagedAnswer,
     spectateManagedChallenge,
-    activeManagedChallenges
+    activeManagedChallenges,
+    socket
   }), [
     duel, invite, sendChallenge, respondToInvite, submitAnswer, 
     sendMessage, lastChatMessage, isConnected, sentChallenges, 
     isPreparing, onlineUsers, challengingUser, challengeWager, 
     challengeTopic, challengeHandicap, isRevengeMode, refreshStats, resetDuel, 
     leaveResults, activeDuels, spectateDuel, sentChallengeInfo, isResponding,
-    speedBonus, managedChallenge, managedInvite, createManagedChallenge,
+    speedBonusFlash, managedChallenge, managedInvite, createManagedChallenge,
     respondToManagedInvite, startManagedChallenge, submitManagedAnswer,
-    spectateManagedChallenge, activeManagedChallenges
+    spectateManagedChallenge, activeManagedChallenges, socket, setManagedChallenge
   ]);
 
   return (

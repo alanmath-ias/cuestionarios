@@ -196,6 +196,7 @@ export interface IStorage {
   updateParticipantStatus(participantId: number, status: string): Promise<void>;
   updateParticipantScore(challengeId: number, userId: number, score: number): Promise<void>;
   getManagedChallengeWithParticipants(id: number): Promise<any>;
+  deleteManagedChallenge(id: number): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -822,6 +823,7 @@ export class MemStorage implements IStorage {
   async updateParticipantStatus(participantId: number, status: string): Promise<void> { }
   async updateParticipantScore(challengeId: number, userId: number, score: number): Promise<void> { }
   async getManagedChallengeWithParticipants(id: number): Promise<any> { return null; }
+  async deleteManagedChallenge(id: number): Promise<void> { }
 
   // Question Reports
   async createQuestionReport(report: InsertQuestionReport): Promise<QuestionReport> { throw new Error("Method not implemented."); }

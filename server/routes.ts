@@ -1109,6 +1109,16 @@ Tono: Alentador, profesional y educativo.`;
     }
   });
 
+  apiRouter.get("/admin/managed-challenges", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const adminId = req.session.userId!;
+      const list = await storage.getManagedChallengesByAdmin(adminId);
+      res.json(list.sort((a, b) => b.id - a.id));
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener historial de retos" });
+    }
+  });
+
   // Update quiz response mode (Admin only)
   apiRouter.patch("/users/:userId/quizzes/:quizId/mode", requireAdmin, async (req: Request, res: Response) => {
     const userId = parseInt(req.params.userId);

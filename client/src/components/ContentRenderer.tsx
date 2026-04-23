@@ -8,12 +8,14 @@ interface ContentRendererProps {
 }
 
 export const ContentRenderer = React.memo(function ContentRenderer({ content, className, tight = false }: ContentRendererProps) {
+    if (typeof content !== 'string') return null;
+
     // Solo normalizamos saltos de línea si el modo 'tight' está activo
     const normalizedContent = tight ? content.replace(/\n\n+/g, '\n') : content;
     const parts = normalizedContent.split(/((?:¡+|\\?\$+).*?(?:¡+|\\?\$+))/g);
 
     return (
-        <div className={`content-renderer ${tight ? 'leading-tight' : 'leading-relaxed'} ${className}`}>
+        <div className={`content-renderer ${tight ? 'leading-[1.1]' : 'leading-relaxed'} ${className}`}>
             {parts.map((part, index) => {
                 const trimmedPart = part.trim();
                 // Check if the part is wrapped in delimiters

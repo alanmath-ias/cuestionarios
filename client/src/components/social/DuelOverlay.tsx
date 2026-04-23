@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ContentRenderer } from "@/components/ContentRenderer";
 import confetti from 'canvas-confetti';
+import { useToast } from "@/hooks/use-toast";
 
 // ─── OPTIMIZED SPEED CLOCK COMPONENT ─────────────────────────────
 // This component manages its own timer to avoid re-rendering the whole Overlay
@@ -133,29 +134,94 @@ export function DuelOverlay() {
     spectateDuel,
     sentChallengeInfo,
     isResponding,
-    speedBonus,
+    speedBonusFlash,
     managedChallenge,
     managedInvite,
     respondToManagedInvite,
-    submitManagedAnswer,
-    startManagedChallenge
+    submitManagedAnswer
   } = useDuel();
   const { session } = useSession();
+  const { toast } = useToast();
+  const [reviewIndex, setReviewIndex] = useState(0);
+  
+  // ─── DERIVED STATE (Define early to be used in effects) ───────────────────
   const myId = session?.userId;
+  const myNumberId = Number(myId);
+  const isManaged = !!managedChallenge;
+  const isSpectator = !!duel?.isSpectator;
+  const [prepStep, setPrepStep] = useState(0);
   const [counterWager, setCounterWager] = useState<number>(0);
   const [isNegotiating, setIsNegotiating] = useState(false);
   const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
-  const [reviewIndex, setReviewIndex] = useState(0);
+  const actualPreparing = isPreparing && (!duel || duel.status !== 'in_progress') && (!managedChallenge || (managedChallenge.currentQuestion?.index === 0 && !managedChallenge.currentQuestion?.content));
 
-  // Speed bonus effects
-  const [speedBonusFlash, setSpeedBonusFlash] = useState<string | null>(null);
-  const [prepStep, setPrepStep] = useState(0);
+  const challengerName = duel?.challengerName || 'Retador';
+  const receiverName = duel?.receiverName || 'Oponente';
 
-  // Sync safety: must be check before any other calculations
-  const actualPreparing = isPreparing && (!duel || duel.status !== 'in_progress');
+  // Extract scores and names for cleaner JSX
+  const scores = duel?.scores || {};
+  const challengerId = Number(duel?.challenger?.userId);
+  const receiverId = Number(duel?.receiver?.userId);
+
+  // Managed Challenge Helpers
+  const managedMe = managedChallenge?.players?.find((p: any) => p.userId === myNumberId);
+  const managedOther = managedChallenge?.players?.find((p: any) => p.userId !== myNumberId);
+
+  const myScore = isManaged ? (managedChallenge.scores?.[myNumberId] ?? managedMe?.score ?? 0) : (scores[myNumberId] || 0);
+
+  // For Arena View
+  const challengerScore = isManaged 
+    ? (isSpectator ? (managedChallenge.scores?.[managedChallenge.players?.[0]?.userId] ?? managedChallenge.players?.[0]?.score ?? 0) : 0)
+    : (isSpectator ? (scores[challengerId] || 0) : 0);
+    
+  const receiverScore = isManaged
+    ? (isSpectator ? (managedChallenge.scores?.[managedChallenge.players?.[1]?.userId] ?? managedChallenge.players?.[1]?.score ?? 0) : 0)
+    : (isSpectator ? (scores[receiverId] || 0) : 0);
+  
+  // Find opponent score (or leading opponent score)
+  const oppScore = isManaged
+    ? (managedOther ? (managedChallenge.scores?.[managedOther.userId] ?? managedOther.score ?? 0) : 0)
+    : ((myNumberId ? Object.entries(scores).find(([id]) => Number(id) !== myNumberId)?.[1] : 0) || 0);
+  
+  const receiverNameLabel = isManaged
+    ? (isSpectator ? (managedChallenge.players?.[1]?.username || 'Jugador 2') : (managedOther?.username || 'Oponente'))
+    : (isSpectator ? (duel?.receiver?.username || 'Oponente') : (duel?.opponentName || 'Oponente'));
+
+  const challengerNameLabel = isManaged
+    ? (isSpectator ? (managedChallenge.players?.[0]?.username || 'Jugador 1') : 'Tú')
+    : (isSpectator ? (duel?.challenger?.username || 'Retador') : 'Tú');
+
+const rivalLeader = isManaged ? (managedChallenge?.players || [])
+    ?.filter((p: any) => p.userId !== myNumberId)
+    ?.reduce((prev: any, current: any) => (prev.score > current.score) ? prev : current, { username: 'RIVALES', score: 0 })
+    : null;
+
+  const displayOppScore = (isManaged && (managedChallenge?.players?.length || 0) > 2)
+    ? (rivalLeader?.score || 0)
+    : oppScore;
+    
+  const displayOppName = (isManaged && (managedChallenge?.players?.length || 0) > 2)
+    ? `LÍDER: ${rivalLeader?.username || 'OPONENTES'}`
+    : receiverNameLabel;
 
   // ─── EFFECTS (Must all be above ANY return) ────────────────────────────────
+
+  // Managed Challenge Join Text Cycle
+  const [joinText, setJoinText] = useState("UNIENDO...");
+  useEffect(() => {
+    if (!managedInvite || !isResponding) {
+        setJoinText("UNIENDO...");
+        return;
+    }
+    const texts = ["ESPERANDO RIVALES...", "UN MOMENTO...", "UNIENDO..."];
+    let i = 0;
+    const interval = setInterval(() => {
+        i = (i + 1) % texts.length;
+        setJoinText(texts[i]);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [managedInvite, isResponding]);
 
   // Cycle through preparing steps every 4.5 seconds
   useEffect(() => {
@@ -194,30 +260,59 @@ export function DuelOverlay() {
   };
 
   const [blurActive, setBlurActive] = useState(false);
+  const [blurTimeLeft, setBlurTimeLeft] = useState(0);
 
   // Time handicap effect
   useEffect(() => {
+    let timer: any;
+    
     // Normal Duel
     if (duel?.status === 'in_progress' && duel.handicap?.type === 'time') {
         const isBeneficiary = duel.handicap.targetId === myId;
         if (!isBeneficiary) {
             setBlurActive(true);
-            const timer = setTimeout(() => setBlurActive(false), duel.handicap.value * 1000);
+            setBlurTimeLeft(duel.handicap.value);
+            timer = setTimeout(() => {
+                setBlurActive(false);
+                setBlurTimeLeft(0);
+            }, duel.handicap.value * 1000);
             return () => clearTimeout(timer);
         }
     } 
     // Managed Challenge
     else if (managedChallenge?.status === 'in_progress') {
         const me = managedChallenge.players?.find((p: any) => Number(p.userId) === Number(myId));
-        if (me && me.timeHandicap > 0 && managedChallenge.currentQuestionIndex === 0) {
-            setBlurActive(true);
-            const timer = setTimeout(() => setBlurActive(false), me.timeHandicap * 1000);
-            return () => clearTimeout(timer);
+        // Advantages apply on EVERY question
+        if (me && me.timeHandicap > 0) {
+            const startTime = managedChallenge.currentQuestion?.startTime || Date.now();
+            const elapsed = (Date.now() - startTime) / 1000;
+            const remaining = me.timeHandicap - elapsed;
+            
+            if (remaining > 0) {
+                setBlurActive(true);
+                setBlurTimeLeft(remaining);
+                timer = setTimeout(() => {
+                    setBlurActive(false);
+                    setBlurTimeLeft(0);
+                }, remaining * 1000);
+                return () => clearTimeout(timer);
+            }
         }
     }
     
     setBlurActive(false);
-  }, [duel?.currentQuestion?.index, duel?.status, duel?.handicap, managedChallenge?.currentQuestionIndex, managedChallenge?.status, myId]);
+    setBlurTimeLeft(0);
+    setBlurActive(false);
+  }, [duel?.currentQuestion?.index, duel?.status, duel?.handicap, managedChallenge?.currentQuestion?.index, managedChallenge?.status, myId]);
+
+  // Digital ticker for the blur countdown display
+  useEffect(() => {
+    if (!blurActive || blurTimeLeft <= 0) return;
+    const interval = setInterval(() => {
+      setBlurTimeLeft(prev => Math.max(0, prev - 0.1));
+    }, 100);
+    return () => clearInterval(interval);
+  }, [blurActive]);
 
   // Reset review state when duel resets or a new duel starts
   useEffect(() => {
@@ -228,22 +323,19 @@ export function DuelOverlay() {
     }
   }, [duel?.status, duel?.duelId]);
 
-  // Drive Speed Bonus Flash from Hook
-  useEffect(() => {
-      if (speedBonus && duel?.lastFeedback) {
-          setSpeedBonusFlash(duel.lastFeedback.userName || 'Alguien');
-          const timer = setTimeout(() => setSpeedBonusFlash(null), 3000);
-          return () => clearTimeout(timer);
-      }
-  }, [speedBonus, duel?.lastFeedback]);
 
   // IMPORTANT: Reset choice on every new question to avoid "Freeze"
   useEffect(() => {
     if (duel?.status === 'in_progress') {
       setSelectedOptionId(null);
-      setSpeedBonusFlash(null); // Reset flash on every new question
     }
   }, [duel?.currentQuestion?.index]);
+
+  useEffect(() => {
+    if (managedChallenge?.status === 'in_progress') {
+      setSelectedOptionId(null);
+    }
+  }, [managedChallenge?.currentQuestion?.index]);
 
   const getHandicapPayload = () => {
     if (!localHandicap || localHandicap.type === 'none' || localHandicap.value === 0) return null;
@@ -263,52 +355,16 @@ export function DuelOverlay() {
   // ─── EARLY RETURN ───
   if (!duel && !invite && !actualPreparing && !sentChallengeInfo && !managedInvite && !managedChallenge) return null;
 
-  // ─── DERIVED STATE (Safe after hooks and early return) ───
-  const isSpectator = !!duel?.isSpectator;
-  const challengerName = duel?.challengerName || 'Retador';
-  const receiverName = duel?.receiverName || 'Oponente';
-
-  // Extract scores and names for cleaner JSX
-  const scores = duel?.scores || {};
-  const challengerId = Number(duel?.challenger?.userId);
-  const receiverId = Number(duel?.receiver?.userId);
-  const myNumberId = Number(myId);
-
-  // Managed Challenge Helpers
-  const managedMe = managedChallenge?.players?.find((p: any) => p.userId === myNumberId);
-  const managedOther = managedChallenge?.players?.find((p: any) => p.userId !== myNumberId);
-  const isManaged = !!managedChallenge;
-
-  const myScore = isManaged ? (managedMe?.score || 0) : (scores[myNumberId] || 0);
-
-  // For Arena View
-  const challengerScore = isManaged 
-    ? (isSpectator ? (managedChallenge.players?.[0]?.score || 0) : 0) // Simplified for now
-    : (isSpectator ? (scores[challengerId] || 0) : 0);
-    
-  const receiverScore = isManaged
-    ? (isSpectator ? (managedChallenge.players?.[1]?.score || 0) : 0)
-    : (isSpectator ? (scores[receiverId] || 0) : 0);
-  
-  // Find opponent score for player view
-  const oppScore = isManaged
-    ? (managedOther?.score || 0)
-    : ((myNumberId ? Object.entries(scores).find(([id]) => Number(id) !== myNumberId)?.[1] : 0) || 0);
-  
-  const receiverNameLabel = isManaged
-    ? (isSpectator ? (managedChallenge.players?.[1]?.username || 'Jugador 2') : (managedOther?.username || 'Oponente'))
-    : (isSpectator ? (duel?.receiver?.username || 'Oponente') : (duel?.opponentName || 'Oponente'));
-
-  const challengerNameLabel = isManaged
-    ? (isSpectator ? (managedChallenge.players?.[0]?.username || 'Jugador 1') : 'Tú')
-    : (isSpectator ? (duel?.challenger?.username || 'Retador') : 'Tú');
+  // ─── EFFECTS (Must all be above ANY return) ────────────────────────────────
 
   // ─── Option styling helper ─────────────────────────────────────────────────
   const getOptionStyle = (option: any) => {
-    const fb = duel?.lastFeedback;
-    const wrongs = duel?.allWrongAnswers || [];
+    const fb = isManaged ? managedChallenge?.lastFeedback : duel?.lastFeedback;
+    const wrongs = (isManaged ? managedChallenge?.allWrongAnswers : duel?.allWrongAnswers) || [];
+    
     const isSelectedByMe = selectedOptionId === option.id;
     const isWrongAnswer = wrongs.some((w: any) => w.answerId === option.id);
+    const iFailedThis = wrongs.some((w: any) => w.answerId === option.id && Number(w.userId) === Number(myId));
 
     if (!fb && wrongs.length === 0) {
       if (isSelectedByMe) return "bg-blue-600/40 border-blue-400 ring-1 ring-blue-400/50 text-white";
@@ -316,29 +372,51 @@ export function DuelOverlay() {
     }
 
     const correctId = (fb as any)?.correctAnswerId;
-    const isCorrect = correctId ? option.id === correctId : (fb?.answerId === option.id && fb?.isCorrect);
+    
+    // In managed challenges, we reveal the correct answer once SOMEONE hits it or it's provided in feedback
+    const isCorrect = correctId 
+        ? option.id === correctId 
+        : (fb?.answerId === option.id && fb?.isCorrect);
 
     if (isCorrect) return "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]";
-    if (isWrongAnswer) return "bg-red-700/60 border-red-500 text-red-200";
+    
+    // RED HIGHLIGHT: Only for the person who actually failed. 
+    // Others just see the small X badge (handled in getWhoAnswered)
+    if (iFailedThis) return "bg-red-700/60 border-red-500 text-red-200";
+    
+    // If someone else failed but I didn't, or it was just selected but not confirmed yet
     if (isSelectedByMe) return "bg-slate-700/50 border-slate-500 text-slate-300";
     return "bg-white/3 border-white/5 text-slate-500";
   };
 
   const getWhoAnswered = (option: any) => {
-    const wrongs = duel?.allWrongAnswers || [];
-    const fb = duel?.lastFeedback;
+    const wrongs = (isManaged ? managedChallenge?.allWrongAnswers : duel?.allWrongAnswers) || [];
+    const fb = isManaged ? managedChallenge?.lastFeedback : duel?.lastFeedback;
+    
     const correctId = (fb as any)?.correctAnswerId;
     const isCorrect = correctId ? option.id === correctId : (fb?.answerId === option.id && fb?.isCorrect);
     const wrongBy = wrongs.filter((w: any) => w.answerId === option.id);
     const isWinnerAnswer = isCorrect && fb?.userId && fb.userId !== null;
 
-    const meWrong = wrongBy.some((w: any) => w.userId === myId);
-    const oppWrong = wrongBy.some((w: any) => w.userId !== myId);
-    const oppCorrect = isWinnerAnswer && fb?.userId !== myId;
-    const meCorrect = isWinnerAnswer && fb?.userId === myId;
+    const meWrong = wrongBy.some((w: any) => Number(w.userId) === Number(myId));
+    const oppWrong = wrongBy.some((w: any) => Number(w.userId) !== Number(myId));
+    const oppCorrect = isWinnerAnswer && Number(fb?.userId) !== Number(myId);
+    const meCorrect = isWinnerAnswer && Number(fb?.userId) === Number(myId);
 
     if (!meWrong && !oppWrong && !oppCorrect && !meCorrect) return null;
-    return { meWrong, oppWrong, oppCorrect, meCorrect, name: fb?.userName || duel?.opponentName };
+    
+    let name = fb?.userName || fb?.winnerName;
+    if (!name) {
+        if (isManaged) {
+            // Find in wrongBy
+            const lastWrong = wrongBy[wrongBy.length - 1];
+            name = lastWrong?.userName || "Alguien";
+        } else {
+            name = duel?.opponentName;
+        }
+    }
+
+    return { meWrong, oppWrong, oppCorrect, meCorrect, name };
   };
 
   // ─── RENDERING GUARDS ───────────────────────────────────────────────────
@@ -347,7 +425,7 @@ export function DuelOverlay() {
   const isAdminManaging = session?.role === 'admin' && !!managedChallenge;
   
   // Only show the overlay if there is something ACTIVE and VISIBLE to the user
-  const hasContent = !!invite || !!managedInvite || !!sentChallengeInfo || (!!duel && !duel.closed) || (!!managedChallenge && !isAdminManaging) || isPreparing;
+  const hasContent = (!!invite || !!managedInvite || !!sentChallengeInfo || (!!duel && !duel.closed) || (!!managedChallenge && !isAdminManaging) || isPreparing) && !isAdminManaging;
 
   if (!hasContent) return null;
 
@@ -362,82 +440,268 @@ export function DuelOverlay() {
 
 
           {/* ── MANAGED GAME ARENA ───────────────────────────────────── */}
-          {managedChallenge && managedChallenge.status === 'in_progress' && (
-            <motion.div key="managed-arena" initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-slate-950/90 border border-amber-500/20 rounded-[2.5rem] shadow-2xl p-6 sm:p-8 flex flex-col w-full">
-                {/* Multi-player Scoreboard */}
-                <div className="flex flex-wrap justify-center gap-4 mb-8">
-                    {managedChallenge.players?.map((p: any) => (
-                        <div key={p.userId} className={`flex flex-col items-center px-4 py-2 rounded-2xl border transition-all ${p.userId === myId ? 'bg-blue-500/20 border-blue-500/50' : 'bg-white/5 border-white/5 grayscale opacity-60'}`}>
-                            <span className="text-[9px] font-black uppercase text-slate-400 mb-1">{p.username}</span>
-                            <span className="text-xl font-black text-white">{managedChallenge.scores?.[p.userId] || 0}</span>
-                        </div>
-                    ))}
-                </div>
+          {managedChallenge && managedChallenge.status === 'in_progress' && !actualPreparing && (
+            <motion.div key="managed-arena" initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-[2.5rem] shadow-2xl p-6 sm:p-8 flex flex-col w-full relative overflow-hidden">
+                {/* Close Button */}
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute top-4 right-4 z-20 text-white/20 hover:text-white hover:bg-white/10 rounded-full" 
+                    onClick={() => leaveResults(managedChallenge.challengeId)}
+                >
+                    <X className="h-6 w-6" />
+                </Button>
+                
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-20 bg-blue-500/5 blur-[40px] rounded-full" />
+                <div className="absolute top-0 right-0 p-12 opacity-[0.03] rotate-12 select-none pointer-events-none">
+                    <span className="text-[12rem] font-black text-white leading-none">ALAN<br/>MATH</span>
+                 </div>
 
-                <div className="flex flex-col items-center mb-6">
-                    <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 mb-2 px-3 py-1 uppercase tracking-widest text-[9px] font-black">
-                        Pregunta {(managedChallenge.currentQuestion?.index ?? 0) + 1} / {managedChallenge.questionsCount}
-                    </Badge>
-                    <div className="text-xl font-bold text-white text-center leading-tight max-w-lg">
-                        <ContentRenderer content={managedChallenge.currentQuestion?.content || ""} tight={true} />
+                {/* Scoreboard Header */}
+                <div className="flex items-center justify-between relative z-20 w-full px-2 mb-6">
+                    <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-blue-400" />
+                        <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">Reto del Profesor</span>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4">
-                    {managedChallenge.currentQuestion?.options?.map((opt: any) => (
-                        <Button 
-                            key={opt.id}
-                            variant="outline"
-                            className="bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 h-auto py-4 px-6 rounded-2xl group transition-all text-left justify-start"
-                            disabled={managedChallenge.myStatus === 'finished'}
-                            onClick={() => submitManagedAnswer(managedChallenge.challengeId, managedChallenge.currentQuestion.index, opt.id)}
-                        >
-                            <div className="h-6 w-6 rounded-lg bg-black/20 flex items-center justify-center mr-3 group-hover:bg-amber-500 transition-colors">
-                                <span className="text-xs font-black text-slate-400 group-hover:text-amber-950">•</span>
+                {/* Individual Pacing replaced by Global Sync - Central Clock */}
+                <div className="flex items-center justify-between relative z-10 w-full px-4 mb-4">
+                    <div className="flex flex-col items-center flex-1">
+                        <span className="text-[9px] text-blue-400 font-black uppercase mb-1">TÚ</span>
+                        <motion.span key={`score-${myScore}`} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-3xl sm:text-4xl font-black text-white">{myScore}</motion.span>
+                    </div>
+
+                    <div className="px-6">
+                        <SpeedClock questionIndex={managedChallenge.currentQuestion?.index ?? 0} lastFeedback={managedChallenge.lastFeedback} />
+                    </div>
+
+                    <div className="flex flex-col items-center flex-1">
+                        <span className="text-[9px] text-red-500 font-black uppercase mb-1">{displayOppName}</span>
+                        <motion.span key={`other-score-${displayOppScore}`} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-3xl sm:text-4xl font-black text-white">{displayOppScore}</motion.span>
+                    </div>
+                </div>
+
+                <div className="flex flex-col items-center mb-6 relative z-10">
+                    <Badge className="bg-slate-800 text-slate-400 border-white/10 mb-3 px-4 py-1 uppercase tracking-[0.2em] text-[8px] font-black rounded-full ring-1 ring-white/5">
+                        Pregunta {(managedChallenge.currentQuestion?.index ?? 0) + 1} / {managedChallenge.questionsCount}
+                    </Badge>
+                    <div className={`text-lg sm:text-xl font-bold text-white text-center leading-[1.1] max-w-lg mb-6 transition-all duration-700 ${blurActive ? 'blur-2xl grayscale opacity-30 select-none scale-95 pointer-events-none' : ''}`}>
+                        <ContentRenderer content={managedChallenge.currentQuestion?.content || ""} tight={true} />
+                    </div>
+                    {blurActive && (
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 flex flex-col items-center">
+                            <div className="bg-orange-600/90 backdrop-blur-xl border border-orange-400 p-4 rounded-3xl shadow-2xl animate-bounce">
+                                <ShieldAlert className="h-10 w-10 text-white mb-2 mx-auto" />
+                                <span className="text-sm font-black text-white uppercase tracking-tighter block">Desventaja Activa</span>
+                                <span className="text-2xl font-black text-white">{blurTimeLeft.toFixed(1)}s</span>
                             </div>
-                            <span className="text-sm font-bold text-slate-200"><ContentRenderer content={opt.content} tight={true} /></span>
-                        </Button>
-                    ))}
+                            <p className="mt-4 text-xs font-bold text-white/40 uppercase tracking-widest text-center whitespace-nowrap">Debes esperar para ver la pregunta</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Speed Bonus Notification for Managed Mode */}
+                <AnimatePresence>
+                    {speedBonusFlash && (
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.5, y: 20 }} 
+                            animate={{ opacity: 1, scale: 1, y: 0 }} 
+                            exit={{ opacity: 0, scale: 1.2, y: -20 }} 
+                            className="absolute inset-x-0 top-1/3 z-50 flex items-center justify-center pointer-events-none"
+                        >
+                          <div className="bg-yellow-400 border-2 border-yellow-200 shadow-[0_0_30px_rgba(250,204,21,0.4)] rounded-2xl px-6 py-3 text-center flex items-center gap-3 transform -rotate-2">
+                            <div className="bg-slate-900 rounded-full p-2">
+                                <Zap className="h-5 w-5 text-yellow-400 animate-pulse" />
+                            </div>
+                            <div className="flex flex-col items-start leading-tight">
+                                <p className="text-slate-900 font-black text-xs uppercase tracking-tighter">¡BONO DE VELOCIDAD!</p>
+                                <p className="text-slate-900/70 text-[9px] font-bold">
+                                    {speedBonusFlash === managedMe?.username ? '¡Has ganado +1 crédito extra!' : `${speedBonusFlash} ha ganado +1 crédito`}
+                                </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 relative z-10 transition-all duration-700 ${blurActive ? 'opacity-20 pointer-events-none grayscale' : ''}`}>
+                    {managedChallenge.currentQuestion?.options?.map((opt: any) => {
+                        const styleClass = getOptionStyle(opt);
+                        const who = getWhoAnswered(opt);
+                        const fb = managedChallenge.lastFeedback;
+                        const wasAlreadyAnsweredByMe = (managedChallenge.allWrongAnswers || []).some((w: any) => Number(w.userId) === Number(myId));
+
+                        return (
+                            <button 
+                                key={opt.id}
+                                disabled={managedChallenge.myStatus === 'finished' || selectedOptionId !== null || (!!fb && (fb as any).isCorrect) || wasAlreadyAnsweredByMe || blurActive}
+                                className={`relative flex items-center gap-3 py-4 px-6 rounded-2xl border transition-all text-left justify-start ${styleClass}`}
+                                onClick={() => {
+                                    setSelectedOptionId(opt.id);
+                                    submitManagedAnswer(managedChallenge.challengeId, managedChallenge.currentQuestion.index, opt.id)
+                                }}
+                            >
+                                <div className="h-7 w-7 rounded-lg flex-shrink-0 flex items-center justify-center bg-black/20">
+                                  {who?.meCorrect || who?.oppCorrect ? <CheckCircle2 className="h-4 w-4" /> : (who?.meWrong || who?.oppWrong) ? <XCircle className="h-4 w-4 text-red-300" /> : <div className="w-1.5 h-1.5 rounded-full bg-white/20" />}
+                                </div>
+                                <span className="text-base font-bold flex-1"><ContentRenderer content={opt.content} tight={true} /></span>
+                                {who && (
+                                  <div className="flex flex-col gap-1.5 items-end ml-1">
+                                    {(who.meCorrect || who.meWrong) && (
+                                        <span className={`px-2 py-0.5 rounded-md bg-yellow-400 text-slate-950 text-[11px] font-black shadow-lg ring-1 ring-yellow-500/50 flex items-center gap-1`}>
+                                            {who.meCorrect ? <CheckCircle2 className="w-2.5 h-2.5 fill-slate-900" /> : <XCircle className="w-2.5 h-2.5" />}
+                                            TÚ
+                                        </span>
+                                    )}
+                                    {(who.oppCorrect || who.oppWrong) && (
+                                        <span className={`px-3 py-1 rounded-md bg-yellow-400 text-slate-950 text-[12px] font-black shadow-lg ring-1 ring-yellow-500/50 flex items-center gap-2 animate-in zoom-in duration-300`}>
+                                            {who.oppCorrect ? <Zap className="w-3 h-3 fill-slate-900" /> : <XCircle className="w-3 h-3" />}
+                                            <span className="truncate max-w-[100px]">{who.name}</span>
+                                        </span>
+                                    )}
+                                  </div>
+                                )}
+                            </button>
+                        );
+                    })}
                 </div>
                 
                 {managedChallenge.myStatus === 'finished' && (
                     <div className="mt-4 flex flex-col items-center gap-4 py-8 rounded-[2rem] bg-amber-500/10 border border-amber-500/20 animate-in fade-in zoom-in">
                         <Loader2 className="h-8 w-8 animate-spin text-amber-500 mb-2" />
-                        <h4 className="text-xl font-black text-amber-400">¡HAS TERMINADO!</h4>
-                        <p className="text-slate-400 text-sm">Espera a que los demás finalicen para ver los resultados.</p>
-                        <div className="flex items-center gap-2 mt-4">
-                            <span className="text-xs text-slate-500 uppercase tracking-widest">Tu puntaje final:</span>
-                            <Badge className="bg-amber-500 text-slate-950 font-black">{managedChallenge.scores?.[myId!] || 0} PUNTOS</Badge>
-                        </div>
+                        <h4 className="text-xl font-black text-amber-400">¡Ronda Finalizada!</h4>
+                        <p className="text-slate-400 text-sm">Espera a que finalice el reto para ver el podio.</p>
                     </div>
                 )}
             </motion.div>
           )}
 
-          {/* ── MANAGED RESULTS ─────────────────────────────────────── */}
+          {/* ── MANAGED RESULTS POYIUM ─────────────────────────────── */}
           {managedChallenge && managedChallenge.status === 'finished' && (
-              <motion.div key="managed-results" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-slate-900 border border-amber-500/30 p-8 rounded-[2.5rem] shadow-2xl text-center max-w-xl mx-auto">
-                    <Trophy className="h-16 w-16 text-yellow-500 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]" />
-                    <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-6">RESULTADOS DEL RETO</h2>
+              <motion.div 
+                key="managed-results" 
+                initial={{ scale: 0.9, opacity: 0 }} 
+                animate={{ scale: 1, opacity: 1 }} 
+                className="bg-slate-900/98 backdrop-blur-3xl border border-white/10 p-0 rounded-[2.5rem] shadow-2xl text-center max-w-xl mx-auto overflow-hidden flex flex-col"
+                onViewportEnter={() => {
+                  const rankings = managedChallenge.results?.rankings || [];
+                  const mIndex = rankings.findIndex((r: any) => Number(r.id) === Number(myNumberId));
+                  const myRank = rankings[mIndex]?.rank;
+                  const isWinner = myRank === 1;
+                  if (isWinner) {
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#fbbf24', '#ffffff', '#3b82f6'] });
+                  } else if (myRank <= 3) {
+                    confetti({ particleCount: 50, spread: 40, origin: { y: 0.8 }, colors: ['#ffffff', '#3b82f6'] });
+                  }
+                }}
+              >
+                    {/* Individual Merit Header */}
+                    <div className="bg-gradient-to-b from-blue-600/20 to-transparent pt-6 pb-4 px-6 relative">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50" />
+                        
+                        {(() => {
+                           const rankings = managedChallenge.results?.rankings || [];
+                           const mIndex = rankings.findIndex((r: any) => Number(r.id) === Number(myId));
+                           const myData = rankings[mIndex];
+                           const myRank = myData?.rank ?? 0;
+                           const isShared = rankings.filter((r: any) => r.rank === myRank).length > 1;
+                           
+                           if (myRank === 1) return (
+                             <>
+                               <div className="relative mb-6">
+                                 {isShared ? <Swords className="h-20 w-20 text-blue-400 mx-auto drop-shadow-[0_0_30px_rgba(59,130,246,0.6)] animate-pulse" /> : <Trophy className="h-20 w-20 text-yellow-500 mx-auto drop-shadow-[0_0_30px_rgba(234,179,8,0.6)] animate-bounce" />}
+                                 <Sparkles className="absolute -top-2 -right-2 h-8 w-8 text-white animate-pulse" />
+                               </div>
+                               <h2 className="text-5xl font-black text-white uppercase italic tracking-tighter mb-2">{isShared ? '¡EMPATE!' : '¡CAMPEÓN!'}</h2>
+                               <p className="text-amber-400 font-black text-lg uppercase tracking-widest">{isShared ? 'Han compartido la gloria' : 'Has conquistado la arena'}</p>
+                             </>
+                           );
+                           
+                           if (myRank === 2 || myRank === 3) return (
+                             <>
+                               <Trophy className={`h-16 w-16 ${myRank === 2 ? 'text-slate-300' : 'text-orange-500'} mx-auto mb-4 drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]`} />
+                               <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-2">¡EXCELENTE!</h2>
+                               <p className="text-blue-300 font-bold uppercase tracking-widest">Podio Asegurado: {myRank}º Puesto</p>
+                             </>
+                           );
 
-                    <div className="space-y-3 mb-8">
-                        {managedChallenge.results?.rankings?.map((r: any, idx: number) => (
-                            <div key={r.id} className={`flex items-center justify-between p-4 rounded-2xl border ${idx === 0 ? 'bg-amber-500/20 border-amber-500/40' : 'bg-white/5 border-white/5'}`}>
-                                <div className="flex items-center gap-4">
-                                    <span className={`text-xl font-black ${idx === 0 ? 'text-amber-500' : 'text-slate-500'}`}>#{idx + 1}</span>
-                                    <span className="font-bold text-slate-100">{r.username}</span>
-                                </div>
-                                <span className="font-black text-white">{r.score} Pts</span>
-                            </div>
-                        ))}
+                           return (
+                             <>
+                               <Brain className="h-16 w-16 text-blue-400 mx-auto mb-4 opacity-70" />
+                               <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-2">¡BIEN JUGADO!</h2>
+                               <p className="text-slate-400 font-bold uppercase tracking-widest">Puesto {myRank} de {managedChallenge.results?.rankings?.length || 0}</p>
+                             </>
+                           );
+                        })()}
                     </div>
 
-                    <Button 
-                        className="w-full bg-slate-100 hover:bg-white text-slate-950 font-bold h-12 rounded-xl"
-                        onClick={() => window.location.href = '/dashboard'}
-                    >
-                        CERRAR ARENA
-                    </Button>
+                    {/* Rankings Comparison */}
+                    <div className="flex-1 overflow-y-auto px-6 py-4 max-h-[45vh] custom-scrollbar">
+                        <div className="space-y-3 mb-6">
+                            {managedChallenge.results?.rankings?.slice(0, 10).map((r: any, idx: number) => {
+                                const isMe = Number(r.id) === myNumberId;
+                                
+                                return (
+                                    <motion.div 
+                                        key={r.id} 
+                                        initial={{ x: -20, opacity: 0 }}
+                                        animate={{ x: 0, opacity: 1 }}
+                                        transition={{ delay: idx * 0.1 }}
+                                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                                            r.rank === 1 ? 'bg-amber-500/20 border-amber-500/40 shadow-lg shadow-amber-900/10' : 
+                                            isMe ? 'bg-blue-600/30 border-blue-500/50 ring-2 ring-blue-500/20' : 'bg-white/5 border-white/5'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`h-8 w-8 rounded-xl flex items-center justify-center font-black ${
+                                                idx === 0 ? 'bg-amber-500 text-slate-950' : 
+                                                idx === 1 ? 'bg-slate-300 text-slate-950' :
+                                                idx === 2 ? 'bg-amber-700 text-white' : 'bg-white/10 text-slate-400'
+                                            }`}>
+                                                {idx + 1}
+                                            </div>
+                                            <div className="text-left">
+                                                <span className={`font-black text-lg block ${isMe ? 'text-blue-300' : 'text-slate-100'}`}>
+                                                    {r.username} {isMe && "(TÚ)"}
+                                                </span>
+                                                <span className="text-[8px] font-black uppercase text-slate-500 tracking-tighter">Combatiente AlanMath</span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="flex flex-col items-end">
+                                               <span className={`text-2xl font-black ${idx === 0 ? 'text-amber-400' : 'text-white'}`}>{r.score}</span>
+                                               {r.creditChange !== undefined && (
+                                                   <span className={`text-[10px] font-black italic ${r.creditChange >= 0 ? 'text-emerald-400' : 'text-red-500'}`}>
+                                                       {r.creditChange >= 0 ? `+${r.creditChange}` : r.creditChange} CRÉDITOS
+                                                   </span>
+                                               )}
+                                               {r.bonusGained > 0 && (
+                                                   <span className="text-[8px] font-black text-yellow-500 uppercase tracking-tighter -mt-0.5">
+                                                       Incluye +{r.bonusGained} por velocidad
+                                                   </span>
+                                               )}
+                                           </div>
+                                        </div>
+                                    </motion.div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="p-8 bg-black/20 border-t border-white/5 space-y-4">
+                        <Button 
+                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black h-16 rounded-3xl text-xl shadow-xl shadow-blue-900/40 active:scale-95 transition-all group relative overflow-hidden"
+                            onClick={() => leaveResults(managedChallenge.challengeId)}
+                        >
+                            <span className="relative z-10 flex items-center justify-center">
+                                <ArrowLeft className="mr-3 h-6 w-6 transition-transform group-hover:-translate-x-1" />
+                                FINALIZAR SESIÓN
+                            </span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                        </Button>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] opacity-60">Sigue practicando para subir en el ranking mundial</p>
+                    </div>
               </motion.div>
           )}
 
@@ -596,7 +860,7 @@ export function DuelOverlay() {
                             </div>
                             <div className="w-px h-8 bg-white/10" />
                             <div className="text-center">
-                                <span className="text-[10px] font-black uppercase text-slate-500 block mb-1">Rivalidad</span>
+                                <span className="text-[10px] font-black uppercase text-slate-500 block mb-1">Jugadores</span>
                                 <div className="flex items-center gap-1.5 text-blue-400 justify-center">
                                     <Users className="h-4 w-4" />
                                     <span className="text-xl font-black">{managedInvite.participantIds?.length || 0}</span>
@@ -606,10 +870,25 @@ export function DuelOverlay() {
 
                         <div className="flex flex-col gap-3 w-full max-w-[280px]">
                             <Button 
-                                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-6 py-7 rounded-2xl font-black text-lg uppercase tracking-tight shadow-xl shadow-purple-900/40 active:scale-95 transition-all"
+                                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-6 py-7 rounded-2xl font-black text-lg uppercase tracking-tight shadow-xl shadow-purple-900/40 active:scale-95 transition-all w-full flex items-center justify-center"
                                 onClick={() => respondToManagedInvite(managedInvite.challengeId, 'accept')}
+                                disabled={isResponding}
                             >
-                                ¡ACEPTAR Y ENTRAR!
+                                {isResponding ? (
+                                    <div className="flex items-center gap-3">
+                                        <Loader2 className="h-6 w-6 animate-spin" />
+                                        <motion.span
+                                            key={joinText}
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="uppercase font-black tracking-widest"
+                                        >
+                                            {joinText}
+                                        </motion.span>
+                                    </div>
+                                ) : (
+                                    "¡ACEPTAR Y ENTRAR!"
+                                )}
                             </Button>
                             <Button 
                                 variant="ghost" 

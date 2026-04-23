@@ -45,6 +45,7 @@ interface ManagedChallengePlayer {
   username: string;
   status: 'pending' | 'ready' | 'abandoned' | 'finished';
   score: number;
+  currentIndex: number; // Added for individual pacing
   pointsHandicap: number;
   timeHandicap: number;
 }
@@ -64,6 +65,10 @@ interface ManagedChallengeRoom {
   questionStartTime: number;
   history: any[];
   topic?: string;
+  failedUserIds: number[];
+  currentRoundAnswers: { userId: number; answerId: number }[];
+  bonusCredits: { [userId: number]: number };
+  timerId?: NodeJS.Timeout;
 }
 
 export class DuelServer {
@@ -286,6 +291,9 @@ export class DuelServer {
           break;
         case 'managed:submit_answer':
           await this.processManagedAnswer(userId, payload);
+          break;
+        case 'managed:delete':
+          await this.handleManagedDelete(userId, payload);
           break;
         default:
           console.warn(`Unknown message type: ${type}`);
@@ -940,6 +948,22 @@ export class DuelServer {
     }
   }
 
+  private broadcastToManaged(challengeId: number, message: any) {
+    const room = this.activeManagedChallenges.get(challengeId);
+    if (!room) return;
+
+    const messageStr = JSON.stringify(message);
+    for (const player of room.players.values()) {
+        if (player.socket && player.socket.readyState === WebSocket.OPEN) {
+            player.socket.send(messageStr);
+        }
+    }
+
+    if (room.adminSocket && room.adminSocket.readyState === WebSocket.OPEN) {
+        room.adminSocket.send(messageStr);
+    }
+  }
+
   private sendSyncState(userId: number, room: DuelRoom) {
     const isChallenger = room.challenger.userId === userId;
     const opponentName = isChallenger ? room.receiver.username : room.challenger.username;
@@ -1075,6 +1099,7 @@ export class DuelServer {
             username: user.name,
             status: 'pending',
             score: playerAdvantage.points || 0,
+            currentIndex: 0,
             pointsHandicap: playerAdvantage.points || 0,
             timeHandicap: playerAdvantage.timeDelay || 0
           });
@@ -1109,7 +1134,10 @@ export class DuelServer {
         questions: [],
         questionStartTime: 0,
         history: [],
-        topic: aiTopic || undefined
+        topic: aiTopic || undefined,
+        failedUserIds: [],
+        currentRoundAnswers: [],
+        bonusCredits: {}
       };
 
       this.activeManagedChallenges.set(challenge.id, room);
@@ -1139,6 +1167,24 @@ export class DuelServer {
       this.sendToUser(adminId, {
           type: 'managed:created',
           payload: { challengeId: challenge.id }
+      });
+
+      // Immediate Sync for admin
+      this.sendToUser(adminId, {
+          type: 'managed:sync',
+          payload: {
+              status: 'pending',
+              challengeId: challenge.id,
+              topic: room.topic,
+              questionsCount: room.questions.length,
+              players: Array.from(room.players.values()).map(p => ({
+                  userId: p.userId,
+                  username: p.username,
+                  status: p.status,
+                  score: p.score
+              })),
+              scores: {}
+          }
       });
     } catch (error) {
       console.error('❌ [MANAGED CRITICAL] Error creating challenge:', error);
@@ -1193,6 +1239,12 @@ export class DuelServer {
     room.status = 'ready';
     await storage.updateManagedChallenge(challengeId, { status: 'ready' });
 
+    // BROADCAST PREPARING EARLY! So students see tips while AI generates questions
+    this.broadcastToManaged(challengeId, {
+        type: 'managed:preparing',
+        payload: { challengeId }
+    });
+
     try {
       let questionsList: any[] = [];
       if (room.quizId) {
@@ -1208,10 +1260,15 @@ export class DuelServer {
               difficulty: "medium",
               questionCount: 8
           });
-          // BARAJAR OPCIONES
+          // MAP OPTIONS CAREFULLY
           questionsList = quizData.questions.map((q: any) => ({
-              ...q,
-              options: [...q.options].sort(() => Math.random() - 0.5)
+              id: Math.floor(Math.random() * 1000000), // Random ID for the question
+              content: q.content,
+              options: q.options.map((opt: any, idx: number) => ({
+                  id: idx,
+                  content: typeof opt === 'string' ? opt : opt.content,
+                  isCorrect: typeof opt === 'string' ? (opt === q.correctAnswer) : !!opt.isCorrect
+              }))
           }));
       }
 
@@ -1230,6 +1287,9 @@ export class DuelServer {
 
       room.status = 'in_progress';
       await storage.updateManagedChallenge(challengeId, { status: 'in_progress' });
+      room.currentQuestionIndex = 0;
+      room.failedUserIds = [];
+      room.currentRoundAnswers = [];
 
       const startMsg = {
           type: 'managed:started',
@@ -1248,17 +1308,17 @@ export class DuelServer {
           }
       };
 
-      // Notify all ready players
-      for (const [pId, p] of room.players) {
-          if (p.status === 'ready') {
-              this.sendToUser(pId, startMsg);
-          }
-      }
+      // Notify everyone about start
+      this.broadcastToManaged(challengeId, startMsg);
 
-      // Notify admin
-      this.sendToUser(adminId, startMsg);
+      // BROADCAST PREPARING to all so they see the 1v1-style countdown/loading
+      this.broadcastToManaged(challengeId, {
+          type: 'managed:preparing',
+          payload: { challengeId }
+      });
 
-      setTimeout(() => this.sendNextManagedQuestion(challengeId), 3000);
+      // Synchronized first question after 3.5s (slight delay to ensure preparing is shown)
+      setTimeout(() => this.sendNextManagedQuestion(challengeId), 3500);
     } catch (error) {
       console.error('❌ [MANAGED] Error starting challenge:', error);
       this.sendToUser(adminId, { type: 'managed:error', payload: { message: 'Error al iniciar el reto' } });
@@ -1272,27 +1332,40 @@ export class DuelServer {
         return;
     }
 
+    room.failedUserIds = [];
+    room.currentRoundAnswers = [];
+    room.questionStartTime = Date.now();
+
     const question = room.questions[room.currentQuestionIndex];
     const msg = {
         type: 'managed:question',
         payload: {
             index: room.currentQuestionIndex,
             content: question.content,
-            options: question.options.map((o: any) => ({ id: o.id, content: o.content }))
+            options: question.options.map((o: any) => ({ id: o.id, content: o.content })),
+            questionsCount: room.questions.length,
+            scores: Object.fromEntries(Array.from(room.players.values()).map(p => [p.userId, p.score]))
         }
     };
 
-    // Broadcast to all active players
-    for (const [pId, p] of room.players) {
-        if (p.status === 'ready' || p.status === 'finished') {
-            this.sendToUser(pId, msg);
-        }
+    console.log(`❓ [MANAGED SYNC] Sending question ${room.currentQuestionIndex + 1}/${room.questions.length} to everyone in ${challengeId}`);
+    this.broadcastToManaged(challengeId, msg);
+    
+    // Also notify Admin WITH Correct Answers
+    if (room.adminSocket && room.adminSocket.readyState === WebSocket.OPEN) {
+        const adminMsg = {
+            ...msg,
+            payload: {
+                ...msg.payload,
+                options: question.options.map((o: any) => ({ 
+                    id: o.id, 
+                    content: o.content,
+                    isCorrect: o.isCorrect
+                }))
+            }
+        };
+        room.adminSocket.send(JSON.stringify(adminMsg));
     }
-
-    // Also send to admin
-    this.sendToUser(room.adminId, msg);
-
-    room.questionStartTime = Date.now();
   }
 
   private async processManagedAnswer(userId: number, payload: { challengeId: number; questionIndex: number; answerId: number }) {
@@ -1301,48 +1374,109 @@ export class DuelServer {
     if (!room || room.status !== 'in_progress' || room.currentQuestionIndex !== questionIndex) return;
 
     const player = room.players.get(userId);
-    if (!player) return;
+    if (!player || player.status !== 'ready') return;
 
     const question = room.questions[questionIndex];
     const answer = question.options.find((o: any) => o.id === answerId);
+    const correctAnswer = question.options.find((o: any) => o.isCorrect);
     
+    // Check if this player already answered (prevent double submit)
+    if (room.currentRoundAnswers.some(a => a.userId === userId)) return;
+
+    room.currentRoundAnswers.push({ userId, answerId });
+
     if (answer?.isCorrect) {
         player.score++;
-    }
-
-    // Notify Admin of progress
-    this.sendToUser(room.adminId, {
-        type: 'managed:player_progress',
-        payload: {
-            userId,
-            score: player.score,
-            questionIndex
-        }
-    });
-
-    // Check if this player finished all questions
-    if (questionIndex === room.questions.length - 1) {
-        player.status = 'finished';
-        await storage.updateParticipantScore(challengeId, userId, player.score);
         
-        // Notify user they finished
-        this.sendToUser(userId, { type: 'managed:completed', payload: { score: player.score } });
+        // WINNER! Broadcast to everyone so they know the round is over
+        this.broadcastToManaged(challengeId, {
+            type: 'managed:round_result',
+            payload: {
+                winnerId: userId,
+                winnerName: player.username,
+                userName: player.username, // Standard key for feedback UI
+                scores: Object.fromEntries(Array.from(room.players.values()).map(p => [p.userId, p.score])),
+                correctAnswerId: correctAnswer?.id,
+                answerId: answerId,
+                isCorrect: true
+            }
+        });
+
+        // Credit Logic: If it's a wager mode, handle transfers
+        if (room.wager > 0) {
+            const transferAmount = room.wager;
+            await db.transaction(async (tx) => {
+                // Award round winner reward
+                await tx.execute(sql`UPDATE users SET hint_credits = hint_credits + ${transferAmount} WHERE id = ${userId}`);
+                
+                // SPEED BONUS: Only if answered before 4 seconds (Sync with SpeedClock UI)
+                const elapsed = Date.now() - room.questionStartTime;
+                if (elapsed < 4000) {
+                    await tx.execute(sql`UPDATE users SET hint_credits = hint_credits + 1 WHERE id = ${userId}`);
+                    room.bonusCredits[userId] = (room.bonusCredits[userId] || 0) + 1;
+                    
+                    this.broadcastToManaged(challengeId, {
+                        type: 'managed:speed_bonus',
+                        payload: { userId, userName: player.username }
+                    });
+                    console.log(`⚡ [MANAGED] Speed Bonus awarded to ${userId} (Elapsed: ${elapsed}ms)`);
+                }
+            });
+            console.log(`💰 [MANAGED] Round reward processed for user ${userId}.`);
+        }
+
+        // Notify Admin of progress
+        this.sendToUser(room.adminId, {
+            type: 'managed:player_progress',
+            payload: { userId, score: player.score, questionIndex }
+        });
+
+        room.currentQuestionIndex++;
+        
+        if (room.currentQuestionIndex >= room.questions.length) {
+            setTimeout(() => this.finishManagedChallenge(challengeId), 2000);
+        } else {
+            // Next synchronized question after 3s
+            setTimeout(() => this.sendNextManagedQuestion(challengeId), 3000);
+        }
+    } else {
+        // WRONG! Inform everyone that someone failed (like 1v1 circles)
+        if (!room.failedUserIds.includes(userId)) {
+            room.failedUserIds.push(userId);
+        }
+
+        // Specific result for the failure
+        this.broadcastToManaged(challengeId, { 
+            type: 'managed:answer_feedback', 
+            payload: { 
+                userId, 
+                answerId, 
+                isCorrect: false,
+                userName: player.username
+            } 
+        });
+
+        // Check if everyone has failed
+        const activeParticipants = Array.from(room.players.values()).filter(p => p.status === 'ready');
+        if (room.failedUserIds.length >= activeParticipants.length) {
+            this.broadcastToManaged(challengeId, {
+                type: 'managed:round_result',
+                payload: {
+                    winnerId: null,
+                    scores: Object.fromEntries(Array.from(room.players.values()).map(p => [p.userId, p.score])),
+                    correctAnswerId: correctAnswer?.id,
+                    answerId: null
+                }
+            });
+
+            room.currentQuestionIndex++;
+            if (room.currentQuestionIndex >= room.questions.length) {
+                setTimeout(() => this.finishManagedChallenge(challengeId), 2000);
+            } else {
+                setTimeout(() => this.sendNextManagedQuestion(challengeId), 3000);
+            }
+        }
     }
-
-    // Update index for the specific user if everyone processed it?
-    // In managed group challenges, multiple players can be on different paces OR same pace.
-    // User request says "admin can see in live what questions go coming out"
-    // Usually managed challenges are synchronous or asynchronous.
-    // Given the live view requirement, we'll keep it somewhat synced.
-    
-    // Check if all players finished current question
-    const allPlayersProcessed = Array.from(room.players.values())
-        .filter(p => p.status === 'ready')
-        .every(p => p.score >= 0); // This is weak. 
-
-    // Better: Admin controls pace OR it's synchronous.
-    // We'll move on when currentQuestionIndex is reached by enough people?
-    // For simplicity, let's allow users to move at their own pace but notify admin.
   }
 
   private async finishManagedChallenge(challengeId: number) {
@@ -1354,8 +1488,35 @@ export class DuelServer {
 
     // Calculate Ranks
     const sortedPlayers = Array.from(room.players.values())
-        .filter(p => p.status === 'finished')
+        .filter(p => p.status === 'ready' || p.status === 'finished')
         .sort((a, b) => b.score - a.score);
+
+    let currentRank = 1;
+    const rankings = sortedPlayers.map((p, index) => {
+        if (index > 0 && p.score < sortedPlayers[index-1].score) {
+            currentRank = index + 1;
+        }
+        
+        let creditChange = 0;
+        const losersPenalty = room.prizeConfig ? Number(room.prizeConfig.losers[p.userId] || 0) : 0;
+        // Prizes based on ACTUAL position in the sorted list
+        const winnerPrize = room.prizeConfig ? Number(room.prizeConfig.winners[index + 1] || 0) : 0;
+        const bonus = room.bonusCredits[p.userId] || 0;
+        
+        if (room.creditsMode === 'redistribute') {
+            creditChange = winnerPrize - losersPenalty + bonus;
+        } else if (room.creditsMode === 'system_pay') {
+            creditChange = winnerPrize + bonus;
+        }
+        return { 
+            id: Number(p.userId), 
+            username: p.username, 
+            score: p.score, 
+            creditChange, 
+            bonusGained: bonus,
+            rank: currentRank
+        };
+    });
 
     const winners: number[] = [];
     if (sortedPlayers.length > 0) winners.push(sortedPlayers[0].userId);
@@ -1392,7 +1553,7 @@ export class DuelServer {
         type: 'managed:results',
         payload: {
             winners,
-            rankings: sortedPlayers.map(p => ({ id: p.userId, username: p.username, score: p.score }))
+            rankings
         }
     };
 
@@ -1406,11 +1567,19 @@ export class DuelServer {
 
   private sendManagedSyncState(userId: number, room: ManagedChallengeRoom) {
       const player = room.players.get(userId);
+      const currentQuestion = room.status === 'in_progress' ? {
+          index: room.currentQuestionIndex,
+          content: room.questions[room.currentQuestionIndex]?.content,
+          options: room.questions[room.currentQuestionIndex]?.options?.map((o: any) => ({ id: o.id, content: o.content })),
+          questionsCount: room.questions.length
+      } : null;
+
       this.sendToUser(userId, {
           type: 'managed:sync',
           payload: {
               challengeId: room.id,
               status: room.status,
+              topic: room.topic || "Cuestionario",
               players: Array.from(room.players.values()).map(p => ({
                   userId: p.userId,
                   username: p.username,
@@ -1419,8 +1588,10 @@ export class DuelServer {
                   pointsHandicap: p.pointsHandicap,
                   timeHandicap: p.timeHandicap
               })),
+              scores: Object.fromEntries(Array.from(room.players.values()).map(p => [p.userId, p.score])),
               currentQuestionIndex: room.currentQuestionIndex,
               questionsCount: room.questions.length,
+              currentQuestion,
               myStatus: player?.status,
               isAdmin: room.adminId === userId
           }
@@ -1432,6 +1603,10 @@ export class DuelServer {
       if (!room) return;
       if (room.adminId === userId) {
           room.adminSocket = socket;
+          this.sendManagedSyncState(userId, room);
+      } else if (room.players.has(userId)) {
+          const p = room.players.get(userId)!;
+          p.socket = socket;
           this.sendManagedSyncState(userId, room);
       }
   }
@@ -1449,5 +1624,22 @@ export class DuelServer {
       this.adminSockets.forEach(ws => {
           if (ws.readyState === WebSocket.OPEN) ws.send(msg);
       });
+  }
+
+  private async handleManagedDelete(adminId: number, payload: { challengeId: number }) {
+      const user = await storage.getUser(adminId);
+      if (!user || user.role !== 'admin') return;
+
+      const { challengeId } = payload;
+      console.log(`🗑️ [MANAGED DELETE] Admin ${user.username} is deleting challenge ${challengeId}`);
+
+      // 1. Remove from memory lobby if active
+      this.activeManagedChallenges.delete(challengeId);
+      
+      // 2. Clear from DB (cascading participants)
+      await storage.deleteManagedChallenge(challengeId);
+
+      // 3. Update admins
+      this.broadcastManagedChallengeListToAdmins();
   }
 }
