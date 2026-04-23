@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, memo } from "react";
 import { useDuel } from "@/hooks/use-duel";
 import { useSession } from "@/hooks/useSession";
 import { motion, AnimatePresence } from "framer-motion";
-import { Swords, Trophy, X, ShieldAlert, Cpu, Coins, Zap, Loader2, Minus, Plus, CheckCircle2, XCircle, Brain, Sparkles, ChevronLeft, ChevronRight, ArrowLeft, Clock, Skull, Users } from "lucide-react";
+import { Swords, Trophy, X, ShieldAlert, Cpu, Coins, Zap, Loader2, Minus, Plus, CheckCircle2, XCircle, Brain, Sparkles, ChevronLeft, ChevronRight, ArrowLeft, ArrowRight, Clock, Skull, Users, HandMetal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -154,6 +154,9 @@ export function DuelOverlay() {
   const [isNegotiating, setIsNegotiating] = useState(false);
   const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
+  const [localHandicap, setLocalHandicap] = useState<{ points: number, time: number }>({ points: 0, time: 0 });
+  const [activeHandicapTab, setActiveHandicapTab] = useState<'points' | 'time'>('points');
+  
   const actualPreparing = isPreparing && (!duel || duel.status !== 'in_progress') && (!managedChallenge || (managedChallenge.currentQuestion?.index === 0 && !managedChallenge.currentQuestion?.content));
 
   const challengerName = duel?.challengerName || 'Retador';
@@ -237,26 +240,32 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
 
   useEffect(() => {
     if (invite) {
+        setIsNegotiating(false);
         setCounterWager(invite.wager);
-        if (invite.handicap) {
-            // Convert server payload back to our bilateral format (-V for self benefit, +V for opponent benefit)
-            const isSelfBenefit = invite.handicap.targetId === myId;
-            setLocalHandicap({
-                type: invite.handicap.type,
-                value: isSelfBenefit ? -invite.handicap.value : invite.handicap.value
-            });
-        } else {
-            setLocalHandicap({ type: 'none', value: 0 });
+        
+        const incomingHandicap = invite.handicap;
+        let initialHandicap = { points: 0, time: 0 };
+        
+        if (incomingHandicap) {
+            if (incomingHandicap.points) {
+                const h = incomingHandicap.points;
+                initialHandicap.points = Number(h.targetId) === Number(myNumberId) ? -h.value : h.value;
+            }
+            if (incomingHandicap.time) {
+                const h = incomingHandicap.time;
+                initialHandicap.time = Number(h.targetId) === Number(myNumberId) ? -h.value : h.value;
+            }
         }
+        setLocalHandicap(initialHandicap);
+        setActiveHandicapTab('points');
     }
-  }, [invite, myId]);
+  }, [invite, myNumberId]);
 
-  const [localHandicap, setLocalHandicap] = useState<{ type: 'points' | 'time' | 'none', value: number }>({ type: 'none', value: 0 });
 
   const updateHandicap = (val: number) => {
-    const limit = localHandicap.type === 'points' ? 3 : 15;
+    const limit = activeHandicapTab === 'points' ? 3 : 15;
     const nextVal = Math.max(-limit, Math.min(limit, val));
-    setLocalHandicap({ ...localHandicap, value: nextVal });
+    setLocalHandicap(prev => ({ ...prev, [activeHandicapTab]: nextVal }));
   };
 
   const [blurActive, setBlurActive] = useState(false);
@@ -267,15 +276,15 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
     let timer: any;
     
     // Normal Duel
-    if (duel?.status === 'in_progress' && duel.handicap?.type === 'time') {
-        const isBeneficiary = duel.handicap.targetId === myId;
+    if (duel?.status === 'in_progress' && duel.handicap?.time) {
+        const isBeneficiary = Number(duel.handicap.time.targetId) === Number(myId);
         if (!isBeneficiary) {
             setBlurActive(true);
-            setBlurTimeLeft(duel.handicap.value);
+            setBlurTimeLeft(duel.handicap.time.value);
             timer = setTimeout(() => {
                 setBlurActive(false);
                 setBlurTimeLeft(0);
-            }, duel.handicap.value * 1000);
+            }, duel.handicap.time.value * 1000);
             return () => clearTimeout(timer);
         }
     } 
@@ -337,21 +346,6 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
     }
   }, [managedChallenge?.currentQuestion?.index]);
 
-  const getHandicapPayload = () => {
-    if (!localHandicap || localHandicap.type === 'none' || localHandicap.value === 0) return null;
-    
-    // Determine who is the "opponent" relative to me
-    const challengerId = Number(invite?.challengerId);
-    const receiverId = Number(invite?.receiverId);
-    const opponentId = myId === challengerId ? receiverId : challengerId;
-
-    return {
-        type: localHandicap.type,
-        value: Math.abs(localHandicap.value),
-        targetId: localHandicap.value > 0 ? Number(opponentId) : Number(myId)
-    };
-  };
-
   // ─── EARLY RETURN ───
   if (!duel && !invite && !actualPreparing && !sentChallengeInfo && !managedInvite && !managedChallenge) return null;
 
@@ -380,11 +374,10 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
 
     if (isCorrect) return "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]";
     
-    // RED HIGHLIGHT: Only for the person who actually failed. 
-    // Others just see the small X badge (handled in getWhoAnswered)
-    if (iFailedThis) return "bg-red-700/60 border-red-500 text-red-200";
+    // RED HIGHLIGHT: Show to everyone if anyone failed this option
+    if (isWrongAnswer) return "bg-red-700/80 border-red-500 text-red-100 shadow-[0_0_15px_rgba(239,68,68,0.2)] animate-pulse";
     
-    // If someone else failed but I didn't, or it was just selected but not confirmed yet
+    // If I selected but not confirmed yet
     if (isSelectedByMe) return "bg-slate-700/50 border-slate-500 text-slate-300";
     return "bg-white/3 border-white/5 text-slate-500";
   };
@@ -435,9 +428,6 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
 
       <div className="relative z-10 w-full max-w-2xl pointer-events-auto">
         <AnimatePresence mode="wait">
-
-          {/* ── MANAGED GROUP INVITATION (DELETED REDUNDANT) ── */}
-
 
           {/* ── MANAGED GAME ARENA ───────────────────────────────────── */}
           {managedChallenge && managedChallenge.status === 'in_progress' && !actualPreparing && (
@@ -501,30 +491,6 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                     )}
                 </div>
 
-                {/* Speed Bonus Notification for Managed Mode */}
-                <AnimatePresence>
-                    {speedBonusFlash && (
-                        <motion.div 
-                            initial={{ opacity: 0, scale: 0.5, y: 20 }} 
-                            animate={{ opacity: 1, scale: 1, y: 0 }} 
-                            exit={{ opacity: 0, scale: 1.2, y: -20 }} 
-                            className="absolute inset-x-0 top-1/3 z-50 flex items-center justify-center pointer-events-none"
-                        >
-                          <div className="bg-yellow-400 border-2 border-yellow-200 shadow-[0_0_30px_rgba(250,204,21,0.4)] rounded-2xl px-6 py-3 text-center flex items-center gap-3 transform -rotate-2">
-                            <div className="bg-slate-900 rounded-full p-2">
-                                <Zap className="h-5 w-5 text-yellow-400 animate-pulse" />
-                            </div>
-                            <div className="flex flex-col items-start leading-tight">
-                                <p className="text-slate-900 font-black text-xs uppercase tracking-tighter">¡BONO DE VELOCIDAD!</p>
-                                <p className="text-slate-900/70 text-[9px] font-bold">
-                                    {speedBonusFlash === managedMe?.username ? '¡Has ganado +1 crédito extra!' : `${speedBonusFlash} ha ganado +1 crédito`}
-                                </p>
-                            </div>
-                          </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
                 <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 relative z-10 transition-all duration-700 ${blurActive ? 'opacity-20 pointer-events-none grayscale' : ''}`}>
                     {managedChallenge.currentQuestion?.options?.map((opt: any) => {
                         const styleClass = getOptionStyle(opt);
@@ -549,8 +515,8 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                                 {who && (
                                   <div className="flex flex-col gap-1.5 items-end ml-1">
                                     {(who.meCorrect || who.meWrong) && (
-                                        <span className={`px-2 py-0.5 rounded-md bg-yellow-400 text-slate-950 text-[11px] font-black shadow-lg ring-1 ring-yellow-500/50 flex items-center gap-1`}>
-                                            {who.meCorrect ? <CheckCircle2 className="w-2.5 h-2.5 fill-slate-900" /> : <XCircle className="w-2.5 h-2.5" />}
+                                        <span className={`px-2 py-0.5 rounded-md bg-yellow-400 text-slate-950 text-[12px] font-black shadow-lg ring-1 ring-yellow-500/50 flex items-center gap-1`}>
+                                            {who.meCorrect ? <CheckCircle2 className="w-3 h-3 fill-slate-900" /> : <XCircle className="w-3 h-3" />}
                                             TÚ
                                         </span>
                                     )}
@@ -796,18 +762,23 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                         <span className="text-[8px] font-black uppercase text-slate-500 block mb-1">Ventaja</span>
                         <div className="flex items-center gap-1.5 text-purple-400 justify-center">
                             <ShieldAlert className="h-3 w-3" />
-                            <div className="flex flex-col items-start leading-tight">
-                                <span className="text-lg font-black uppercase">
-                                    {(sentChallengeInfo.handicap && sentChallengeInfo.handicap.type !== 'none')
-                                        ? `+${sentChallengeInfo.handicap.value} ${sentChallengeInfo.handicap.type === 'points' ? 'Pts' : 'Seg'}` 
-                                        : 'Nula'}
-                                </span>
-                                {(sentChallengeInfo.handicap && sentChallengeInfo.handicap.type !== 'none') && (
-                                    <span className="text-[7px] font-black text-purple-400/60 uppercase -mt-1">
-                                        {Number(sentChallengeInfo.handicap.targetId) === Number(myId) ? 'Para ti' : 'Para oponente'}
-                                    </span>
-                                )}
-                            </div>
+                                <div className="flex flex-col items-center leading-none">
+                                    {(!sentChallengeInfo.handicap || (sentChallengeInfo.handicap.points === 0 && sentChallengeInfo.handicap.time === 0)) ? (
+                                        <span className="text-lg font-black uppercase text-slate-600">Nula</span>
+                                    ) : (
+                                        <div className="flex flex-col gap-0.5 items-center">
+                                            {sentChallengeInfo.handicap.points !== 0 && (
+                                                <span className="text-xs font-black uppercase text-emerald-400">+{Math.abs(sentChallengeInfo.handicap.points)} PTS</span>
+                                            )}
+                                            {sentChallengeInfo.handicap.time !== 0 && (
+                                                <span className="text-xs font-black uppercase text-blue-400">+{Math.abs(sentChallengeInfo.handicap.time)} SEG</span>
+                                            )}
+                                            <span className="text-[7px] font-black text-purple-400/60 uppercase mt-0.5">
+                                                {Number(sentChallengeInfo.handicap.targetId) === Number(myId) ? 'Para ti' : 'Para oponente'}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
                         </div>
                     </div>
                   </div>
@@ -921,73 +892,97 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                     {myId === Number(invite.challengerId) ? ' ha actualizado las condiciones para un duelo de ' : ' te ha retado a un duelo de '}
                     <span className="text-amber-200">{invite.topic}</span>.
                   </p>
+                  
                   <div className="grid grid-cols-2 gap-4 w-full max-w-sm mb-4">
+                    {/* Wager Column */}
                     <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
                       <div className="flex items-center justify-center gap-2 mb-2 text-yellow-500">
                         <Coins className="h-4 w-4" />
                         <span className="text-[10px] font-black uppercase tracking-wider">Apuesta</span>
                       </div>
-                      <div className="flex items-center justify-center gap-3">
-                        {isNegotiating && <button className="h-6 w-6 rounded-lg bg-slate-700 hover:bg-amber-500 flex items-center justify-center" onClick={() => setCounterWager(Math.max(1, counterWager - 1))}><Minus className="h-3 w-3" /></button>}
-                        <span className="text-2xl font-black">{isNegotiating ? counterWager : invite.wager}</span>
-                        {isNegotiating && <button className="h-6 w-6 rounded-lg bg-slate-700 hover:bg-amber-500 flex items-center justify-center" onClick={() => setCounterWager(counterWager + 1)}><Plus className="h-3 w-3" /></button>}
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <div className="flex items-center gap-3">
+                          {isNegotiating && <button className="h-6 w-6 rounded-lg bg-slate-700 hover:bg-amber-500 flex items-center justify-center transition-colors" onClick={() => setCounterWager(Math.max(1, counterWager - 1))}><Minus className="h-3 w-3" /></button>}
+                          <span className="text-3xl font-black">{isNegotiating ? counterWager : invite.wager}</span>
+                          {isNegotiating && <button className="h-6 w-6 rounded-lg bg-slate-700 hover:bg-amber-500 flex items-center justify-center transition-colors" onClick={() => setCounterWager(counterWager + 1)}><Plus className="h-3 w-3" /></button>}
+                        </div>
+                        <span className="text-[9px] font-black text-amber-500 uppercase tracking-[0.2em] animate-pulse">Créditos</span>
                       </div>
                     </div>
 
+                    {/* Handicap Type Toggle Column */}
                     <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
                       <div className="flex items-center justify-center gap-2 mb-2 text-purple-400">
                         <ShieldAlert className="h-4 w-4" />
                         <span className="text-[10px] font-black uppercase tracking-wider">Ventaja</span>
                       </div>
                       {isNegotiating ? (
-                        <div className="flex bg-black/20 p-1 rounded-lg gap-1">
-                          <button onClick={() => setLocalHandicap({...localHandicap, type: 'points', value: 0})} className={`flex-1 text-[8px] font-black py-1 rounded transition-all ${localHandicap.type === 'points' ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}>PTS</button>
-                          <button onClick={() => setLocalHandicap({...localHandicap, type: 'time', value: 0})} className={`flex-1 text-[8px] font-black py-1 rounded transition-all ${localHandicap.type === 'time' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}>SEG</button>
+                        <div className="flex bg-black/20 p-1 rounded-xl gap-1">
+                          <button 
+                             onClick={() => setActiveHandicapTab('points')} 
+                             className={`flex-1 text-[8px] font-black py-1 rounded transition-all relative ${activeHandicapTab === 'points' ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}
+                          >
+                            PTS
+                            {localHandicap.points !== 0 && <span className="absolute -top-1 -right-1 h-1.5 w-1.5 bg-emerald-400 rounded-full" />}
+                          </button>
+                          <button 
+                             onClick={() => setActiveHandicapTab('time')} 
+                             className={`flex-1 text-[8px] font-black py-1 rounded transition-all relative ${activeHandicapTab === 'time' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+                          >
+                            SEG
+                            {localHandicap.time !== 0 && <span className="absolute -top-1 -right-1 h-1.5 w-1.5 bg-blue-400 rounded-full" />}
+                          </button>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center gap-2">
-                           <span className="text-xl font-black uppercase">{invite.handicap ? (invite.handicap.type === 'points' ? 'Puntos' : 'Tiempo') : 'Nula'}</span>
+                        <div className="flex flex-col items-center justify-center p-1">
+                           {(!invite.handicap || (!invite.handicap.points && !invite.handicap.time)) ? (
+                               <span className="text-lg font-black uppercase leading-none text-slate-600">Nula</span>
+                           ) : (
+                               <div className="flex flex-col gap-1">
+                                   {invite.handicap.points && (
+                                       <div className="bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                            <span className="text-[9px] font-black text-emerald-400 uppercase">+{invite.handicap.points.value} PTS para {invite.handicap.points.targetId === myNumberId ? 'ti' : 'él'}</span>
+                                       </div>
+                                   )}
+                                   {invite.handicap.time && (
+                                       <div className="bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                                            <span className="text-[9px] font-black text-blue-400 uppercase">+{invite.handicap.time.value} SEG para {invite.handicap.time.targetId === myNumberId ? 'ti' : 'él'}</span>
+                                       </div>
+                                   )}
+                               </div>
+                           )}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <AnimatePresence>
-                    {isNegotiating && localHandicap.type !== 'none' && (
-                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="w-full max-w-sm overflow-hidden mb-6">
-                            <div className="bg-slate-950/40 border border-white/5 rounded-2xl p-4">
-                                <div className="flex items-center justify-between gap-4">
-                                     <div className="flex flex-col items-center flex-1 min-w-0">
-                                         <span className="text-[8px] font-black text-slate-500 mb-1 uppercase truncate w-full text-center">TÚ</span>
-                                         <div className={`w-full py-1.5 rounded-lg border flex items-center justify-center ${localHandicap.value < 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
-                                             <span className="text-lg font-black">{localHandicap.value < 0 ? Math.abs(localHandicap.value) : 0}{localHandicap.type === 'time' && localHandicap.value < 0 ? 's' : ''}</span>
-                                         </div>
-                                     </div>
-                                     <div className="flex items-center gap-2 mt-4 shrink-0">
-                                         <button className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700" onClick={() => updateHandicap(localHandicap.value - 1)}><Minus className="h-3 w-3" /></button>
-                                         <button className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700" onClick={() => updateHandicap(localHandicap.value + 1)}><Plus className="h-3 w-3" /></button>
-                                     </div>
-                                     <div className="flex flex-col items-center flex-1 min-w-0">
-                                         <span className="text-[8px] font-black text-slate-500 mb-1 uppercase truncate w-full text-center">{myId === Number(invite.challengerId) ? invite.receiverName : invite.challengerName}</span>
-                                         <div className={`w-full py-1.5 rounded-lg border flex items-center justify-center ${localHandicap.value > 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
-                                             <span className="text-lg font-black">{localHandicap.value > 0 ? Math.abs(localHandicap.value) : 0}{localHandicap.type === 'time' && localHandicap.value > 0 ? 's' : ''}</span>
-                                         </div>
-                                     </div>
-                                  </div>
-                            </div>
-                        </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {!isNegotiating && invite.handicap && (
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2 mb-6">
-                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
-                           {invite.handicap.targetId === myId 
-                            ? `¡Ventaja para ti: +${invite.handicap.value} ${invite.handicap.type === 'points' ? 'pts' : 'seg'}!` 
-                            : `Ventaja para oponente: +${invite.handicap.value} ${invite.handicap.type === 'points' ? 'pts' : 'seg'}`}
-                        </p>
-                    </div>
-                  )}
+                  <AnimatePresence mode="wait">
+                     {isNegotiating && activeHandicapTab && (
+                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="w-full max-w-sm overflow-hidden mb-6">
+                             <div className="bg-slate-950/40 border border-white/5 rounded-2xl p-4">
+                                 <p className="text-[8px] font-black text-blue-400/60 text-center mb-4 uppercase tracking-[0.2em]">Usa la flechas para señalar quien tiene la ventaja</p>
+                                 <div className="flex items-center justify-between gap-4">
+                                      <div className="flex flex-col items-center flex-1 min-w-0">
+                                          <span className="text-[8px] font-black text-slate-500 mb-1 uppercase truncate w-full text-center">TÚ</span>
+                                          <div className={`w-full py-1.5 rounded-lg border flex items-center justify-center ${localHandicap[activeHandicapTab] < 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
+                                              <span className="text-lg font-black">{localHandicap[activeHandicapTab] < 0 ? Math.abs(localHandicap[activeHandicapTab]) : 0}{activeHandicapTab === 'time' && localHandicap[activeHandicapTab] < 0 ? 's' : ''}</span>
+                                          </div>
+                                      </div>
+                                      <div className="flex items-center gap-2 mt-4 shrink-0">
+                                          <button className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 text-emerald-400" onClick={() => updateHandicap(localHandicap[activeHandicapTab] - 1)}><ArrowLeft className="h-3 w-3" /></button>
+                                          <button className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 text-emerald-400" onClick={() => updateHandicap(localHandicap[activeHandicapTab] + 1)}><ArrowRight className="h-3 w-3" /></button>
+                                      </div>
+                                      <div className="flex flex-col items-center flex-1 min-w-0">
+                                          <span className="text-[8px] font-black text-slate-500 mb-1 uppercase truncate w-full text-center">{myNumberId === Number(invite.challengerId) ? invite.receiverName : invite.challengerName}</span>
+                                          <div className={`w-full py-1.5 rounded-lg border flex items-center justify-center ${localHandicap[activeHandicapTab] > 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
+                                              <span className="text-lg font-black">{localHandicap[activeHandicapTab] > 0 ? Math.abs(localHandicap[activeHandicapTab]) : 0}{activeHandicapTab === 'time' && localHandicap[activeHandicapTab] > 0 ? 's' : ''}</span>
+                                          </div>
+                                      </div>
+                                   </div>
+                             </div>
+                         </motion.div>
+                     )}
+                   </AnimatePresence>
 
                   <div className="flex flex-wrap gap-2 justify-center">
                     {isResponding ? (
@@ -1012,10 +1007,35 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                         >
                           <span className="text-[10px] opacity-90 uppercase font-black tracking-widest leading-none">Aceptar Desafío</span>
                           <span className="text-[11px] font-black leading-tight">
-                            {invite.wager} Créditos {(invite.handicap && invite.handicap.type !== 'none') ? `+ Ventaja ${invite.handicap.value} ${invite.handicap.type === 'points' ? 'PTS' : 'SEG'} para ${invite.handicap.targetId === myId ? 'ti' : (invite.handicap.targetId === Number(invite.challengerId) ? invite.challengerName : invite.receiverName)}` : ''}
+                            {invite.wager} Créditos 
+                            {invite.handicap?.points && ` + ${invite.handicap.points.value} PTS para ${invite.handicap.points.targetId === myNumberId ? 'ti' : 'él'}`}
+                            {invite.handicap?.time && ` + ${invite.handicap.time.value} SEG para ${invite.handicap.time.targetId === myNumberId ? 'ti' : 'él'}`}
                           </span>
                         </Button>
-                        <Button variant="outline" className="bg-amber-600/20 border-amber-500/30 font-bold py-3 px-6 rounded-xl hover:bg-amber-600/30 transition-all" onClick={() => respondToInvite(invite.duelId, 'counter', counterWager, getHandicapPayload())}>SOLO CONTRA-OFERTAR</Button>
+                        <Button 
+                          variant="outline" 
+                          className="bg-amber-600/20 border-amber-500/30 font-bold py-3 px-6 rounded-xl hover:bg-amber-600/30 transition-all flex flex-col gap-0.5" 
+                          onClick={() => {
+                            const payload: any = {};
+                            const otherId = Number(myNumberId === Number(invite.challengerId) ? invite.receiverId : invite.challengerId);
+                            
+                            if (localHandicap.points !== 0) {
+                                payload.points = {
+                                    value: Math.abs(localHandicap.points),
+                                    targetId: localHandicap.points > 0 ? otherId : myNumberId
+                                };
+                            }
+                            if (localHandicap.time !== 0) {
+                                payload.time = {
+                                    value: Math.abs(localHandicap.time),
+                                    targetId: localHandicap.time > 0 ? otherId : myNumberId
+                                };
+                            }
+                            respondToInvite(invite.duelId, 'counter', counterWager, Object.keys(payload).length > 0 ? payload : null);
+                          }}
+                        >
+                            <span className="text-[10px] font-black uppercase">Solo Contra-ofertar</span>
+                        </Button>
                         <Button variant="ghost" className="text-red-400 hover:bg-red-400/10" onClick={() => respondToInvite(invite.duelId, 'reject')}>RECHAZAR</Button>
                         <Button variant="link" className="text-slate-500 text-[10px] font-bold w-full uppercase tracking-widest opacity-60" onClick={() => setIsNegotiating(false)}>Volver atrás</Button>
                       </>
@@ -1044,7 +1064,11 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                   </span>
                 </div>
                 {isSpectator && <Badge className="bg-indigo-600 text-white animate-pulse text-[10px] h-5">MODO OBSERVADOR</Badge>}
-                <Button variant="ghost" size="icon" onClick={() => resetDuel()} className="h-6 w-6 text-slate-500 hover:text-white transition-colors">
+                <Button variant="ghost" size="icon" onClick={() => {
+                    if (confirm("¿Seguro que quieres salir del duelo en curso? PERDERÁS LOS CRÉDITOS APUESTADOS.")) {
+                        resetDuel();
+                    }
+                }} className="h-6 w-6 text-slate-500 hover:text-white transition-colors">
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -1125,20 +1149,20 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                             <div className="flex flex-col items-start leading-tight">
                                 <p className="text-slate-900 font-black text-xs uppercase tracking-tighter">¡BONO DE VELOCIDAD!</p>
                                 <p className="text-slate-900/70 text-[9px] font-bold">
-                                    {duel?.lastFeedback?.userId === myId ? '¡Has ganado +1 crédito extra!' : `${speedBonusFlash} ha ganado +1 crédito`}
+                                    {speedBonusFlash === 'Tú' ? '¡Has ganado +1 crédito extra!' : `${speedBonusFlash} ha ganado +1 crédito`}
                                 </p>
                             </div>
                           </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
-
-                    {/* Question Content with Blur Effect */}
+                    
+                    {/* RESTORED: Question Content with Blur Effect */}
                     <div className={`text-base font-bold text-white mb-4 leading-tight text-center transition-all duration-700 ${blurActive ? 'blur-xl grayscale opacity-30 select-none scale-95 pointer-events-none' : ''}`}>
                         <ContentRenderer content={duel.currentQuestion.content} tight={true} />
                     </div>
 
-                    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2 transition-all duration-700 ${blurActive ? 'opacity-20 pointer-events-none grayscale' : ''}`}>
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 ${blurActive ? 'opacity-20 pointer-events-none grayscale' : ''}`}>
                       {duel.currentQuestion.options.map((option: any) => {
                         const styleClass = getOptionStyle(option);
                         const who = getWhoAnswered(option);
@@ -1154,15 +1178,23 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                             }}
                           >
                             <div className="h-6 w-6 rounded-lg flex-shrink-0 flex items-center justify-center bg-black/20">
-                              {who?.meCorrect || who?.oppCorrect ? <CheckCircle2 className="h-4 w-4" /> : (who?.meWrong || who?.oppWrong) ? <XCircle className="h-4 w-4 text-red-300" /> : <div className="w-1.5 h-1.5 rounded-full bg-white/20" />}
+                              {who?.meCorrect || who?.oppCorrect ? <CheckCircle2 className="h-4 w-4" /> : (who?.meWrong || who?.oppWrong) ? <XCircle className="h-4 w-4 text-red-300 opacity-50" /> : <div className="w-1.5 h-1.5 rounded-full bg-white/20" />}
                             </div>
                             <span className="text-base font-bold flex-1 text-left leading-tight"><ContentRenderer content={option.content} tight={true} /></span>
                             {who && (
-                              <div className="flex flex-col gap-1 items-end ml-1">
-                                {(who.meCorrect || who.meWrong) && <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${who.meCorrect ? 'bg-blue-500' : 'bg-orange-600'}`}>TÚ</span>}
-                                {(who.oppCorrect || who.oppWrong) && <span className={`text-[8px] font-black px-2 py-0.5 rounded-full max-w-[60px] truncate ${who.oppCorrect ? 'bg-yellow-400 text-slate-900' : 'bg-orange-600'}`}>{who.oppCorrect ? '⚡ ' : ''}{who.name}</span>}
-                              </div>
-                            )}
+                               <div className="flex flex-col gap-1 items-end ml-1">
+                                 {(who.meCorrect || who.meWrong) && (
+                                   <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-lg border-2 shadow-lg ${who.meCorrect ? 'bg-blue-500 border-blue-400 text-white' : 'bg-yellow-400 border-black text-slate-950 scale-110'}`}>
+                                     TÚ
+                                   </span>
+                                 )}
+                                 {(who.oppCorrect || who.oppWrong) && (
+                                   <span className={`text-[11px] font-black px-2 py-0.5 rounded-lg border-2 shadow-lg max-w-[100px] truncate ${who.oppCorrect ? 'bg-yellow-400 border-yellow-200 text-slate-900 font-black' : 'bg-yellow-400 border-black text-slate-950 scale-110'}`}>
+                                     {who.oppCorrect ? '⚡ ' : ''}{who.name}
+                                   </span>
+                                 )}
+                               </div>
+                             )}
                           </button>
                         );
                       })}
@@ -1232,19 +1264,54 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                     </div>
                   </>
                 )}
-                <p className="text-slate-400 text-xs max-w-[280px] leading-relaxed">El honor se gana en el campo de batalla. Pulsa abajo para revisar tus aciertos y fallos.</p>
+                 {/* SPEED BONUS SUMMARY (Hidden on Tie) */}
+                 {duel.finalResults?.bonusSummary && duel.finalResults?.winnerId !== null && (
+                    <div className="w-full max-w-[280px] bg-white/5 border border-white/5 rounded-2xl p-4 mt-2 space-y-3">
+                        <div className="flex items-center gap-2 text-[10px] font-black text-blue-400 uppercase tracking-widest border-b border-white/5 pb-2">
+                            <Zap className="h-3 w-3" />
+                            <span>Resumen de Bonos</span>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                           {Object.entries(duel.finalResults.bonusSummary).map(([uid, bonus]: [string, any]) => {
+                               if (bonus === 0) return null;
+                               const isMe = Number(uid) === myId;
+                               const name = isMe ? 'TÚ' : (Number(uid) === Number(duel?.challenger?.userId) ? duel.finalResults.challengerName : duel.finalResults.receiverName);
+                               return (
+                                   <div key={uid} className="flex items-center justify-between">
+                                       <span className={`text-[10px] font-bold ${isMe ? 'text-blue-300' : 'text-slate-400'}`}>{name}</span>
+                                       <span className={`text-xs font-black ${bonus > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                           {bonus > 0 ? `+${bonus}` : bonus} <span className="text-[8px] opacity-60">CRÉD.</span>
+                                       </span>
+                                   </div>
+                               );
+                           })}
+                           {!Object.values(duel.finalResults.bonusSummary).some(b => b !== 0) && (
+                               <p className="text-[9px] text-slate-500 font-bold italic">Nadie obtuvo bonos de velocidad</p>
+                           )}
+                        </div>
+                    </div>
+                 )}
+                 <p className="text-slate-400 text-[10px] max-w-[240px] leading-relaxed mt-4 italic">El honor se gana en el campo de batalla. Pulsa abajo para revisar tus aciertos y fallos.</p>
               </div>
               <div className="p-6 bg-black/20 flex flex-col gap-2">
                 <Button onClick={() => { setReviewIndex(0); setIsReviewing(true); }} className="bg-blue-600 hover:bg-blue-500 py-6 font-black rounded-2xl text-lg">REVISAR DETALLES</Button>
-                {(!isSpectator && duel?.finalResults?.winnerId !== myId) && (
+                {(!isSpectator && (duel?.finalResults?.winnerId !== myId || !duel)) && (
                   <button 
                     onClick={() => { 
-                      if (!duel) return;
-                      const oppIds = Object.keys(duel.scores).filter(id => Number(id) !== myId);
-                      const oppId = Number(oppIds[0]);
-                      const oppName = duel.opponentName;
+                      const oppId = duel ? Number(Object.keys(duel.scores).find(id => Number(id) !== myId)) 
+                                   : (sentChallengeInfo ? Number(sentChallengeInfo.receiverId) 
+                                   : (invite ? Number(invite.challengerId) : null));
+                      const oppName = duel?.opponentName || sentChallengeInfo?.receiverName || invite?.challengerName || "Oponente";
+                      
+                      if (!oppId) {
+                          toast({ title: "No se encontró oponente", description: "No se puede iniciar la revancha.", variant: "destructive" });
+                          return;
+                      }
+
                       // First: fully close the current duel
-                      leaveResults(duel.duelId);
+                      if (duel) leaveResults(duel.duelId);
+                      resetDuel();
+
                       // Then: open revenge dialog after duel state is cleared
                       setTimeout(() => {
                         setChallengingUser({ id: oppId, name: oppName });

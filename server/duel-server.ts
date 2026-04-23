@@ -33,9 +33,8 @@ interface DuelRoom {
   currentRoundAnswers: { userId: number; answerId: number }[];
   spectators: Set<WebSocket>;
   handicap?: {
-    type: 'points' | 'time' | 'none';
-    value: number;
-    targetId: number;
+    points?: { value: number; targetId: number };
+    time?: { value: number; targetId: number };
   };
 }
 
@@ -496,11 +495,12 @@ export class DuelServer {
       };
 
       // Apply points handicap
-      if (room.handicap?.type === 'points' && room.handicap.value > 0) {
-        const targetId = Number(room.handicap.targetId);
+      const pointsH = room.handicap?.points;
+      if (pointsH && pointsH.value > 0) {
+        const targetId = Number(pointsH.targetId);
         if (room.scores[targetId] !== undefined) {
-          room.scores[targetId] = room.handicap.value;
-          console.log(`🎯 [HANDICAP] Initializing user ${targetId} with ${room.handicap.value} points.`);
+          room.scores[targetId] = pointsH.value;
+          console.log(`🎯 [HANDICAP] Initializing user ${targetId} with ${pointsH.value} points.`);
         } else {
           console.warn(`⚠️ [HANDICAP] Target user ${targetId} not found in scores. Keys:`, Object.keys(room.scores));
         }
@@ -578,9 +578,9 @@ export class DuelServer {
     room.questionStartTime = Date.now();
     this.broadcastDuelListToAdmins();
 
-    // SERVER-SIDE TIMEOUT (Failsafe for stuck duels)
+    // SERVER-SIDE TIMEOUT (Failsafe for stuck duels - Increased to 2h)
     if (this.duelTimers.has(duelId)) clearTimeout(this.duelTimers.get(duelId));
-    this.duelTimers.set(duelId, setTimeout(() => this.handleQuestionTimeout(duelId, room.currentQuestionIndex), 35000));
+    this.duelTimers.set(duelId, setTimeout(() => this.handleQuestionTimeout(duelId, room.currentQuestionIndex), 7200000));
   }
 
   private handleQuestionTimeout(duelId: number, questionIndex: number) {
@@ -804,7 +804,10 @@ export class DuelServer {
             scores: room.scores,
             wager: room.wager,
             speedBonuses: (room as any).winnerBonus || 0,
-            history: room.history
+            bonusSummary: room.bonusCredits,
+            history: room.history,
+            challengerName: room.challenger.username,
+            receiverName: room.receiver.username
         }
     });
 

@@ -28,8 +28,8 @@ interface DuelContextType {
   setChallengeWager: (wager: number) => void;
   challengeTopic: string;
   setChallengeTopic: (topic: string) => void;
-  challengeHandicap: { type: 'points' | 'time' | 'none', value: number, targetId: number | null };
-  setChallengeHandicap: (h: { type: 'points' | 'time' | 'none', value: number, targetId: number | null }) => void;
+  challengeHandicap: { points: number, time: number };
+  setChallengeHandicap: (h: { points: number, time: number }) => void;
   isRevengeMode: boolean;
   setIsRevengeMode: (mode: boolean) => void;
   refreshStats: () => void;
@@ -75,7 +75,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
   const [challengingUser, setChallengingUser] = useState<{ id: number; name: string } | null>(null);
   const [challengeWager, setChallengeWager] = useState<number>(10);
   const [challengeTopic, setChallengeTopic] = useState<string>("");
-  const [challengeHandicap, setChallengeHandicap] = useState<{ type: 'points' | 'time' | 'none', value: number, targetId: number | null }>({ type: 'none', value: 0, targetId: null });
+  const [challengeHandicap, setChallengeHandicap] = useState<{ points: number, time: number }>({ points: 0, time: 0 });
   const [isRevengeMode, setIsRevengeMode] = useState(false);
   const [activeDuels, setActiveDuels] = useState<any[]>([]);
   const [sentChallengeInfo, setSentChallengeInfo] = useState<any | null>(null);
@@ -139,12 +139,15 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
 
   const handleWsMessage = (message: DuelMessage) => {
     const { type, payload } = message;
+    const myId = user?.userId;
     console.log(`📩 [WS MESSAGE] ${type}:`, payload);
 
     switch (type) {
       case 'duel:invited':
         // Always clear any stale duel state when a new invitation arrives
         setDuel(null);
+        setIsResponding(false);
+        setIsPreparing(false);
         setInvite({
             ...payload,
             challengerId: payload.challengerId,
@@ -176,10 +179,11 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         setDuel((prev: any) => prev ? { 
             ...prev, 
             currentQuestion: payload,
-            scores: payload.scores || prev.scores, // Safety sync from server
+            scores: payload.scores || prev.scores, 
             lastFeedback: undefined,
-            allWrongAnswers: [],   // clear per-round wrong answers on each new question
+            allWrongAnswers: [],   
         } : null);
+        setSpeedBonusFlash(null); 
         break;
       case 'duel:answer_feedback':
         setIsPreparing(false); // Safety
@@ -200,6 +204,12 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
               title: "⚡ " + payload.winnerName + " acertó!",
               description: "Prepárate para la siguiente...",
           });
+        } else if (payload.correctAnswerId) {
+          toast({
+              title: "⌛ Nadie acertó",
+              description: "Se mostrará la respuesta correcta...",
+              variant: "destructive"
+          });
         }
         setDuel((prev: any) => ({ 
             ...prev, 
@@ -210,12 +220,12 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
                 answerId: payload.answerId, 
                 correctAnswerId: payload.correctAnswerId,
                 speedBonus: payload.speedBonus,
-                isCorrect: true 
+                isCorrect: payload.winnerId !== null 
             } 
         }));
 
         if (payload.speedBonus) {
-            setSpeedBonusFlash(payload.winnerName);
+            setSpeedBonusFlash(payload.winnerId === myId ? "Tú" : payload.winnerName);
             setTimeout(() => setSpeedBonusFlash(null), 3500);
         }
         break;
@@ -423,7 +433,11 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         receiverName: receiverName || "Oponente",
         topic: topic || "Matemáticas",
         wager,
-        handicap: handicap || { type: 'none', value: 0 }
+        handicap: {
+            points: handicap?.points?.value || 0,
+            time: handicap?.time?.value || 0,
+            targetId: handicap?.points?.targetId || handicap?.time?.targetId || null
+        }
     });
   };
 

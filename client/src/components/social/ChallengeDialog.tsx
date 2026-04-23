@@ -9,7 +9,9 @@ import {
   History,
   ShieldAlert,
   Zap,
-  Timer
+  Timer,
+  ArrowLeft,
+  ArrowRight
 } from "lucide-react";
 import { 
   Dialog, 
@@ -40,6 +42,7 @@ export function ChallengeDialog() {
     setIsRevengeMode,
     sendChallenge 
   } = useDuel();
+  const [activeHandicapTab, setActiveHandicapTab] = useState<'points' | 'time'>('points');
 
   if (!challengingUser) return null;
 
@@ -47,27 +50,31 @@ export function ChallengeDialog() {
     if (!challengeTopic.trim()) return;
     
     // Process handicap for server
-    let handicapPayload = null;
-    if (challengeHandicap.type !== 'none' && challengeHandicap.value !== 0) {
-      handicapPayload = {
-        type: challengeHandicap.type,
-        value: Math.abs(challengeHandicap.value),
-        targetId: challengeHandicap.value > 0 ? challengingUser.id : session?.userId
+    let handicapPayload: any = {};
+    if (challengeHandicap.points !== 0) {
+      handicapPayload.points = {
+        value: Math.abs(challengeHandicap.points),
+        targetId: challengeHandicap.points > 0 ? challengingUser.id : session?.userId
+      };
+    }
+    if (challengeHandicap.time !== 0) {
+      handicapPayload.time = {
+        value: Math.abs(challengeHandicap.time),
+        targetId: challengeHandicap.time > 0 ? challengingUser.id : session?.userId
       };
     }
 
-    sendChallenge(challengingUser.id, challengeWager, challengeTopic, isRevengeMode, handicapPayload, challengingUser.name);
+    sendChallenge(challengingUser.id, challengeWager, challengeTopic, isRevengeMode, Object.keys(handicapPayload).length > 0 ? handicapPayload : null, challengingUser.name);
     setChallengingUser(null);
     setChallengeTopic("");
-    setChallengeHandicap({ type: 'none', value: 0, targetId: null });
+    setChallengeHandicap({ points: 0, time: 0 });
     setIsRevengeMode(false);
   };
 
   const updateHandicap = (val: number) => {
-    // Limit points to 3, time to 15s (arbitrary but reasonable)
-    const limit = challengeHandicap.type === 'points' ? 3 : 15;
+    const limit = activeHandicapTab === 'points' ? 3 : 15;
     const nextVal = Math.max(-limit, Math.min(limit, val));
-    setChallengeHandicap({ ...challengeHandicap, value: nextVal });
+    setChallengeHandicap({ ...challengeHandicap, [activeHandicapTab]: nextVal });
   };
 
   return (
@@ -123,24 +130,30 @@ export function ChallengeDialog() {
                   </div>
                   <div className="flex bg-black/20 p-1 rounded-xl gap-1">
                     <button 
-                        onClick={() => setChallengeHandicap({ ...challengeHandicap, type: 'none', value: 0 })}
-                        className={`flex-1 text-[9px] font-black py-1.5 rounded-lg transition-all ${challengeHandicap.type === 'none' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                        onClick={() => setChallengeHandicap({ points: 0, time: 0 })}
+                        className={`flex-1 text-[9px] font-black py-1.5 rounded-lg transition-all ${(challengeHandicap.points === 0 && challengeHandicap.time === 0) ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}
                     >OFF</button>
                     <button 
-                        onClick={() => setChallengeHandicap({ ...challengeHandicap, type: 'points', value: 0 })}
-                        className={`flex-1 text-[9px] font-black py-1.5 rounded-lg transition-all ${challengeHandicap.type === 'points' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                    >PTS</button>
+                        onClick={() => setActiveHandicapTab('points')}
+                        className={`flex-1 text-[9px] font-black py-1.5 rounded-lg transition-all relative ${activeHandicapTab === 'points' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                        PTS
+                        {challengeHandicap.points !== 0 && <span className="absolute -top-1 -right-1 h-2 w-2 bg-emerald-400 rounded-full border border-slate-900" />}
+                    </button>
                     <button 
-                        onClick={() => setChallengeHandicap({ ...challengeHandicap, type: 'time', value: 0 })}
-                        className={`flex-1 text-[9px] font-black py-1.5 rounded-lg transition-all ${challengeHandicap.type === 'time' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                    >SEG</button>
+                        onClick={() => setActiveHandicapTab('time')}
+                        className={`flex-1 text-[9px] font-black py-1.5 rounded-lg transition-all relative ${activeHandicapTab === 'time' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                        SEG
+                        {challengeHandicap.time !== 0 && <span className="absolute -top-1 -right-1 h-2 w-2 bg-blue-400 rounded-full border border-slate-900" />}
+                    </button>
                   </div>
                 </div>
               </div>
 
               {/* Bilateral Handicap Selector (Conditional) */}
               <AnimatePresence mode="wait">
-                {challengeHandicap.type !== 'none' && (
+                {(challengeHandicap.points !== 0 || challengeHandicap.time !== 0 || activeHandicapTab) && (
                   <motion.div 
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
@@ -148,46 +161,47 @@ export function ChallengeDialog() {
                     className="overflow-hidden"
                   >
                     <div className="bg-slate-950/60 border border-white/5 rounded-2xl p-4 px-5">
+                      <p className="text-[8px] font-black text-blue-400/60 text-center mb-4 uppercase tracking-[0.2em]">Usa las flechas para señalar quien tiene la ventaja</p>
                       <div className="flex items-center justify-between gap-4">
                            {/* Left: You */}
                            <div className="flex flex-col items-center flex-1 min-w-0">
                               <span className="text-[8px] font-black text-slate-500 uppercase mb-2 truncate w-full text-center">TÚ</span>
-                              <div className={`w-full py-2 rounded-xl border flex items-center justify-center transition-all ${challengeHandicap.value < 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
+                              <div className={`w-full py-2 rounded-xl border flex items-center justify-center transition-all ${challengeHandicap[activeHandicapTab] < 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
                                  <span className={`text-xl font-black`}>
-                                     {challengeHandicap.value < 0 ? Math.abs(challengeHandicap.value) : 0}
-                                     {challengeHandicap.type === 'time' && challengeHandicap.value < 0 ? 's' : ''}
+                                     {challengeHandicap[activeHandicapTab] < 0 ? Math.abs(challengeHandicap[activeHandicapTab]) : 0}
+                                     {activeHandicapTab === 'time' && challengeHandicap[activeHandicapTab] < 0 ? 's' : ''}
                                  </span>
                               </div>
                            </div>
 
                           {/* Center: Controls */}
                           <div className="flex items-center gap-3 mt-4">
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-slate-800 hover:bg-slate-700" onClick={() => updateHandicap(challengeHandicap.value - 1)}>
-                                <Minus className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-slate-800 hover:bg-slate-700 text-emerald-400" onClick={() => updateHandicap(challengeHandicap[activeHandicapTab] - 1)}>
+                                <ArrowLeft className="h-4 w-4" />
                             </Button>
                             <div className="flex flex-col items-center">
-                                {challengeHandicap.type === 'points' ? <Trophy className="h-4 w-4 text-emerald-400 animate-pulse" /> : <Timer className="h-4 w-4 text-blue-400 animate-pulse" />}
+                                {activeHandicapTab === 'points' ? <Trophy className="h-4 w-4 text-emerald-400 animate-pulse" /> : <Timer className="h-4 w-4 text-blue-400 animate-pulse" />}
                             </div>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-slate-800 hover:bg-slate-700" onClick={() => updateHandicap(challengeHandicap.value + 1)}>
-                                <Plus className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-slate-800 hover:bg-slate-700 text-emerald-400" onClick={() => updateHandicap(challengeHandicap[activeHandicapTab] + 1)}>
+                                <ArrowRight className="h-4 w-4" />
                             </Button>
                           </div>
 
                            {/* Right: Opponent */}
                            <div className="flex flex-col items-center flex-1 min-w-0">
                               <span className="text-[8px] font-black text-slate-500 uppercase mb-2 truncate w-full text-center">{challengingUser?.name || 'OPONENTE'}</span>
-                              <div className={`w-full py-2 rounded-xl border flex items-center justify-center transition-all ${challengeHandicap.value > 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
+                              <div className={`w-full py-2 rounded-xl border flex items-center justify-center transition-all ${challengeHandicap[activeHandicapTab] > 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
                                  <span className={`text-xl font-black`}>
-                                     {challengeHandicap.value > 0 ? Math.abs(challengeHandicap.value) : 0}
-                                     {challengeHandicap.type === 'time' && challengeHandicap.value > 0 ? 's' : ''}
+                                     {challengeHandicap[activeHandicapTab] > 0 ? Math.abs(challengeHandicap[activeHandicapTab]) : 0}
+                                     {activeHandicapTab === 'time' && challengeHandicap[activeHandicapTab] > 0 ? 's' : ''}
                                  </span>
                               </div>
                            </div>
                       </div>
                       <p className="text-[9px] text-slate-500 text-center mt-3 font-bold uppercase tracking-widest italic">
-                        {challengeHandicap.value === 0 
+                        {challengeHandicap[activeHandicapTab] === 0 
                             ? "Equilibrio Perfecto" 
-                            : challengeHandicap.value > 0 
+                            : challengeHandicap[activeHandicapTab] > 0 
                                 ? `Ventaja para ${challengingUser?.name}` 
                                 : `Ventaja para ti`}
                       </p>
