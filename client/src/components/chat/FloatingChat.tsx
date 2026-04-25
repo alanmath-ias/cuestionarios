@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, ChevronLeft, User, Search, Trash2 } from "lucide-react";
+import { MessageCircle, X, Send, ChevronLeft, User, Search, Trash2, Pencil, Check } from "lucide-react";
 import { useDuel } from "@/hooks/use-duel";
 import { useSession } from "@/hooks/useSession";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +19,9 @@ interface Message {
   receiverId: number;
   content: string;
   read: boolean;
+  isEdited?: boolean;
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface Friend {
@@ -32,7 +34,13 @@ interface Friend {
 
 export function FloatingChat() {
   const { session } = useSession();
-  const { sendMessage, lastChatMessage } = useDuel();
+  const { 
+    sendMessage, 
+    lastChatMessage, 
+    editChatMessage, 
+    deleteChatMessage,
+    onlineUsers 
+  } = useDuel();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
 
@@ -41,6 +49,8 @@ export function FloatingChat() {
   const [messageText, setMessageText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
 
   // Clean up ALL old localStorage chat_cleared keys on mount (legacy pollution)
   useEffect(() => {
@@ -108,7 +118,18 @@ export function FloatingChat() {
         const clearedAtStr = sessionStorage.getItem(clearedKey);
         const clearedAt = clearedAtStr ? parseInt(clearedAtStr, 10) : 0;
 
-        setChatHistory(data.filter(m => new Date(m.createdAt).getTime() > clearedAt));
+        const newHistory = data.filter(m => new Date(m.createdAt).getTime() > clearedAt);
+        setChatHistory(prev => {
+            // Merge existing messages (from WebSocket) with fetched ones
+            const merged = [...prev];
+            newHistory.forEach(msg => {
+                if (!merged.some(m => m.id === msg.id)) {
+                    merged.push(msg);
+                }
+            });
+            // Sort chronologically
+            return merged.sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        });
 
         // Mark as read & refresh notification counts
         queryClient.invalidateQueries({ queryKey: ["/api/user/unread-messages"] });
@@ -147,29 +168,72 @@ export function FloatingChat() {
     return () => window.removeEventListener("open-chat", handleOpenChat);
   }, []);
 
-  // ── Handle incoming WS messages ────────────────────────────────────────────
+  // ── Handle incoming messages via Event (Robust against rapid-fire) ─────────────
   useEffect(() => {
-    if (!lastChatMessage) return;
+    const handleMessageEvent = (e: any) => {
+      const msg = e.detail;
+      if (!msg) return;
 
-    const msgSenderId = Number(lastChatMessage.senderId);
-    const msgReceiverId = Number(lastChatMessage.receiverId);
-    const currentFriendId = selectedFriend ? Number(selectedFriend.id) : null;
+      const msgSenderId = Number(msg.senderId);
+      const msgReceiverId = Number(msg.receiverId);
+      const currentFriendId = selectedFriend ? Number(selectedFriend.id) : null;
 
-    if (currentFriendId && (msgSenderId === currentFriendId || msgReceiverId === currentFriendId)) {
-      setChatHistory(prev => {
-        if (prev.some(m => m.id === lastChatMessage.id)) return prev;
-        return [...prev, lastChatMessage];
-      });
-      // Mark as read if we are the receiver
-      if (msgReceiverId === Number(sessionUserIdRef.current)) {
-        fetch(`/api/social/chat/${currentFriendId}`, { method: "GET" });
+      if (currentFriendId && (msgSenderId === currentFriendId || msgReceiverId === currentFriendId)) {
+        setChatHistory(prev => {
+          // 1. Check if we already have this message (by server ID)
+          if (prev.some(m => m.id === msg.id)) return prev;
+
+          // 2. Optimistic Sync: If this is my own echo, find the temporary message and "upgrade" it
+          if (msgSenderId === Number(sessionUserIdRef.current)) {
+              // Look for a message with the same content that was sent in the last 10 seconds
+              const tempIndex = prev.findIndex(m => 
+                  m.id < 0 && // temporary IDs are negative
+                  m.content === msg.content 
+              );
+              if (tempIndex !== -1) {
+                  const next = [...prev];
+                  next[tempIndex] = msg;
+                  return next;
+              }
+          }
+
+          // 3. Just append if not found
+          return [...prev, msg];
+        });
+
+        // Mark as read if we are the receiver
+        if (msgReceiverId === Number(sessionUserIdRef.current)) {
+          fetch(`/api/social/chat/${currentFriendId}`, { method: "GET" });
+        }
+      } else {
+        // Message to someone not open - refresh badges
+        queryClient.invalidateQueries({ queryKey: ["/api/user/unread-messages"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user/unread-messages/details"] });
       }
-    } else {
-      // Message to someone not currently open – just refresh badge
-      queryClient.invalidateQueries({ queryKey: ["/api/user/unread-messages"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user/unread-messages/details"] });
-    }
-  }, [lastChatMessage]);
+    };
+
+    window.addEventListener("chat-message", handleMessageEvent);
+    return () => window.removeEventListener("chat-message", handleMessageEvent);
+  }, [selectedFriend?.id]);
+
+  // ── Handle Edited/Deleted messages via Events ──────────────────────────────
+  useEffect(() => {
+    const handleEdited = (e: any) => {
+      const updated = e.detail;
+      setChatHistory(prev => prev.map(m => m.id === updated.id ? updated : m));
+    };
+    const handleDeleted = (e: any) => {
+      const { id } = e.detail;
+      setChatHistory(prev => prev.filter(m => m.id !== id));
+    };
+
+    window.addEventListener("chat-edited", handleEdited);
+    window.addEventListener("chat-deleted", handleDeleted);
+    return () => {
+      window.removeEventListener("chat-edited", handleEdited);
+      window.removeEventListener("chat-deleted", handleDeleted);
+    };
+  }, []);
 
   // ── Scroll on new messages ─────────────────────────────────────────────────
   useEffect(() => {
@@ -179,8 +243,43 @@ export function FloatingChat() {
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleSend = () => {
     if (!messageText.trim() || !selectedFriend) return;
-    sendMessage(selectedFriend.id, messageText.trim());
+    const text = messageText.trim();
+    const friendId = selectedFriend.id;
+    const myId = sessionUserIdRef.current;
+
+    // OPTIMISTIC UPDATE: Add to history immediately
+    if (myId) {
+        const tempMsg: Message = {
+            id: -Date.now(), // Temporary negative ID
+            senderId: myId,
+            receiverId: friendId,
+            content: text,
+            read: true,
+            createdAt: new Date().toISOString()
+        };
+        setChatHistory(prev => [...prev, tempMsg]);
+    }
+
+    sendMessage(friendId, text);
     setMessageText("");
+  };
+
+  const handleStartEdit = (msg: Message) => {
+    setEditingMessageId(msg.id);
+    setEditText(msg.content);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingMessageId || !editText.trim()) return;
+    editChatMessage(editingMessageId, editText.trim());
+    setEditingMessageId(null);
+    setEditText("");
+  };
+
+  const handleDelete = (messageId: number) => {
+    if (confirm("¿Estás seguro de borrar este mensaje?")) {
+        deleteChatMessage(messageId);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -273,20 +372,88 @@ export function FloatingChat() {
                         </div>
                       )}
                       {chatHistory.map(msg => {
-                        const isMe = Number(msg.senderId) === Number(session?.userId);
+                        const myId = Number(session?.userId);
+                        const isMe = Number(msg.senderId) === myId;
+                        const isEditing = editingMessageId === msg.id;
+
+                        // Improved logic: A message can be edited only if the OTHER person hasn't responded yet
+                        const msgTime = new Date(msg.createdAt).getTime();
+                        const hasReply = !isMe ? false : chatHistory.some(m => {
+                            const otherId = Number(m.senderId);
+                            const mTime = new Date(m.createdAt).getTime();
+                            return otherId !== myId && mTime > msgTime;
+                        });
+                        const canEdit = isMe && !hasReply && msg.id > 0;
+
                         return (
-                          <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                            <div
-                              className={`max-w-[85%] rounded-[1.5rem] px-4 py-2.5 text-sm shadow-sm ${
-                                isMe
-                                  ? "bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-tr-none"
-                                  : "bg-slate-800 text-slate-200 border border-white/5 rounded-tl-none"
-                              }`}
-                            >
-                              <p className="whitespace-pre-wrap">{msg.content}</p>
-                              <span className={`text-[10px] opacity-50 block mt-1 ${isMe ? "text-right" : "text-left"}`}>
-                                {format(new Date(msg.createdAt), "HH:mm")}
-                              </span>
+                          <div key={msg.id} className={`group flex flex-col ${isMe ? "items-end" : "items-start"} mb-2`}>
+                            <div className="flex w-full relative">
+                              {!isMe && (
+                                <Avatar className="h-6 w-6 mt-auto mr-2 shrink-0">
+                                  <AvatarFallback className="text-[10px]">{selectedFriend?.name[0]}</AvatarFallback>
+                                </Avatar>
+                              )}
+                              
+                              <div className={`relative flex flex-col ${isMe ? "items-end ml-auto max-w-[85%]" : "items-start mr-auto max-w-[85%]"}`}>
+                                <div
+                                  className={`rounded-[1.2rem] px-4 py-2.5 text-sm shadow-sm relative w-full ${
+                                    isMe
+                                      ? "bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-tr-none"
+                                      : "bg-slate-800 text-slate-200 border border-white/5 rounded-tl-none"
+                                  }`}
+                                >
+                                  {isEditing ? (
+                                    <div className="flex flex-col gap-2 min-w-[180px]">
+                                      <textarea
+                                        value={editText}
+                                        onChange={(e) => setEditText(e.target.value)}
+                                        className="bg-white/10 text-white border-none focus:ring-1 ring-white/30 rounded p-1 text-sm outline-none resize-none"
+                                        rows={2}
+                                        autoFocus
+                                      />
+                                      <div className="flex justify-end gap-1">
+                                        <button onClick={() => setEditingMessageId(null)} className="p-1 hover:bg-white/20 rounded">
+                                          <X className="w-3 h-3" />
+                                        </button>
+                                        <button onClick={handleSaveEdit} className="p-1 bg-white/20 hover:bg-white/30 rounded">
+                                          <Check className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                                      <div className="flex items-center gap-1 mt-1">
+                                        {msg.isEdited && (
+                                          <span className="text-[9px] opacity-60 italic">editado</span>
+                                        )}
+                                        <span className="text-[10px] opacity-50 ml-auto">
+                                          {format(new Date(msg.createdAt), "HH:mm")}
+                                        </span>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                                
+                                {isMe && canEdit && !isEditing && (
+                                  <div className="absolute -bottom-2 -right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100 z-10">
+                                    <button 
+                                      onClick={() => handleStartEdit(msg)} 
+                                      className="p-1.5 bg-white border border-slate-200 shadow-md rounded-full text-slate-900 hover:text-blue-600 transition-colors"
+                                      title="Editar"
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleDelete(msg.id)} 
+                                      className="p-1.5 bg-white border border-slate-200 shadow-md rounded-full text-red-600 hover:text-red-700 transition-colors"
+                                      title="Borrar"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );

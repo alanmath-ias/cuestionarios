@@ -20,7 +20,7 @@ import {
 } from "../shared/schema.js";
 
 import { db, DbClient } from "./db.js";
-import { eq, and, desc, asc, inArray, sql, ilike, or, isNotNull, gte, lt } from "drizzle-orm";
+import { eq, and, desc, asc, inArray, sql, ilike, or, isNotNull, gte, lt, gt } from "drizzle-orm";
 import { IStorage } from "./storage.js";
 import { userQuizzes } from "../shared/schema.js";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -2382,6 +2382,56 @@ export class DatabaseStorage implements IStorage {
       read: false
     }).returning();
     return message;
+  }
+
+  async editChatMessage(id: number, senderId: number, content: string): Promise<Message | undefined> {
+    const [message] = await this.db.select().from(messages).where(eq(messages.id, id));
+    if (!message || message.senderId !== senderId) return undefined;
+
+    // Check if recipient has replied after this message
+    const replies = await this.db.select({ count: sql<number>`count(*)` })
+      .from(messages)
+      .where(and(
+        eq(messages.senderId, message.receiverId),
+        eq(messages.receiverId, senderId),
+        gt(messages.createdAt, message.createdAt)
+      ));
+
+    if (Number(replies[0].count) > 0) {
+        throw new Error("No puedes editar un mensaje que ya ha sido respondido.");
+    }
+
+    const [updated] = await this.db.update(messages)
+      .set({ 
+        content, 
+        isEdited: true,
+        updatedAt: new Date()
+      })
+      .where(eq(messages.id, id))
+      .returning();
+    
+    return updated;
+  }
+
+  async deleteChatMessage(id: number, senderId: number): Promise<boolean> {
+    const [message] = await this.db.select().from(messages).where(eq(messages.id, id));
+    if (!message || message.senderId !== senderId) return false;
+
+    // Check if recipient has replied after this message
+    const replies = await this.db.select({ count: sql<number>`count(*)` })
+      .from(messages)
+      .where(and(
+        eq(messages.senderId, message.receiverId),
+        eq(messages.receiverId, senderId),
+        gt(messages.createdAt, message.createdAt)
+      ));
+
+    if (Number(replies[0].count) > 0) {
+        throw new Error("No puedes borrar un mensaje que ya ha sido respondido.");
+    }
+
+    await this.db.delete(messages).where(eq(messages.id, id));
+    return true;
   }
 
   async getChatHistory(userId1: number, userId2: number): Promise<Message[]> {

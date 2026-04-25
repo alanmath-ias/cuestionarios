@@ -585,7 +585,9 @@ export const messages = pgTable("messages", {
 	receiverId: integer("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
 	content: text("content").notNull(),
 	read: boolean("read").default(false).notNull(),
+	isEdited: boolean("is_edited").default(false).notNull(),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const friendshipsRelations = relations(friendships, ({ one }) => ({

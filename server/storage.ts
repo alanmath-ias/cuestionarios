@@ -180,6 +180,8 @@ export interface IStorage {
 
   // Chat methods
   saveChatMessage(senderId: number, receiverId: number, content: string): Promise<Message>;
+  editChatMessage(id: number, senderId: number, content: string): Promise<Message | undefined>;
+  deleteChatMessage(id: number, senderId: number): Promise<boolean>;
   getChatHistory(userId1: number, userId2: number): Promise<Message[]>;
   markMessagesAsRead(userId: number, friendId: number): Promise<void>;
   cleanupOldMessages(): Promise<void>;
@@ -197,6 +199,8 @@ export interface IStorage {
   updateParticipantScore(challengeId: number, userId: number, score: number): Promise<void>;
   getManagedChallengeWithParticipants(id: number): Promise<any>;
   deleteManagedChallenge(id: number): Promise<void>;
+  editChatMessage(id: number, senderId: number, content: string): Promise<import("../shared/schema.js").Message | undefined>;
+  deleteChatMessage(id: number, senderId: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -251,6 +255,8 @@ export class MemStorage implements IStorage {
   async getUserByGoogleId(googleId: string): Promise<User | undefined> { return undefined; }
   async updateUserGoogleId(userId: number, googleId: string): Promise<void> { }
   async getUserByEmail(email: string): Promise<User | undefined> { return undefined; }
+  async editChatMessage(id: number, senderId: number, content: string): Promise<Message | undefined> { return undefined; }
+  async deleteChatMessage(id: number, senderId: number): Promise<boolean> { return false; }
 
   async getAllSubcategories(): Promise<any[]> { return []; }
   async getSubcategoriesByCategory(categoryId: number): Promise<any[]> { return []; }

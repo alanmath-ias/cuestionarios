@@ -15,6 +15,8 @@ interface DuelContextType {
   respondToInvite: (duelId: number, action: 'accept' | 'reject' | 'counter', wager?: number, handicap?: any) => void;
   submitAnswer: (duelId: number, questionIndex: number, answerId: number) => void;
   sendMessage: (receiverId: number, content: string) => void;
+  editChatMessage: (messageId: number, content: string) => void;
+  deleteChatMessage: (messageId: number) => void;
   lastChatMessage: any;
   isConnected: boolean;
   sentChallenges: Set<number>;
@@ -304,11 +306,26 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           setDuel(payload);
           break;
       case 'chat:receive':
-          setLastChatMessage(payload);
+          // IMPROVEMENT: Use Custom Event to prevent race conditions when multiple messages arrive
+          window.dispatchEvent(new CustomEvent('chat-message', { detail: payload }));
+          setLastChatMessage(payload); // Keep for legacy if needed
           queryClient.invalidateQueries({ queryKey: ["/api/social/chat", Number(payload.senderId)] });
           queryClient.invalidateQueries({ queryKey: ["/api/social/chat", Number(payload.receiverId)] });
           queryClient.invalidateQueries({ queryKey: ["/api/user/unread-messages"] });
           queryClient.invalidateQueries({ queryKey: ["/api/user/unread-messages/details"] });
+          break;
+      case 'chat:edited':
+          window.dispatchEvent(new CustomEvent('chat-edited', { detail: payload }));
+          break;
+      case 'chat:deleted':
+          window.dispatchEvent(new CustomEvent('chat-deleted', { detail: payload }));
+          break;
+      case 'chat:error':
+          toast({
+              title: "Error en el chat",
+              description: payload.message,
+              variant: "destructive"
+          });
           break;
       case 'admin:duel_list':
           setActiveDuels(payload);
@@ -464,6 +481,16 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     socket.send(JSON.stringify({ type: 'chat:send', payload: { receiverId, content } }));
   };
 
+  const editChatMessage = (messageId: number, content: string) => {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify({ type: 'chat:edit', payload: { messageId, content } }));
+  };
+
+  const deleteChatMessage = (messageId: number) => {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify({ type: 'chat:delete', payload: { messageId } }));
+  };
+
   const refreshStats = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/user"] });
   }, [queryClient]);
@@ -539,6 +566,8 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     respondToInvite,
     submitAnswer,
     sendMessage,
+    editChatMessage,
+    deleteChatMessage,
     lastChatMessage,
     isConnected,
     sentChallenges,
@@ -576,7 +605,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     socket
   }), [
     duel, invite, sendChallenge, respondToInvite, submitAnswer, 
-    sendMessage, lastChatMessage, isConnected, sentChallenges, 
+    sendMessage, editChatMessage, deleteChatMessage, lastChatMessage, isConnected, sentChallenges, 
     isPreparing, onlineUsers, challengingUser, challengeWager, 
     challengeTopic, challengeHandicap, isRevengeMode, refreshStats, resetDuel, 
     leaveResults, activeDuels, spectateDuel, sentChallengeInfo, isResponding,
