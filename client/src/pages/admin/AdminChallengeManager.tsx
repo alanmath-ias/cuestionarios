@@ -432,9 +432,9 @@ export default function AdminChallengeManager() {
                                         <SelectTrigger className="bg-slate-950 border-white/20 text-white h-14 text-base font-black focus:ring-amber-500/50 rounded-xl border-2 uppercase">
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-900 border-white/10 text-white">
-                                            <SelectItem value="redistribute" className="font-medium py-3 text-sm">APUESTA ENTRE JUGADORES</SelectItem>
-                                            <SelectItem value="system_pay" className="font-medium py-3 text-sm">SISTEMA PAGA</SelectItem>
+                                        <SelectContent className="bg-slate-900 border-white/20 text-white shadow-2xl p-1">
+                                            <SelectItem value="redistribute" className="font-bold py-3 text-sm focus:bg-blue-600 focus:text-white rounded-lg transition-colors cursor-pointer">💸 APUESTA ENTRE JUGADORES</SelectItem>
+                                            <SelectItem value="system_pay" className="font-bold py-3 text-sm focus:bg-blue-600 focus:text-white rounded-lg transition-colors cursor-pointer">🏢 SISTEMA PAGA</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -458,36 +458,67 @@ export default function AdminChallengeManager() {
                                     </Button>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black text-amber-400 uppercase text-center block tracking-[0.1em] opacity-90">🏆 1º PUESTO</Label>
-                                        <Input
-                                            type="number"
-                                            value={currentPrizes[1]}
-                                            onChange={(e) => setWinnersPrize({ ...winnersPrize, 1: Number(e.target.value) })}
-                                            className="bg-slate-950 border-amber-500/30 text-white font-black text-xl h-12 text-center rounded-xl"
-                                        />
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-4 p-4 bg-white/2 rounded-2xl border border-white/5">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-[10px] font-black text-amber-400 uppercase tracking-[0.1em]">🏆 1º PUESTO</Label>
+                                                <span className="text-xl font-black text-amber-500">{currentPrizes[1]} <span className="text-[10px] text-slate-500">🪙</span></span>
+                                            </div>
+                                            <Slider
+                                                value={[currentPrizes[1]]}
+                                                max={totalPot}
+                                                step={1}
+                                                onValueChange={(val) => setWinnersPrize({ ...winnersPrize, 1: val[0] })}
+                                                className="py-4"
+                                            />
+                                            <Input
+                                                type="number"
+                                                value={currentPrizes[1]}
+                                                max={totalPot}
+                                                onChange={(e) => setWinnersPrize({ ...winnersPrize, 1: Math.min(totalPot, Number(e.target.value)) })}
+                                                className="bg-slate-950 border-amber-500/30 text-white font-black text-center rounded-xl h-10"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-4 p-4 bg-white/2 rounded-2xl border border-white/5">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-[10px] font-black text-slate-300 uppercase tracking-[0.1em]">🥈 2º PUESTO</Label>
+                                                <span className="text-xl font-black text-slate-300">{currentPrizes[2]} <span className="text-[10px] text-slate-500">🪙</span></span>
+                                            </div>
+                                            <Slider
+                                                value={[currentPrizes[2]]}
+                                                max={Math.max(0, totalPot - currentPrizes[1])}
+                                                step={1}
+                                                disabled={selectedStudents.length < 2}
+                                                onValueChange={(val) => setWinnersPrize({ ...winnersPrize, 2: val[0] })}
+                                                className="py-4"
+                                            />
+                                            <Input
+                                                type="number"
+                                                value={currentPrizes[2]}
+                                                max={Math.max(0, totalPot - currentPrizes[1])}
+                                                disabled={selectedStudents.length < 2}
+                                                onChange={(e) => setWinnersPrize({ ...winnersPrize, 2: Math.min(Math.max(0, totalPot - currentPrizes[1]), Number(e.target.value)) })}
+                                                className={`bg-slate-950 border-slate-500/30 text-white font-black text-center rounded-xl h-10 ${selectedStudents.length < 2 ? 'opacity-50' : ''}`}
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black text-slate-300 uppercase text-center block tracking-[0.1em] opacity-90">🥈 2º PUESTO</Label>
-                                        <Input
-                                            type="number"
-                                            value={currentPrizes[2]}
-                                            onChange={(e) => setWinnersPrize({ ...winnersPrize, 2: Number(e.target.value) })}
-                                            disabled={selectedStudents.length < 2}
-                                            readOnly={selectedStudents.length === 2}
-                                            className={`bg-slate-950 border-slate-500/30 text-white font-black text-xl h-12 text-center rounded-xl ${selectedStudents.length === 2 ? 'opacity-50' : ''}`}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black text-amber-900 uppercase text-center block tracking-[0.1em] opacity-90">🥉 3º PUESTO</Label>
-                                        <Input
-                                            type="number"
-                                            value={currentPrizes[3]}
-                                            disabled={selectedStudents.length < 3}
-                                            readOnly={true}
-                                            className="bg-slate-950 border-amber-900/30 text-white font-black text-xl h-12 text-center rounded-xl opacity-50"
-                                        />
+
+                                    <div className="p-4 bg-amber-900/5 rounded-2xl border border-amber-900/20 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-amber-900/20 flex items-center justify-center">
+                                                <Trophy className="w-5 h-5 text-amber-900" />
+                                            </div>
+                                            <div>
+                                                <Label className="text-[10px] font-black text-amber-900 uppercase block tracking-[0.1em]">🥉 3º PUESTO (RESTANTE)</Label>
+                                                <p className="text-xs font-bold text-slate-500">Se asigna automáticamente</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-2xl font-black text-amber-900 leading-none">{currentPrizes[3]}</p>
+                                            <p className="text-[8px] font-black text-slate-600 uppercase mt-1">🪙 PUNTOS</p>
+                                        </div>
                                     </div>
                                 </div>
 

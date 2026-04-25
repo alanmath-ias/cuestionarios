@@ -464,7 +464,7 @@ export class DuelServer {
             explanation: q.explanation
           }).returning();
           
-          const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+          const shuffledOptions = this.shuffleArray([...q.options]);
           
           const createdAnswers = await tx.insert(answers).values(
             shuffledOptions.map((opt: any) => ({
@@ -1276,15 +1276,19 @@ export class DuelServer {
               questionCount: 8
           });
           // MAP OPTIONS CAREFULLY
-          questionsList = quizData.questions.map((q: any) => ({
-              id: Math.floor(Math.random() * 1000000), // Random ID for the question
-              content: q.content,
-              options: q.options.map((opt: any, idx: number) => ({
+          questionsList = quizData.questions.map((q: any) => {
+              const options = q.options.map((opt: any, idx: number) => ({
                   id: idx,
                   content: typeof opt === 'string' ? opt : opt.content,
                   isCorrect: typeof opt === 'string' ? (opt === q.correctAnswer) : !!opt.isCorrect
-              }))
-          }));
+              }));
+              
+              return {
+                  id: Math.floor(Math.random() * 1000000), // Random ID for the question
+                  content: q.content,
+                  options: this.shuffleArray(options)
+              };
+          });
       }
 
       room.questions = questionsList;
@@ -1422,20 +1426,41 @@ export class DuelServer {
                 // Award round winner reward
                 await tx.execute(sql`UPDATE users SET hint_credits = hint_credits + ${transferAmount} WHERE id = ${userId}`);
                 
+                // If redistribute mode, subtract from everyone else who is still in the game
+                if (room.creditsMode === 'redistribute') {
+                    const otherPlayerIds = Array.from(room.players.keys()).filter(id => id !== userId);
+                    if (otherPlayerIds.length > 0) {
+                        // Use = ANY() for Postgres array compatibility with raw SQL in Drizzle
+                        await tx.execute(sql`UPDATE users SET hint_credits = CASE WHEN hint_credits >= ${transferAmount} THEN hint_credits - ${transferAmount} ELSE 0 END WHERE id = ANY(${otherPlayerIds})`);
+                    }
+                }
+
                 // SPEED BONUS: Only if answered before 4 seconds (Sync with SpeedClock UI)
                 const elapsed = Date.now() - room.questionStartTime;
                 if (elapsed < 4000) {
                     await tx.execute(sql`UPDATE users SET hint_credits = hint_credits + 1 WHERE id = ${userId}`);
                     room.bonusCredits[userId] = (room.bonusCredits[userId] || 0) + 1;
                     
+                    // If redistribute mode, subtract 1 from everyone else too
+                    if (room.creditsMode === 'redistribute') {
+                        const otherPlayerIds = Array.from(room.players.keys()).filter(id => id !== userId);
+                        if (otherPlayerIds.length > 0) {
+                            await tx.execute(sql`UPDATE users SET hint_credits = CASE WHEN hint_credits > 0 THEN hint_credits - 1 ELSE 0 END WHERE id = ANY(${otherPlayerIds})`);
+                            
+                            // Also track negative bonus for final summary
+                            for (const otherId of otherPlayerIds) {
+                                room.bonusCredits[otherId] = (room.bonusCredits[otherId] || 0) - 1;
+                            }
+                        }
+                    }
+                    
                     this.broadcastToManaged(challengeId, {
                         type: 'managed:speed_bonus',
                         payload: { userId, userName: player.username }
                     });
-                    console.log(`⚡ [MANAGED] Speed Bonus awarded to ${userId} (Elapsed: ${elapsed}ms)`);
+                    console.log(`⚡ [MANAGED] Speed Bonus (+1) and Round Reward (+${transferAmount}) awarded to ${userId} (Mode: ${room.creditsMode})`);
                 }
             });
-            console.log(`💰 [MANAGED] Round reward processed for user ${userId}.`);
         }
 
         // Notify Admin of progress
@@ -1651,5 +1676,13 @@ export class DuelServer {
 
       // 3. Update admins
       this.broadcastManagedChallengeListToAdmins();
+  }
+
+  private shuffleArray<T>(array: T[]): T[] {
+      for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
   }
 }

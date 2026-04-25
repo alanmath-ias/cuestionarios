@@ -473,6 +473,28 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                 </div>
 
                 <div className="flex flex-col items-center mb-6 relative z-10">
+                    <AnimatePresence>
+                      {speedBonusFlash && (
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.5, y: 20 }} 
+                            animate={{ opacity: 1, scale: 1, y: 0 }} 
+                            exit={{ opacity: 0, scale: 1.2, y: -20 }} 
+                            className="absolute -top-6 z-50 flex items-center justify-center pointer-events-none"
+                        >
+                          <div className="bg-yellow-400 border-2 border-yellow-200 shadow-[0_0_30px_rgba(250,204,21,0.4)] rounded-2xl px-6 py-3 text-center flex items-center gap-3 transform -rotate-2">
+                            <div className="bg-slate-900 rounded-full p-2">
+                                <Zap className="h-5 w-5 text-yellow-400 animate-pulse" />
+                            </div>
+                            <div className="flex flex-col items-start leading-tight">
+                                <p className="text-slate-900 font-black text-xs uppercase tracking-tighter">¡BONO DE VELOCIDAD!</p>
+                                <p className="text-slate-900/70 text-[9px] font-bold">
+                                    {speedBonusFlash === 'Tú' ? '¡Has ganado +1 crédito extra!' : `${speedBonusFlash} ha ganado +1 crédito`}
+                                </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                     <Badge className="bg-slate-800 text-slate-400 border-white/10 mb-3 px-4 py-1 uppercase tracking-[0.2em] text-[8px] font-black rounded-full ring-1 ring-white/5">
                         Pregunta {(managedChallenge.currentQuestion?.index ?? 0) + 1} / {managedChallenge.questionsCount}
                     </Badge>
