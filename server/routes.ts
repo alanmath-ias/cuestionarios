@@ -740,7 +740,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const prompt = `Actúa como un profesor experto de matemáticas. Genera un "Tip Matemático" valioso y pedagógico sobre el tema específico proporcionado.
+
+IMPORTANTE: No uses los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).
 Contexto: ${context}
+
+IMPORTANTE: No uses nunca los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡). Si necesitas enfatizar algo, utiliza negritas o simplemente el texto sin signos de admiración.
 
 Objetivo: Que el estudiante entienda realmente la idea clave o un proceso fundamental para resolver este tipo de problemas.
 Requisitos:
@@ -825,7 +829,9 @@ Tono: Alentador, profesional y educativo.`;
         Tu tarea:
         1. Identifica los 2 o 3 temas PRINCIPALES donde falló.
         2. Para cada tema, da un consejo muy breve (máx 10 palabras).
-        3. Devuelve SOLO un JSON válido con este formato (sin markdown):
+        3. IMPORTANTE: No uses los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).
+        3. IMPORTANTE: No uses los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).
+        4. Devuelve SOLO un JSON válido con este formato (sin markdown):
         [
           { "topic": "Nombre del Tema", "status": "danger", "message": "Consejo breve" },
           { "topic": "Nombre del Tema 2", "status": "danger", "message": "Consejo breve" }
@@ -1002,10 +1008,12 @@ Tono: Alentador, profesional y educativo.`;
         
         Tu tarea:
         1. Genera 3 consejos personalizados, prácticos y motivadores para que este estudiante mejore su rendimiento.
+        3. IMPORTANTE: No uses los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).
         2. Ten en cuenta sus hábitos (estudio, sueño, salidas), contexto familiar y dificultades previas.
-        3. El tono debe ser empático pero directo.
-        4. Devuelve el texto en formato markdown (puedes usar negritas y listas).
-        5. Máximo 150 palabras en total.
+        3. IMPORTANTE: No uses los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).
+        4. El tono debe ser empático pero directo.
+        5. Devuelve el texto en formato markdown (puedes usar negritas y listas).
+        6. Máximo 150 palabras en total.
       `;
 
       const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -2720,9 +2728,10 @@ Instrucciones:
 1. Usa métodos específicos de ${quizTitle}
 2. Muestra máximo 6 pasos numerados
 3. Usa notación LaTeX (¡...¡) para matemáticas inline y (¡¡...¡¡) para bloque. NO uses $ o $$.
-4. Comienza directamente con la solución, no escribas "Solución", simplemente inicia con los pasos correspondientes
-5. Cuando escribas algo como:  a = x y b = y No olvides usar Latex dos veces, una para a = x y otra para b = y, de modo que la "y" de la conjunción queda por fuera del Latex
-6. No uses ninguna palabra en inglés nunca, asegúrate de escribir las palabras correspondientes y adecuadas en español
+4. IMPORTANTE: No uses nunca los signos de exclamación '¡' ni '!' para puntuación de texto. Solo usa '¡' como delimitador de fórmulas.
+5. Comienza directamente con la solución, no escribas "Solución", simplemente inicia con los pasos correspondientes
+6. Cuando escribas algo como:  a = x y b = y No olvides usar Latex dos veces, una para a = x y otra para b = y, de modo que la "y" de la conjunción queda por fuera del Latex
+7. No uses ninguna palabra en inglés nunca, asegúrate de escribir las palabras correspondientes y adecuadas en español
 
 Ejemplo de formato:
 1. Identificamos: ¡x^2 + bx + c! (problema de ${quizTitle})
@@ -2901,6 +2910,7 @@ Ejemplo de formato:
         
         Genera una ${hintType === 'super' ? 'SÚPER PISTA (muy reveladora pero sin dar la respuesta directa)' : 'PISTA (una ayuda sutil para guiar al estudiante)'}.
         La pista debe ser breve (máximo 2 frases) y en Español.
+        IMPORTANTE: No uses nunca los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).
         NO des la respuesta final.`;
 
         const apiKey = process.env.DEEPSEEK_API_KEY || process.env.VITE_DEEPSEEK_API_KEY;
@@ -4162,6 +4172,8 @@ Ejemplo de formato:
       Determina si la respuesta del estudiante es esencialmente correcta, incluso si hay pequeñas variaciones en la redacción o formato.
       Asegúrate de que el feedback sea constructivo y breve.
       
+      IMPORTANTE: No uses los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).
+      
       Responde estrictamente en formato JSON:
       {
         "isCorrect": boolean,
@@ -4450,6 +4462,7 @@ Ejemplo de formato:
         **Veredicto:** [Indica si la pregunta o las respuestas tienen algún error]
 
         IMPORTANTE:
+        - No uses nunca los signos de exclamación '¡' ni '!' para puntuación de texto. Usa negritas si quieres enfatizar.
         - Usa notación LaTeX encerrada entre signos de exclamación invertidos (¡...¡) para todas las expresiones matemáticas. Ejemplo: ¡x^2 + 2x + 1 = 0¡
         - NO uses $...$ ni \\(...\\) para matemáticas.
         - Asegúrate de que el contenido matemático se renderice correctamente con este formato.

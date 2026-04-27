@@ -91,7 +91,7 @@ const QuestionContent = ({ content }: { content: string }) => {
     return "text-lg md:text-xl";
   };
   return (
-    <div className={`mb-8 text-slate-200 leading-relaxed transition-all duration-300 ${getQuestionSizeClass(content)}`}>
+    <div className={`mb-5 text-slate-200 leading-relaxed transition-all duration-300 ${getQuestionSizeClass(content)}`}>
       <ContentRenderer content={content} />
     </div>
   );
@@ -564,7 +564,7 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                     </AnimatePresence>
 
                     {/* Options Grid */}
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 gap-2.5">
                         {currentQuestion.options.map((option, index) => {
                             const isSelected = isAnswered ? previousAnswer?.selectedOption === index : selectedOption === index;
                             const isCorrect = option.isCorrect;
@@ -580,7 +580,7 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                             }
 
                             return (
-                                <button key={option.id} onClick={() => handleOptionSelect(index)} disabled={isAnswered || reviewMode || showResult} className={`w-full text-left p-5 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between group overflow-hidden ${btnClass}`}>
+                                <button key={option.id} onClick={() => handleOptionSelect(index)} disabled={isAnswered || reviewMode || showResult} className={`w-full text-left py-3 px-5 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between group overflow-hidden ${btnClass}`}>
                                     <div className="flex items-center gap-5 w-full">
                                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center border-2 text-sm font-black shrink-0 transition-all ${isSelected || (showResultLocal && isCorrect) ? 'bg-white/10 border-white/30 text-white' : 'bg-slate-950 border-white/10 text-slate-600'}`}>
                                             {String.fromCharCode(65 + index)}

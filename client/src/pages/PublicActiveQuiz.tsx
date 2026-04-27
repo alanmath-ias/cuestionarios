@@ -587,7 +587,7 @@ function PublicActiveQuiz() {
               </div>
             )}
 
-            <div className="text-lg md:text-xl mb-8 text-slate-200 leading-relaxed">
+            <div className="text-lg md:text-xl mb-6 text-slate-200 leading-relaxed">
               <ContentRenderer content={currentQuestion.content} />
             </div>
 
@@ -629,7 +629,7 @@ function PublicActiveQuiz() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-2.5">
               {shuffledAnswers.map((answer, index) => {
                 const isSelected = selectedAnswerId === answer.id;
                 const isAnswered = answeredQuestions[currentQuestionIndex];
@@ -653,7 +653,7 @@ function PublicActiveQuiz() {
                     key={answer.id}
                     onClick={() => !isAnswered && handleSelectAnswer(answer.id)}
                     disabled={isAnswered}
-                    className={`w-full text-left p-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass}`}
+                    className={`w-full text-left py-3 px-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass}`}
                   >
                     <div className="flex items-center gap-4 relative z-10 w-full">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors

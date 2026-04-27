@@ -99,9 +99,11 @@ function PublicQuizResults() {
   };
 
   const formatTimeSpent = (seconds: number) => {
+    if (!seconds) return '0 s';
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    if (minutes === 0) return `${remainingSeconds} s`;
+    return `${minutes} min ${remainingSeconds} s`;
   };
 
   const totalTimeSpent = sessionResults?.studentAnswers.reduce((acc, curr) => acc + curr.timeSpent, 0) || 0;
@@ -268,7 +270,7 @@ function PublicQuizResults() {
                 <h3 className="text-2xl font-bold mb-3 text-white">{quizTitle}</h3>
                 <div className="inline-flex items-center bg-blue-500/10 text-blue-300 px-4 py-1.5 rounded-full text-sm border border-blue-500/20">
                   <Clock className="mr-2 h-4 w-4" />
-                  Completado en {formatTimeSpent(totalTimeSpent)} minutos
+                  Completado en {formatTimeSpent(totalTimeSpent)}
                 </div>
               </div>
 

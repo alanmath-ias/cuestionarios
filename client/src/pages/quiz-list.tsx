@@ -99,6 +99,7 @@ function QuizList() {
     setQuizSearchQuery("");
   }, [selectedSubcategory]);
 
+
   const { data: category, isLoading: loadingCategory } = useQuery<Category>({
     queryKey: [`/api/categories/${categoryId}`],
     queryFn: async () => {
@@ -296,6 +297,41 @@ function QuizList() {
 
   const isLoading = loadingCategory || loadingSubcategories || loadingQuizzes || loadingProgress;
 
+  // Sync dialog with URL params for navigation persistence
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const subId = params.get('subId');
+    const nodeId = params.get('nodeId');
+
+    if (subId && subcategories) {
+      const sub = subcategories.find(s => s.id === parseInt(subId));
+      if (sub) {
+        setSelectedSubcategory(sub);
+        if (nodeId) {
+          const node = currentMapNodes.find(n => n.id === nodeId);
+          if (node) setSelectedNode(node);
+        }
+      }
+    } else if (!subId) {
+      setSelectedSubcategory(null);
+      setSelectedNode(null);
+    }
+  }, [location, subcategories, currentMapNodes]);
+
+  const updateUrlState = (sub: any | null, node: any | null) => {
+    const params = new URLSearchParams(window.location.search);
+    if (sub) {
+      params.set('subId', sub.id.toString());
+      if (node) params.set('nodeId', node.id);
+    } else {
+      params.delete('subId');
+      params.delete('nodeId');
+    }
+    const newSearch = params.toString();
+    const newPath = window.location.pathname + (newSearch ? `?${newSearch}` : '');
+    window.history.replaceState({ ...window.history.state }, '', newPath);
+  };
+
   // Prepare Roadmap Data
   const roadmapNodes = quizzesBySubcategory.map((sub, index) => {
     const progressPercent = calculateSubcategoryProgress(sub.id);
@@ -329,6 +365,7 @@ function QuizList() {
       progress: progressPercent,
       onClick: () => {
         setSelectedSubcategory(sub);
+        updateUrlState(sub, null);
       }
     };
   });
@@ -383,10 +420,15 @@ function QuizList() {
             ['1', '2', '4', '5', '19'].includes(categoryId) ? (
               <SkillTreeView
                 nodes={currentMapNodes}
-                allQuizzes={quizzes?.map(q => ({
-                  ...q,
-                  status: progress?.find(p => p.quizId === q.id)?.status || 'not_started'
-                }))}
+                allQuizzes={quizzes?.map(q => {
+                  const p = progress?.find(prog => prog.quizId === q.id);
+                  return {
+                    ...q,
+                    status: p?.status || 'not_started',
+                    completedAt: p?.completedAt || null,
+                    progressId: p?.id || 0
+                  };
+                })}
                 title={`Mapa de Habilidades: ${category?.name}`}
                 description={(() => {
                   if (categoryId === '1') return "Un árbol de conocimiento diseñado para dominar la aritmética paso a paso.";
@@ -495,6 +537,7 @@ function QuizList() {
                     if (sub) {
                       setSelectedSubcategory(sub);
                       setSelectedNode(node);
+                      updateUrlState(sub, node);
                       if (highlightedQuizId) {
                         setHighlightedQuizId(highlightedQuizId);
                       }
@@ -679,6 +722,7 @@ function QuizList() {
           setSelectedSubcategory(null);
           setSelectedNode(null);
           setHighlightedQuizId(null);
+          updateUrlState(null, null);
         }
       }}>
         <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()} tabIndex={-1}>
@@ -801,7 +845,7 @@ function QuizList() {
                                 )}
                                 {!isCompleted && (quizProgress?.completedQuestions || 0) > 0 && (
                                   <span className="text-xs font-medium text-yellow-500 mr-1 opacity-90">
-                                    Progreso: {quizProgress.completedQuestions}
+                                    Progreso: {quizProgress?.completedQuestions}
                                   </span>
                                 )}
                                 <div className="flex gap-2">

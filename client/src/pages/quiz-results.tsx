@@ -231,10 +231,11 @@ function QuizResults() {
   const hasPendingAI = results?.answers.some(a => a.userResponse && a.answerId === null && !a.aiEvaluation);
 
   const formatTimeSpent = (seconds?: number | null) => {
-    if (!seconds) return '0:00';
+    if (!seconds) return '0 s';
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    if (minutes === 0) return `${remainingSeconds} s`;
+    return `${minutes} min ${remainingSeconds} s`;
   };
 
   const getCorrectAnswerContent = (answer: any): string | undefined => {
@@ -415,7 +416,7 @@ function QuizResults() {
                   <h3 className="text-2xl font-bold mb-3 text-white">{results.quiz.title}</h3>
                   <div className="inline-flex items-center bg-blue-500/10 text-blue-300 px-4 py-1.5 rounded-full text-sm border border-blue-500/20">
                     <Clock className="mr-2 h-4 w-4" />
-                    Completado en {results.progress ? formatTimeSpent(results.progress.timeSpent) : '--'} minutos
+                    Completado en {results.progress ? formatTimeSpent(results.progress.timeSpent) : '--'}
                   </div>
                 </div>
 

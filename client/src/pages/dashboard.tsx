@@ -671,7 +671,7 @@ export default function UserDashboard() {
     }
   }, [mathTipData, toast, showWelcomeDialog, currentUser, showOnboarding]);
 
-  const isLoading = loadingUser || loadingCategories || loadingQuizzes;
+  const isLoading = (loadingUser && !currentUser) || (loadingCategories && !categories) || (loadingQuizzes && !quizzes);
 
 
 

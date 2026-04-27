@@ -121,10 +121,11 @@ function AdminQuizReview() {
   const totalQuestions = results?.answers.length || 0;
 
   const formatTimeSpent = (seconds?: number | null) => {
-    if (!seconds) return '0:00';
+    if (!seconds) return '0 s';
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    if (minutes === 0) return `${remainingSeconds} s`;
+    return `${minutes} min ${remainingSeconds} s`;
   };
 
   const getCorrectAnswerContent = (answer: any): string | undefined => {
@@ -178,7 +179,7 @@ function AdminQuizReview() {
                 <h3 className="text-xl font-bold mb-2 text-slate-100">{results.quiz.title}</h3>
                 <div className="inline-flex items-center bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1.5 rounded-full text-sm">
                   <Clock className="text-blue-400 mr-1 h-4 w-4" />
-                  Completado en {formatTimeSpent(results.progress.timeSpent)} minutos
+                  Completado en {formatTimeSpent(results.progress.timeSpent)}
                 </div>
               </div>
 

@@ -19,6 +19,14 @@ interface QuizWithFeedback extends UserQuiz {
     responseMode?: 'multiple_choice' | 'direct_input';
 }
 
+const formatTimeSpent = (seconds?: number | null) => {
+    if (!seconds) return '0 s';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes === 0) return `${remainingSeconds} s`;
+    return `${minutes} min ${remainingSeconds} s`;
+};
+
 async function fetchQuizzes() {
     const response = await fetch("/api/user/quizzes", { credentials: "include" });
     if (!response.ok) throw new Error("Error al obtener cuestionarios");
@@ -102,7 +110,7 @@ export default function HistoryPage() {
                                                     </span>
                                                     <span className="flex items-center gap-1.5">
                                                         <Clock className="w-3.5 h-3.5" />
-                                                        {quiz.timeSpent || 0} min
+                                                        {formatTimeSpent(quiz.timeSpent)}
                                                     </span>
                                                     {hasFeedback && (
                                                         <span className="flex items-center gap-1.5 text-blue-400 font-medium">

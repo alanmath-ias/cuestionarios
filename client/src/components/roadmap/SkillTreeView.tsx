@@ -43,6 +43,8 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     const [celebrationType, setCelebrationType] = useState<'node' | 'family'>('node'); // type of celebration
     const [showSilverMedal, setShowSilverMedal] = useState(false); // State for silver medal overlay
     const [processedSilverMedalId, setProcessedSilverMedalId] = useState<string | null>(null); // To avoid repeat
+    const [showLastWorkedHint, setShowLastWorkedHint] = useState<string | null>(null); // Friendly indicator
+    const lastWorkedScrollProcessed = useRef<boolean>(false);
 
     // Calculate Multi-purpose progress metrics
     const { totalVisibleQuizzes, nodeProgress, nodeAverages, nodeCompletedCount, nodeTotalQuizzes } = React.useMemo(() => {
@@ -381,6 +383,52 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
             }, 1200);
         }
     }, [nodes, allQuizzes, processedScrollId, processedCelebrationId, nodeProgress, progressMap]);
+
+    // NEW Logic: Automatic Scroll to Last Worked Node (if no focusNode in URL)
+    useEffect(() => {
+        const searchParams = new URLSearchParams(window.location.search);
+        const focusId = searchParams.get('focusNode');
+        
+        if (focusId || nodes.length === 0 || allQuizzes.length === 0 || lastWorkedScrollProcessed.current) return;
+
+        // Find most recent interaction
+        const recentQuiz = [...allQuizzes]
+            .filter(q => q.status !== 'not_started')
+            .sort((a, b) => {
+                // Priority 1: Recent completion
+                if (a.completedAt && b.completedAt) {
+                    return new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime();
+                }
+                if (a.completedAt) return -1;
+                if (b.completedAt) return 1;
+                
+                // Priority 2: Most recently started (highest progressId)
+                return (b.progressId || 0) - (a.progressId || 0);
+            })[0];
+            
+        if (!recentQuiz) return;
+        
+        // Find node for this quiz
+        let targetNode = nodes.find(n => n.subcategoryId === recentQuiz.subcategoryId);
+        if (!targetNode && recentQuiz.subcategoryId) {
+            targetNode = nodes.find(n => n.additionalSubcategories?.includes(recentQuiz.subcategoryId));
+        }
+
+        if (targetNode) {
+            lastWorkedScrollProcessed.current = true;
+            const nodeId = targetNode.id;
+            
+            setTimeout(() => {
+                const element = document.getElementById(`node-container-${nodeId}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Show a friendly hint
+                    setShowLastWorkedHint(nodeId);
+                    setTimeout(() => setShowLastWorkedHint(null), 5000);
+                }
+            }, 800);
+        }
+    }, [nodes, allQuizzes]);
 
     // Search Logic
     const [searchQuery, setSearchQuery] = useState("");
@@ -1038,6 +1086,24 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                                     </div>
                                                                 </div>
                                                             )}
+
+                                                            {/* Friendly "Last Worked" Hint */}
+                                                            <AnimatePresence>
+                                                                {showLastWorkedHint === node.id && (
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, scale: 0.5, y: 10 }}
+                                                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                                        exit={{ opacity: 0, scale: 0.5, y: 10 }}
+                                                                        className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none"
+                                                                    >
+                                                                        <div className="bg-blue-600 text-white text-[10px] md:text-[11px] font-bold px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-[0_4px_15px_rgba(59,130,246,0.5)] flex items-center gap-2 whitespace-nowrap border border-blue-400 relative">
+                                                                            <Box className="w-3 md:w-3.5 h-3 md:h-3.5" />
+                                                                            ¡Aquí estuviste la última vez!
+                                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-blue-600" />
+                                                                        </div>
+                                                                    </motion.div>
+                                                                )}
+                                                            </AnimatePresence>
                                                         </div>
 
                                                         {/* Progress Bar */}

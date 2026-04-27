@@ -72,6 +72,7 @@ REQUISITOS TÉCNICOS:
 10. **UNICIDAD OBLIGATORIA**: Los textos de las 4 opciones deben ser COMPLETAMENTE distintos entre sí. Nunca repitas el mismo valor o texto.
 11. Incluye una breve explicación pedagógica de la respuesta correcta (máximo 2 líneas).
 12. Prioriza ejercicios técnicos directos. Evita enunciados extensos, historias o contextos innecesarios.
+13. **IMPORTANTE**: No uses nunca los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡¡ x^2 ¡¡).
 
 DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
 {

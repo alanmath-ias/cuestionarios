@@ -86,7 +86,7 @@ const QuestionContent = ({ content }: { content: string }) => {
   };
 
   return (
-    <div className={`mb-8 text-slate-200 leading-relaxed transition-all duration-300 ${getQuestionSizeClass(content)}`}>
+    <div className={`mb-6 text-slate-200 leading-relaxed transition-all duration-300 ${getQuestionSizeClass(content)}`}>
       <ContentRenderer content={content} />
     </div>
   );
@@ -231,6 +231,9 @@ const ActiveQuiz = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/progress/${quizId}`] });
+      queryClient.invalidateQueries({ queryKey: ["user-quizzes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
   });
 
@@ -487,7 +490,7 @@ const ActiveQuiz = () => {
     const length = cleanContent.length;
 
     if (length < 10) {
-      return hasFraction ? "text-lg md:text-xl" : "text-2xl md:text-3xl";
+      return hasFraction ? "text-lg md:text-xl" : "text-xl md:text-2xl";
     }
     if (length < 40) return "text-xl md:text-2xl";
     if (length < 70) return "text-lg md:text-xl";
@@ -1468,7 +1471,7 @@ const ActiveQuiz = () => {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 gap-2.5">
                   {shuffledAnswers.map((answer, index) => {
                     const existingAnswer = studentAnswers.find(sa =>
                       sa.questionId === currentQuestion.id && sa.answerId === answer.id
@@ -1495,7 +1498,7 @@ const ActiveQuiz = () => {
                         key={answer.id}
                         onClick={() => !isAnswered && !isReadOnly && handleSelectAnswer(answer.id)}
                         disabled={isAnswered || isReadOnly}
-                        className={`w-full text-left p-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass} ${isReadOnly ? 'cursor-default opacity-80' : ''}`}
+                        className={`w-full text-left py-3 px-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass} ${isReadOnly ? 'cursor-default opacity-80' : ''}`}
                       >
                         <div className="flex items-center gap-4 relative z-10 w-full">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors
