@@ -513,7 +513,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                     )}
                 </div>
 
-                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 relative z-10 transition-all duration-700 ${blurActive ? 'opacity-20 pointer-events-none grayscale' : ''}`}>
+                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 relative z-10 transition-all duration-700 ${blurActive ? 'blur-xl opacity-10 pointer-events-none grayscale select-none' : ''}`}>
                     {managedChallenge.currentQuestion?.options?.map((opt: any) => {
                         const styleClass = getOptionStyle(opt);
                         const who = getWhoAnswered(opt);
@@ -677,18 +677,20 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                         </div>
                     </div>
 
-                    <div className="p-8 bg-black/20 border-t border-white/5 space-y-4">
+                    <div className="p-8 bg-black/20 border-t border-white/5 space-y-3">
                         <Button 
-                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black h-16 rounded-3xl text-xl shadow-xl shadow-blue-900/40 active:scale-95 transition-all group relative overflow-hidden"
+                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black h-14 rounded-3xl text-lg shadow-xl shadow-blue-900/40 active:scale-95 transition-all"
+                            onClick={() => { setReviewIndex(0); setIsReviewing(true); }}
+                        >
+                            REVISAR DETALLES
+                        </Button>
+                        <Button 
+                            variant="ghost"
+                            className="w-full text-slate-400 hover:text-white font-black h-12 rounded-3xl text-base uppercase tracking-widest opacity-70 hover:bg-white/5"
                             onClick={() => leaveResults(managedChallenge.challengeId)}
                         >
-                            <span className="relative z-10 flex items-center justify-center">
-                                <ArrowLeft className="mr-3 h-6 w-6 transition-transform group-hover:-translate-x-1" />
-                                FINALIZAR SESIÓN
-                            </span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                            FINALIZAR SESIÓN
                         </Button>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] opacity-60">Sigue practicando para subir en el ranking mundial</p>
                     </div>
               </motion.div>
           )}
@@ -1097,6 +1099,9 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
 
               <div className="relative px-4 pb-2 flex flex-col items-center">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-20 bg-blue-500/5 blur-[40px] rounded-full" />
+                <div className="absolute top-0 right-0 p-12 opacity-[0.03] rotate-12 select-none pointer-events-none">
+                    <span className="text-[12rem] font-black text-white leading-none">ALAN<br/>MATH</span>
+                 </div>
                 <div className="flex items-center justify-between relative z-10 w-full px-4">
                   <div className="flex flex-col items-center flex-1">
                     <span className="text-[9px] text-blue-400 font-black uppercase mb-1 truncate max-w-[80px]">
@@ -1184,7 +1189,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                         <ContentRenderer content={duel.currentQuestion.content} tight={true} />
                     </div>
 
-                    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 ${blurActive ? 'opacity-20 pointer-events-none grayscale' : ''}`}>
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 transition-all duration-700 ${blurActive ? 'blur-xl opacity-10 pointer-events-none grayscale select-none' : ''}`}>
                       {duel.currentQuestion.options.map((option: any) => {
                         const styleClass = getOptionStyle(option);
                         const who = getWhoAnswered(option);
@@ -1353,31 +1358,47 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
           )}
 
           {/* ── REVIEW MODE ── */}
-          {duel && duel.status === 'finished' && isReviewing && (
+          {(duel || (managedChallenge && managedChallenge.results?.history)) && (duel?.status === 'finished' || managedChallenge?.status === 'finished') && isReviewing && (
             <motion.div key="review" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-slate-900 border border-blue-500/30 rounded-[2.5rem] shadow-2xl p-0 w-full max-w-2xl overflow-hidden relative max-h-[96vh] flex flex-col">
               <div className="flex items-center justify-between p-4 px-6 border-b border-white/5">
                 <div className="flex items-center gap-3"><div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center"><Swords className="h-4 w-4 text-blue-400" /></div><h2 className="text-lg font-black text-white uppercase italic tracking-tight">REVISIÓN DE ARENA</h2></div>
                 <Button variant="ghost" size="icon" onClick={() => setIsReviewing(false)} className="h-8 w-8"><X className="h-4 w-4 text-slate-500" /></Button>
               </div>
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
-                {duel.history && duel.history[reviewIndex] ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 mb-2"><span>PREGUNTA {reviewIndex + 1} DE {duel.history.length}</span><span className="text-blue-400">TEMA: {duel.topic || "Matemáticas"}</span></div>
-                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5 min-h-[60px] flex items-center justify-center text-center text-white font-bold leading-tight"><ContentRenderer content={duel.history[reviewIndex].content} /></div>
-                    <div className="grid grid-cols-1 gap-2">
-                        {duel.history[reviewIndex].options.map((option: any) => {
-                          const isError = !option.isCorrect && (option.selections?.length || 0) > 0;
-                          return (
-                            <div key={option.id} className={`relative flex items-center gap-3 py-1.5 px-3 rounded-xl border transition-all ${option.isCorrect ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-100 shadow-[0_0_15px_rgba(16,185,129,0.1)]" : isError ? "bg-red-500/20 border-red-500/40 text-red-100" : "bg-white/5 border-white/5 text-slate-400"}`}>
-                              <div className={`h-6 w-6 rounded-lg flex items-center justify-center flex-shrink-0 ${option.isCorrect ? "bg-emerald-500 text-white" : isError ? "bg-red-500 text-white" : "bg-slate-800 text-slate-600"}`}>{option.isCorrect ? <CheckCircle2 className="h-3.5 w-3.5" /> : isError ? <XCircle className="h-3.5 w-3.5" /> : <div className="h-1.5 w-1.5 rounded-full bg-current" />}</div>
-                              <span className="text-base font-bold flex-1 leading-tight"><ContentRenderer content={option.content} tight={true} /></span>
-                              <div className="flex gap-1">{option.selections && option.selections.map((sel: any) => <Badge key={sel.userId} className={`px-2 py-0.5 text-[10px] uppercase font-black tracking-tighter rounded-full ${sel.userId === myId ? "bg-blue-500 text-white" : "bg-yellow-500 text-slate-900"}`}>{sel.userId === myId ? "TÚ" : sel.username}</Badge>)}</div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                ) : <div className="py-20 text-center"><Loader2 className="h-10 w-10 text-slate-700 animate-spin mx-auto mb-4" /><p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Sin historial disponible</p></div>}
+                {(() => {
+                    const history = duel?.history || managedChallenge?.results?.history;
+                    const topic = duel?.topic || managedChallenge?.topic || "Matemáticas";
+                    
+                    if (!history || !history[reviewIndex]) {
+                        return <div className="py-20 text-center"><Loader2 className="h-10 w-10 text-slate-700 animate-spin mx-auto mb-4" /><p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Sin historial disponible</p></div>;
+                    }
+
+                    const current = history[reviewIndex];
+                    return (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 mb-2"><span>PREGUNTA {reviewIndex + 1} DE {history.length}</span><span className="text-blue-400">TEMA: {topic}</span></div>
+                        <div className="bg-white/5 rounded-2xl p-4 border border-white/5 min-h-[60px] flex items-center justify-center text-center text-white font-bold leading-tight"><ContentRenderer content={current.content} /></div>
+                        <div className="grid grid-cols-1 gap-2">
+                            {current.options.map((option: any) => {
+                              const isError = !option.isCorrect && (option.selections?.length || 0) > 0;
+                              return (
+                                <div key={option.id} className={`relative flex items-center gap-3 py-1.5 px-3 rounded-xl border transition-all ${option.isCorrect ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-100 shadow-[0_0_15px_rgba(16,185,129,0.1)]" : isError ? "bg-red-500/20 border-red-500/40 text-red-100" : "bg-white/5 border-white/5 text-slate-400"}`}>
+                                  <div className={`h-6 w-6 rounded-lg flex items-center justify-center flex-shrink-0 ${option.isCorrect ? "bg-emerald-500 text-white" : isError ? "bg-red-500 text-white" : "bg-slate-800 text-slate-600"}`}>{option.isCorrect ? <CheckCircle2 className="h-3.5 w-3.5" /> : isError ? <XCircle className="h-3.5 w-3.5" /> : <div className="h-1.5 w-1.5 rounded-full bg-current" />}</div>
+                                  <span className="text-base font-bold flex-1 leading-tight"><ContentRenderer content={option.content} tight={true} /></span>
+                                  <div className="flex gap-1 flex-wrap justify-end">
+                                      {option.selections && option.selections.map((sel: any) => (
+                                          <Badge key={sel.userId} className={`px-2 py-0.5 text-[9px] uppercase font-black tracking-tighter rounded-full ${Number(sel.userId) === Number(myId) ? "bg-blue-500 text-white" : "bg-yellow-500 text-slate-900"}`}>
+                                              {Number(sel.userId) === Number(myId) ? "TÚ" : (sel.username || "Oponente")}
+                                          </Badge>
+                                      ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    );
+                })()}
               </div>
               <div className="p-4 bg-slate-900 border-t border-white/10 flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-3">
@@ -1391,7 +1412,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                       ANTERIOR
                     </Button>
                     <Button 
-                      disabled={reviewIndex === (duel.history?.length || 0) - 1} 
+                      disabled={reviewIndex === ((duel?.history?.length || managedChallenge?.results?.history?.length || 0)) - 1} 
                       onClick={() => setReviewIndex(reviewIndex + 1)} 
                       className="flex-1 bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 h-11 rounded-xl text-xs font-black tracking-widest transition-all active:scale-95"
                     >

@@ -398,7 +398,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
               scores: payload.scores || prev.scores,
               lastFeedback: payload,
               allWrongAnswers: payload.isCorrect ? [] : [
-                  ...(prev.allWrongAnswers || []),
+                  ...(prev.allWrongAnswers || []).filter((w: any) => w.userId !== payload.userId),
                   { userId: payload.userId, answerId: payload.answerId, userName: payload.userName || "Alguien" }
               ]
           } : null);
@@ -496,9 +496,9 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
   }, [queryClient]);
 
   const resetDuel = useCallback(() => {
-    if (duel?.duelId && !duel.isSpectator) {
+    if (duel?.duelId && !duel.isSpectator && duel.status !== 'finished') {
         socket?.send(JSON.stringify({ type: 'duel:abandon', payload: { duelId: duel.duelId } }));
-    } else if (invite?.duelId) {
+    } else if (invite?.duelId && !duel?.duelId) {
         socket?.send(JSON.stringify({ type: 'duel:abandon', payload: { duelId: invite.duelId } }));
     }
     setDuel(null);

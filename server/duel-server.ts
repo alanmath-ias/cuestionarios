@@ -868,12 +868,15 @@ export class DuelServer {
             return;
         }
         
-        await db.update(duels).set({ status: 'cancelled' }).where(eq(duels.id, duelId));
+        const isFinished = room.status === 'finished';
+        await db.update(duels).set({ status: isFinished ? 'finished' : 'cancelled' }).where(eq(duels.id, duelId));
         
-        this.broadcastToDuel(duelId, { 
-            type: 'duel:error', 
-            payload: { message: 'El oponente ha abandonado el duelo.' } 
-        });
+        if (!isFinished) {
+            this.broadcastToDuel(duelId, { 
+                type: 'duel:error', 
+                payload: { message: 'El oponente ha abandonado el duelo.' } 
+            });
+        }
         
         room.status = 'finished';
         this.activeDuels.delete(duelId);
@@ -1469,6 +1472,20 @@ export class DuelServer {
             payload: { userId, score: player.score, questionIndex }
         });
 
+        // Add to history before moving to next round
+        room.history.push({
+            content: question.content,
+            options: question.options.map((o: any) => ({
+                id: o.id,
+                content: o.content,
+                isCorrect: o.isCorrect,
+                selections: room.currentRoundAnswers.filter(a => a.answerId === o.id).map(a => ({
+                    userId: a.userId,
+                    username: room.players.get(a.userId)?.username || "Desconocido"
+                }))
+            }))
+        });
+
         room.currentQuestionIndex++;
         
         if (room.currentQuestionIndex >= room.questions.length) {
@@ -1505,6 +1522,20 @@ export class DuelServer {
                     correctAnswerId: correctAnswer?.id,
                     answerId: null
                 }
+            });
+
+            // Add to history on skip
+            room.history.push({
+                content: question.content,
+                options: question.options.map((o: any) => ({
+                    id: o.id,
+                    content: o.content,
+                    isCorrect: o.isCorrect,
+                    selections: room.currentRoundAnswers.filter(a => a.answerId === o.id).map(a => ({
+                        userId: a.userId,
+                        username: room.players.get(a.userId)?.username || "Desconocido"
+                    }))
+                }))
             });
 
             room.currentQuestionIndex++;
@@ -1591,7 +1622,8 @@ export class DuelServer {
         type: 'managed:results',
         payload: {
             winners,
-            rankings
+            rankings,
+            history: room.history
         }
     };
 

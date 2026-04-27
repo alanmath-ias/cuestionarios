@@ -52,6 +52,8 @@ export default function AdminChallengeManager() {
     const [quizSearch, setQuizSearch] = useState("");
     const [isStarting, setIsStarting] = useState(false);
     const [view, setView] = useState<'monitor' | 'history'>('monitor');
+    const [isReviewing, setIsReviewing] = useState(false);
+    const [reviewIndex, setReviewIndex] = useState(0);
 
     // Queries
     const { data: allUsers = [] } = useQuery<User[]>({ queryKey: ["/api/admin/users"] });
@@ -824,12 +826,19 @@ export default function AdminChallengeManager() {
                                                          </div>
                                                          
                                                          <Button 
-                                                            variant="ghost" 
-                                                            className="mt-6 text-slate-500 hover:text-white uppercase font-black text-[10px] tracking-widest hover:bg-white/5 h-10 w-full"
-                                                            onClick={() => setManagedChallenge(null)}
-                                                         >
-                                                             LIMPIAR MONITOR
-                                                         </Button>
+                                                             className="mt-6 bg-blue-600 hover:bg-blue-500 text-white font-black h-12 w-full rounded-2xl shadow-xl shadow-blue-900/40 active:scale-95 transition-all"
+                                                             onClick={() => { setReviewIndex(0); setIsReviewing(true); }}
+                                                          >
+                                                              REVISAR DETALLES
+                                                          </Button>
+                                                          
+                                                          <Button 
+                                                             variant="ghost" 
+                                                             className="mt-2 text-slate-500 hover:text-white uppercase font-black text-[10px] tracking-widest hover:bg-white/5 h-10 w-full"
+                                                             onClick={() => setManagedChallenge(null)}
+                                                          >
+                                                              LIMPIAR MONITOR
+                                                          </Button>
                                                      </div>
                                                  ) : managedChallenge?.currentQuestion && (
                                                     <div className="mt-4 p-5 rounded-2xl bg-white/5 border border-white/10 animate-in fade-in slide-in-from-bottom-4">
@@ -858,26 +867,26 @@ export default function AdminChallengeManager() {
                                                                                 : hasAnyWrong ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-white/5 border-white/5 text-slate-400'
                                                                         }`}
                                                                     >
-                                                                        <div className="flex items-center gap-3">
-                                                                            <div className={`w-2 h-2 rounded-full ${opt.isCorrect ? 'bg-emerald-400 animate-pulse' : 'bg-slate-700'}`} />
-                                                                            <span className="leading-[1.1]">
-                                                                                <ContentRenderer content={opt.content} tight={true} />
-                                                                            </span>
-                                                                            {opt.isCorrect && <span className="text-emerald-400 text-lg">★</span>}
-                                                                        </div>
+                                                                        <div className="flex items-center gap-3 flex-1 min-w-0 mr-2">
+                                                                             <div className={`w-2 h-2 rounded-full shrink-0 ${opt.isCorrect ? 'bg-emerald-400 animate-pulse' : 'bg-slate-700'}`} />
+                                                                             <span className="leading-[1.1] truncate">
+                                                                                 <ContentRenderer content={opt.content} tight={true} />
+                                                                             </span>
+                                                                             {opt.isCorrect && <span className="text-emerald-400 text-lg shrink-0">★</span>}
+                                                                         </div>
                                                                         
-                                                                        <div className="flex items-center gap-1.5">
-                                                                            {isFirstCorrect && (
-                                                                                <Badge className="bg-yellow-500 text-slate-950 text-[10px] font-black py-0 px-2 h-5">
-                                                                                    {managedChallenge.lastFeedback.userName} ★
-                                                                                </Badge>
-                                                                            )}
-                                                                            {playersWhoChoseThis.map((w: any, idx: number) => (
-                                                                                <Badge key={idx} variant="outline" className="border-red-500/30 text-red-400 bg-red-500/10 text-[10px] font-black h-5 px-2">
-                                                                                    {w.userName} ✕
-                                                                                </Badge>
-                                                                            ))}
-                                                                        </div>
+                                                                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                                                             {isFirstCorrect && (
+                                                                                 <Badge className="bg-emerald-500 text-white text-[9px] font-black py-0 px-2 h-5 truncate max-w-[100px]">
+                                                                                     {managedChallenge.lastFeedback.userName} ★
+                                                                                 </Badge>
+                                                                             )}
+                                                                             {playersWhoChoseThis.map((w: any, idx: number) => (
+                                                                                 <Badge key={idx} variant="outline" className="bg-yellow-400 text-slate-950 border-yellow-500 text-[9px] font-black h-5 px-2 truncate max-w-[100px]">
+                                                                                     {w.userName} ✕
+                                                                                 </Badge>
+                                                                             ))}
+                                                                         </div>
                                                                     </div>
                                                                 );
                                                             })}
@@ -997,6 +1006,109 @@ export default function AdminChallengeManager() {
                             CONFIRMAR VENTAJA
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ── REVIEW DIALOG ─────────────────────────── */}
+            <Dialog open={isReviewing} onOpenChange={setIsReviewing}>
+                <DialogContent className="max-w-2xl bg-slate-900 border-blue-500/30 p-0 overflow-hidden rounded-[2.5rem]">
+                    <div className="flex flex-col max-h-[90vh]">
+                        <div className="flex items-center justify-between p-4 px-6 border-b border-white/5 bg-slate-900/50">
+                            <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                                    <ClipboardList className="h-4 w-4 text-blue-400" />
+                                </div>
+                                <h2 className="text-lg font-black text-white uppercase italic tracking-tight">AUDITORÍA DE RETO</h2>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => setIsReviewing(false)} className="h-8 w-8 text-slate-500"><XCircle className="h-4 w-4" /></Button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            {(() => {
+                                const history = managedChallenge?.results?.history;
+                                if (!history || !history[reviewIndex]) return (
+                                    <div className="py-20 text-center"><Loader2 className="h-10 w-10 text-slate-700 animate-spin mx-auto mb-4" /><p className="text-slate-500 font-bold uppercase tracking-widest text-xs italic">Sin historial disponible</p></div>
+                                );
+
+                                const current = history[reviewIndex];
+                                return (
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">
+                                            <span>PREGUNTA {reviewIndex + 1} DE {history.length}</span>
+                                            <span className="text-blue-400">MONITOR DE ADMINISTRADOR</span>
+                                        </div>
+                                        
+                                        <div className="bg-white/5 rounded-[2rem] p-6 border border-white/10 text-center text-white text-xl font-bold leading-tight shadow-inner">
+                                            <ContentRenderer content={current.content} />
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {current.options.map((option: any) => {
+                                                const hasSelections = (option.selections?.length || 0) > 0;
+                                                return (
+                                                    <div 
+                                                        key={option.id} 
+                                                        className={`relative flex items-center gap-4 py-3 px-5 rounded-2xl border transition-all ${
+                                                            option.isCorrect ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-100" : 
+                                                            hasSelections ? "bg-red-500/10 border-red-500/30 text-red-100" : 
+                                                            "bg-white/5 border-white/5 text-slate-400 opacity-60"
+                                                        }`}
+                                                    >
+                                                        <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                                            option.isCorrect ? "bg-emerald-500 text-white shadow-lg shadow-emerald-900/20" : 
+                                                            hasSelections ? "bg-red-500 text-white shadow-lg shadow-red-900/20" : 
+                                                            "bg-slate-800 text-slate-600"
+                                                        }`}>
+                                                            {option.isCorrect ? <CheckCircle2 className="h-4 w-4" /> : hasSelections ? <XCircle className="h-4 w-4" /> : <div className="h-2 w-2 rounded-full bg-current" />}
+                                                        </div>
+                                                        <div className="flex-1 text-base font-bold leading-tight">
+                                                            <ContentRenderer content={option.content} tight={true} />
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1 justify-end max-w-[40%]">
+                                                            {option.selections?.map((sel: any) => (
+                                                                <Badge key={sel.userId} className="bg-blue-500/20 text-blue-300 border-blue-500/30 text-[9px] font-black py-0.5 px-2 rounded-lg">
+                                                                    {sel.username}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+
+                        <div className="p-6 bg-slate-900/80 border-t border-white/5 backdrop-blur-md">
+                            <div className="flex items-center gap-3 mb-4">
+                                <Button 
+                                    variant="outline" 
+                                    disabled={reviewIndex === 0} 
+                                    onClick={() => setReviewIndex(reviewIndex - 1)} 
+                                    className="flex-1 bg-slate-800 border-white/10 text-white hover:bg-slate-700 h-12 rounded-2xl text-xs font-black tracking-widest transition-all"
+                                >
+                                    <ArrowLeft className="mr-2 h-4 w-4" />
+                                    ANTERIOR
+                                </Button>
+                                <Button 
+                                    disabled={!managedChallenge?.results?.history || reviewIndex === managedChallenge.results.history.length - 1} 
+                                    onClick={() => setReviewIndex(reviewIndex + 1)} 
+                                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 h-12 rounded-2xl text-xs font-black tracking-widest transition-all active:scale-95"
+                                >
+                                    SIGUIENTE
+                                    <Sword className="ml-2 h-4 w-4 rotate-45" />
+                                </Button>
+                            </div>
+                            <Button 
+                                variant="ghost" 
+                                onClick={() => setIsReviewing(false)} 
+                                className="w-full text-slate-500 hover:text-white text-[10px] font-black uppercase tracking-[0.3em]"
+                            >
+                                CERRAR AUDITORÍA
+                            </Button>
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
