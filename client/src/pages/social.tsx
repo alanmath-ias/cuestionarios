@@ -20,7 +20,8 @@ import {
   Coins,
   ShieldAlert,
   Minus,
-  Plus
+  Plus,
+  CheckCircle2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,12 @@ export default function SocialPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [friendsFilter, setFriendsFilter] = useState("");
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
-  const [showOfflineDialog, setShowOfflineDialog] = useState<{ isOpen: boolean; name: string }>({ isOpen: false, name: "" });
+  const [showOfflineDialog, setShowOfflineDialog] = useState<{ 
+    isOpen: boolean; 
+    name: string; 
+    friendId?: number;
+    isSent?: boolean;
+  }>({ isOpen: false, name: "" });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -168,6 +174,34 @@ export default function SocialPage() {
     },
   });
 
+  const sendOfflineNotificationMutation = useMutation({
+    mutationFn: async (friendId: number) => {
+      await apiRequest("POST", "/api/social/challenge/offline", { friendId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    }
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("PATCH", `/api/notifications/${id}/read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    }
+  });
+
+  const deleteNotificationMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/notifications/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      toast({ title: "Notificación eliminada" });
+    }
+  });
+
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
@@ -221,6 +255,14 @@ export default function SocialPage() {
                   </Badge>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="notifications" className="rounded-lg data-[state=active]:bg-amber-600">
+                <Bell className="w-4 h-4 mr-2" /> Notificaciones
+                {notifications && notifications.filter((n: any) => !n.read).length > 0 && (
+                  <Badge variant="destructive" className="ml-2 animate-pulse bg-slate-950 text-white font-black border border-amber-500/50">
+                    {notifications.filter((n: any) => !n.read).length}
+                  </Badge>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="search" className="rounded-lg data-[state=active]:bg-slate-700">
                 <Search className="w-4 h-4 mr-2" /> Buscar
               </TabsTrigger>
@@ -261,14 +303,20 @@ export default function SocialPage() {
                           key={friend.id} 
                           user={friend} 
                           type="friend" 
-                           onChallenge={() => {
-                             if (!onlineUsers.has(friend.id)) {
-                               setShowOfflineDialog({ isOpen: true, name: friend.name });
-                             } else {
-                               setChallengingUser(friend);
-                             }
-                           }}
-                           onProfile={() => setSelectedProfileId(friend.id)}
+                            onChallenge={() => {
+                              if (!onlineUsers.has(friend.id)) {
+                                sendOfflineNotificationMutation.mutate(friend.id);
+                                setShowOfflineDialog({ 
+                                  isOpen: true, 
+                                  name: friend.name, 
+                                  friendId: friend.id,
+                                  isSent: true 
+                                });
+                              } else {
+                                setChallengingUser(friend);
+                              }
+                            }}
+                            onProfile={() => setSelectedProfileId(friend.id)}
                         />
                       ))
                     ) : (
@@ -301,6 +349,79 @@ export default function SocialPage() {
                       onBlock={() => blockMutation.mutate(req.sender.id)}
                       onProfile={() => setSelectedProfileId(req.sender.id)}
                     />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* TAB: NOTIFICATIONS */}
+            <TabsContent value="notifications" className="mt-0">
+              {notifications?.length === 0 ? (
+                <EmptyState 
+                  icon={Bell} 
+                  title="Sin notificaciones" 
+                  description="Aquí verás novedades y retos de tus amigos."
+                />
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {notifications?.map((notification: any) => (
+                    <motion.div
+                      key={notification.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`bg-slate-900/40 border ${notification.read ? 'border-white/5 opacity-70' : 'border-amber-500/30'} rounded-2xl p-4 flex items-center justify-between group backdrop-blur-sm transition-all`}
+                    >
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                          <Sword className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-200">
+                            {notification.type === 'offline_challenge' ? (
+                              <>Tu amigo <span className="text-amber-400 font-bold">{notification.fromUser?.name || 'Alguien'}</span> quiere retarte a un Duelo, comunícate con él para agendarlo.</>
+                            ) : (
+                                "Tienes una nueva notificación"
+                            )}
+                          </p>
+                          <p className="text-[10px] text-slate-500 mt-1">
+                            {new Date(notification.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            if (!notification.read) markReadMutation.mutate(notification.id);
+                            window.dispatchEvent(new CustomEvent('open-chat', { detail: { friend: notification.fromUser } }));
+                          }}
+                          className="rounded-xl border-blue-500/20 bg-blue-500/5 text-blue-400 hover:bg-blue-600 hover:text-white"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 mr-2" /> Chatear
+                        </Button>
+                        {!notification.read && (
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            title="Marcar como leída"
+                            onClick={() => markReadMutation.mutate(notification.id)}
+                            className="rounded-xl h-9 w-9 text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/10"
+                          >
+                            <Check className="w-4 h-4" />
+                          </Button>
+                        )}
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          title="Eliminar notificación"
+                          onClick={() => deleteNotificationMutation.mutate(notification.id)}
+                          className="rounded-xl h-9 w-9 text-slate-500 hover:text-red-400 hover:bg-red-400/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </motion.div>
                   ))}
                 </div>
               )}
@@ -363,7 +484,13 @@ export default function SocialPage() {
           onClose={() => setSelectedProfileId(null)}
           onChallenge={(friend) => {
             if (!onlineUsers.has(friend.id)) {
-                setShowOfflineDialog({ isOpen: true, name: friend.name });
+                sendOfflineNotificationMutation.mutate(friend.id);
+                setShowOfflineDialog({ 
+                  isOpen: true, 
+                  name: friend.name, 
+                  friendId: friend.id,
+                  isSent: true 
+                });
                 return;
             }
             setChallengingUser({ id: friend.id, name: friend.name });
@@ -375,27 +502,51 @@ export default function SocialPage() {
 
         {/* Offline Friend Alert Dialog */}
         <Dialog open={showOfflineDialog.isOpen} onOpenChange={(open) => setShowOfflineDialog(prev => ({ ...prev, isOpen: open }))}>
-          <DialogContent className="bg-slate-900 border-white/10 text-white rounded-3xl sm:max-w-md">
+          <DialogContent className="bg-slate-900 border-white/10 text-white rounded-[2rem] sm:max-w-md p-8">
             <DialogHeader className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-3xl bg-blue-500/10 flex items-center justify-center mb-4">
-                <Clock className="w-8 h-8 text-blue-400" />
+              <div className="h-20 w-20 rounded-3xl bg-blue-500/10 flex items-center justify-center mb-6 border border-blue-500/20 shadow-lg shadow-blue-500/5">
+                {showOfflineDialog.isSent ? (
+                  <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+                ) : (
+                  <Clock className="w-10 h-10 text-blue-400" />
+                )}
               </div>
-              <DialogTitle className="text-2xl font-black uppercase tracking-tighter italic">¡Ups! {showOfflineDialog.name} no anda por aquí</DialogTitle>
-              <DialogDescription className="text-slate-400 text-sm mt-2">
-                Parece que tu amigo no está conectado en este momento. Escríbele un mensaje para ponerte de acuerdo o espera a que esté en línea para retarlo.
+              <DialogTitle className="text-3xl font-black uppercase tracking-tighter italic leading-none">
+                {showOfflineDialog.isSent ? "¡Invitación Enviada!" : `¡Ups! ${showOfflineDialog.name} no está`}
+              </DialogTitle>
+              <DialogDescription className="text-slate-400 text-base mt-4 leading-relaxed font-medium">
+                {showOfflineDialog.isSent 
+                  ? <>Hemos avisado a <span className="text-white font-bold">{showOfflineDialog.name}</span> que quieres retarlo. <br/><span className="text-blue-400 font-bold mt-2 inline-block italic">Espera a que responda.</span></>
+                  : "Parece que tu amigo no está conectado en este momento. Pero no te preocupes, ya le enviamos un aviso."
+                }
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className="flex-row gap-2 sm:justify-center mt-4">
-              <Button 
-                className="flex-1 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold uppercase text-[10px] tracking-widest py-6"
+            
+            <div className="flex flex-col gap-3 mt-8">
+               <Button 
+                className="w-full bg-blue-600 hover:bg-blue-500 rounded-2xl font-black uppercase text-xs tracking-widest py-7 shadow-xl shadow-blue-900/20 active:scale-95 transition-all flex items-center justify-center gap-3"
                 onClick={() => {
                   setShowOfflineDialog(prev => ({ ...prev, isOpen: false }));
-                  // Open chat logic could go here if needed
+                  if (showOfflineDialog.friendId) {
+                      const friendObj = friends.find(f => f.id === showOfflineDialog.friendId);
+                      if (friendObj) {
+                          window.dispatchEvent(new CustomEvent('open-chat', { detail: { friend: friendObj } }));
+                      }
+                  }
                 }}
               >
-                ENTENDIDO
+                <MessageSquare className="w-4 h-4" />
+                DÉJALE UN MENSAJE EN SU CHAT
               </Button>
-            </DialogFooter>
+              
+              <Button 
+                variant="ghost"
+                className="text-slate-500 hover:text-white hover:bg-white/5 font-bold uppercase text-[10px] tracking-widest"
+                onClick={() => setShowOfflineDialog(prev => ({ ...prev, isOpen: false }))}
+              >
+                CERRAR
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

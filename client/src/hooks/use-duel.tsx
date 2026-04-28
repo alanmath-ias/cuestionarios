@@ -300,6 +300,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
           queryClient.invalidateQueries({ queryKey: ["/api/social/pending-requests"] });
           queryClient.invalidateQueries({ queryKey: ["/api/social/friendships"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
           break;
       case 'duel:sync':
           setIsPreparing(false);

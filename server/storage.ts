@@ -176,6 +176,7 @@ export interface IStorage {
   // Notification methods
   getNotifications(userId: number): Promise<Notification[]>;
   markNotificationRead(notificationId: number): Promise<void>;
+  deleteNotification(notificationId: number): Promise<void>;
   createNotification(userId: number, type: string, fromId?: number, data?: any): Promise<Notification>;
 
   // Chat methods
@@ -878,6 +879,7 @@ export class MemStorage implements IStorage {
   // Notification methods
   async getNotifications(userId: number): Promise<Notification[]> { return []; }
   async markNotificationRead(notificationId: number): Promise<void> { }
+  async deleteNotification(notificationId: number): Promise<void> { }
   async createNotification(userId: number, type: string, fromId?: number, data?: any): Promise<Notification> {
     throw new Error("Method not implemented.");
   }

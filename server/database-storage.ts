@@ -2348,17 +2348,25 @@ export class DatabaseStorage implements IStorage {
 
 
   // Notification methods
-  async getNotifications(userId: number): Promise<Notification[]> {
-    return this.db.select()
-      .from(notifications)
-      .where(eq(notifications.userId, userId))
-      .orderBy(desc(notifications.createdAt))
-      .limit(30);
+  async getNotifications(userId: number): Promise<any[]> {
+    return this.db.query.notifications.findMany({
+      where: eq(notifications.userId, userId),
+      with: {
+        fromUser: true
+      },
+      orderBy: desc(notifications.createdAt),
+      limit: 30
+    });
   }
 
   async markNotificationRead(notificationId: number): Promise<void> {
     await this.db.update(notifications)
       .set({ read: true })
+      .where(eq(notifications.id, notificationId));
+  }
+
+  async deleteNotification(notificationId: number): Promise<void> {
+    await this.db.delete(notifications)
       .where(eq(notifications.id, notificationId));
   }
 

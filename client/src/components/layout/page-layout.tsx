@@ -54,6 +54,13 @@ export function PageLayout({ children }: PageLayoutProps) {
     enabled: !!user,
   });
 
+  const { data: notifications } = useQuery<any[]>({
+    queryKey: ['/api/notifications'],
+    enabled: !!user,
+  });
+
+  const totalUnreadCount = (pendingRequests?.length || 0) + (notifications?.filter((n: any) => !n.read).length || 0);
+
   const [isMagicQuizOpen, setIsMagicQuizOpen] = useState(false);
 
   useEffect(() => {
@@ -65,7 +72,7 @@ export function PageLayout({ children }: PageLayoutProps) {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header user={user} pendingCount={pendingRequests?.length || 0} />
+      <Header user={user} pendingCount={totalUnreadCount} />
 
       <main className="flex-grow">
         {children}

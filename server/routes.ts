@@ -1613,6 +1613,35 @@ Tono: Alentador, profesional y educativo.`;
     }
   });
 
+  apiRouter.delete("/notifications/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      await storage.deleteNotification(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Error al eliminar notificación" });
+    }
+  });
+
+  apiRouter.post("/social/challenge/offline", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { friendId } = req.body;
+      const userId = req.session.userId!;
+
+      if (!friendId) return res.status(400).json({ message: "ID de amigo requerido" });
+
+      await storage.createNotification(friendId, 'offline_challenge', userId);
+
+      if (DuelServer.instance) {
+        DuelServer.instance.broadcastToUser(friendId, { type: 'social:refresh' });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error creating offline challenge notification:", error);
+      res.status(500).json({ message: "Error al enviar notificación" });
+    }
+  });
+
   //Obtener el nombre del usuario
   app.get("/api/me", requireAuth, async (req, res) => {
     try {
