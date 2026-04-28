@@ -47,6 +47,9 @@ interface DuelContextType {
   managedChallenge: any;
   setManagedChallenge: React.Dispatch<React.SetStateAction<any>>;
   managedInvite: any;
+  setManagedInvite: React.Dispatch<React.SetStateAction<any>>;
+  managedCancellation: any;
+  setManagedCancellation: React.Dispatch<React.SetStateAction<any>>;
   createManagedChallenge: (payload: any) => void;
   respondToManagedInvite: (challengeId: number, action: 'accept' | 'abandon') => void;
   startManagedChallenge: (challengeId: number) => void;
@@ -86,9 +89,17 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
   // Managed Challenges State
   const [managedChallenge, setManagedChallenge] = useState<any>(null);
   const [managedInvite, setManagedInvite] = useState<any>(null);
+  const [managedCancellation, setManagedCancellation] = useState<any>(null);
   const [activeManagedChallenges, setActiveManagedChallenges] = useState<any[]>([]);
 
   const reconnectTimeout = useRef<any>(null);
+  const managedInviteRef = useRef<any>(null);
+  const managedChallengeRef = useRef<any>(null);
+
+  useEffect(() => {
+    managedInviteRef.current = managedInvite;
+    managedChallengeRef.current = managedChallenge;
+  }, [managedInvite, managedChallenge]);
 
   const connect = useCallback(() => {
     if (!user) return;
@@ -180,7 +191,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
         setIsPreparing(false);
         setDuel((prev: any) => prev ? { 
             ...prev, 
-            currentQuestion: payload,
+            currentQuestion: { ...payload, startTime: payload.startTime },
             scores: payload.scores || prev.scores, 
             lastFeedback: undefined,
             allWrongAnswers: [],   
@@ -335,7 +346,11 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           setActiveManagedChallenges(payload);
           break;
       case 'managed:invited':
+          setManagedChallenge(null); // Clear any previous finished challenge (podium/results)
           setManagedInvite(payload);
+          setIsResponding(false);
+          setIsPreparing(false);
+          setManagedCancellation(null);
           toast({
               title: "¡RETO DEL PROFESOR!",
               description: `${payload.adminName} te ha invitado a un reto de ${payload.topic}.`,
@@ -345,6 +360,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
       case 'managed:started':
           setManagedInvite(null);
           setIsPreparing(true); // Trigger rotating tips transition
+          setManagedCancellation(null);
           setManagedChallenge({
               status: 'in_progress',
               challengeId: payload.challengeId,
@@ -379,15 +395,29 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           break;
       case 'managed:sync':
           setManagedChallenge(payload);
+          setIsPreparing(false); // Clear preparing state on sync
+
+          // NEW RECOVERY: If I haven't accepted and it's still pending, restore the invite UI
+          if (payload.status === 'pending' && payload.myStatus === 'pending') {
+              setManagedInvite({
+                  challengeId: payload.challengeId,
+                  adminName: payload.adminName || "El Profesor",
+                  topic: payload.topic,
+                  wager: payload.wager,
+                  questionsCount: payload.questionsCount
+              });
+              setManagedCancellation(null);
+          }
           break;
       case 'managed:preparing':
           setIsPreparing(true);
+          setManagedInvite(null); // Clear invite so preparing cards render immediately
           break;
       case 'managed:question':
           setIsPreparing(false);
           setManagedChallenge((prev: any) => prev ? { 
               ...prev, 
-              currentQuestion: { ...payload, startTime: Date.now() },
+              currentQuestion: { ...payload, startTime: payload.startTime },
               scores: payload.scores || prev.scores,
               lastFeedback: undefined,
               allWrongAnswers: []
@@ -419,6 +449,27 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           setSpeedBonusFlash(payload.userName);
           setTimeout(() => setSpeedBonusFlash(null), 3000);
           break;
+       case 'managed:deleted':
+            const currentChallengeId = managedChallengeRef.current?.challengeId || managedInviteRef.current?.challengeId;
+            // Clear if it matches our active challenge or if we don't have a specific ID (safety)
+            if (!payload.challengeId || Number(currentChallengeId) === Number(payload.challengeId)) {
+                setManagedInvite(null);
+                setManagedChallenge(null);
+                setIsPreparing(false);
+                setIsResponding(false);
+                // Only show cancellation overlay if we were actually part of it and not admin (admin manages it)
+                if (user?.role !== 'admin') {
+                    setManagedCancellation({
+                        adminName: payload.adminName || "El Administrador",
+                        message: payload.message
+                    });
+                }
+            }
+            break;
+      case 'managed:error':
+          setManagedInvite(null);
+          toast({ title: "Aviso", description: payload.message || "Ocurrió un error en el reto.", variant: "destructive" });
+          break;
     }
   };
 
@@ -430,6 +481,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     setManagedInvite(null);
     setIsPreparing(false);
     setIsResponding(false);
+    setManagedCancellation(null);
 
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       toast({
@@ -597,6 +649,9 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     managedChallenge,
     setManagedChallenge,
     managedInvite,
+    setManagedInvite,
+    managedCancellation,
+    setManagedCancellation,
     createManagedChallenge,
     respondToManagedInvite,
     startManagedChallenge,
@@ -610,7 +665,7 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     isPreparing, onlineUsers, challengingUser, challengeWager, 
     challengeTopic, challengeHandicap, isRevengeMode, refreshStats, resetDuel, 
     leaveResults, activeDuels, spectateDuel, sentChallengeInfo, isResponding,
-    speedBonusFlash, managedChallenge, managedInvite, createManagedChallenge,
+    speedBonusFlash, managedChallenge, managedInvite, setManagedInvite, managedCancellation, setManagedCancellation, createManagedChallenge,
     respondToManagedInvite, startManagedChallenge, submitManagedAnswer,
     spectateManagedChallenge, activeManagedChallenges, socket, setManagedChallenge
   ]);

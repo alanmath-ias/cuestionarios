@@ -12,10 +12,11 @@ import { useToast } from "@/hooks/use-toast";
 
 // ─── OPTIMIZED SPEED CLOCK COMPONENT ─────────────────────────────
 // This component manages its own timer to avoid re-rendering the whole Overlay
-const SpeedClock = memo(({ questionIndex, lastFeedback, onExpire }: { 
+const SpeedClock = memo(({ questionIndex, lastFeedback, onExpire, startTime }: { 
     questionIndex: number, 
     lastFeedback: any,
-    onExpire?: () => void 
+    onExpire?: () => void,
+    startTime?: number
 }) => {
     const [msLeft, setMsLeft] = useState(4000);
     const [isFrozen, setIsFrozen] = useState(false);
@@ -26,16 +27,20 @@ const SpeedClock = memo(({ questionIndex, lastFeedback, onExpire }: {
         setIsFrozen(false);
         
         let intervalId: any;
-        const start = Date.now();
+        const start = startTime || Date.now();
+        
+        // If we have a server startTime, we should calculate the real elapsed time immediately
+        const initialElapsed = startTime ? (Date.now() - startTime) : 0;
         
         // Dynamic delay: First question needs more time for entrance animations + math engine cold start
-        const startDelay = questionIndex === 0 ? 1800 : 400;
+        // But if we are syncing with server, we might need to skip or shorten this delay
+        const startDelay = startTime ? 0 : (questionIndex === 0 ? 1800 : 400);
         
         const timeoutId = setTimeout(() => {
             intervalId = setInterval(() => {
-                const elapsed = Date.now() - start;
-                const adjustedElapsed = Math.max(0, elapsed - startDelay);
-                const remaining = Math.max(0, totalMs - adjustedElapsed);
+                const now = Date.now();
+                const elapsedSinceStart = now - start;
+                const remaining = Math.max(0, totalMs - elapsedSinceStart);
                 setMsLeft(remaining);
                 if (remaining <= 0) {
                     clearInterval(intervalId);
@@ -48,7 +53,7 @@ const SpeedClock = memo(({ questionIndex, lastFeedback, onExpire }: {
             clearTimeout(timeoutId);
             clearInterval(intervalId);
         };
-    }, [questionIndex]);
+    }, [questionIndex, startTime]);
 
     useEffect(() => {
         if (lastFeedback) {
@@ -137,6 +142,8 @@ export function DuelOverlay() {
     speedBonusFlash,
     managedChallenge,
     managedInvite,
+    managedCancellation,
+    setManagedCancellation,
     respondToManagedInvite,
     submitManagedAnswer
   } = useDuel();
@@ -157,7 +164,7 @@ export function DuelOverlay() {
   const [localHandicap, setLocalHandicap] = useState<{ points: number, time: number }>({ points: 0, time: 0 });
   const [activeHandicapTab, setActiveHandicapTab] = useState<'points' | 'time'>('points');
   
-  const actualPreparing = isPreparing && (!duel || duel.status !== 'in_progress') && (!managedChallenge || (managedChallenge.currentQuestion?.index === 0 && !managedChallenge.currentQuestion?.content));
+  const actualPreparing = isPreparing;
 
   const challengerName = duel?.challengerName || 'Retador';
   const receiverName = duel?.receiverName || 'Oponente';
@@ -233,7 +240,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
       return;
     }
     const interval = setInterval(() => {
-      setPrepStep(prev => (prev + 1) % 4);
+      setPrepStep(prev => (prev + 1) % 3);
     }, 4500);
     return () => clearInterval(interval);
   }, [actualPreparing]);
@@ -347,7 +354,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
   }, [managedChallenge?.currentQuestion?.index]);
 
   // ─── EARLY RETURN ───
-  if (!duel && !invite && !actualPreparing && !sentChallengeInfo && !managedInvite && !managedChallenge) return null;
+  if (!duel && !invite && !actualPreparing && !sentChallengeInfo && !managedInvite && !managedChallenge && !managedCancellation) return null;
 
   // ─── EFFECTS (Must all be above ANY return) ────────────────────────────────
 
@@ -418,7 +425,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
   const isAdminManaging = session?.role === 'admin' && !!managedChallenge;
   
   // Only show the overlay if there is something ACTIVE and VISIBLE to the user
-  const hasContent = (!!invite || !!managedInvite || !!sentChallengeInfo || (!!duel && !duel.closed) || (!!managedChallenge && !isAdminManaging) || isPreparing) && !isAdminManaging;
+  const hasContent = (!!invite || !!managedInvite || !!sentChallengeInfo || (!!duel && !duel.closed) || (!!managedChallenge && !isAdminManaging) || isPreparing || !!managedCancellation) && !isAdminManaging;
 
   if (!hasContent) return null;
 
@@ -427,7 +434,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950/85 backdrop-blur-md pointer-events-auto" />
 
       <div className="relative z-10 w-full max-w-2xl pointer-events-auto">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout">
 
           {/* ── MANAGED GAME ARENA ───────────────────────────────────── */}
           {managedChallenge && managedChallenge.status === 'in_progress' && !actualPreparing && (
@@ -463,7 +470,11 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                     </div>
 
                     <div className="px-6">
-                        <SpeedClock questionIndex={managedChallenge.currentQuestion?.index ?? 0} lastFeedback={managedChallenge.lastFeedback} />
+                        <SpeedClock 
+                            questionIndex={managedChallenge.currentQuestion?.index ?? 0} 
+                            lastFeedback={managedChallenge.lastFeedback} 
+                            startTime={managedChallenge.currentQuestion?.startTime}
+                        />
                     </div>
 
                     <div className="flex flex-col items-center flex-1">
@@ -566,7 +577,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
           )}
 
           {/* ── MANAGED RESULTS POYIUM ─────────────────────────────── */}
-          {managedChallenge && managedChallenge.status === 'finished' && (
+          {managedChallenge && managedChallenge.status === 'finished' && !managedInvite && !invite && !sentChallengeInfo && (
               <motion.div 
                 key="managed-results" 
                 initial={{ scale: 0.9, opacity: 0 }} 
@@ -695,17 +706,37 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
               </motion.div>
           )}
 
+          {/* ── MANAGED LOBBY (WAITING FOR START) ── */}
+          {managedChallenge && managedChallenge.status === 'pending' && managedChallenge.myStatus === 'ready' && !managedInvite && !actualPreparing && (
+            <motion.div
+              key="managed-lobby"
+              initial={{ opacity: 0, scale: 0.9 }} 
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-slate-900/90 border border-amber-500/30 p-10 rounded-[3rem] shadow-2xl backdrop-blur-2xl flex flex-col items-center text-center max-w-lg mx-auto"
+            >
+              <div className="h-20 w-20 rounded-full bg-amber-500/10 flex items-center justify-center mb-6 ring-4 ring-amber-500/20">
+                <Loader2 className="h-10 w-10 animate-spin text-amber-500" />
+              </div>
+              <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-2">¡ESTÁS LISTO!</h2>
+              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mb-6 opacity-60">Esperando a que el profesor inicie el combate</p>
+              
+              <div className="w-full bg-white/5 rounded-2xl p-4 border border-white/5 space-y-2">
+                  <p className="text-[10px] font-black text-amber-500/80 uppercase">Reto: {managedChallenge.topic}</p>
+                  <p className="text-[10px] font-black text-blue-400 uppercase">Profesor: {managedChallenge.adminName}</p>
+              </div>
+            </motion.div>
+          )}
 
           {/* ── PREPARING ──────────────────────────────────────────────── */}
-          {actualPreparing && (
+          {actualPreparing && !managedInvite && !invite && !sentChallengeInfo && (
             <motion.div
               key="preparing-container"
-              initial={{ opacity: 0, scale: 0.9 }} 
+              initial={{ opacity: 0, scale: 0.95 }} 
               animate={{ opacity: 1, scale: 1 }} 
-              exit={{ opacity: 0, scale: 1.1 }}
-              className="bg-slate-900/90 border border-blue-500/30 p-4 sm:p-10 rounded-3xl shadow-xl backdrop-blur-2xl flex flex-col items-center text-center max-w-lg mx-auto"
+              exit={{ opacity: 0, scale: 1.05 }}
+              className="bg-slate-900/90 border border-blue-500/50 p-4 sm:p-10 rounded-3xl shadow-2xl backdrop-blur-2xl flex flex-col items-center text-center max-w-lg mx-auto"
             >
-              <AnimatePresence mode="wait">
+              <AnimatePresence mode="popLayout">
                 {prepStep === 0 && (
                   <motion.div key="p0" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="flex flex-col items-center">
                     <div className="relative mb-6">
@@ -980,7 +1011,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                     </div>
                   </div>
 
-                  <AnimatePresence mode="wait">
+                  <AnimatePresence mode="popLayout">
                      {isNegotiating && activeHandicapTab && (
                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="w-full max-w-sm overflow-hidden mb-6">
                              <div className="bg-slate-950/40 border border-white/5 rounded-2xl p-4">
@@ -1119,7 +1150,11 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                   
                   {/* CENTRAL SPEED CLOCK */}
                   <div className="px-2 sm:px-6">
-                    <SpeedClock questionIndex={duel?.currentQuestion?.index ?? 0} lastFeedback={duel?.lastFeedback} />
+                    <SpeedClock 
+                        questionIndex={duel?.currentQuestion?.index ?? 0} 
+                        lastFeedback={duel?.lastFeedback} 
+                        startTime={(duel?.currentQuestion as any)?.startTime}
+                    />
                   </div>
 
                   <div className="flex flex-col items-center flex-1">
@@ -1238,7 +1273,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
           )}
 
           {/* ── RESULTS ────────────────────────────────────────────────── */}
-          {duel && duel.status === 'finished' && !isReviewing && duel.finalResults && (
+          {duel && duel.status === 'finished' && !isReviewing && duel.finalResults && !managedInvite && !invite && (
             <motion.div
               key="results" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               className="bg-slate-900/98 border border-white/10 p-0 rounded-[2.5rem] shadow-2xl text-center text-white overflow-hidden max-h-[96vh] flex flex-col"
@@ -1430,6 +1465,34 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                     VOLVER A RESULTADOS
                   </Button>
               </div>
+            </motion.div>
+          )}
+
+          {/* ── MANAGED CANCELLATION ─────────────────────────────────── */}
+          {managedCancellation && (
+            <motion.div
+              key="managed-cancellation"
+              initial={{ scale: 0.9, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 1.1, opacity: 0 }}
+              className="bg-slate-900 border border-red-500/30 p-8 sm:p-12 rounded-[3.5rem] shadow-2xl backdrop-blur-3xl flex flex-col items-center text-center max-w-lg mx-auto relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent" />
+              <div className="h-24 w-24 rounded-3xl bg-red-500/10 flex items-center justify-center mb-8 rotate-3 ring-4 ring-red-500/5">
+                <ShieldAlert className="h-12 w-12 text-red-500 animate-pulse" />
+              </div>
+              <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-4">RETO CANCELADO</h2>
+              <div className="space-y-4 mb-10">
+                  <p className="text-slate-400 font-bold leading-relaxed">{managedCancellation.message}</p>
+
+              </div>
+
+              <Button 
+                onClick={() => setManagedCancellation(null)} 
+                className="w-full bg-red-600 hover:bg-red-500 text-white font-black py-8 rounded-[2rem] text-xl shadow-xl shadow-red-900/40 active:scale-95 transition-all"
+              >
+                ENTENDIDO, SALIR
+              </Button>
             </motion.div>
           )}
         </AnimatePresence>

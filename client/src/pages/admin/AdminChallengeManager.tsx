@@ -25,6 +25,9 @@ export default function AdminChallengeManager() {
         activeManagedChallenges, 
         managedChallenge, 
         setManagedChallenge,
+        setManagedInvite,
+        managedCancellation,
+        setManagedCancellation,
         spectateManagedChallenge, 
         socket 
     } = duelContext;
@@ -54,6 +57,7 @@ export default function AdminChallengeManager() {
     const [view, setView] = useState<'monitor' | 'history'>('monitor');
     const [isReviewing, setIsReviewing] = useState(false);
     const [reviewIndex, setReviewIndex] = useState(0);
+    const [lastCancelledChallengeId, setLastCancelledChallengeId] = useState<number | null>(null);
 
     // Queries
     const { data: allUsers = [] } = useQuery<User[]>({ queryKey: ["/api/admin/users"] });
@@ -114,11 +118,11 @@ export default function AdminChallengeManager() {
             (c.status === 'in_progress' || c.status === 'pending')
         );
 
-        if (myActiveChallenge) {
+        if (myActiveChallenge && myActiveChallenge.id !== lastCancelledChallengeId) {
             console.log(`🔗 [ADMIN] Auto-reconnecting to challenge ${myActiveChallenge.id}`);
             spectateManagedChallenge(myActiveChallenge.id);
         }
-    }, [activeManagedChallenges, session?.userId, managedChallenge]);
+    }, [activeManagedChallenges, session?.userId, managedChallenge, lastCancelledChallengeId]);
 
     const totalPot = creditsMode === 'redistribute' ? (selectedStudents.length * wager) : wager;
 
@@ -161,6 +165,16 @@ export default function AdminChallengeManager() {
     });
 
     const handleCreateChallenge = () => {
+        if (managedChallenge && managedChallenge.status !== 'finished') {
+            toast({ title: "Acción bloqueada", description: "Ya hay un reto en curso. Cancela el actual antes de lanzar uno nuevo.", variant: "destructive" });
+            return;
+        }
+
+        // Si hay uno terminado, lo limpiamos automáticamente para el nuevo
+        if (managedChallenge?.status === 'finished') {
+            setManagedChallenge(null);
+            setManagedInvite(null);
+        }
         if (selectedStudents.length < 2) {
             toast({ title: "Error", description: "Selecciona al menos 2 estudiantes", variant: "destructive" });
             return;
@@ -194,14 +208,19 @@ export default function AdminChallengeManager() {
 
     const handleReset = () => {
         if (!managedChallenge?.challengeId) return;
-        if (!confirm("¿Seguro que quieres reiniciar? Esto borrará el reto actual de la base de datos y detendrá la sesión para todos.")) return;
+        if (!confirm("¿Deseas cancelar este reto? Las invitaciones se cerrarán y los alumnos serán notificados. No perderás tu selección de estudiantes.")) return;
         
+        const cid = managedChallenge.challengeId;
+        setLastCancelledChallengeId(cid);
+
         socket?.send(JSON.stringify({ 
             type: 'managed:delete', 
-            payload: { challengeId: managedChallenge.challengeId } 
+            payload: { challengeId: cid } 
         }));
         
-        toast({ title: "Configuración Reiniciada", description: "El reto ha sido eliminado y la sesión limpiada." });
+        toast({ title: "Lanzamiento Cancelado", description: "Las invitaciones han sido retiradas. Puedes volver a lanzar cuando estés listo." });
+        setManagedChallenge(null);
+        setManagedInvite(null);
     };
 
     const handleDeleteHistory = (id: number) => {
@@ -418,8 +437,9 @@ export default function AdminChallengeManager() {
                                         <div className="relative flex-1">
                                             <Input
                                                 type="number"
+                                                min={0}
                                                 value={wager}
-                                                onChange={(e) => setWager(Number(e.target.value))}
+                                                onChange={(e) => setWager(Math.max(0, Number(e.target.value)))}
                                                 className="bg-slate-950 border-white/20 text-white font-black text-2xl h-14 text-center rounded-xl focus:ring-amber-500/50 transition-all"
                                             />
                                         </div>
@@ -535,10 +555,10 @@ export default function AdminChallengeManager() {
                             <Button
                                 className="w-full bg-gradient-to-br from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black gap-3 h-16 text-xl uppercase tracking-tighter shadow-xl border-t border-white/20 rounded-2xl active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
                                 onClick={handleCreateChallenge}
-                                disabled={selectedStudents.length < 2 || (quizType === 'database' && !selectedQuizId) || (quizType === 'ai' && !aiTopic)}
+                                disabled={selectedStudents.length < 2 || (quizType === 'database' && !selectedQuizId) || (quizType === 'ai' && !aiTopic) || (!!managedChallenge && managedChallenge.status !== 'finished')}
                             >
                                 <Sword className="w-6 h-6" />
-                                LANZAR RETO A LA ARENA
+                                {!!managedChallenge && managedChallenge.status !== 'finished' ? 'RETO YA LANZADO' : 'LANZAR RETO A LA ARENA'}
                             </Button>
                         </CardContent>
                     </Card>
@@ -576,12 +596,7 @@ export default function AdminChallengeManager() {
                                             variant="ghost" 
                                             size="sm" 
                                             className="h-8 text-[10px] font-black text-red-500 hover:text-red-400 hover:bg-red-500/10 uppercase tracking-widest rounded-lg border border-red-500/20"
-                                            onClick={() => {
-                                                if (confirm("¿Estás seguro de cancelar este reto? Se borrará todo el progreso actual.")) {
-                                                    socket?.send(JSON.stringify({ type: 'managed:delete', payload: { challengeId: managedChallenge.challengeId } }));
-                                                    setView('monitor');
-                                                }
-                                            }}
+                                            onClick={handleReset}
                                         >
                                             <XCircle className="w-3.5 h-3.5 mr-2" />
                                             CANCELAR RETO
@@ -767,7 +782,7 @@ export default function AdminChallengeManager() {
                                                         setIsStarting(true);
                                                         startManagedChallenge(managedChallenge.challengeId);
                                                     }}
-                                                    disabled={isStarting}
+                                                    disabled={isStarting || !managedChallenge.players?.some((p: any) => p.status === 'ready')}
                                                 >
                                                     <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                                                     {isStarting ? (
@@ -833,11 +848,15 @@ export default function AdminChallengeManager() {
                                                           </Button>
                                                           
                                                           <Button 
-                                                             variant="ghost" 
-                                                             className="mt-2 text-slate-500 hover:text-white uppercase font-black text-[10px] tracking-widest hover:bg-white/5 h-10 w-full"
-                                                             onClick={() => setManagedChallenge(null)}
+                                                              variant="ghost" 
+                                                              className="mt-2 text-slate-500 hover:text-white uppercase font-black text-[10px] tracking-widest hover:bg-white/5 h-10 w-full"
+                                                              onClick={() => {
+                                                                  setManagedChallenge(null);
+                                                                  setManagedInvite(null);
+                                                              }}
                                                           >
-                                                              LIMPIAR MONITOR
+                                                              <History className="w-3.5 h-3.5 mr-2" />
+                                                              FINALIZAR Y NUEVA SESIÓN
                                                           </Button>
                                                      </div>
                                                  ) : managedChallenge?.currentQuestion && (
@@ -895,6 +914,43 @@ export default function AdminChallengeManager() {
                                                 )}
                                             </>
                                         )}
+                                    </div>
+                                </div>
+                            ) : selectedStudents.length > 0 ? (
+                                <div className="space-y-8 flex-1 flex flex-col h-full overflow-hidden">
+                                    <div className="flex items-center justify-between bg-slate-900/50 p-6 rounded-2xl border-2 border-dashed border-white/10">
+                                        <div>
+                                            <h4 className="text-xl font-black text-slate-400 uppercase tracking-tighter italic">PREVISTA: {aiTopic || (selectedQuizId ? allQuizzes.find(q => q.id === parseInt(selectedQuizId))?.title : "Cuestionario Seleccionado")}</h4>
+                                            <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-tight">Listo para lanzar a la arena</p>
+                                        </div>
+                                        <Badge className="bg-slate-800 text-slate-500 px-4 py-1 text-xs font-black ring-2 ring-slate-800/30">PENDIENTE</Badge>
+                                    </div>
+
+                                    {/* Player List Preview */}
+                                    <div className="space-y-4 flex-1 flex flex-col overflow-hidden">
+                                        <h5 className="text-sm font-black text-white flex items-center gap-3 uppercase tracking-widest pl-2 opacity-70">
+                                            <Users className="w-5 h-5 text-slate-500" />
+                                            LISTA DE COMBATIENTES
+                                        </h5>
+                                        <ScrollArea className="flex-1 pr-6">
+                                            <div className="space-y-3">
+                                                {selectedStudents.map((s) => (
+                                                    <div key={s.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/3 border border-white/5 opacity-60">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-3 h-3 rounded-full bg-slate-700" />
+                                                            <div>
+                                                                <p className="font-medium text-lg text-slate-300">{s.username}</p>
+                                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">En espera de lanzamiento</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                    </div>
+
+                                    <div className="py-6 border-t border-white/5 text-center">
+                                        <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">Configura y pulsa "Lanzar reto" para empezar</p>
                                     </div>
                                 </div>
                             ) : (
