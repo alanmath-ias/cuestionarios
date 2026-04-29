@@ -558,6 +558,7 @@ export const managedChallenges = pgTable("managed_challenges", {
 	status: text("status").notNull().default('pending'), // 'pending', 'ready', 'in_progress', 'finished'
 	wager: integer("wager").default(0).notNull(),
 	creditsMode: text("credits_mode").notNull().default('redistribute'), // 'redistribute' or 'system_pay'
+	questionsCount: integer("questions_count").default(10).notNull(),
 	prizeConfig: jsonb("prize_config").$type<{
 		winners: { 1: number; 2?: number; 3?: number };
 		losers: { [userId: number]: number };

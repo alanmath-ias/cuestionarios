@@ -67,6 +67,7 @@ interface ManagedChallengeRoom {
   failedUserIds: number[];
   currentRoundAnswers: { userId: number; answerId: number }[];
   bonusCredits: { [userId: number]: number };
+  questionsCount: number;
   timerId?: NodeJS.Timeout;
 }
 
@@ -1116,7 +1117,7 @@ export class DuelServer {
   // --- Managed Challenge Methods ---
 
   private async handleManagedCreate(adminId: number, payload: any) {
-    const { studentIds, wager, creditsMode, prizeConfig, advantages = {}, quizConfig } = payload;
+    const { studentIds, wager, creditsMode, prizeConfig, advantages = {}, quizConfig, questionsCount = 10 } = payload;
     
     // NEW: Cleanup any existing active managed challenges for this admin to avoid ghost states
     const existingChallenges = Array.from(this.activeManagedChallenges.entries())
@@ -1139,6 +1140,7 @@ export class DuelServer {
         aiTopic: aiTopic || null,
         wager,
         creditsMode,
+        questionsCount,
         prizeConfig,
         status: 'pending'
       });
@@ -1191,6 +1193,7 @@ export class DuelServer {
         status: 'pending',
         wager,
         creditsMode,
+        questionsCount,
         prizeConfig,
         quizId: quizId || undefined,
         currentQuestionIndex: 0,
@@ -1310,7 +1313,7 @@ export class DuelServer {
               topicDescription: room.topic,
               categoryName: "Reto Grupal",
               difficulty: "medium",
-              questionCount: 8
+              questionCount: room.questionsCount || 8
           });
           // MAP OPTIONS CAREFULLY
           questionsList = quizData.questions.map((q: any) => {
@@ -1328,6 +1331,11 @@ export class DuelServer {
           });
       }
 
+      // Limit questions to questionsCount if we have more
+      if (questionsList.length > room.questionsCount) {
+          questionsList = questionsList.slice(0, room.questionsCount);
+      }
+      
       room.questions = questionsList;
       
       if (questionsList.length === 0) {

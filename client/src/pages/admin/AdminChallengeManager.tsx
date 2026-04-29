@@ -45,6 +45,7 @@ export default function AdminChallengeManager() {
     const [aiTopic, setAiTopic] = useState("");
     const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
     const [winnersPrize, setWinnersPrize] = useState<{ 1: number; 2: number; 3: number }>({ 1: 0, 2: 0, 3: 0 });
+    const [questionCount, setQuestionCount] = useState(10);
     const [losersPenalty, setLosersPenalty] = useState<number>(10);
     const [advantages, setAdvantages] = useState<Record<number, { points: number, timeDelay: number }>>({});
     const [editingStudent, setEditingStudent] = useState<User | null>(null);
@@ -207,6 +208,7 @@ export default function AdminChallengeManager() {
                 losers
             },
             advantages,
+            questionsCount: questionCount,
             quizConfig: quizType === 'ai' ? { type: 'ai', topic: aiTopic } : { type: 'database', quizId: parseInt(selectedQuizId!) }
         });
 
@@ -436,7 +438,7 @@ export default function AdminChallengeManager() {
                                         />
                                         <div className="flex items-center gap-2 text-blue-400 font-bold text-[10px] bg-blue-500/5 p-2 rounded-lg border border-blue-500/10 uppercase tracking-tight">
                                             <Wand2 className="w-3 h-3" />
-                                            <span>La IA creará 10 preguntas desafiantes sobre este tema.</span>
+                                            <span>La IA creará {questionCount} preguntas desafiantes sobre este tema.</span>
                                         </div>
                                     </div>
                                 ) : (
@@ -468,8 +470,36 @@ export default function AdminChallengeManager() {
                                                 )}
                                             </div>
                                         </ScrollArea>
+                                        <div className="flex items-center gap-2 text-amber-500/80 font-bold text-[10px] bg-amber-500/5 p-2 rounded-lg border border-amber-500/10 uppercase tracking-tight">
+                                            <ClipboardList className="w-3 h-3" />
+                                            <span>Se usarán máximo {questionCount} preguntas de este cuestionario.</span>
+                                        </div>
                                     </div>
                                 )}
+
+                                {/* Question Count Selection */}
+                                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-white font-black text-[10px] uppercase tracking-widest opacity-70 flex items-center gap-2">
+                                            <Settings2 className="w-3 h-3 text-blue-400" />
+                                            CANTIDAD DE PREGUNTAS
+                                        </Label>
+                                        <span className="text-xl font-black text-blue-400 tracking-tighter">{questionCount}</span>
+                                    </div>
+                                    <Slider
+                                        value={[questionCount]}
+                                        min={5}
+                                        max={12}
+                                        step={1}
+                                        onValueChange={([val]) => setQuestionCount(val)}
+                                        className="py-2"
+                                    />
+                                    <div className="flex justify-between text-[8px] font-bold text-slate-600 uppercase tracking-tighter px-1">
+                                        <span>Mínimo (5)</span>
+                                        <span>Recomendado (10)</span>
+                                        <span>Máximo (12)</span>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* 3. Base Wager & Economy Mode */}
