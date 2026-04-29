@@ -200,6 +200,7 @@ export interface IStorage {
   updateParticipantScore(challengeId: number, userId: number, score: number): Promise<void>;
   getManagedChallengeWithParticipants(id: number): Promise<any>;
   deleteManagedChallenge(id: number): Promise<void>;
+  deleteAllManagedChallenges(adminId: number): Promise<void>;
   editChatMessage(id: number, senderId: number, content: string): Promise<import("../shared/schema.js").Message | undefined>;
   deleteChatMessage(id: number, senderId: number): Promise<boolean>;
 }
@@ -831,6 +832,7 @@ export class MemStorage implements IStorage {
   async updateParticipantScore(challengeId: number, userId: number, score: number): Promise<void> { }
   async getManagedChallengeWithParticipants(id: number): Promise<any> { return null; }
   async deleteManagedChallenge(id: number): Promise<void> { }
+  async deleteAllManagedChallenges(adminId: number): Promise<void> { }
 
   // Question Reports
   async createQuestionReport(report: InsertQuestionReport): Promise<QuestionReport> { throw new Error("Method not implemented."); }

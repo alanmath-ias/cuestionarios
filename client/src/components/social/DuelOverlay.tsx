@@ -577,12 +577,12 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
           )}
 
           {/* ── MANAGED RESULTS POYIUM ─────────────────────────────── */}
-          {managedChallenge && managedChallenge.status === 'finished' && !managedInvite && !invite && !sentChallengeInfo && (
+          {managedChallenge && managedChallenge.status === 'finished' && !managedInvite && !invite && !sentChallengeInfo && !isReviewing && (
               <motion.div 
                 key="managed-results" 
                 initial={{ scale: 0.9, opacity: 0 }} 
                 animate={{ scale: 1, opacity: 1 }} 
-                className="bg-slate-900/98 backdrop-blur-3xl border border-white/10 p-0 rounded-[2.5rem] shadow-2xl text-center max-w-xl mx-auto overflow-hidden flex flex-col"
+                className="bg-slate-900/98 backdrop-blur-3xl border border-white/10 p-0 rounded-[2.5rem] shadow-2xl text-center max-w-xl mx-auto overflow-hidden flex flex-col max-h-[90vh]"
                 onViewportEnter={() => {
                   const rankings = managedChallenge.results?.rankings || [];
                   const mIndex = rankings.findIndex((r: any) => Number(r.id) === Number(myNumberId));
@@ -596,7 +596,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                 }}
               >
                     {/* Individual Merit Header */}
-                    <div className="bg-gradient-to-b from-blue-600/20 to-transparent pt-6 pb-4 px-6 relative">
+                    <div className="bg-gradient-to-b from-blue-600/20 to-transparent pt-4 pb-2 px-6 relative">
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50" />
                         
                         {(() => {
@@ -608,36 +608,36 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                            
                            if (myRank === 1) return (
                              <>
-                               <div className="relative mb-6">
-                                 {isShared ? <Swords className="h-20 w-20 text-blue-400 mx-auto drop-shadow-[0_0_30px_rgba(59,130,246,0.6)] animate-pulse" /> : <Trophy className="h-20 w-20 text-yellow-500 mx-auto drop-shadow-[0_0_30px_rgba(234,179,8,0.6)] animate-bounce" />}
-                                 <Sparkles className="absolute -top-2 -right-2 h-8 w-8 text-white animate-pulse" />
+                               <div className="relative mb-3">
+                                 {isShared ? <Swords className="h-14 w-14 text-blue-400 mx-auto drop-shadow-[0_0_30px_rgba(59,130,246,0.6)] animate-pulse" /> : <Trophy className="h-14 w-14 text-yellow-500 mx-auto drop-shadow-[0_0_30px_rgba(234,179,8,0.6)] animate-bounce" />}
+                                 <Sparkles className="absolute -top-1 -right-1 h-6 w-6 text-white animate-pulse" />
                                </div>
-                               <h2 className="text-5xl font-black text-white uppercase italic tracking-tighter mb-2">{isShared ? '¡EMPATE!' : '¡CAMPEÓN!'}</h2>
-                               <p className="text-amber-400 font-black text-lg uppercase tracking-widest">{isShared ? 'Han compartido la gloria' : 'Has conquistado la arena'}</p>
+                               <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-1">{isShared ? '¡EMPATE!' : '¡CAMPEÓN!'}</h2>
+                               <p className="text-amber-400 font-black text-xs uppercase tracking-widest">{isShared ? 'Han compartido la gloria' : 'Has conquistado la arena'}</p>
                              </>
                            );
                            
                            if (myRank === 2 || myRank === 3) return (
                              <>
-                               <Trophy className={`h-16 w-16 ${myRank === 2 ? 'text-slate-300' : 'text-orange-500'} mx-auto mb-4 drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]`} />
-                               <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-2">¡EXCELENTE!</h2>
-                               <p className="text-blue-300 font-bold uppercase tracking-widest">Podio Asegurado: {myRank}º Puesto</p>
+                               <Trophy className={`h-12 w-12 ${myRank === 2 ? 'text-slate-300' : 'text-orange-500'} mx-auto mb-2 drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]`} />
+                               <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-1">¡EXCELENTE!</h2>
+                               <p className="text-blue-300 font-bold text-xs uppercase tracking-widest">Podio Asegurado: {myRank}º Puesto</p>
                              </>
                            );
 
                            return (
                              <>
-                               <Brain className="h-16 w-16 text-blue-400 mx-auto mb-4 opacity-70" />
-                               <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-2">¡BIEN JUGADO!</h2>
-                               <p className="text-slate-400 font-bold uppercase tracking-widest">Puesto {myRank} de {managedChallenge.results?.rankings?.length || 0}</p>
+                               <Brain className="h-10 w-10 text-blue-400 mx-auto mb-2 opacity-70" />
+                               <h2 className="text-xl font-black text-white uppercase italic tracking-tighter mb-1">¡BIEN JUGADO!</h2>
+                               <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Puesto {myRank} de {managedChallenge.results?.rankings?.length || 0}</p>
                              </>
                            );
                         })()}
                     </div>
 
                     {/* Rankings Comparison */}
-                    <div className="flex-1 overflow-y-auto px-6 py-4 max-h-[45vh] custom-scrollbar">
-                        <div className="space-y-3 mb-6">
+                    <div className="flex-1 overflow-y-auto px-6 py-2 max-h-[35vh] custom-scrollbar">
+                        <div className="space-y-2 mb-4">
                             {managedChallenge.results?.rankings?.slice(0, 10).map((r: any, idx: number) => {
                                 const isMe = Number(r.id) === myNumberId;
                                 
@@ -647,7 +647,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                                         initial={{ x: -20, opacity: 0 }}
                                         animate={{ x: 0, opacity: 1 }}
                                         transition={{ delay: idx * 0.1 }}
-                                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                                        className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
                                             r.rank === 1 ? 'bg-amber-500/20 border-amber-500/40 shadow-lg shadow-amber-900/10' : 
                                             isMe ? 'bg-blue-600/30 border-blue-500/50 ring-2 ring-blue-500/20' : 'bg-white/5 border-white/5'
                                         }`}
@@ -661,15 +661,15 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                                                 {idx + 1}
                                             </div>
                                             <div className="text-left">
-                                                <span className={`font-black text-lg block ${isMe ? 'text-blue-300' : 'text-slate-100'}`}>
+                                                <span className={`font-black text-base block ${isMe ? 'text-blue-300' : 'text-slate-100'}`}>
                                                     {r.username} {isMe && "(TÚ)"}
                                                 </span>
                                                 <span className="text-[8px] font-black uppercase text-slate-500 tracking-tighter">Combatiente AlanMath</span>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="flex flex-col items-end">
-                                               <span className={`text-2xl font-black ${idx === 0 ? 'text-amber-400' : 'text-white'}`}>{r.score}</span>
+                                            <div className="flex flex-col items-end leading-tight">
+                                               <span className={`text-xl font-black ${idx === 0 ? 'text-amber-400' : 'text-white'}`}>{r.score}</span>
                                                {r.creditChange !== undefined && (
                                                    <span className={`text-[10px] font-black italic ${r.creditChange >= 0 ? 'text-emerald-400' : 'text-red-500'}`}>
                                                        {r.creditChange >= 0 ? `+${r.creditChange}` : r.creditChange} CRÉDITOS
@@ -688,16 +688,53 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                         </div>
                     </div>
 
-                    <div className="p-8 bg-black/20 border-t border-white/5 space-y-3">
+                    {/* Session Leaderboard (show when 2+ challenges completed) */}
+                    {managedChallenge.results?.sessionLeaderboard?.length > 0 && (
+                        <div className="px-6 py-2">
+                            <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/10 via-slate-900/60 to-blue-500/10 border border-amber-500/20 space-y-2">
+                                <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] flex items-center gap-2 justify-center">
+                                    <Trophy className="w-3 h-3" />
+                                    CLASIFICACIÓN GENERAL DE LA SESIÓN
+                                </h4>
+                                <div className="space-y-1.5">
+                                    {managedChallenge.results.sessionLeaderboard.map((p: any, idx: number) => {
+                                        const isMe = Number(p.userId) === myNumberId;
+                                        return (
+                                            <div key={p.userId} className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs ${
+                                                isMe ? 'bg-blue-600/20 border border-blue-500/30' : 
+                                                idx === 0 ? 'bg-amber-500/10 border border-amber-500/20' : 
+                                                'bg-white/5 border border-white/5'
+                                            }`}>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-black w-6 text-center">
+                                                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`}
+                                                    </span>
+                                                    <span className={`font-bold ${isMe ? 'text-blue-300' : 'text-white'}`}>
+                                                        {p.username} {isMe && "(TÚ)"}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-black text-amber-500">{p.wins}🏆</span>
+                                                    <span className="font-bold text-slate-500">{p.totalScore} pts</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="p-6 bg-black/20 border-t border-white/5 space-y-2">
                         <Button 
-                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black h-14 rounded-3xl text-lg shadow-xl shadow-blue-900/40 active:scale-95 transition-all"
+                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black h-11 rounded-2xl text-base shadow-xl shadow-blue-900/40 active:scale-95 transition-all"
                             onClick={() => { setReviewIndex(0); setIsReviewing(true); }}
                         >
                             REVISAR DETALLES
                         </Button>
                         <Button 
                             variant="ghost"
-                            className="w-full text-slate-400 hover:text-white font-black h-12 rounded-3xl text-base uppercase tracking-widest opacity-70 hover:bg-white/5"
+                            className="w-full text-slate-400 hover:text-white font-black h-10 rounded-2xl text-xs uppercase tracking-widest opacity-70 hover:bg-white/5"
                             onClick={() => leaveResults(managedChallenge.challengeId)}
                         >
                             FINALIZAR SESIÓN

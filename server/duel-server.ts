@@ -1470,37 +1470,38 @@ export class DuelServer {
                             .where(inArray(users.id, otherPlayerIds));
                     }
                 }
+            });
+        }
 
-                // SPEED BONUS: Only if answered before 4 seconds (Sync with SpeedClock UI)
-                const elapsed = Date.now() - room.questionStartTime;
-                if (elapsed < 4000) {
-                    await tx.update(users)
-                        .set({ hintCredits: sql`hint_credits + 1` })
-                        .where(eq(users.id, userId));
-                    room.bonusCredits[userId] = (room.bonusCredits[userId] || 0) + 1;
-                    
-                    // If redistribute mode, subtract 1 from everyone else too
-                    if (room.creditsMode === 'redistribute') {
-                        const otherPlayerIds = Array.from(room.players.keys()).filter(id => id !== userId);
-                        if (otherPlayerIds.length > 0) {
-                            await tx.update(users)
-                                .set({ hintCredits: sql`CASE WHEN hint_credits > 0 THEN hint_credits - 1 ELSE 0 END` })
-                                .where(inArray(users.id, otherPlayerIds));
-                            
-                            // Also track negative bonus for final summary
-                            for (const otherId of otherPlayerIds) {
-                                room.bonusCredits[otherId] = (room.bonusCredits[otherId] || 0) - 1;
-                            }
+        // SPEED BONUS: Independent of wager — always check if answered before 4 seconds
+        const elapsed = Date.now() - room.questionStartTime;
+        if (elapsed < 4000) {
+            await db.transaction(async (tx) => {
+                await tx.update(users)
+                    .set({ hintCredits: sql`hint_credits + 1` })
+                    .where(eq(users.id, userId));
+                room.bonusCredits[userId] = (room.bonusCredits[userId] || 0) + 1;
+                
+                // If redistribute mode, subtract 1 from everyone else too
+                if (room.creditsMode === 'redistribute') {
+                    const otherPlayerIds = Array.from(room.players.keys()).filter(id => id !== userId);
+                    if (otherPlayerIds.length > 0) {
+                        await tx.update(users)
+                            .set({ hintCredits: sql`CASE WHEN hint_credits > 0 THEN hint_credits - 1 ELSE 0 END` })
+                            .where(inArray(users.id, otherPlayerIds));
+                        
+                        for (const otherId of otherPlayerIds) {
+                            room.bonusCredits[otherId] = (room.bonusCredits[otherId] || 0) - 1;
                         }
                     }
-                    
-                    this.broadcastToManaged(challengeId, {
-                        type: 'managed:speed_bonus',
-                        payload: { userId, userName: player.username }
-                    });
-                    console.log(`⚡ [MANAGED] Speed Bonus (+1) and Round Reward (+${transferAmount}) awarded to ${userId} (Mode: ${room.creditsMode})`);
                 }
             });
+            
+            this.broadcastToManaged(challengeId, {
+                type: 'managed:speed_bonus',
+                payload: { userId, userName: player.username }
+            });
+            console.log(`⚡ [MANAGED] Speed Bonus (+1) awarded to ${userId} in ${elapsed}ms`);
         }
 
         // Notify Admin of progress
@@ -1629,6 +1630,12 @@ export class DuelServer {
     if (sortedPlayers.length > 1) winners.push(sortedPlayers[1].userId);
     if (sortedPlayers.length > 2) winners.push(sortedPlayers[2].userId);
 
+    // Persist final scores and ranks to database for history
+    for (const r of rankings) {
+        await storage.updateParticipantScore(challengeId, r.id, r.score);
+    }
+    await storage.updateManagedChallenge(challengeId, { status: 'finished', winnerIds: winners });
+
     // Apply Credit Logic
     await db.transaction(async (tx) => {
         if (room.creditsMode === 'redistribute' && room.prizeConfig) {
@@ -1654,13 +1661,46 @@ export class DuelServer {
         }
     });
 
+    // Calculate session leaderboard from all finished challenges by this admin
+    let sessionLeaderboard: any[] = [];
+    try {
+        const allChallenges = await storage.getManagedChallengesByAdmin(room.adminId);
+        const finishedChallenges = allChallenges.filter((c: any) => c.status === 'finished');
+        
+        if (finishedChallenges.length >= 1) {
+            const playerStats: Record<number, { username: string; wins: number; totalScore: number; played: number }> = {};
+            
+            for (const ch of finishedChallenges) {
+                if (!ch.participants || ch.participants.length === 0) continue;
+                const sorted = [...ch.participants].sort((a: any, b: any) => (b.score || 0) - (a.score || 0));
+                
+                for (let i = 0; i < sorted.length; i++) {
+                    const p = sorted[i];
+                    if (!playerStats[p.userId]) {
+                        playerStats[p.userId] = { username: p.user?.username || `User${p.userId}`, wins: 0, totalScore: 0, played: 0 };
+                    }
+                    playerStats[p.userId].played++;
+                    playerStats[p.userId].totalScore += (p.score || 0);
+                    if (i === 0 && (p.score || 0) > 0) playerStats[p.userId].wins++;
+                }
+            }
+            
+            sessionLeaderboard = Object.entries(playerStats)
+                .map(([id, stats]) => ({ userId: Number(id), ...stats }))
+                .sort((a, b) => b.wins - a.wins || b.totalScore - a.totalScore);
+        }
+    } catch (e) {
+        console.error("[ManagedChallenge] Error calculating session leaderboard:", e);
+    }
+
     // Notify final results
     const resultsMsg = {
         type: 'managed:results',
         payload: {
             winners,
             rankings,
-            history: room.history
+            history: room.history,
+            sessionLeaderboard
         }
     };
 

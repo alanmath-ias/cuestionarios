@@ -64,8 +64,15 @@ export default function AdminChallengeManager() {
     const { data: allQuizzes = [] } = useQuery<Quiz[]>({ queryKey: ["/api/quizzes"] });
     const { data: challengeHistory = [], refetch: refetchHistory } = useQuery<any[]>({ 
         queryKey: ["/api/admin/managed-challenges"],
-        enabled: view === 'history'
+        enabled: view === 'history' || !!managedChallenge
     });
+
+    // Auto-refetch history when a challenge ends to update leaderboard
+    React.useEffect(() => {
+        if (managedChallenge?.status === 'finished') {
+            refetchHistory();
+        }
+    }, [managedChallenge?.status, refetchHistory]);
 
     const handleAddStudent = (student: User) => {
         if (selectedStudents.find(s => s.id === student.id)) return;
@@ -231,6 +238,45 @@ export default function AdminChallengeManager() {
         }));
         setTimeout(() => refetchHistory(), 500);
     };
+
+    const handleDeleteAllHistory = async () => {
+        if (!confirm("¿Borrar TODO el historial de retos? Esta acción no se puede deshacer.")) return;
+        try {
+            const res = await fetch('/api/admin/managed-challenges', { method: 'DELETE' });
+            if (res.ok) {
+                toast({ title: "Historial borrado", description: "Todos los retos han sido eliminados." });
+                refetchHistory();
+                setSelectedHistoryChallenge(null);
+            }
+        } catch (e) {
+            toast({ title: "Error", description: "No se pudo borrar el historial.", variant: "destructive" });
+        }
+    };
+
+    // Calculate session leaderboard from history
+    const sessionLeaderboard = React.useMemo(() => {
+        const finished = challengeHistory.filter(c => c.status === 'finished');
+        if (finished.length < 1) return [];
+        
+        const stats: Record<number, { username: string; wins: number; totalScore: number; played: number }> = {};
+        for (const ch of finished) {
+            if (!ch.participants || ch.participants.length === 0) continue;
+            const sorted = [...ch.participants].sort((a: any, b: any) => (b.score || 0) - (a.score || 0));
+            for (let i = 0; i < sorted.length; i++) {
+                const p = sorted[i];
+                if (!stats[p.userId]) {
+                    stats[p.userId] = { username: p.user?.username || `User${p.userId}`, wins: 0, totalScore: 0, played: 0 };
+                }
+                stats[p.userId].played++;
+                stats[p.userId].totalScore += (p.score || 0);
+                if (i === 0 && (p.score || 0) > 0) stats[p.userId].wins++;
+            }
+        }
+        
+        return Object.entries(stats)
+            .map(([id, s]) => ({ userId: Number(id), ...s }))
+            .sort((a, b) => b.wins - a.wins || b.totalScore - a.totalScore);
+    }, [challengeHistory]);
 
     return (
         <div className="min-h-screen bg-slate-950 p-6 text-slate-100">
@@ -614,6 +660,68 @@ export default function AdminChallengeManager() {
                                 <div className="flex-1 flex flex-col h-full overflow-hidden">
                                      <ScrollArea className="flex-1">
                                         <div className="space-y-4">
+                                            {/* Session Leaderboard */}
+                                            {sessionLeaderboard.length > 0 && (
+                                                <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-slate-900/80 to-blue-500/10 border border-amber-500/20 space-y-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <h4 className="text-sm font-black text-amber-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                                                            <Trophy className="w-4 h-4" />
+                                                            CLASIFICACIÓN GENERAL
+                                                        </h4>
+                                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                                                            {challengeHistory.filter(c => c.status === 'finished').length} retos
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        {sessionLeaderboard.map((p, idx) => (
+                                                            <div key={p.userId} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                                                                idx === 0 ? 'bg-amber-500/10 border-amber-500/30' : 
+                                                                idx === 1 ? 'bg-slate-400/5 border-slate-400/20' : 
+                                                                idx === 2 ? 'bg-orange-500/5 border-orange-500/20' : 
+                                                                'bg-white/5 border-white/5'
+                                                            }`}>
+                                                                <div className="flex items-center gap-3">
+                                                                    <span className={`text-lg font-black w-8 text-center ${
+                                                                        idx === 0 ? 'text-amber-500' : idx === 1 ? 'text-slate-400' : idx === 2 ? 'text-orange-500' : 'text-slate-600'
+                                                                    }`}>
+                                                                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`}
+                                                                    </span>
+                                                                    <span className="text-sm font-bold text-white">{p.username}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="text-right">
+                                                                        <p className="text-lg font-black text-amber-500 leading-none">{p.wins}</p>
+                                                                        <p className="text-[8px] font-black text-slate-600 uppercase">VICTORIAS</p>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <p className="text-sm font-bold text-blue-400 leading-none">{p.totalScore}</p>
+                                                                        <p className="text-[8px] font-black text-slate-600 uppercase">PTS TOTAL</p>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <p className="text-xs font-bold text-slate-500 leading-none">{p.played}</p>
+                                                                        <p className="text-[8px] font-black text-slate-700 uppercase">JUGADOS</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Delete All Button */}
+                                            {challengeHistory.length > 0 && (
+                                                <div className="flex justify-end">
+                                                    <Button 
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={handleDeleteAllHistory}
+                                                        className="h-8 text-[10px] font-black text-red-500 hover:text-red-400 hover:bg-red-500/10 uppercase tracking-widest rounded-lg border border-red-500/20 gap-2"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                        BORRAR TODO EL HISTORIAL
+                                                    </Button>
+                                                </div>
+                                            )}
                                             {challengeHistory.length === 0 ? (
                                                 <div className="py-24 text-center flex flex-col items-center justify-center bg-slate-900/50 rounded-[2.5rem] border-2 border-dashed border-white/5 mx-2">
                                                     <div className="h-24 w-24 rounded-full bg-slate-800/80 flex items-center justify-center mb-6 shadow-2xl relative">
@@ -818,17 +926,17 @@ export default function AdminChallengeManager() {
                                                 </div>
 
                                                 {/* LIVE QUESTION MONITOR / RESULTS PODIUM */}
-                                                {managedChallenge?.status === 'finished' ? (
-                                                     <div className="mt-4 p-8 rounded-3xl bg-amber-500/5 border-2 border-amber-500/20 animate-in zoom-in-95 duration-500 flex flex-col items-center">
-                                                         <div className="w-16 h-16 rounded-2xl bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-900/40 mb-4">
-                                                             <Trophy className="w-10 h-10 text-slate-950" />
+                                                {managedChallenge?.status === 'finished' && !isReviewing ? (
+                                                     <div className="mt-4 p-5 rounded-3xl bg-amber-500/5 border-2 border-amber-500/20 animate-in zoom-in-95 duration-500 flex flex-col items-center overflow-y-auto max-h-[80vh] custom-scrollbar">
+                                                         <div className="w-12 h-12 rounded-xl bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-900/40 mb-3">
+                                                             <Trophy className="w-7 h-7 text-slate-950" />
                                                          </div>
-                                                         <h4 className="text-2xl font-black text-amber-500 uppercase tracking-tighter italic mb-1">PODIUM FINAL</h4>
-                                                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6">El combate ha concluido</p>
+                                                         <h4 className="text-xl font-black text-amber-500 uppercase tracking-tighter italic mb-0.5">PODIUM FINAL</h4>
+                                                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4">El combate ha concluido</p>
                                                          
-                                                         <div className="w-full space-y-2">
+                                                         <div className="w-full space-y-1.5 mb-4">
                                                              {managedChallenge.results?.rankings?.slice(0, 5).map((r: any, idx: number) => (
-                                                                 <div key={r.id} className={`flex items-center justify-between p-3 rounded-xl border ${idx === 0 ? 'bg-amber-500/20 border-amber-500/30' : 'bg-white/5 border-white/5'}`}>
+                                                                 <div key={r.id} className={`flex items-center justify-between p-2.5 rounded-xl border ${idx === 0 ? 'bg-amber-500/20 border-amber-500/30' : 'bg-white/5 border-white/5'}`}>
                                                                      <div className="flex items-center gap-3">
                                                                          <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs ${idx === 0 ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
                                                                              {idx + 1}
@@ -839,9 +947,37 @@ export default function AdminChallengeManager() {
                                                                  </div>
                                                              ))}
                                                          </div>
+
+                                                         {/* Session Leaderboard in Admin Podium */}
+                                                         {sessionLeaderboard.length > 0 && (
+                                                             <div className="w-full p-3 rounded-xl bg-gradient-to-br from-amber-500/10 via-slate-900/60 to-blue-500/10 border border-amber-500/20 space-y-2 mb-4">
+                                                                 <h4 className="text-[9px] font-black text-amber-500 uppercase tracking-[0.2em] flex items-center gap-2 justify-center">
+                                                                     <Trophy className="w-2.5 h-2.5" />
+                                                                     CLASIFICACIÓN GENERAL DE LA SESIÓN
+                                                                 </h4>
+                                                                 <div className="space-y-1.5">
+                                                                     {sessionLeaderboard.slice(0, 5).map((p, idx) => (
+                                                                         <div key={p.userId} className={`flex items-center justify-between px-3 py-2 rounded-xl text-[10px] ${
+                                                                             idx === 0 ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-white/5 border border-white/5'
+                                                                         }`}>
+                                                                             <div className="flex items-center gap-2">
+                                                                                 <span className="font-black w-5 text-center">
+                                                                                     {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`}
+                                                                                 </span>
+                                                                                 <span className="font-bold text-white">{p.username}</span>
+                                                                             </div>
+                                                                             <div className="flex items-center gap-3">
+                                                                                 <span className="font-black text-amber-500">{p.wins}🏆</span>
+                                                                                 <span className="font-bold text-slate-500">{p.totalScore} pts</span>
+                                                                             </div>
+                                                                         </div>
+                                                                     ))}
+                                                                 </div>
+                                                             </div>
+                                                         )}
                                                          
                                                          <Button 
-                                                             className="mt-6 bg-blue-600 hover:bg-blue-500 text-white font-black h-12 w-full rounded-2xl shadow-xl shadow-blue-900/40 active:scale-95 transition-all"
+                                                             className="mt-0 bg-blue-600 hover:bg-blue-500 text-white font-black h-11 w-full rounded-xl shadow-xl shadow-blue-900/40 active:scale-95 transition-all"
                                                              onClick={() => { setReviewIndex(0); setIsReviewing(true); }}
                                                           >
                                                               REVISAR DETALLES
@@ -859,7 +995,7 @@ export default function AdminChallengeManager() {
                                                               FINALIZAR Y NUEVA SESIÓN
                                                           </Button>
                                                      </div>
-                                                 ) : managedChallenge?.currentQuestion && (
+                                                 ) : (managedChallenge?.status === 'finished' && isReviewing) ? null : managedChallenge?.currentQuestion && (
                                                     <div className="mt-4 p-5 rounded-2xl bg-white/5 border border-white/10 animate-in fade-in slide-in-from-bottom-4">
                                                         <div className="flex items-center gap-2 mb-3">
                                                             <ClipboardList className="w-4 h-4 text-blue-400" />

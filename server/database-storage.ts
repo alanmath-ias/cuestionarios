@@ -2089,6 +2089,27 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async deleteAllManagedChallenges(adminId: number): Promise<void> {
+    // Get all challenge IDs for this admin
+    const challenges = await this.db.select({ id: managedChallenges.id })
+      .from(managedChallenges)
+      .where(eq(managedChallenges.adminId, adminId));
+
+    if (challenges.length === 0) return;
+
+    const challengeIds = challenges.map(c => c.id);
+
+    await this.db.transaction(async (tx) => {
+      // 1. Delete all participants for these challenges
+      await tx.delete(managedChallengeParticipants)
+        .where(inArray(managedChallengeParticipants.challengeId, challengeIds));
+      
+      // 2. Delete all challenges
+      await tx.delete(managedChallenges)
+        .where(eq(managedChallenges.adminId, adminId));
+    });
+  }
+
   // Social/Friendship methods
   async sendFriendRequest(userId: number, friendId: number): Promise<void> {
     // Check if already friends or request exists
