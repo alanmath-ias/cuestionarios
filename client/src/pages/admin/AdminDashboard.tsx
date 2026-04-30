@@ -15,8 +15,11 @@ import {
   AlertOctagon,
   FileClock,
   Wand2,
-  Sword
+  Sword,
+  PlayCircle,
+  ChevronDown
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { DuelMonitor } from "@/components/admin/DuelMonitor";
@@ -84,6 +87,7 @@ const AdminDashboard: React.FC = () => {
   const [categories, setCategories] = useState<{ id: number; name: string; youtubeLink?: string | null }[]>([]);
   const [atRiskStudents, setAtRiskStudents] = useState<AtRiskStudent[]>([]);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [isSubjectsExpanded, setIsSubjectsExpanded] = useState(false);
 
   // State for history dialog
   const [selectedStudentHistory, setSelectedStudentHistory] = useState<StudentHistory[]>([]);
@@ -413,66 +417,92 @@ const AdminDashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Accesos Rápidos a Materias */}
-            <Card className="border border-white/10 bg-slate-900 shadow-xl">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold text-slate-200">
-                  Materias
-                </CardTitle>
+            {/* Accesos Rápidos a Materias (Collapsible, Blue Theme) */}
+            <Card className="border border-blue-500/20 bg-slate-900 shadow-xl overflow-hidden transition-all duration-300">
+              <CardHeader 
+                className="p-4 cursor-pointer hover:bg-white/5 transition-colors select-none flex flex-row items-center justify-between"
+                onClick={() => setIsSubjectsExpanded(!isSubjectsExpanded)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <PlayCircle className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <CardTitle className="text-base font-bold text-slate-100">
+                    Materias (Mapas)
+                  </CardTitle>
+                </div>
+                <motion.div
+                  animate={{ rotate: isSubjectsExpanded ? 180 : 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                >
+                  <ChevronDown className="w-4 h-4 text-slate-500" />
+                </motion.div>
               </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="space-y-1">
-                  {categories.map(cat => (
-                    <div key={cat.id} className="flex items-center justify-between p-2 hover:bg-white/5 rounded-md transition group border border-transparent hover:border-white/5">
-                      <Link to={`/category/${cat.id}`} className="font-medium text-sm text-slate-300 hover:text-blue-400 flex-1 truncate mr-2" title={cat.name}>
-                        {cat.name}
-                      </Link>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {cat.youtubeLink ? (
-                          <a
-                            href={cat.youtubeLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Ver videos en YouTube"
-                            className="text-slate-500 hover:text-red-400 transition-colors p-1.5 rounded-md hover:bg-red-500/10"
-                          >
-                            <Youtube className="w-4 h-4" />
-                          </a>
-                        ) : (
-                          <span className="w-7"></span>
-                        )}
-                        <Link
-                          to={`/training/${cat.id}`}
-                          title="Ir a Entrenamiento"
-                          className="text-slate-500 hover:text-indigo-400 transition-colors p-1.5 rounded-md hover:bg-indigo-500/10"
-                        >
-                          <TrendingUp className="w-4 h-4" />
+
+              <AnimatePresence>
+                {isSubjectsExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                  >
+                    <CardContent className="p-4 pt-0 border-t border-white/5">
+                      <div className="space-y-1 mt-3">
+                        {categories.map(cat => (
+                          <div key={cat.id} className="flex items-center justify-between p-2 hover:bg-blue-500/5 rounded-md transition group border border-transparent hover:border-blue-500/10">
+                            <Link to={`/category/${cat.id}`} className="font-medium text-sm text-slate-300 group-hover:text-blue-400 flex-1 truncate mr-2" title={cat.name}>
+                              {cat.name}
+                            </Link>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {cat.youtubeLink ? (
+                                <a
+                                  href={cat.youtubeLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Ver videos en YouTube"
+                                  className="text-slate-500 hover:text-red-400 transition-colors p-1.5 rounded-md hover:bg-red-500/10"
+                                >
+                                  <Youtube className="w-4 h-4" />
+                                </a>
+                              ) : (
+                                <span className="w-7"></span>
+                              )}
+                              <Link
+                                to={`/training/${cat.id}`}
+                                title="Ir a Entrenamiento"
+                                className="text-slate-500 hover:text-blue-400 transition-colors p-1.5 rounded-md hover:bg-blue-500/10"
+                              >
+                                <PlayCircle className="w-4 h-4" />
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
+                        <Link to="/admin/challenge-manager">
+                          <Button className="w-full justify-between bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-lg shadow-amber-500/20">
+                            Retos Grupales
+                            <Sword className="w-4 h-4 ml-2" />
+                          </Button>
+                        </Link>
+                        <Link to="/admin/ai-quizzes">
+                          <Button variant="outline" className="w-full justify-between bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 border-amber-500/20 shadow-lg shadow-amber-500/5">
+                            Cuestionarios IA
+                            <Wand2 className="w-4 h-4 ml-2" />
+                          </Button>
+                        </Link>
+                        <Link to="/admin/users">
+                          <Button variant="outline" className="w-full justify-between bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white border-slate-700">
+                            Gestionar Usuarios
+                            <Users className="w-4 h-4 ml-2" />
+                          </Button>
                         </Link>
                       </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
-                  <Link to="/admin/challenge-manager">
-                    <Button className="w-full justify-between bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-lg shadow-amber-500/20">
-                      Retos Grupales
-                      <Sword className="w-4 h-4 ml-2" />
-                    </Button>
-                  </Link>
-                  <Link to="/admin/ai-quizzes">
-                    <Button variant="outline" className="w-full justify-between bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 border-amber-500/20 shadow-lg shadow-amber-500/5">
-                      Cuestionarios IA
-                      <Wand2 className="w-4 h-4 ml-2" />
-                    </Button>
-                  </Link>
-                  <Link to="/admin/users">
-                    <Button variant="outline" className="w-full justify-between bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white border-slate-700">
-                      Gestionar Usuarios
-                      <Users className="w-4 h-4 ml-2" />
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
+                    </CardContent>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </Card>
 
           </div>

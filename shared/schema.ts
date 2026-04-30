@@ -538,6 +538,7 @@ export const duels = pgTable("duels", {
 	topic: text("topic"),
 	status: text("status").notNull(),
 	wager: integer("wager").default(0).notNull(),
+	questionsCount: integer("questions_count").default(5).notNull(),
 	quizId: integer("quiz_id").references(() => quizzes.id, { onDelete: "set null" }),
 	scores: jsonb("scores").default({ challenger: 0, receiver: 0 }).notNull(),
 	currentQuestionIndex: integer("current_question_index").default(0),

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, memo } from "react";
 import { useDuel } from "@/hooks/use-duel";
 import { useSession } from "@/hooks/useSession";
 import { motion, AnimatePresence } from "framer-motion";
-import { Swords, Trophy, X, ShieldAlert, Cpu, Coins, Zap, Loader2, Minus, Plus, CheckCircle2, XCircle, Brain, Sparkles, ChevronLeft, ChevronRight, ArrowLeft, ArrowRight, Clock, Skull, Users, HandMetal } from "lucide-react";
+import { Swords, Trophy, X, ShieldAlert, Cpu, Coins, Zap, Loader2, Minus, Plus, CheckCircle2, XCircle, Brain, Sparkles, ChevronLeft, ChevronRight, ArrowLeft, ArrowRight, Clock, Skull, Users, HandMetal, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -158,6 +158,7 @@ export function DuelOverlay() {
   const isSpectator = !!duel?.isSpectator;
   const [prepStep, setPrepStep] = useState(0);
   const [counterWager, setCounterWager] = useState<number>(0);
+  const [counterQuestionsCount, setCounterQuestionsCount] = useState<number>(5);
   const [isNegotiating, setIsNegotiating] = useState(false);
   const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
@@ -247,24 +248,25 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
 
   useEffect(() => {
     if (invite) {
-        setIsNegotiating(false);
-        setCounterWager(invite.wager);
-        
-        const incomingHandicap = invite.handicap;
-        let initialHandicap = { points: 0, time: 0 };
-        
-        if (incomingHandicap) {
-            if (incomingHandicap.points) {
-                const h = incomingHandicap.points;
-                initialHandicap.points = Number(h.targetId) === Number(myNumberId) ? -h.value : h.value;
-            }
-            if (incomingHandicap.time) {
-                const h = incomingHandicap.time;
-                initialHandicap.time = Number(h.targetId) === Number(myNumberId) ? -h.value : h.value;
-            }
-        }
-        setLocalHandicap(initialHandicap);
-        setActiveHandicapTab('points');
+      setIsNegotiating(false);
+      setCounterWager(invite.wager);
+      setCounterQuestionsCount(invite.questionsCount || 5);
+      
+      const incomingHandicap = invite.handicap;
+      let initialHandicap = { points: 0, time: 0 };
+      
+      if (incomingHandicap) {
+          if (incomingHandicap.points) {
+              const h = incomingHandicap.points;
+              initialHandicap.points = Number(h.targetId) === Number(myNumberId) ? -h.value : h.value;
+          }
+          if (incomingHandicap.time) {
+              const h = incomingHandicap.time;
+              initialHandicap.time = Number(h.targetId) === Number(myNumberId) ? -h.value : h.value;
+          }
+      }
+      setLocalHandicap(initialHandicap);
+      setActiveHandicapTab('points');
     }
   }, [invite, myNumberId]);
 
@@ -354,7 +356,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
   }, [managedChallenge?.currentQuestion?.index]);
 
   // ─── EARLY RETURN ───
-  if (!duel && !invite && !actualPreparing && !sentChallengeInfo && !managedInvite && !managedChallenge && !managedCancellation) return null;
+  if (!duel && !invite && !actualPreparing && !sentChallengeInfo && !managedInvite && !managedChallenge && !managedCancellation && !isResponding) return null;
 
   // ─── EFFECTS (Must all be above ANY return) ────────────────────────────────
 
@@ -764,8 +766,8 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
             </motion.div>
           )}
 
-          {/* ── PREPARING ──────────────────────────────────────────────── */}
-          {actualPreparing && !managedInvite && !invite && !sentChallengeInfo && (
+          {/* ── PREPARING / RESPONDING ────────────────────────────────── */}
+          {(actualPreparing || isResponding) && !managedInvite && !managedChallenge && (
             <motion.div
               key="preparing-container"
               initial={{ opacity: 0, scale: 0.95 }} 
@@ -781,7 +783,15 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                       <Cpu className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-9 w-9 text-blue-400 animate-pulse" />
                     </div>
                     <h2 className="text-2xl sm:text-3xl font-black text-white uppercase italic tracking-tighter mb-3 bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Preparando la Batalla</h2>
-                    <p className="text-slate-400 max-w-xs text-xs sm:text-sm">AlanMath está diseñando un desafío único para ti. ¡Demuestra tu nivel!</p>
+                    <p className="text-slate-400 max-w-xs text-xs sm:text-sm">
+                        {sentChallengeInfo 
+                            ? `Preparando tu desafío para ${sentChallengeInfo.receiverName}...` 
+                            : invite 
+                                ? `${invite.challengerName} está preparando el desafío...` 
+                                : isResponding 
+                                    ? "Procesando aceptación..." 
+                                    : "Preparando un desafío único para ti. ¡Demuestra tu nivel!"}
+                    </p>
                   </motion.div>
                 )}
 
@@ -871,6 +881,14 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                                         </div>
                                     )}
                                 </div>
+                        </div>
+                    </div>
+                    <div className="w-px h-8 bg-white/10" />
+                    <div className="text-center">
+                        <span className="text-[8px] font-black uppercase text-slate-500 block mb-1">Preguntas</span>
+                        <div className="flex items-center gap-1.5 text-blue-400 justify-center">
+                            <Timer className="h-3 w-3" />
+                            <span className="text-lg font-black">{sentChallengeInfo.questionsCount || 5}</span>
                         </div>
                     </div>
                   </div>
@@ -968,8 +986,8 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
 
           {/* ── INVITATION / NEGOTIATION ───────────────────────────────── */}
           {invite && !actualPreparing && (!duel || duel.status === 'finished') && (
-            <motion.div key="invite" initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.9, y: -20, opacity: 0 }} className="px-2 relative">
-              <Card className="bg-slate-900 border-amber-500/30 p-4 sm:p-8 shadow-2xl text-white overflow-hidden relative">
+            <motion.div key="invite" initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.9, y: -20, opacity: 0 }} className="px-2 relative w-full max-w-lg mx-auto">
+              <Card className="bg-slate-900 border-amber-500/30 p-4 sm:p-6 shadow-2xl text-white overflow-y-auto max-h-[95vh] custom-scrollbar relative rounded-[2rem]">
                 <Button variant="ghost" size="icon" className="absolute top-4 right-4 z-20 text-slate-500 hover:text-white hover:bg-white/10 rounded-full" onClick={() => respondToInvite(invite.duelId, 'reject')}><X className="h-6 w-6" /></Button>
                 <div className="absolute top-0 right-0 p-8 opacity-10"><Swords className="w-40 h-40 text-amber-500" /></div>
                 <div className="relative z-10 flex flex-col items-center text-center">
@@ -998,32 +1016,75 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                           <span className="text-3xl font-black">{isNegotiating ? counterWager : invite.wager}</span>
                           {isNegotiating && <button className="h-6 w-6 rounded-lg bg-slate-700 hover:bg-amber-500 flex items-center justify-center transition-colors" onClick={() => setCounterWager(counterWager + 1)}><Plus className="h-3 w-3" /></button>}
                         </div>
-                        <span className="text-[9px] font-black text-amber-500 uppercase tracking-[0.2em] animate-pulse">Créditos</span>
+                        <span className="text-[9px] font-black text-amber-500 uppercase tracking-[0.2em]">Créditos</span>
                       </div>
                     </div>
 
-                    {/* Handicap Type Toggle Column */}
+                    {/* Questions Count Column (TOP RIGHT) */}
                     <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-2 text-blue-400">
+                        <Timer className="h-4 w-4" />
+                        <span className="text-[10px] font-black uppercase tracking-wider">Preguntas</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <div className="flex items-center gap-3">
+                          {isNegotiating && <button className="h-6 w-6 rounded-lg bg-slate-700 hover:bg-blue-500 flex items-center justify-center transition-colors text-white" onClick={() => setCounterQuestionsCount(Math.max(5, counterQuestionsCount - 1))} disabled={counterQuestionsCount <= 5}><Minus className="h-3 w-3" /></button>}
+                          <span className="text-3xl font-black">{isNegotiating ? counterQuestionsCount : invite.questionsCount || 5}</span>
+                          {isNegotiating && <button className="h-6 w-6 rounded-lg bg-slate-700 hover:bg-blue-500 flex items-center justify-center transition-colors text-white" onClick={() => setCounterQuestionsCount(Math.min(12, counterQuestionsCount + 1))} disabled={counterQuestionsCount >= 12}><Plus className="h-3 w-3" /></button>}
+                        </div>
+                        <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.2em]">Total</span>
+                      </div>
+                    </div>
+
+                    {/* Handicap / Advantage Column (MERGED) */}
+                    <div className={`bg-white/5 border border-white/10 rounded-2xl p-4 text-center transition-all ${isNegotiating ? 'col-span-2' : ''}`}>
                       <div className="flex items-center justify-center gap-2 mb-2 text-purple-400">
                         <ShieldAlert className="h-4 w-4" />
                         <span className="text-[10px] font-black uppercase tracking-wider">Ventaja</span>
                       </div>
+                      
                       {isNegotiating ? (
-                        <div className="flex bg-black/20 p-1 rounded-xl gap-1">
-                          <button 
-                             onClick={() => setActiveHandicapTab('points')} 
-                             className={`flex-1 text-[8px] font-black py-1 rounded transition-all relative ${activeHandicapTab === 'points' ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}
-                          >
-                            PTS
-                            {localHandicap.points !== 0 && <span className="absolute -top-1 -right-1 h-1.5 w-1.5 bg-emerald-400 rounded-full" />}
-                          </button>
-                          <button 
-                             onClick={() => setActiveHandicapTab('time')} 
-                             className={`flex-1 text-[8px] font-black py-1 rounded transition-all relative ${activeHandicapTab === 'time' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
-                          >
-                            SEG
-                            {localHandicap.time !== 0 && <span className="absolute -top-1 -right-1 h-1.5 w-1.5 bg-blue-400 rounded-full" />}
-                          </button>
+                        <div className="space-y-4">
+                          <div className="flex bg-black/20 p-1 rounded-xl gap-1 max-w-[200px] mx-auto">
+                            <button 
+                               onClick={() => setActiveHandicapTab('points')} 
+                               className={`flex-1 text-[8px] font-black py-1.5 rounded transition-all relative ${activeHandicapTab === 'points' ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}
+                            >
+                              PTS
+                              {localHandicap.points !== 0 && <span className="absolute -top-1 -right-1 h-1.5 w-1.5 bg-emerald-400 rounded-full" />}
+                            </button>
+                            <button 
+                               onClick={() => setActiveHandicapTab('time')} 
+                               className={`flex-1 text-[8px] font-black py-1.5 rounded transition-all relative ${activeHandicapTab === 'time' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+                            >
+                              SEG
+                              {localHandicap.time !== 0 && <span className="absolute -top-1 -right-1 h-1.5 w-1.5 bg-blue-400 rounded-full" />}
+                            </button>
+                          </div>
+
+                          {activeHandicapTab && (
+                             <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="w-full">
+                                <p className="text-[7px] font-black text-blue-400/60 text-center mb-3 uppercase tracking-[0.2em]">Usa la flechas para señalar quien tiene la ventaja</p>
+                                <div className="flex items-center justify-between gap-4 bg-black/30 p-3 rounded-xl border border-white/5">
+                                     <div className="flex flex-col items-center flex-1 min-w-0">
+                                         <span className="text-[8px] font-black text-slate-500 mb-1 uppercase truncate w-full text-center">TÚ</span>
+                                         <div className={`w-full py-1.5 rounded-lg border flex items-center justify-center ${localHandicap[activeHandicapTab] < 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
+                                             <span className="text-lg font-black">{localHandicap[activeHandicapTab] < 0 ? Math.abs(localHandicap[activeHandicapTab]) : 0}{activeHandicapTab === 'time' && localHandicap[activeHandicapTab] < 0 ? 's' : ''}</span>
+                                         </div>
+                                     </div>
+                                     <div className="flex items-center gap-2 mt-4 shrink-0">
+                                         <button className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 text-emerald-400 transition-colors" onClick={() => updateHandicap(localHandicap[activeHandicapTab] - 1)}><ArrowLeft className="h-3 w-3" /></button>
+                                         <button className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 text-emerald-400 transition-colors" onClick={() => updateHandicap(localHandicap[activeHandicapTab] + 1)}><ArrowRight className="h-3 w-3" /></button>
+                                     </div>
+                                     <div className="flex flex-col items-center flex-1 min-w-0">
+                                         <span className="text-[8px] font-black text-slate-500 mb-1 uppercase truncate w-full text-center">{myNumberId === Number(invite.challengerId) ? invite.receiverName : invite.challengerName}</span>
+                                         <div className={`w-full py-1.5 rounded-lg border flex items-center justify-center ${localHandicap[activeHandicapTab] > 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
+                                             <span className="text-lg font-black">{localHandicap[activeHandicapTab] > 0 ? Math.abs(localHandicap[activeHandicapTab]) : 0}{activeHandicapTab === 'time' && localHandicap[activeHandicapTab] > 0 ? 's' : ''}</span>
+                                         </div>
+                                     </div>
+                                </div>
+                             </motion.div>
+                          )}
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center p-1">
@@ -1046,35 +1107,8 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                         </div>
                       )}
                     </div>
-                  </div>
 
-                  <AnimatePresence mode="popLayout">
-                     {isNegotiating && activeHandicapTab && (
-                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="w-full max-w-sm overflow-hidden mb-6">
-                             <div className="bg-slate-950/40 border border-white/5 rounded-2xl p-4">
-                                 <p className="text-[8px] font-black text-blue-400/60 text-center mb-4 uppercase tracking-[0.2em]">Usa la flechas para señalar quien tiene la ventaja</p>
-                                 <div className="flex items-center justify-between gap-4">
-                                      <div className="flex flex-col items-center flex-1 min-w-0">
-                                          <span className="text-[8px] font-black text-slate-500 mb-1 uppercase truncate w-full text-center">TÚ</span>
-                                          <div className={`w-full py-1.5 rounded-lg border flex items-center justify-center ${localHandicap[activeHandicapTab] < 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
-                                              <span className="text-lg font-black">{localHandicap[activeHandicapTab] < 0 ? Math.abs(localHandicap[activeHandicapTab]) : 0}{activeHandicapTab === 'time' && localHandicap[activeHandicapTab] < 0 ? 's' : ''}</span>
-                                          </div>
-                                      </div>
-                                      <div className="flex items-center gap-2 mt-4 shrink-0">
-                                          <button className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 text-emerald-400" onClick={() => updateHandicap(localHandicap[activeHandicapTab] - 1)}><ArrowLeft className="h-3 w-3" /></button>
-                                          <button className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 text-emerald-400" onClick={() => updateHandicap(localHandicap[activeHandicapTab] + 1)}><ArrowRight className="h-3 w-3" /></button>
-                                      </div>
-                                      <div className="flex flex-col items-center flex-1 min-w-0">
-                                          <span className="text-[8px] font-black text-slate-500 mb-1 uppercase truncate w-full text-center">{myNumberId === Number(invite.challengerId) ? invite.receiverName : invite.challengerName}</span>
-                                          <div className={`w-full py-1.5 rounded-lg border flex items-center justify-center ${localHandicap[activeHandicapTab] > 0 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-white/5 text-slate-600'}`}>
-                                              <span className="text-lg font-black">{localHandicap[activeHandicapTab] > 0 ? Math.abs(localHandicap[activeHandicapTab]) : 0}{activeHandicapTab === 'time' && localHandicap[activeHandicapTab] > 0 ? 's' : ''}</span>
-                                          </div>
-                                      </div>
-                                   </div>
-                             </div>
-                         </motion.div>
-                     )}
-                   </AnimatePresence>
+                  </div>
 
                   <div className="flex flex-wrap gap-2 justify-center">
                     {isResponding ? (
@@ -1123,7 +1157,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                                     targetId: localHandicap.time > 0 ? otherId : myNumberId
                                 };
                             }
-                            respondToInvite(invite.duelId, 'counter', counterWager, Object.keys(payload).length > 0 ? payload : null);
+                            respondToInvite(invite.duelId, 'counter', counterWager, Object.keys(payload).length > 0 ? payload : null, counterQuestionsCount);
                           }}
                         >
                             <span className="text-[10px] font-black uppercase">Solo Contra-ofertar</span>
@@ -1157,7 +1191,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                 </div>
                 {isSpectator && <Badge className="bg-indigo-600 text-white animate-pulse text-[10px] h-5">MODO OBSERVADOR</Badge>}
                 <Button variant="ghost" size="icon" onClick={() => {
-                    if (confirm("¿Seguro que quieres salir del duelo en curso? PERDERÁS LOS CRÉDITOS APUESTADOS.")) {
+                    if (isSpectator || confirm("¿Seguro que quieres salir del duelo en curso? PERDERÁS LOS CRÉDITOS APUESTADOS.")) {
                         resetDuel();
                     }
                 }} className="h-6 w-6 text-slate-500 hover:text-white transition-colors">
@@ -1459,7 +1493,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                                   <span className="text-base font-bold flex-1 leading-tight"><ContentRenderer content={option.content} tight={true} /></span>
                                   <div className="flex gap-1 flex-wrap justify-end">
                                       {option.selections && option.selections.map((sel: any) => (
-                                          <Badge key={sel.userId} className={`px-2 py-0.5 text-[9px] uppercase font-black tracking-tighter rounded-full ${Number(sel.userId) === Number(myId) ? "bg-blue-500 text-white" : "bg-yellow-500 text-slate-900"}`}>
+                                          <Badge key={sel.userId} className={`px-2 py-0.5 text-[9px] uppercase font-black tracking-tighter rounded-full ${Number(sel.userId) === myNumberId ? "bg-blue-500 text-white" : "bg-yellow-500 text-slate-900"}`}>
                                               {Number(sel.userId) === Number(myId) ? "TÚ" : (sel.username || "Oponente")}
                                           </Badge>
                                       ))}

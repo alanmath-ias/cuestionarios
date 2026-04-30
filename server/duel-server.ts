@@ -36,6 +36,8 @@ interface DuelRoom {
     points?: { value: number; targetId: number };
     time?: { value: number; targetId: number };
   };
+  questionsCount: number;
+  finalResults?: any;
 }
 
 interface ManagedChallengePlayer {
@@ -318,8 +320,8 @@ export class DuelServer {
     }
   }
 
-  private async handleChallenge(challengerId: number, payload: { receiverId: number; wager: number; topic?: string; isRevenge?: boolean; handicap?: any }) {
-    const { receiverId, wager, topic, isRevenge, handicap } = payload;
+  private async handleChallenge(challengerId: number, payload: { receiverId: number; wager: number; topic?: string; isRevenge?: boolean; handicap?: any; questionsCount?: number }) {
+    const { receiverId, wager, topic, isRevenge, handicap, questionsCount } = payload;
     
     // Safety: Cleanup any active duels involving these users to avoid ghost states
     for (const [duelId, room] of this.activeDuels.entries()) {
@@ -357,6 +359,7 @@ export class DuelServer {
       receiverId,
       status: 'inviting',
       wager,
+      questionsCount: questionsCount || 5,
       topic: topic || 'Matemáticas Generales',
       handicap: handicap || null
     }).returning();
@@ -372,6 +375,7 @@ export class DuelServer {
         challengerName: challenger!.name,
         receiverName: receiver?.name || "Oponente",
         wager,
+        questionsCount: newDuel.questionsCount,
         topic: topic || 'Matemáticas Generales',
         isRevenge: !!isRevenge,
         handicap: newDuel.handicap
@@ -381,8 +385,8 @@ export class DuelServer {
     this.broadcastDuelListToAdmins();
   }
 
-  private async processResponse(userId: number, payload: { duelId: number; action: 'accept' | 'reject' | 'counter'; wager?: number; handicap?: any }) {
-    const { duelId, action, wager, handicap } = payload;
+  private async processResponse(userId: number, payload: { duelId: number; action: 'accept' | 'reject' | 'counter'; wager?: number; handicap?: any; questionsCount?: number }) {
+    const { duelId, action, wager, handicap, questionsCount } = payload;
     const duelRecord = await db.query.duels.findFirst({ where: eq(duels.id, duelId) });
 
     if (!duelRecord) return;
@@ -395,7 +399,8 @@ export class DuelServer {
     } else if (action === 'counter') {
       await db.update(duels).set({ 
         wager: wager !== undefined ? wager : duelRecord.wager,
-        handicap: handicap !== undefined ? handicap : duelRecord.handicap
+        handicap: handicap !== undefined ? handicap : duelRecord.handicap,
+        questionsCount: questionsCount !== undefined ? questionsCount : duelRecord.questionsCount
       }).where(eq(duels.id, duelId));
       
       const targetId = Number(userId === duelRecord.challengerId ? duelRecord.receiverId : duelRecord.challengerId);
@@ -412,7 +417,8 @@ export class DuelServer {
           challengerName: challenger?.name || "Retador",
           receiverName: receiver?.name || "Oponente",
           wager: wager !== undefined ? wager : duelRecord.wager,
-          handicap: handicap !== undefined ? handicap : duelRecord.handicap
+          handicap: handicap !== undefined ? handicap : duelRecord.handicap,
+          questionsCount: questionsCount !== undefined ? questionsCount : duelRecord.questionsCount
         } 
       });
     } else if (action === 'accept') {
@@ -440,7 +446,7 @@ export class DuelServer {
         topicDescription: duelRecord.topic || "Duelo de velocidad matemática",
         categoryName: "Duelo",
         difficulty: "medium",
-        questionCount: 5
+        questionCount: duelRecord.questionsCount
       });
 
       // Persist quiz
@@ -499,6 +505,7 @@ export class DuelServer {
         quizId: result.quizId,
         currentQuestionIndex: 0,
         questions: result.questions,
+        questionsCount: duelRecord.questionsCount,
         scores: { [duelRecord.challengerId]: 0, [duelRecord.receiverId]: 0 },
         failedUserIds: [],
         questionStartTime: 0,
@@ -813,20 +820,23 @@ export class DuelServer {
     });
 
     const winnerName = winnerId ? (winnerId === room.challenger.userId ? room.challenger.username : room.receiver.username) : null;
-    
+    const finalResults = {
+        winnerId,
+        winnerName,
+        scores: room.scores,
+        wager: room.wager,
+        speedBonuses: (room as any).winnerBonus || 0,
+        bonusSummary: room.bonusCredits,
+        history: room.history,
+        challengerName: room.challenger.username,
+        receiverName: room.receiver.username
+    };
+
+    room.finalResults = finalResults;
+
     this.broadcastToDuel(duelId, {
         type: 'duel:end',
-        payload: {
-            winnerId,
-            winnerName,
-            scores: room.scores,
-            wager: room.wager,
-            speedBonuses: (room as any).winnerBonus || 0,
-            bonusSummary: room.bonusCredits,
-            history: room.history,
-            challengerName: room.challenger.username,
-            receiverName: room.receiver.username
-        }
+        payload: finalResults
     });
 
     // Mark room as finished in memory so recovery won't re-send stale state
@@ -1106,6 +1116,7 @@ export class DuelServer {
         topic: room.topic,
         history: room.history,
         wager: room.wager,
+        finalResults: room.finalResults,
         isSpectator: true
     };
 
