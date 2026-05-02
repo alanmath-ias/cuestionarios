@@ -4181,12 +4181,29 @@ Ejemplo de formato:
     }
 
     try {
-      // Eliminar respuestas asociadas
+      // Obtener el quizId antes de borrar
+      const question = await storage.getQuestion(questionId);
+      if (!question) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+
+      const quizId = question.quizId;
+
+      // Eliminar respuestas asociadas (Aunque el schema tiene cascade, lo mantenemos por consistencia con el storage actual)
       const answers = await storage.getAnswersByQuestion(questionId);
       await Promise.all(answers.map(answer => storage.deleteAnswer(answer.id)));
 
       // Eliminar la pregunta
       await storage.deleteQuestion(questionId);
+
+      // Descontar una pregunta del total del quiz
+      const quiz = await storage.getQuiz(quizId);
+      if (quiz) {
+        await storage.updateQuiz(quizId, {
+          totalQuestions: Math.max(0, quiz.totalQuestions - 1)
+        });
+      }
+
       res.status(204).end();
     } catch (error) {
       console.error("Question deletion error:", error);

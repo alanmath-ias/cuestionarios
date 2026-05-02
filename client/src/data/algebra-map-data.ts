@@ -675,18 +675,18 @@ export const algebraMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['a12-funciones'],
         description: 'y = mx + b',
-        xOffset: -20,
+        xOffset: 20,
         subcategoryId: 420,
         behavior: 'quiz_list'
     },
     {
         id: 'a12-2-concepto',
-        label: 'Conceptos',
+        label: 'Resúmen de Funciones',
         level: 31,
         type: 'critical',
         requires: ['a12-funciones'],
         description: 'Dominio y rango.',
-        xOffset: 20,
+        xOffset: -20,
         subcategoryId: 431,
         behavior: 'quiz_list'
     },

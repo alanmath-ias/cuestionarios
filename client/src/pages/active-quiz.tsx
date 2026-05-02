@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, X as CloseIcon } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, X as CloseIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { startActiveQuizTour } from "@/lib/tour";
 import { useState, useEffect, useRef } from "react";
@@ -265,6 +265,38 @@ const ActiveQuiz = () => {
       toast({
         title: "Error",
         description: error.message || "No se pudo actualizar la pregunta",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const deleteQuestionMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/questions/${id}`);
+      if (!res.ok) {
+        throw new Error("Error al eliminar la pregunta");
+      }
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: isChiqui ? [`/api/chiquitest/questions/${categoryId}`] : [`/api/quizzes/${quizId}/questions`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/quizzes/${quizId}`] });
+      
+      setIsEditing(false);
+      toast({
+        title: "Pregunta eliminada",
+        description: "La pregunta ha sido eliminada correctamente.",
+      });
+
+      // Si no es la primera pregunta, retroceder una. Si es la primera, quedarse ahí (o el refetch hará lo suyo)
+      if (currentQuestionIndex > 0) {
+        setCurrentQuestionIndex(prev => prev - 1);
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo eliminar la pregunta",
         variant: "destructive",
       });
     }
@@ -1244,6 +1276,20 @@ const ActiveQuiz = () => {
                   <Pencil className="h-5 w-5" /> Modo Edición de Pregunta
                 </h3>
                 <div className="flex gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      if (window.confirm("¿Estás seguro de que deseas eliminar esta pregunta? Esta acción no se puede deshacer.")) {
+                        deleteQuestionMutation.mutate(questions[currentQuestionIndex].id);
+                      }
+                    }} 
+                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                    disabled={deleteQuestionMutation.isPending}
+                  >
+                    {deleteQuestionMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                    Eliminar
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={handleCancelEdit} className="text-slate-400 hover:text-white">
                     <CloseIcon className="h-4 w-4 mr-2" /> Cancelar
                   </Button>
