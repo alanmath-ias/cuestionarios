@@ -388,8 +388,18 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     useEffect(() => {
         const searchParams = new URLSearchParams(window.location.search);
         const focusId = searchParams.get('focusNode');
-        
-        if (focusId || nodes.length === 0 || allQuizzes.length === 0 || lastWorkedScrollProcessed.current) return;
+        const hasSubId = searchParams.get('subId');
+        const hasNodeId = searchParams.get('nodeId');
+
+        // If we have a focusNode, a subId (open dialog), or nodeId, we consider the "initial focus" 
+        // as handled by the URL and we should NOT trigger the automatic "Last Worked" scroll later.
+        if (focusId || hasSubId || hasNodeId) {
+            lastWorkedScrollProcessed.current = true;
+            return;
+        }
+
+        // We skip if nodes aren't ready or if we already processed the scroll for this mount.
+        if (nodes.length === 0 || allQuizzes.length === 0 || lastWorkedScrollProcessed.current) return;
 
         // Find most recent interaction
         const recentQuiz = [...allQuizzes]
@@ -1091,16 +1101,17 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                             <AnimatePresence>
                                                                 {showLastWorkedHint === node.id && (
                                                                     <motion.div
-                                                                        initial={{ opacity: 0, scale: 0.5, y: 10 }}
-                                                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                                        exit={{ opacity: 0, scale: 0.5, y: 10 }}
-                                                                        className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none"
+                                                                        initial={{ opacity: 0, scale: 0.5, y: 10, x: "-50%" }}
+                                                                        animate={{ opacity: 1, scale: 1, y: 0, x: "-50%" }}
+                                                                        exit={{ opacity: 0, scale: 0.5, y: 10, x: "-50%" }}
+                                                                        className="absolute bottom-full mb-2 left-1/2 z-[1000] pointer-events-none flex flex-col items-center"
                                                                     >
-                                                                        <div className="bg-blue-600 text-white text-[10px] md:text-[11px] font-bold px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-[0_4px_15px_rgba(59,130,246,0.5)] flex items-center gap-2 whitespace-nowrap border border-blue-400 relative">
+                                                                        <div className="bg-blue-600 text-white text-[10px] md:text-[11px] font-bold px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-[0_4px_15px_rgba(59,130,246,0.5)] flex items-center gap-2 whitespace-nowrap border border-blue-400">
                                                                             <Box className="w-3 md:w-3.5 h-3 md:h-3.5" />
                                                                             ¡Aquí estuviste la última vez!
-                                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-blue-600" />
                                                                         </div>
+                                                                        {/* The "Punta" (Arrow) - Centered naturally by the flex-col parent */}
+                                                                        <div className="w-0 h-0 border-[6px] border-transparent border-t-blue-600 -mt-[1px]" />
                                                                     </motion.div>
                                                                 )}
                                                             </AnimatePresence>

@@ -83,15 +83,34 @@ function QuizList() {
   const [quizSearchQuery, setQuizSearchQuery] = useState("");
   const [showMasteryDialog, setShowMasteryDialog] = useState(false);
   const videoSectionRef = useRef<HTMLDivElement>(null);
+  const isFirstMount = useRef(true);
+  const prevViewModeRef = useRef<'roadmap' | 'grid'>(viewMode);
 
   // Update view mode if URL changes (e.g. back button)
   useEffect(() => {
-    const mode = searchParams.get('view') as 'roadmap' | 'grid' | null;
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('view') as 'roadmap' | 'grid' | null;
+    
     if (mode && mode !== viewMode) {
       setViewMode(mode);
     }
-    // Scroll to top when view changes or on mount
-    window.scrollTo(0, 0);
+
+    // Scroll to top when view changes OR on first mount (unless we have a focusNode/subId to go to)
+    const hasFocusNode = params.has('focusNode');
+    const hasSubId = params.has('subId');
+    
+    if (isFirstMount.current) {
+      // If it's a fresh entry (no focus/subId), scroll to top
+      if (!hasFocusNode && !hasSubId) {
+        window.scrollTo(0, 0);
+      }
+      isFirstMount.current = false;
+    } else if (prevViewModeRef.current !== viewMode) {
+      // If user explicitly switched view mode, scroll to top
+      window.scrollTo(0, 0);
+    }
+    
+    prevViewModeRef.current = viewMode;
   }, [window.location.search, viewMode]);
 
   // Reset quiz search when subcategory changes
@@ -295,13 +314,20 @@ function QuizList() {
     }
   };
 
-  const isLoading = loadingCategory || loadingSubcategories || loadingQuizzes || loadingProgress;
+  // Only show the full-screen loader if we are missing essential data.
+  // If we have cached data, we show the map immediately to preserve scroll position.
+  const isLoading = (loadingCategory && !category) || 
+                    (loadingSubcategories && !subcategories) || 
+                    (loadingQuizzes && !quizzes) || 
+                    (loadingProgress && !progress);
 
   // Sync dialog with URL params for navigation persistence
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const subId = params.get('subId');
     const nodeId = params.get('nodeId');
+    
+    console.log(`[QuizList] Syncing Dialog: subId=${subId}, hasSubcategories=${!!subcategories}`);
 
     if (subId && subcategories) {
       const sub = subcategories.find(s => s.id === parseInt(subId));
