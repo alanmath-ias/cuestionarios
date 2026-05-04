@@ -548,7 +548,10 @@ export class MemStorage implements IStorage {
       canReport: insertUser.canReport ?? false,
       canCreateAiQuizzes: (insertUser as any).canCreateAiQuizzes ?? false,
       totalReports: 0,
-      duelWins: 0
+      duelWins: 0,
+      mathTipContent: null,
+      mathTipLastGeneratedAt: null,
+      mathTipClaimedAt: null
     };
     this.users.set(id, user);
     return user;

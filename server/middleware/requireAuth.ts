@@ -35,6 +35,9 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       canCreateAiQuizzes: user.canCreateAiQuizzes,
       totalReports: user.totalReports,
       duelWins: user.duelWins,
+      mathTipContent: user.mathTipContent,
+      mathTipLastGeneratedAt: user.mathTipLastGeneratedAt,
+      mathTipClaimedAt: user.mathTipClaimedAt,
     };
 
     next();

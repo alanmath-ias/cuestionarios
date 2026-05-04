@@ -69,6 +69,7 @@ import { getRandomQuote } from "@/lib/motivational-quotes";
 import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
 import { MasteryInsignia } from "@/components/dashboard/MasteryInsignia";
 import { AwardsDialog } from "@/components/dashboard/AwardsDialog";
+import { MathTipCard } from "@/components/dashboard/MathTipCard";
 
 
 interface QuizWithFeedback {
@@ -642,34 +643,7 @@ export default function UserDashboard() {
     refetchOnWindowFocus: false
   });
 
-  useEffect(() => {
-    if (!currentUser?.id) return;
-
-    const today = new Date().toDateString();
-    const storageKey = `mathTipLastShown_${currentUser.id}`;
-    const lastShown = localStorage.getItem(storageKey);
-
-    // Only show tip if welcome dialog is NOT shown AND user has activity (not a new user)
-    // Also wait for Onboarding Tour to finish
-    const isNewUser = quizzes && quizzes.length === 0;
-    if (mathTipData?.tip && lastShown !== today && !showWelcomeDialog && !isNewUser && !showOnboarding) {
-      const timer = setTimeout(() => {
-        toast({
-          title: "💡 Tip Matemático",
-          description: (
-            <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-              <ContentRenderer content={mathTipData.tip} className="text-white/90 text-base font-medium text-center mt-2" />
-            </div>
-          ),
-          duration: 15000,
-          className: "w-full md:w-[400px] h-auto flex flex-col justify-center items-center bg-slate-900 border border-indigo-500/30 text-slate-200 shadow-2xl rounded-2xl p-6 md:mr-12 [&>button[toast-close]]:!text-slate-400 [&>button[toast-close]]:!opacity-100 [&>button[toast-close]]:hover:!text-white [&>button[toast-close]]:hover:!bg-white/10 [&>button[toast-close]]:scale-125 [&>button[toast-close]]:top-3 [&>button[toast-close]]:right-3"
-        });
-        localStorage.setItem(storageKey, today);
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [mathTipData, toast, showWelcomeDialog, currentUser, showOnboarding]);
+  // Math Tip data is used in MathTipCard component
 
   const isLoading = (loadingUser && !currentUser) || (loadingCategories && !categories) || (loadingQuizzes && !quizzes);
 
@@ -980,6 +954,29 @@ export default function UserDashboard() {
                     : `Tienes ${feedbackQuizzes.length} nuevos comentarios`}
                 </span>
               </div>
+            )}
+
+            {/* Math Tip Indicator */}
+            {mathTipData && !mathTipData.claimed && (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center gap-2 bg-amber-500/10 text-amber-400 px-4 py-2 rounded-full border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.2)] cursor-pointer hover:bg-amber-500/20 transition-all group"
+                onClick={() => {
+                   const element = document.getElementById('math-tip-card');
+                   if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+              >
+                <div className="relative">
+                  <Lightbulb className="w-4 h-4 text-amber-400" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full animate-ping" />
+                </div>
+                <span className="text-sm font-bold">
+                  ¡Chispazo disponible!
+                </span>
+                <Sparkles className="w-3 h-3 text-amber-300 group-hover:rotate-12 transition-transform" />
+              </motion.div>
             )}
           </div>
         </div>
@@ -1500,6 +1497,11 @@ export default function UserDashboard() {
 
           {/* Right Column: Sidebar */}
           <div className="space-y-4">
+            {/* Math Tip Card - Protagonic Position */}
+            <div id="math-tip-card">
+              <MathTipCard userId={currentUser?.id || 0} />
+            </div>
+
             {/* Progress Card */}
             <div id="tour-stats" className="h-auto min-h-[220px]">
               <StatCard

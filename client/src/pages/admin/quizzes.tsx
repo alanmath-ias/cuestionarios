@@ -88,7 +88,9 @@ const DraggableDialogQuizItem = ({
   setSearchQuery,
   allUsers,
   assignedUsers,
-  toggleQuizAssignment
+  toggleQuizAssignment,
+  onOrderChange,
+  fullGroup
 }: {
   quiz: Quiz;
   isHighlighted: boolean;
@@ -106,8 +108,30 @@ const DraggableDialogQuizItem = ({
   allUsers: any[];
   assignedUsers: number[];
   toggleQuizAssignment: (quizId: number, userId: number, isAssigned: boolean, mode: string) => void;
+  onOrderChange: (quizId: number, newOrder: number, group: Quiz[]) => void;
+  fullGroup: Quiz[];
 }) => {
   const controls = useDragControls();
+  const [localOrder, setLocalOrder] = useState(quiz.sortOrder ?? 0);
+
+  useEffect(() => {
+    setLocalOrder(quiz.sortOrder ?? 0);
+  }, [quiz.sortOrder]);
+
+  const handleBlur = () => {
+    const val = parseInt(String(localOrder));
+    if (!isNaN(val) && val !== quiz.sortOrder) {
+      onOrderChange(quiz.id, val, fullGroup);
+    } else {
+      setLocalOrder(quiz.sortOrder ?? 0);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    }
+  };
 
   return (
     <Reorder.Item
@@ -139,6 +163,23 @@ const DraggableDialogQuizItem = ({
             }}
           >
             <GripVertical className="h-4 w-4" />
+          </div>
+
+          {/* ORDER INPUT */}
+          <div 
+            className="flex items-center gap-1 bg-slate-900/50 border border-white/10 rounded-md px-1.5 py-0.5" 
+            title="Posición (orden)"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <span className="text-[10px] text-slate-500 font-bold">#</span>
+            <input 
+              type="number"
+              value={localOrder}
+              onChange={(e) => setLocalOrder(e.target.value as any)}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              className="w-6 bg-transparent text-[11px] font-bold text-blue-400 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
           </div>
 
           <div className={cn(
@@ -756,6 +797,30 @@ export default function QuizzesAdmin() {
     debouncedReorderCategories(orders);
   }, [queryClient, debouncedReorderCategories]);
 
+  // Handle manual order change (Smart Adjustment)
+  const handleOrderChange = React.useCallback((quizId: number, newOrderVal: number, currentGroup: Quiz[]) => {
+    if (isNaN(newOrderVal)) return;
+
+    // 1. Get all quizzes in the group sorted by current sortOrder
+    const sortedGroup = [...currentGroup].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    
+    // 2. Find the quiz being moved
+    const quizToMove = sortedGroup.find(q => q.id === quizId);
+    if (!quizToMove) return;
+
+    // 3. Remove it and insert it at the new position
+    const otherQuizzes = sortedGroup.filter(q => q.id !== quizId);
+    
+    // Clamp new position
+    const targetIndex = Math.max(0, Math.min(newOrderVal, otherQuizzes.length));
+    
+    const newGroupOrder = [...otherQuizzes];
+    newGroupOrder.splice(targetIndex, 0, quizToMove);
+
+    // 4. Update cache
+    updateQuizzesCache(newGroupOrder);
+  }, [updateQuizzesCache]);
+
   // Filtered Data and Auto-Expansion
   // Filtered Data and Auto-Expansion
   const { filteredHierarchicalData, filteredUnclassifiedQuizzes } = React.useMemo(() => {
@@ -1329,6 +1394,7 @@ export default function QuizzesAdmin() {
                           setExpandedSubcategories={setExpandedSubcategories}
                           assignmentResponseMode={assignmentResponseMode}
                           setAssignmentResponseMode={setAssignmentResponseMode}
+                          onOrderChange={handleOrderChange}
                         />
                       ))}
                     </Reorder.Group>
@@ -1367,7 +1433,7 @@ export default function QuizzesAdmin() {
                                 <Reorder.Group
                                   axis="y"
                                   values={filteredUnclassifiedQuizzes}
-                                  onReorder={quizSearchQuery ? () => { } : updateQuizzesCache}
+                                  onReorder={quizSearchQuery ? () => { } : (newOrder) => updateQuizzesCache(newOrder as Quiz[])}
                                   className="grid grid-cols-1 gap-3 py-3"
                                 >
                                   <AnimatePresence initial={false}>
@@ -1388,6 +1454,8 @@ export default function QuizzesAdmin() {
                                         toggleQuizAssignment={toggleQuizAssignment}
                                         assignmentResponseMode={assignmentResponseMode}
                                         setAssignmentResponseMode={setAssignmentResponseMode}
+                                        onOrderChange={handleOrderChange}
+                                        fullGroup={filteredUnclassifiedQuizzes}
                                       />
                                     ))}
                                   </AnimatePresence>
@@ -1642,7 +1710,7 @@ export default function QuizzesAdmin() {
                   <Reorder.Group
                     axis="y"
                     values={sortednodeQuizzes}
-                    onReorder={searchQuery ? () => { } : (updateQuizzesCache as any)}
+                    onReorder={(newOrder) => updateQuizzesCache(newOrder as Quiz[])}
                     className="grid grid-cols-1 gap-3"
                   >
                     {sortednodeQuizzes.map((quiz) => (
@@ -1664,6 +1732,8 @@ export default function QuizzesAdmin() {
                         allUsers={allUsers}
                         assignedUsers={assignedUsers}
                         toggleQuizAssignment={toggleQuizAssignment}
+                        onOrderChange={handleOrderChange}
+                        fullGroup={nodeQuizzes}
                       />
                     ))}
                   </Reorder.Group>
@@ -1773,7 +1843,8 @@ const DraggableCategoryItem = React.memo(({
   expandedSubcategories,
   setExpandedSubcategories,
   assignmentResponseMode,
-  setAssignmentResponseMode
+  setAssignmentResponseMode,
+  onOrderChange
 }: any) => {
   const controls = useDragControls();
 
@@ -1897,6 +1968,7 @@ const DraggableCategoryItem = React.memo(({
                         }}
                         assignmentResponseMode={assignmentResponseMode}
                         setAssignmentResponseMode={setAssignmentResponseMode}
+                        onOrderChange={onOrderChange}
                       />
                     ))}
                 </Reorder.Group>
@@ -1927,7 +1999,8 @@ const DraggableSubcategoryItem = React.memo(({
   isExpanded,
   onToggle,
   assignmentResponseMode,
-  setAssignmentResponseMode
+  setAssignmentResponseMode,
+  onOrderChange
 }: any) => {
   const controls = useDragControls();
 
@@ -2012,7 +2085,7 @@ const DraggableSubcategoryItem = React.memo(({
                 <Reorder.Group
                   axis="y"
                   values={subcategory.quizzes}
-                  onReorder={searchQuery ? () => { } : updateQuizzesCache}
+                  onReorder={(newOrder) => updateQuizzesCache(newOrder as Quiz[])}
                   className="grid grid-cols-1 gap-3"
                 >
                   <AnimatePresence initial={false}>
@@ -2033,6 +2106,8 @@ const DraggableSubcategoryItem = React.memo(({
                         toggleQuizAssignment={toggleQuizAssignment}
                         assignmentResponseMode={assignmentResponseMode}
                         setAssignmentResponseMode={setAssignmentResponseMode}
+                        onOrderChange={onOrderChange}
+                        fullGroup={subcategory.quizzes}
                       />
                     ))}
                   </AnimatePresence>
@@ -2061,9 +2136,31 @@ const DraggableQuizItem = React.memo(({
   assignedUsers,
   toggleQuizAssignment,
   assignmentResponseMode,
-  setAssignmentResponseMode
+  setAssignmentResponseMode,
+  onOrderChange,
+  fullGroup
 }: any) => {
   const controls = useDragControls();
+  const [localOrder, setLocalOrder] = useState(quiz.sortOrder ?? 0);
+
+  useEffect(() => {
+    setLocalOrder(quiz.sortOrder ?? 0);
+  }, [quiz.sortOrder]);
+
+  const handleBlur = () => {
+    const val = parseInt(String(localOrder));
+    if (!isNaN(val) && val !== quiz.sortOrder) {
+      onOrderChange(quiz.id, val, fullGroup);
+    } else {
+      setLocalOrder(quiz.sortOrder ?? 0);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    }
+  };
 
   return (
     <Reorder.Item
@@ -2102,6 +2199,22 @@ const DraggableQuizItem = React.memo(({
                   }}
                 >
                   <GripVertical className="h-5 w-5" />
+                </div>
+                {/* ORDER INPUT */}
+                <div 
+                  className="mt-1 flex items-center gap-1 bg-slate-950/50 border border-white/10 rounded-md px-2 py-0.5 h-7" 
+                  title="Posición (orden)"
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">Orden</span>
+                  <input 
+                    type="number"
+                    value={localOrder}
+                    onChange={(e) => setLocalOrder(e.target.value as any)}
+                    onBlur={handleBlur}
+                    onKeyDown={handleKeyDown}
+                    className="w-7 bg-transparent text-xs font-bold text-blue-400 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">

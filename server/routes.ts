@@ -689,101 +689,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Math Tip Endpoint
+  // Math Tip Status/Fetch Endpoint
   apiRouter.get("/user/math-tip", async (req: Request, res: Response) => {
     const userId = req.session.userId;
     if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
     try {
-      // 1. Get recent completed quizzes (fetch more to allow random selection)
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const today = new Date().toISOString().split('T')[0];
+      const lastGenerated = user.mathTipLastGeneratedAt ? new Date(user.mathTipLastGeneratedAt).toISOString().split('T')[0] : null;
+      const claimed = user.mathTipClaimedAt ? new Date(user.mathTipClaimedAt).toISOString().split('T')[0] === today : false;
+
+      // If we have a tip from today or a previous day that hasn't been claimed yet, return it
+      // Actually, if it was generated on a previous day and never claimed, we can still show it.
+      // But if it was generated today, it's definitely the "tip of the day".
+      
+      res.json({
+        tip: user.mathTipContent,
+        lastGenerated: user.mathTipLastGeneratedAt,
+        claimed: claimed,
+        isToday: lastGenerated === today
+      });
+    } catch (error) {
+      console.error("[MathTip Status] Error:", error);
+      res.status(500).json({ message: "Error al obtener estado del tip" });
+    }
+  });
+
+  // Generate Math Tip On Demand
+  apiRouter.post("/user/math-tip/generate", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const today = new Date().toISOString().split('T')[0];
+      const lastGenerated = user.mathTipLastGeneratedAt ? new Date(user.mathTipLastGeneratedAt).toISOString().split('T')[0] : null;
+
+      // If already generated today, just return existing
+      if (lastGenerated === today && user.mathTipContent) {
+        return res.json({ tip: user.mathTipContent, lastGenerated: user.mathTipLastGeneratedAt });
+      }
+
+      // 1. Get context for AI (mistakes in recent quizzes)
       const allProgress = await storage.getStudentProgress(userId);
       const completedProgress = allProgress
         .filter(p => p.status === "completed" && p.score !== null)
         .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime())
-        .slice(0, 10); // Get last 10 to have variety
+        .slice(0, 10);
 
+      let context = "¡Bienvenido! Sigue practicando para recibir consejos personalizados.";
+      let selectedQuizTitle = "General";
 
+      if (completedProgress.length > 0) {
+        const randomProgress = completedProgress[Math.floor(Math.random() * completedProgress.length)];
+        const quiz = await storage.getQuiz(randomProgress.quizId);
+        
+        if (quiz) {
+          selectedQuizTitle = quiz.title;
+          context = `El estudiante completó el cuestionario "${quiz.title}".`;
+          const answers = await storage.getStudentAnswersByProgress(randomProgress.id);
+          const wrongAnswers = answers.filter(a => a.isCorrect === false);
 
-      if (completedProgress.length === 0) {
-        return res.json({ tip: "¡Bienvenido! Completa tu primer cuestionario para recibir tips personalizados." });
+          if (wrongAnswers.length > 0) {
+            const questionIds = wrongAnswers.slice(0, 2).map(m => m.questionId);
+            const questions = await Promise.all(questionIds.map(id => storage.getQuestion(id)));
+            context += " Tuvo errores en preguntas sobre: ";
+            context += questions.map(q => q?.content.replace(/¡/g, '').substring(0, 60) + "...").join(" y ");
+          } else {
+            context += " Respondió todo correctamente, ¡felicítalo!";
+          }
+        }
       }
 
-      // 2. Pick ONE random quiz to focus on
-      const randomProgress = completedProgress[Math.floor(Math.random() * completedProgress.length)];
-      const quiz = await storage.getQuiz(randomProgress.quizId);
-
-      if (!quiz) return res.json({ tip: "Sigue practicando para mejorar tus habilidades matemáticas." });
-
-      // 3. Get context for this specific quiz
-      let context = `El estudiante completó el cuestionario "${quiz.title}".`;
-
-      // Check for mistakes in this specific attempt
-      const answers = await storage.getStudentAnswersByProgress(randomProgress.id);
-      const wrongAnswers = answers.filter(a => a.isCorrect === false);
-
-      if (wrongAnswers.length > 0) {
-        const questionIds = wrongAnswers.slice(0, 2).map(m => m.questionId);
-        const questions = await Promise.all(questionIds.map(id => storage.getQuestion(id)));
-
-        context += " Tuvo errores en preguntas sobre: ";
-        context += questions.map(q => q?.content.replace(/¡/g, '').substring(0, 50) + "...").join(" y ");
-      } else {
-        context += " Respondió todo correctamente.";
-      }
-
-      console.log(`[MathTip] Selected topic: ${quiz.title}`);
-
-      // 4. Generate Tip with DeepSeek
+      // 2. Generate Tip with DeepSeek
       const apiKey = process.env.DEEPSEEK_API_KEY;
-      if (!apiKey) {
-        return res.json({ tip: "Recuerda revisar siempre los signos en tus operaciones." });
+      let generatedTip = "Recuerda revisar siempre los signos en tus operaciones matemáticas.";
+
+      if (apiKey) {
+        const prompt = `Actúa como un profesor experto de matemáticas llamado AlanMath. Genera un "Tip Matemático" (Chispazo) valioso y pedagógico.
+        
+IMPORTANTE: No uses los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).
+Contexto del estudiante: ${context}
+
+Objetivo: Que el estudiante entienda una idea clave o un proceso fundamental.
+Formato: Markdown. Sé breve (máximo 80 palabras). Usa LaTeX para fórmulas matemáticas.
+Tono: Motivador, moderno y empático.`;
+
+        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.7,
+            max_tokens: 300,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          generatedTip = data.choices?.[0]?.message?.content?.trim() || generatedTip;
+        }
       }
 
-      const prompt = `Actúa como un profesor experto de matemáticas. Genera un "Tip Matemático" valioso y pedagógico sobre el tema específico proporcionado.
-
-IMPORTANTE: No uses los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).
-Contexto: ${context}
-
-IMPORTANTE: No uses nunca los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡). Si necesitas enfatizar algo, utiliza negritas o simplemente el texto sin signos de admiración.
-
-Objetivo: Que el estudiante entienda realmente la idea clave o un proceso fundamental para resolver este tipo de problemas.
-Requisitos:
-1. Explicación Clara: Explica el "por qué" o el "cómo" de forma sencilla pero profunda. Evita enunciados vacíos.
-2. Ejemplo Concreto: Incluye un ejemplo breve que ilustre perfectamente el concepto. No solo una ecuación, sino una pequeña demostración de la idea.
-3. Conexión: Si hubo errores, explica cómo evitarlos específicamente.
-4. Formato LaTeX: Usa signos de exclamación invertidos (¡...¡) para TODA la notación matemática. Ejemplo: ¡x^2 + 1¡.
-
-Longitud: Máximo 40-50 palabras. Conciso pero útil.
-Tono: Alentador, profesional y educativo.`;
-
-      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.7,
-          max_tokens: 400,
-        }),
+      // 3. Save to DB
+      await storage.updateUser(userId, {
+        mathTipContent: generatedTip,
+        mathTipLastGeneratedAt: new Date().toISOString(),
+        mathTipClaimedAt: null // Reset claim status for the new tip
       });
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error(`[MathTip] DeepSeek API error: ${response.status}`, errText);
-        throw new Error("DeepSeek API error");
-      }
-
-      const data = await response.json();
-      const tip = data.choices?.[0]?.message?.content?.trim() || "La práctica hace al maestro.";
-
-      res.json({ tip });
+      res.json({ tip: generatedTip, lastGenerated: new Date().toISOString() });
 
     } catch (error) {
-      console.error("[MathTip] Error generating math tip:", error);
-      res.json({ tip: "¡Sigue esforzándote! Cada error es una oportunidad de aprender." });
+      console.error("[MathTip Generate] Error:", error);
+      res.status(500).json({ message: "Error al generar el chispazo matemático" });
+    }
+  });
+
+  // Claim Math Tip Reward
+  apiRouter.post("/user/math-tip/claim", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const today = new Date().toISOString().split('T')[0];
+      const claimedAtDate = user.mathTipClaimedAt ? new Date(user.mathTipClaimedAt).toISOString().split('T')[0] : null;
+
+      if (claimedAtDate === today) {
+        return res.status(400).json({ message: "Ya has reclamado tu recompensa de hoy" });
+      }
+
+      // Add 1 credit and mark as claimed
+      await storage.updateUser(userId, {
+        hintCredits: (user.hintCredits || 0) + 1,
+        mathTipClaimedAt: new Date().toISOString()
+      });
+
+      res.json({ 
+        message: "¡Recompensa reclamada con éxito! +1 Crédito",
+        newCredits: (user.hintCredits || 0) + 1
+      });
+
+    } catch (error) {
+      console.error("[MathTip Claim] Error:", error);
+      res.status(500).json({ message: "Error al reclamar recompensa" });
     }
   });
 

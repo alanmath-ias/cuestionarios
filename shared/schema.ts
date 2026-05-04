@@ -23,6 +23,9 @@ export const users = pgTable("users", {
 	totalReports: integer("total_reports").default(0).notNull(),
 	canCreateAiQuizzes: boolean("can_create_ai_quizzes").default(false).notNull(),
 	duelWins: integer("duel_wins").default(0).notNull(),
+	mathTipContent: text("math_tip_content"),
+	mathTipLastGeneratedAt: timestamp("math_tip_last_generated_at", { mode: 'string' }),
+	mathTipClaimedAt: timestamp("math_tip_claimed_at", { mode: 'string' }),
 }, (table) => [
 	unique("users_username_unique").on(table.username),
 ]);
