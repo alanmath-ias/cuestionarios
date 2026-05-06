@@ -1518,52 +1518,57 @@ const ActiveQuiz = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-2.5">
-                  {shuffledAnswers.map((answer, index) => {
-                    const existingAnswer = studentAnswers.find(sa =>
-                      sa.questionId === currentQuestion.id && sa.answerId === answer.id
+                  {(() => {
+                    const hasMathContent = shuffledAnswers.some(a =>
+                      a.content && (a.content.includes('¡') || a.content.includes('\\'))
                     );
-                    const isSelected = selectedAnswerId === answer.id || !!existingAnswer;
-                    const isAnswered = answeredQuestions[currentQuestionIndex];
+                    return shuffledAnswers.map((answer, index) => {
+                      const existingAnswer = studentAnswers.find(sa =>
+                        sa.questionId === currentQuestion.id && sa.answerId === answer.id
+                      );
+                      const isSelected = selectedAnswerId === answer.id || !!existingAnswer;
+                      const isAnswered = answeredQuestions[currentQuestionIndex];
 
-                    let variantClass = "bg-slate-800/30 border-white/5 hover:bg-slate-800/60 hover:border-blue-500/30 text-slate-300";
+                      let variantClass = "bg-slate-800/30 border-white/5 hover:bg-slate-800/60 hover:border-blue-500/30 text-slate-300";
 
-                    if (isAnswered) {
-                      if (answer.isCorrect) {
-                        variantClass = "bg-green-500/10 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.1)]";
+                      if (isAnswered) {
+                        if (answer.isCorrect) {
+                          variantClass = "bg-green-500/10 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.1)]";
+                        } else if (isSelected) {
+                          variantClass = "bg-red-500/10 border-red-500/50 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]";
+                        } else {
+                          variantClass = "opacity-60 border-white/5 bg-slate-900/20 text-slate-500";
+                        }
                       } else if (isSelected) {
-                        variantClass = "bg-red-500/10 border-red-500/50 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]";
-                      } else {
-                        variantClass = "opacity-60 border-white/5 bg-slate-900/20 text-slate-500";
+                        variantClass = "bg-blue-600/20 border-blue-500 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.15)]";
                       }
-                    } else if (isSelected) {
-                      variantClass = "bg-blue-600/20 border-blue-500 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.15)]";
-                    }
 
-                    return (
-                      <button
-                        key={answer.id}
-                        onClick={() => !isAnswered && !isReadOnly && handleSelectAnswer(answer.id)}
-                        disabled={isAnswered || isReadOnly}
-                        className={`w-full text-left py-3 px-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass} ${isReadOnly ? 'cursor-default opacity-80' : ''}`}
-                      >
-                        <div className="flex items-center gap-4 relative z-10 w-full">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors
-                                  ${isSelected || (isAnswered && answer.isCorrect)
-                              ? 'bg-white/10 border-white/20 text-white'
-                              : 'bg-slate-900/50 border-white/10 text-slate-500 group-hover:text-slate-300 group-hover:border-white/20'
-                            }
-                                `}>
-                            {String.fromCharCode(65 + index)}
+                      return (
+                        <button
+                          key={answer.id}
+                          onClick={() => !isAnswered && !isReadOnly && handleSelectAnswer(answer.id)}
+                          disabled={isAnswered || isReadOnly}
+                          className={`w-full text-left ${hasMathContent ? 'py-3' : 'py-4'} px-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass} ${isReadOnly ? 'cursor-default opacity-80' : ''}`}
+                        >
+                          <div className="flex items-center gap-4 relative z-10 w-full">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors
+                                    ${isSelected || (isAnswered && answer.isCorrect)
+                                ? 'bg-white/10 border-white/20 text-white'
+                                : 'bg-slate-900/50 border-white/10 text-slate-500 group-hover:text-slate-300 group-hover:border-white/20'
+                              }
+                                  `}>
+                              {String.fromCharCode(65 + index)}
+                            </div>
+                            <div className={`font-medium flex-1 ${getAnswerSizeClass(answer.content)}`}>
+                              <ContentRenderer content={answer.content} tight={true} />
+                            </div>
                           </div>
-                          <div className={`font-medium flex-1 ${getAnswerSizeClass(answer.content)}`}>
-                            <ContentRenderer content={answer.content} />
-                          </div>
-                        </div>
-                        {isAnswered && answer.isCorrect && <CheckCircle2 className="h-6 w-6 text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)] shrink-0 ml-4" />}
-                        {isAnswered && isSelected && !answer.isCorrect && <XCircle className="h-6 w-6 text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] shrink-0 ml-4" />}
-                      </button>
-                    );
-                  })}
+                          {isAnswered && answer.isCorrect && <CheckCircle2 className="h-6 w-6 text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)] shrink-0 ml-4" />}
+                          {isAnswered && isSelected && !answer.isCorrect && <XCircle className="h-6 w-6 text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] shrink-0 ml-4" />}
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </>

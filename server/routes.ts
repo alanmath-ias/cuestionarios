@@ -706,8 +706,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Actually, if it was generated on a previous day and never claimed, we can still show it.
       // But if it was generated today, it's definitely the "tip of the day".
       
+      // Parse JSON content (new format) or handle legacy plain text
+      let tipText = user.mathTipContent || "";
+      let tipContext = "";
+      let tipImage = "";
+      try {
+        const parsed = JSON.parse(tipText);
+        tipText = parsed.tip || tipText;
+        tipContext = parsed.context || "";
+        tipImage = parsed.imageUrl || "";
+      } catch { /* legacy plain text tip, use as-is */ }
+
       res.json({
-        tip: user.mathTipContent,
+        tip: tipText,
+        context: tipContext,
+        imageUrl: tipImage,
         lastGenerated: user.mathTipLastGeneratedAt,
         claimed: claimed,
         isToday: lastGenerated === today
@@ -732,7 +745,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If already generated today, just return existing
       if (lastGenerated === today && user.mathTipContent) {
-        return res.json({ tip: user.mathTipContent, lastGenerated: user.mathTipLastGeneratedAt });
+        try {
+          const parsed = JSON.parse(user.mathTipContent);
+          return res.json({ 
+            tip: parsed.tip || user.mathTipContent, 
+            context: parsed.context || "", 
+            imageUrl: parsed.imageUrl || "",
+            lastGenerated: user.mathTipLastGeneratedAt 
+          });
+        } catch {
+          return res.json({ tip: user.mathTipContent, context: "", imageUrl: "", lastGenerated: user.mathTipLastGeneratedAt });
+        }
       }
 
       // 1. Get context for AI (mistakes in recent quizzes)
@@ -742,26 +765,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime())
         .slice(0, 10);
 
-      let context = "¡Bienvenido! Sigue practicando para recibir consejos personalizados.";
-      let selectedQuizTitle = "General";
+      let aiContext = "El estudiante está aprendiendo matemáticas. Genera un tip motivador general.";
+      let questionReference = ""; // The question shown as reminder in the UI
+      let questionImage = "";     // Image for the reminder question
 
       if (completedProgress.length > 0) {
         const randomProgress = completedProgress[Math.floor(Math.random() * completedProgress.length)];
         const quiz = await storage.getQuiz(randomProgress.quizId);
         
         if (quiz) {
-          selectedQuizTitle = quiz.title;
-          context = `El estudiante completó el cuestionario "${quiz.title}".`;
           const answers = await storage.getStudentAnswersByProgress(randomProgress.id);
           const wrongAnswers = answers.filter(a => a.isCorrect === false);
 
           if (wrongAnswers.length > 0) {
-            const questionIds = wrongAnswers.slice(0, 2).map(m => m.questionId);
-            const questions = await Promise.all(questionIds.map(id => storage.getQuestion(id)));
-            context += " Tuvo errores en preguntas sobre: ";
-            context += questions.map(q => q?.content.replace(/¡/g, '').substring(0, 60) + "...").join(" y ");
+            // Pick one wrong answer question to focus on
+            const focusQuestion = await storage.getQuestion(wrongAnswers[0].questionId);
+            if (focusQuestion) {
+              const cleanQuestion = focusQuestion.content.replace(/¡([^¡]+)¡/g, '$1').replace(/¡/g, '').trim();
+              questionReference = `${quiz.title}: ${cleanQuestion}`;
+              questionImage = focusQuestion.imageUrl || "";
+              aiContext = `El estudiante falló esta pregunta del cuestionario "${quiz.title}": "${cleanQuestion}". Genera un tip que ayude a entender el concepto detrás de esta pregunta específica.`;
+            }
           } else {
-            context += " Respondió todo correctamente, ¡felicítalo!";
+            aiContext = `El estudiante completó el cuestionario "${quiz.title}" correctamente. Genera un tip avanzado relacionado con ese tema.`;
           }
         }
       }
@@ -771,14 +797,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let generatedTip = "Recuerda revisar siempre los signos en tus operaciones matemáticas.";
 
       if (apiKey) {
-        const prompt = `Actúa como un profesor experto de matemáticas llamado AlanMath. Genera un "Tip Matemático" (Chispazo) valioso y pedagógico.
-        
-IMPORTANTE: No uses los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).
-Contexto del estudiante: ${context}
+        const prompt = `Actúa como AlanMath, profesor experto de matemáticas. Genera un "Chispazo Matemático" pedagógico y motivador.
 
-Objetivo: Que el estudiante entienda una idea clave o un proceso fundamental.
-Formato: Markdown. Sé breve (máximo 80 palabras). Usa LaTeX para fórmulas matemáticas.
-Tono: Motivador, moderno y empático.`;
+REGLAS DE FORMATO:
+1. Puedes usar exclamaciones españolas normales como "¡Tú puedes!" en el texto.
+2. Para fórmulas usa EXCLUSIVAMENTE \\( expresión \\) para inline y \\[ expresión \\] para bloque.
+3. PROHIBIDO usar $ como delimitador matemático.
+4. Máximo 80 palabras. Sé directo y claro.
+
+TAREA: ${aiContext}
+
+Genera SOLO el tip, sin saludos introductorios. Empieza directo con el concepto o tip clave.`;
 
         const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
           method: 'POST',
@@ -796,18 +825,34 @@ Tono: Motivador, moderno y empático.`;
 
         if (response.ok) {
           const data = await response.json();
-          generatedTip = data.choices?.[0]?.message?.content?.trim() || generatedTip;
+          let rawTip = data.choices?.[0]?.message?.content?.trim() || generatedTip;
+          // Sanitize AI-generated $ signs:
+          rawTip = rawTip.replace(/\$\$([\s\S]*?)\$\$/g, '\\[$1\\]');                      // $$ block → \[ \]
+          rawTip = rawTip.replace(/\$\s*((?:\\[a-zA-Z]+|[0-9])[^$\n]*?)\s*\$/g, '\\($1\\)'); // $ math $ → \( \)
+          rawTip = rawTip.replace(/^\$/gm, '');                                              // stray $ at line start
+          rawTip = rawTip.replace(/\$/g, '');                                               // remaining stray $
+          generatedTip = rawTip;
         }
       }
 
-      // 3. Save to DB
+      // 3. Save to DB as JSON with context + tip + image
+      const tipPayload = JSON.stringify({ 
+        context: questionReference, 
+        tip: generatedTip,
+        imageUrl: questionImage 
+      });
       await storage.updateUser(userId, {
-        mathTipContent: generatedTip,
+        mathTipContent: tipPayload,
         mathTipLastGeneratedAt: new Date().toISOString(),
         mathTipClaimedAt: null // Reset claim status for the new tip
       });
 
-      res.json({ tip: generatedTip, lastGenerated: new Date().toISOString() });
+      res.json({ 
+        tip: generatedTip, 
+        context: questionReference, 
+        imageUrl: questionImage,
+        lastGenerated: new Date().toISOString() 
+      });
 
     } catch (error) {
       console.error("[MathTip Generate] Error:", error);

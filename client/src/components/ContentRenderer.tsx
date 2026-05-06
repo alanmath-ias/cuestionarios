@@ -12,14 +12,15 @@ export const ContentRenderer = React.memo(function ContentRenderer({ content, cl
 
     // Solo normalizamos saltos de línea si el modo 'tight' está activo
     const normalizedContent = tight ? content.replace(/\n\n+/g, '\n') : content;
-    const parts = normalizedContent.split(/((?:¡+|\\?\$+).*?(?:¡+|\\?\$+))/g);
+    // Usamos [\s\S] para permitir que el punto coincida con saltos de línea (multilínea)
+    const parts = normalizedContent.split(/((?:¡+|\\?\$+)(?:[\s\S]*?)(?:¡+|\\?\$+))/g);
 
     return (
         <div className={`content-renderer ${tight ? 'leading-[1.1]' : 'leading-relaxed'} ${className}`}>
             {parts.map((part, index) => {
                 const trimmedPart = part.trim();
-                // Check if the part is wrapped in delimiters
-                const match = trimmedPart.match(/^((?:¡+|\\?\$+))(.*?)(\1)$/);
+                // Check if the part is wrapped in delimiters - use [\s\S] for multiline
+                const match = trimmedPart.match(/^((?:¡+|\\?\$+))([\s\S]*?)(\1)$/);
 
                 if (match) {
                     const [fullMatch, startDelim, equation, endDelim] = match;

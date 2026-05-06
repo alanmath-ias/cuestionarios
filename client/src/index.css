@@ -192,3 +192,15 @@ body.dragging-active [data-framer-motion-projections] {
 [data-reorder-item-dragging="true"] {
   cursor: grabbing !important;
 }
+
+/* KaTeX: prevent inline math formulas from breaking across lines */
+.katex {
+  white-space: nowrap !important;
+  display: inline-block;
+}
+
+.katex-display {
+  white-space: normal;  /* block math (display mode) CAN wrap - it's full width */
+  display: block;
+  overflow-x: auto;    /* scroll if too wide instead of overflow */
+}

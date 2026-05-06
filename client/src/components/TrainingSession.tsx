@@ -564,36 +564,41 @@ export function TrainingSession({ title, questions, loading, onExit, categoryId 
                     </AnimatePresence>
 
                     {/* Options Grid */}
-                    <div className="grid grid-cols-1 gap-2.5">
-                        {currentQuestion.options.map((option, index) => {
-                            const isSelected = isAnswered ? previousAnswer?.selectedOption === index : selectedOption === index;
-                            const isCorrect = option.isCorrect;
-                            const showResultLocal = showResult || reviewMode || isAnswered;
-
-                            let btnClass = "bg-slate-900/30 border-white/5 hover:bg-slate-800/60 text-slate-300";
-                            if (showResultLocal) {
-                                if (isCorrect) btnClass = "bg-green-500/10 border-green-500/50 text-green-400 ring-2 ring-green-500/10 shadow-green-900/10";
-                                else if (isSelected) btnClass = "bg-red-500/10 border-red-500/50 text-red-400";
-                                else btnClass = "opacity-40 border-white/5 bg-slate-900/20";
-                            } else if (isSelected) {
-                                btnClass = "bg-blue-600/20 border-blue-500 text-blue-300 ring-4 ring-blue-500/10 shadow-blue-500/20";
-                            }
-
-                            return (
-                                <button key={option.id} onClick={() => handleOptionSelect(index)} disabled={isAnswered || reviewMode || showResult} className={`w-full text-left py-3 px-5 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between group overflow-hidden ${btnClass}`}>
-                                    <div className="flex items-center gap-5 w-full">
-                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center border-2 text-sm font-black shrink-0 transition-all ${isSelected || (showResultLocal && isCorrect) ? 'bg-white/10 border-white/30 text-white' : 'bg-slate-950 border-white/10 text-slate-600'}`}>
-                                            {String.fromCharCode(65 + index)}
-                                        </div>
-                                        <div className="text-lg font-medium flex-1">
-                                            <ContentRenderer content={option.text} />
-                                        </div>
-                                    </div>
-                                    {showResultLocal && isCorrect && <CheckCircle2 className="h-6 w-6 text-green-400 shrink-0 ml-4" />}
-                                    {showResultLocal && isSelected && !isCorrect && <XCircle className="h-6 w-6 text-red-400 shrink-0 ml-4" />}
-                                </button>
+                    <div className="grid grid-cols-1 gap-2">
+                        {(() => {
+                            const hasMathContent = currentQuestion.options.some((o: any) =>
+                                o.text && (o.text.includes('¡') || o.text.includes('\\'))
                             );
-                        })}
+                            return currentQuestion.options.map((option: any, index: number) => {
+                                const isSelected = isAnswered ? previousAnswer?.selectedOption === index : selectedOption === index;
+                                const isCorrect = option.isCorrect;
+                                const showResultLocal = showResult || reviewMode || isAnswered;
+
+                                let btnClass = "bg-slate-900/30 border-white/5 hover:bg-slate-800/60 text-slate-300";
+                                if (showResultLocal) {
+                                    if (isCorrect) btnClass = "bg-green-500/10 border-green-500/50 text-green-400 ring-2 ring-green-500/10 shadow-green-900/10";
+                                    else if (isSelected) btnClass = "bg-red-500/10 border-red-500/50 text-red-400";
+                                    else btnClass = "opacity-40 border-white/5 bg-slate-900/20";
+                                } else if (isSelected) {
+                                    btnClass = "bg-blue-600/20 border-blue-500 text-blue-300 ring-4 ring-blue-500/10 shadow-blue-500/20";
+                                }
+
+                                return (
+                                    <button key={option.id} onClick={() => handleOptionSelect(index)} disabled={isAnswered || reviewMode || showResult} className={`w-full text-left ${hasMathContent ? 'py-3' : 'py-4'} px-5 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between group overflow-hidden ${btnClass}`}>
+                                        <div className="flex items-center gap-5 w-full">
+                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center border-2 text-sm font-black shrink-0 transition-all ${isSelected || (showResultLocal && isCorrect) ? 'bg-white/10 border-white/30 text-white' : 'bg-slate-950 border-white/10 text-slate-600'}`}>
+                                                {String.fromCharCode(65 + index)}
+                                            </div>
+                                            <div className="text-lg font-medium flex-1">
+                                                <ContentRenderer content={option.text} tight={hasMathContent} />
+                                            </div>
+                                        </div>
+                                        {showResultLocal && isCorrect && <CheckCircle2 className="h-6 w-6 text-green-400 shrink-0 ml-4" />}
+                                        {showResultLocal && isSelected && !isCorrect && <XCircle className="h-6 w-6 text-red-400 shrink-0 ml-4" />}
+                                    </button>
+                                );
+                            });
+                        })()}
                     </div>
                 </div>
 

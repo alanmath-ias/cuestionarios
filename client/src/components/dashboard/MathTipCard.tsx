@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ContentRenderer } from '@/components/ContentRenderer';
+import { AIMarkdown } from '@/components/ui/ai-markdown';
 import {
   Dialog,
   DialogContent,
@@ -153,7 +153,7 @@ export const MathTipCard: React.FC<MathTipCardProps> = ({ userId }) => {
 
       {/* Dialog for the Tip */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md bg-slate-950 border-amber-500/30 text-slate-100 rounded-[2rem] overflow-hidden p-0 max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-xl bg-slate-950 border-amber-500/30 text-slate-100 rounded-[2rem] overflow-hidden p-0 max-h-[90vh] flex flex-col">
           {/* Header Accent */}
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-500 to-orange-500 z-50" />
           
@@ -183,14 +183,37 @@ export const MathTipCard: React.FC<MathTipCardProps> = ({ userId }) => {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="bg-slate-900/60 rounded-2xl p-6 border border-white/5 mb-8 min-h-[120px] flex items-center justify-center relative group">
+            <div className="bg-slate-900/60 rounded-2xl p-6 border border-white/5 mb-8 min-h-[120px] flex items-center relative group overflow-x-auto custom-scrollbar">
               {/* Internal Glow */}
               <div className="absolute inset-0 bg-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl pointer-events-none" />
               
-              <div className="relative z-10 w-full">
-                <ContentRenderer 
+              <div className="relative z-10 w-full flex flex-col gap-4">
+                {tipData?.context && (
+                  <div className="bg-slate-950/80 rounded-xl p-4 border border-white/5 mb-2 flex flex-col gap-3">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2">
+                      <Zap className="w-3 h-3 text-amber-500" />
+                      Pregunta de Referencia
+                    </p>
+                    
+                    {tipData.imageUrl && (
+                      <div className="relative w-full rounded-lg overflow-hidden border border-white/5 bg-slate-900/50">
+                        <img 
+                          src={tipData.imageUrl} 
+                          alt="Contexto visual" 
+                          className="w-full h-auto max-h-40 object-contain mx-auto"
+                        />
+                      </div>
+                    )}
+
+                    <p className="text-slate-300 text-sm italic line-clamp-3">
+                      "{tipData.context}"
+                    </p>
+                  </div>
+                )}
+                
+                <AIMarkdown 
                   content={tipData?.tip || ""} 
-                  className="text-slate-200 text-lg text-center leading-relaxed font-medium" 
+                  className="text-slate-200 text-center [&_p]:leading-relaxed [&_p]:text-base [&_p]:mb-3 [&_strong]:text-amber-300 [&_.katex]:text-amber-100 prose-invert w-full overflow-x-auto custom-scrollbar" 
                 />
               </div>
             </div>
