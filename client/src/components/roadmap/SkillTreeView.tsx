@@ -14,6 +14,14 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Settings, Plus, Search as SearchIcon, Trash2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 
 interface SkillTreeViewProps {
     nodes: ArithmeticNode[];
@@ -24,11 +32,42 @@ interface SkillTreeViewProps {
     allQuizzes?: any[]; // Passed from parent
     isAdmin?: boolean;
     subcategories?: any[]; // For admin tooltips
+    categoryId: number; // For mapping identification
+    nodeMappings?: any[]; // Dynamic content overrides
+    allQuizzesForAdmin?: any[]; // For inviting quizzes from other categories
 }
 
-export function SkillTreeView({ nodes, progressMap, onNodeClick, title, description, allQuizzes = [], isAdmin = false, subcategories = [] }: SkillTreeViewProps) {
+export function SkillTreeView({ 
+    nodes, progressMap, onNodeClick, title, description, 
+    allQuizzes = [], isAdmin = false, subcategories = [], 
+    categoryId, nodeMappings = [], allQuizzesForAdmin = [] 
+}: SkillTreeViewProps) {
     const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
     const [isInteractive, setIsInteractive] = useState(false);
+    
+    // Node configuration state
+    const [configNode, setConfigNode] = useState<ArithmeticNode | null>(null);
+    const queryClient = useQueryClient();
+
+    const upsertMappingMutation = useMutation({
+        mutationFn: async (mapping: any) => {
+            const res = await fetch('/api/node-mappings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(mapping)
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.message || 'Error al guardar el vínculo');
+            }
+            return res.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [`/api/node-mappings/${categoryId}`] });
+            setConfigNode(null);
+        }
+    });
+
     const [showReloadButton, setShowReloadButton] = useState(false);
     const reloadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const transformRef = useRef<ReactZoomPanPinchRef>(null);
@@ -37,7 +76,6 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     const [triggeredFamilies, setTriggeredFamilies] = useState<Set<string>>(new Set());
     const [celebratingNodeId, setCelebratingNodeId] = useState<string | null>(null);
     const [showCelebrationDialog, setShowCelebrationDialog] = useState(false);
-    const [processedCelebrateParam, setProcessedCelebrateParam] = useState<string | null>(null);
     const [processedScrollId, setProcessedScrollId] = useState<string | null>(null); // state for scroll
     const [processedCelebrationId, setProcessedCelebrationId] = useState<string | null>(null); // state for node/family celebrate
     const [celebrationType, setCelebrationType] = useState<'node' | 'family'>('node'); // type of celebration
@@ -79,6 +117,12 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
 
         nodes.forEach(node => {
             let contextQuizzes: any[] = [];
+            
+            // Get dynamic mappings for this node
+            const mapping = nodeMappings?.find(m => m.nodeId === node.id);
+            const dynamicSubIds = mapping?.additionalSubcategories || [];
+            const dynamicQuizIds = mapping?.additionalQuizzes || [];
+            const overrideSubId = mapping?.subcategoryId;
 
             if (node.behavior === 'container') {
                 // For containers, we aggregate EVERY individual quiz in their family branch
@@ -86,19 +130,19 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                 const familyNodes = nodes.filter(n => familyIds.includes(n.id));
 
                 familyNodes.forEach(fn => {
+                    const fnMapping = nodeMappings?.find(m => m.nodeId === fn.id);
+                    const fnSubIds = fnMapping?.additionalSubcategories || fn.additionalSubcategories || [];
+                    const fnSubId = fnMapping?.subcategoryId || fn.subcategoryId;
+                    const fnGuestQuizzes = fnMapping?.additionalQuizzes || [];
+
                     let nodeMatches = allQuizzes.filter(q =>
-                        Number(q.subcategoryId) === Number(fn.subcategoryId) ||
-                        (fn.additionalSubcategories && fn.additionalSubcategories.includes(Number(q.subcategoryId)))
+                        Number(q.subcategoryId) === Number(fnSubId) ||
+                        (fnSubIds && fnSubIds.map(Number).includes(Number(q.subcategoryId))) ||
+                        fnGuestQuizzes.map(Number).includes(Number(q.id))
                     );
 
-                    if (fn.filterKeywords?.length) {
-                        const kw = fn.filterKeywords.map(k => k.toLowerCase());
-                        nodeMatches = nodeMatches.filter(q => kw.some(k => q.title.toLowerCase().includes(k)));
-                    }
-                    if (fn.excludeKeywords?.length) {
-                        const ex = fn.excludeKeywords.map(k => k.toLowerCase());
-                        nodeMatches = nodeMatches.filter(q => !ex.some(k => q.title.toLowerCase().includes(k)));
-                    }
+                    // No keyword filtering needed anymore
+
 
                     contextQuizzes.push(...nodeMatches);
                 });
@@ -111,22 +155,20 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                     return true;
                 });
             } else {
-                const hasSub = !!(node.subcategoryId || (node.additionalSubcategories && node.additionalSubcategories.length > 0));
+                const subId = overrideSubId || node.subcategoryId;
+                const subIds = dynamicSubIds.length > 0 ? dynamicSubIds : (node.additionalSubcategories || []);
+                
+                const hasSub = !!(subId || subIds.length > 0 || dynamicQuizIds.length > 0);
                 if (!hasSub) return;
 
                 contextQuizzes = allQuizzes.filter(q =>
-                    Number(q.subcategoryId) === Number(node.subcategoryId) ||
-                    (node.additionalSubcategories && node.additionalSubcategories.includes(Number(q.subcategoryId)))
+                    Number(q.subcategoryId) === Number(subId) ||
+                    (subIds && subIds.map(Number).includes(Number(q.subcategoryId))) ||
+                    dynamicQuizIds.map(Number).includes(Number(q.id))
                 );
 
-                if (node.filterKeywords?.length) {
-                    const kw = node.filterKeywords.map(k => k.toLowerCase());
-                    contextQuizzes = contextQuizzes.filter(q => kw.some(k => q.title.toLowerCase().includes(k)));
-                }
-                if (node.excludeKeywords?.length) {
-                    const ex = node.excludeKeywords.map(k => k.toLowerCase());
-                    contextQuizzes = contextQuizzes.filter(q => !ex.some(k => q.title.toLowerCase().includes(k)));
-                }
+                // No keyword filtering needed anymore
+
             }
 
             if (contextQuizzes.length > 0) {
@@ -153,7 +195,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
             nodeCompletedCount: completedCountMapLocal,
             nodeTotalQuizzes: totalQuizzesMapLocal
         };
-    }, [nodes, allQuizzes]);
+    }, [nodes, allQuizzes, nodeMappings]);
 
     // Get highlighted nodes recursively (stops at next container)
     const getHighlightedNodes = (rootId: string | null): Set<string> => {
@@ -236,7 +278,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     // Helper to get coordinates
     const getNodePos = (node: ArithmeticNode) => ({
         x: CENTER_X + (node.xOffset || 0) * SPREAD,
-        y: node.level * ROW_HEIGHT + 100
+        y: node.level * ROW_HEIGHT + 30
     });
 
     const totalHeight = (Math.max(...nodes.map(n => n.level)) + 1) * ROW_HEIGHT + 200;
@@ -440,18 +482,47 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
         }
     }, [nodes, allQuizzes]);
 
+    // Calculate a Set of all quiz IDs that belong to this specific roadmap
+    // (Native, additional subcategories, or guest quizzes)
+    const mapQuizIds = useMemo(() => {
+        const ids = new Set<number>();
+        if (!nodes || !allQuizzes) return ids;
+
+        nodes.forEach(node => {
+            const mapping = nodeMappings?.find(m => m.nodeId === node.id);
+            const subId = mapping?.subcategoryId || node.subcategoryId;
+            const additionalSubs = mapping?.additionalSubcategories || node.additionalSubcategories || [];
+            const guestQuizzes = mapping?.additionalQuizzes || [];
+
+            // Find all quizzes that match this node's criteria
+            allQuizzes.forEach(q => {
+                if (Number(q.subcategoryId) === Number(subId) || 
+                    (additionalSubs && additionalSubs.map(Number).includes(Number(q.subcategoryId))) ||
+                    (guestQuizzes && guestQuizzes.map(Number).includes(Number(q.id)))) {
+                    ids.add(q.id);
+                }
+            });
+        });
+        return ids;
+    }, [nodes, nodeMappings, allQuizzes]);
+
     // Search Logic
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
 
-    // Filter quizzes based on search
     const filteredQuizzes = useMemo(() => {
         if (!searchQuery.trim() || !allQuizzes) return [];
         const lowerQuery = searchQuery.toLowerCase();
+        
         return allQuizzes
-            .filter(q => q.title.toLowerCase().includes(lowerQuery))
-            .slice(0, 10); // Limit results
+            .filter(q => {
+                if (!q) return false;
+                // Match by title OR exact ID
+                return q.title.toLowerCase().includes(lowerQuery) || 
+                       q.id.toString() === searchQuery.trim();
+            })
+            .slice(0, 10);
     }, [searchQuery, allQuizzes]);
 
     // Handle click outside to close search
@@ -466,14 +537,17 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
     }, []);
 
     const handleSearchSelect = (quiz: any) => {
-        // Find the node that contains this quiz
-        let targetNode = nodes.find(n => n.subcategoryId === quiz.subcategoryId);
-
-        if (!targetNode && quiz.subcategoryId) {
-            targetNode = nodes.find(n =>
-                n.additionalSubcategories && n.additionalSubcategories.includes(quiz.subcategoryId)
-            );
-        }
+        // Find the node that contains this quiz (considering static data and dynamic mappings)
+        let targetNode = nodes.find(n => {
+            const mapping = nodeMappings?.find(m => m.nodeId === n.id);
+            const subId = mapping?.subcategoryId || n.subcategoryId;
+            const additionalSubs = mapping?.additionalSubcategories || n.additionalSubcategories || [];
+            const guestQuizzes = mapping?.additionalQuizzes || [];
+            
+            return Number(subId) === Number(quiz.subcategoryId) ||
+                   (additionalSubs && additionalSubs.map(Number).includes(Number(quiz.subcategoryId))) ||
+                   (guestQuizzes && guestQuizzes.map(Number).includes(Number(quiz.id)));
+        });
 
         if (targetNode) {
             setSearchQuery("");
@@ -487,14 +561,14 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
         <TooltipProvider delayDuration={300}>
             <div
                 ref={containerRef}
-                className="relative w-full min-h-[600px] flex flex-col items-center bg-transparent py-8"
+                className="relative w-full min-h-[600px] flex flex-col items-center bg-transparent pt-6 pb-8"
                 onClick={() => setHighlightedNodeId(null)} // Click outside clears highlight
             >
             {styles}
 
             {/* Header */}
-            <div className="text-center mb-8 z-10 relative px-4 pointer-events-none">
-                <h2 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 mb-4 filter drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+            <div className="text-center mb-2 z-10 relative px-4 pointer-events-none">
+                <h2 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 pb-4 mb-1 filter drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
                     {title}
                 </h2>
                 {description && (
@@ -610,7 +684,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                     )}
                 </AnimatePresence>
                 {/* Search Bar - Top Right above Legend */}
-                <div className="md:absolute md:top-[-100px] md:right-4 relative mt-4 md:mt-0 mb-4 md:mb-0 z-[90] flex flex-col items-center md:items-end gap-2 pointer-events-auto px-2 sm:px-4 w-full md:w-auto">
+                <div className="md:absolute md:top-[110px] md:right-4 relative mt-4 md:mt-0 mb-4 md:mb-0 z-[90] flex flex-col items-center md:items-end gap-2 pointer-events-auto px-2 sm:px-4 w-full md:w-auto">
                     <div
                         ref={searchRef}
                         className="relative w-full max-w-[280px] sm:max-w-sm md:max-w-xs"
@@ -649,6 +723,9 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                                     className="absolute top-full right-0 mt-3 w-full max-w-[280px] sm:max-w-[320px] bg-slate-900/95 border border-slate-700 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar z-[100]"
                                 >
+                                    <div className="px-3 py-2 border-b border-slate-800 text-[9px] text-slate-500 uppercase tracking-wider font-bold">
+                                        Resultados en el Mapa ({filteredQuizzes.length})
+                                    </div>
                                     {filteredQuizzes.length > 0 ? (
                                         <div className="py-2">
                                             {filteredQuizzes.map(quiz => {
@@ -702,7 +779,7 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                 </div>
 
                 {/* Legend - Responsive Position */}
-                <div className="md:absolute md:top-4 md:right-4 relative mt-4 mx-auto w-fit inset-auto z-50 bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-xl min-w-[200px] pointer-events-auto">
+                <div className="md:absolute md:top-[180px] md:right-4 relative mt-4 mx-auto w-fit inset-auto z-50 bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-xl min-w-[200px] pointer-events-auto">
                     <h4 className="text-slate-300 font-bold mb-3 text-xs uppercase tracking-wider border-b border-slate-700 pb-2">Leyenda</h4>
                     <div className="flex flex-col gap-3 text-[11px] text-slate-400 font-medium">
                         {/* Parent Nodes */}
@@ -1078,23 +1155,61 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                                                             )}
 
                                                             {/* Admin Subcategory Tooltip */}
-                                                            {isAdmin && (node.subcategoryId || (node.additionalSubcategories && node.additionalSubcategories.length > 0)) && (
-                                                                <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-900/95 text-white text-[10px] p-2 rounded-lg whitespace-nowrap pointer-events-none border border-blue-500/50 z-[100] shadow-xl backdrop-blur-sm">
-                                                                    <div className="font-bold border-b border-blue-400/30 mb-1 pb-1 flex items-center gap-1">
-                                                                        <Shield className="w-3 h-3" /> Subcategorías Vinculadas
-                                                                    </div>
-                                                                    <div className="space-y-1">
-                                                                        {[node.subcategoryId, ...(node.additionalSubcategories || [])].filter(Boolean).map(id => {
-                                                                            const sub = subcategories.find(s => s.id === id);
-                                                                            return (
-                                                                                <div key={id} className="flex items-center gap-2">
-                                                                                    <span className="bg-blue-500/30 px-1 rounded text-[9px] font-mono">ID: {id}</span>
-                                                                                    <span className="text-blue-100">{sub?.name || 'Cargando...'}</span>
+                                                            {isAdmin && (() => {
+                                                                const mapping = nodeMappings?.find(m => m.nodeId === node.id);
+                                                                const subId = mapping?.subcategoryId || node.subcategoryId;
+                                                                const additionalSubs = mapping?.additionalSubcategories || node.additionalSubcategories || [];
+                                                                const guestQuizzes = mapping?.additionalQuizzes || [];
+                                                                
+                                                                if (!subId && additionalSubs.length === 0 && guestQuizzes.length === 0) return null;
+
+                                                                return (
+                                                                    <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-900/95 text-white text-[10px] p-2 rounded-lg whitespace-nowrap pointer-events-none border border-blue-500/50 z-[100] shadow-xl backdrop-blur-sm">
+                                                                        <div className="font-bold border-b border-blue-400/30 mb-1 pb-1 flex items-center gap-1 text-blue-300">
+                                                                            <Shield className="w-3 h-3" /> Contenido Vinculado
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            {[subId, ...additionalSubs].filter(Boolean).map(id => {
+                                                                                const sub = subcategories.find(s => Number(s.id) === Number(id));
+                                                                                return (
+                                                                                    <div key={id} className="flex items-center gap-2">
+                                                                                        <span className="bg-blue-500/30 px-1 rounded text-[9px] font-mono">SUB: {id}</span>
+                                                                                        <span className="text-blue-100">{sub?.name || 'ID no encontrado'}</span>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                            {Array.isArray(guestQuizzes) && guestQuizzes.length > 0 && (
+                                                                                <div className="pt-1 mt-1 border-t border-blue-400/20">
+                                                                                    {guestQuizzes.map((guestId: any) => {
+                                                                                        const quiz = (allQuizzesForAdmin || []).find((q: any) => Number(q.id) === Number(guestId));
+                                                                                        return (
+                                                                                            <div key={guestId} className="flex items-center gap-2">
+                                                                                                <span className="bg-pink-500/30 px-1 rounded text-[9px] font-mono text-pink-200">GUEST: {guestId}</span>
+                                                                                                <span className="text-pink-100 max-w-[120px] truncate">{quiz?.title || 'Invitado'}</span>
+                                                                                            </div>
+                                                                                        );
+                                                                                    })}
                                                                                 </div>
-                                                                            );
-                                                                        })}
+                                                                            )}
+                                                                        </div>
                                                                     </div>
-                                                                </div>
+                                                                );
+                                                            })()}
+
+                                                            {/* Admin Config Button */}
+                                                            {isAdmin && (
+                                                                <motion.button
+                                                                    whileHover={{ scale: 1.2, rotate: 90 }}
+                                                                    whileTap={{ scale: 0.8 }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setConfigNode(node);
+                                                                    }}
+                                                                    className="absolute -top-2 -right-2 z-[110] bg-slate-900 border border-slate-700 text-blue-400 p-1.5 rounded-full shadow-lg hover:bg-slate-800 transition-colors"
+                                                                    title="Configurar Contenido del Nodo"
+                                                                >
+                                                                    <Settings className="w-4 h-4" />
+                                                                </motion.button>
                                                             )}
 
                                                             {/* Friendly "Last Worked" Hint */}
@@ -1205,7 +1320,286 @@ export function SkillTreeView({ nodes, progressMap, onNodeClick, title, descript
                     </TransformWrapper>
                 </div>
             </div>
-        </div>
-    </TooltipProvider>
-);
+            </div>
+            
+            {isAdmin && configNode && (
+                <NodeConfigDialog
+                    node={configNode}
+                    categoryId={categoryId}
+                    mapping={nodeMappings?.find(m => m.nodeId === configNode.id)}
+                    allQuizzes={allQuizzesForAdmin?.length > 0 ? allQuizzesForAdmin : allQuizzes}
+                    subcategories={subcategories}
+                    onClose={() => setConfigNode(null)}
+                    onSave={(data) => upsertMappingMutation.mutate(data)}
+                    isLoading={upsertMappingMutation.isPending}
+                />
+            )}
+        </TooltipProvider>
+    );
+}
+
+function NodeConfigDialog({
+    node,
+    categoryId,
+    mapping,
+    allQuizzes,
+    subcategories,
+    onClose,
+    onSave,
+    isLoading
+}: {
+    node: ArithmeticNode,
+    categoryId: number,
+    mapping?: any,
+    allQuizzes: any[],
+    subcategories: any[],
+    onClose: () => void,
+    onSave: (data: any) => void,
+    isLoading: boolean
+}) {
+    const [subId, setSubId] = useState(mapping?.subcategoryId?.toString() || node.subcategoryId?.toString() || "");
+    const [subSearch, setSubSearch] = useState("");
+    const [quizSearch, setQuizSearch] = useState("");
+    const [additionalSubs, setAdditionalSubs] = useState<number[]>(mapping?.additionalSubcategories || node.additionalSubcategories || []);
+    const [additionalQuizzes, setAdditionalQuizzes] = useState<number[]>(mapping?.additionalQuizzes || []);
+    const { toast } = useToast();
+
+    const filteredQuizzes = useMemo(() => {
+        const search = quizSearch.trim().toLowerCase();
+        if (!search) return [];
+        
+        const source = Array.isArray(allQuizzes) ? allQuizzes : [];
+        
+        return source.filter(q => {
+            if (!q) return false;
+            const title = (q.title || "").toLowerCase();
+            const idStr = (q.id || "").toString();
+            
+            const categoryName = (q.category?.name || q.categoryName || "").toLowerCase();
+            const matches = title.includes(search) || idStr.includes(search) || categoryName.includes(search);
+            const alreadyAdded = (additionalQuizzes || []).includes(q.id);
+            
+            return matches && !alreadyAdded;
+        }).slice(0, 15);
+    }, [quizSearch, allQuizzes, additionalQuizzes]);
+
+    const filteredSubs = useMemo(() => {
+        if (!subSearch.trim()) return [];
+        const lowerSearch = subSearch.toLowerCase();
+        return subcategories.filter(s =>
+            (s.name.toLowerCase().includes(lowerSearch) || s.id.toString() === subSearch) &&
+            !additionalSubs.includes(s.id) &&
+            s.id.toString() !== subId
+        ).slice(0, 10);
+    }, [subSearch, subcategories, additionalSubs, subId]);
+
+    const handleSave = () => {
+        onSave({
+            mapId: categoryId,
+            nodeId: node.id,
+            subcategoryId: subId ? parseInt(subId) : null,
+            additionalSubcategories: additionalSubs,
+            additionalQuizzes: additionalQuizzes
+        });
+        toast({
+            title: "Configuración guardada",
+            description: `Se han actualizado los vínculos para el nodo ${node.label}.`,
+        });
+    };
+
+    return (
+        <Dialog open={!!node} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-[600px] w-[95vw] h-[85vh] bg-slate-900 border-slate-700 text-white flex flex-col p-0 overflow-hidden">
+                <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b border-white/5">
+                    <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                        <Settings className="w-6 h-6 text-blue-400 animate-spin-slow" />
+                        Configurar Nodo: {node.label}
+                    </DialogTitle>
+                    <DialogDescription className="text-slate-400">
+                        Gestiona qué contenido se muestra en este nodo.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <ScrollArea className="flex-1 px-6">
+                    <div className="space-y-8 py-4 pb-12">
+                        {/* Subcategoría Principal */}
+                        <div className="space-y-3 bg-slate-800/30 p-4 rounded-2xl border border-white/5">
+                            <Label className="text-blue-300 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]" />
+                                Subcategoría Principal (ID o Nombre)
+                            </Label>
+                            <div className="relative">
+                                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                <Input
+                                    value={subId}
+                                    onChange={(e) => setSubId(e.target.value)}
+                                    placeholder="ID de la subcategoría..."
+                                    className="bg-slate-950 border-slate-800 pl-10 focus:ring-blue-500/50"
+                                />
+                                {subId && (
+                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[10px] font-medium max-w-[200px] truncate">
+                                        {subcategories.find(s => s.id.toString() === subId)?.name || 'ID no encontrado'}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Subcategorías Adicionales */}
+                        <div className="space-y-4 bg-slate-800/30 p-4 rounded-2xl border border-white/5">
+                            <Label className="text-purple-300 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_5px_rgba(168,85,247,0.5)]" />
+                                Subcategorías Adicionales
+                            </Label>
+                            <div className="relative">
+                                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                <Input
+                                    placeholder="Busca subcategoría por nombre o ID..."
+                                    value={subSearch}
+                                    onChange={(e) => setSubSearch(e.target.value)}
+                                    className="bg-slate-950 border-slate-800 pl-10 focus:ring-purple-500/50"
+                                />
+                            </div>
+
+                            {subSearch && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="bg-slate-950 border border-slate-800 rounded-xl p-1 max-h-40 overflow-y-auto shadow-2xl"
+                                >
+                                    {filteredSubs.length > 0 ? (
+                                        filteredSubs.map(s => (
+                                            <div
+                                                key={s.id}
+                                                className="flex items-center justify-between p-2 hover:bg-slate-900 rounded-lg cursor-pointer transition-colors group"
+                                                onClick={() => {
+                                                    setAdditionalSubs([...additionalSubs, s.id]);
+                                                    setSubSearch("");
+                                                }}
+                                            >
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-bold text-slate-200 group-hover:text-purple-400 transition-colors">{s.name}</span>
+                                                    <span className="text-[9px] text-slate-500">ID: {s.id}</span>
+                                                </div>
+                                                <Plus className="w-3.5 h-3.5 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="p-3 text-center text-slate-600 text-xs italic">
+                                            No se encontraron subcategorías
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )}
+
+                            <div className="flex flex-wrap gap-2">
+                                {additionalSubs.length === 0 && <p className="text-[10px] text-slate-500 italic">No hay subcategorías adicionales.</p>}
+                                {additionalSubs.map(id => {
+                                    const sub = subcategories.find(s => s.id === id);
+                                    return (
+                                        <Badge key={id} variant="secondary" className="bg-slate-800 hover:bg-slate-700 border border-white/5 flex items-center gap-2 px-2 py-1 group transition-all">
+                                            <div className="flex flex-col items-start leading-none">
+                                                <span className="text-[9px] text-slate-500 font-mono">ID: {id}</span>
+                                                <span className="text-xs">{sub?.name || 'Cargando...'}</span>
+                                            </div>
+                                            <X className="w-3 h-3 cursor-pointer text-slate-500 group-hover:text-red-400 transition-colors" onClick={() => setAdditionalSubs(additionalSubs.filter(s => s !== id))} />
+                                        </Badge>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Invitados (Quizzes Específicos) */}
+                        <div className="space-y-4 bg-slate-800/30 p-4 rounded-2xl border border-white/5">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-pink-300 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-pink-500 shadow-[0_0_5px_rgba(236,72,153,0.5)]" />
+                                    Cuestionarios Invitados
+                                </Label>
+                                <span className="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded-full border border-white/5">
+                                    {allQuizzes?.length || 0} disponibles
+                                </span>
+                            </div>
+                            
+                            <div className="relative">
+                                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                <Input
+                                    placeholder="Nombre, ID o Materia (ej: Álgebra)..."
+                                    value={quizSearch}
+                                    onChange={(e) => setQuizSearch(e.target.value)}
+                                    className="bg-slate-950 border-slate-800 pl-10 focus:ring-pink-500/50"
+                                />
+                            </div>
+
+                            {quizSearch && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="bg-slate-950 border border-slate-800 rounded-xl p-1 max-h-48 overflow-y-auto shadow-2xl"
+                                >
+                                    {filteredQuizzes.length > 0 ? (
+                                        filteredQuizzes.map(q => (
+                                            <div
+                                                key={q.id}
+                                                className="flex items-center justify-between p-2.5 hover:bg-slate-900 rounded-lg cursor-pointer group"
+                                                onClick={() => {
+                                                    setAdditionalQuizzes([...additionalQuizzes, q.id]);
+                                                    setQuizSearch("");
+                                                }}
+                                            >
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-bold text-slate-200 group-hover:text-pink-400 transition-colors">{q.title}</span>
+                                                    <div className="flex gap-2 items-center text-[10px] text-slate-500 mt-0.5">
+                                                        <span className="bg-slate-800 px-1.5 rounded">ID: {q.id}</span>
+                                                        <span className="text-slate-400 font-bold uppercase">{q.category?.name || q.categoryName || 'Materia'}</span>
+                                                    </div>
+                                                </div>
+                                                <Plus className="w-3.5 h-3.5 text-pink-400 opacity-0 group-hover:opacity-100" />
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="p-4 text-center text-slate-600 text-xs italic">
+                                            No se encontraron resultados
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )}
+
+                            <div className="flex flex-wrap gap-2">
+                                {additionalQuizzes.map(id => {
+                                    const q = allQuizzes.find(aq => aq.id === id);
+                                    return (
+                                        <Badge key={id} variant="outline" className="border-pink-500/30 bg-pink-500/5 text-pink-300 flex items-center gap-2 px-2 py-1 group transition-all">
+                                            <div className="flex flex-col items-start leading-none">
+                                                <span className="text-[9px] text-pink-500/50 font-mono">ID: {id}</span>
+                                                <span className="text-xs truncate max-w-[120px]">{q?.title || `Quiz #${id}`}</span>
+                                            </div>
+                                            <X className="w-3 h-3 cursor-pointer text-pink-700 group-hover:text-red-400" onClick={() => setAdditionalQuizzes(additionalQuizzes.filter(qid => qid !== id))} />
+                                        </Badge>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </ScrollArea>
+
+                <DialogFooter className="px-6 py-4 bg-slate-950/50 border-t border-white/5 flex items-center justify-between shrink-0">
+                    <Button variant="ghost" onClick={onClose} className="text-slate-400 hover:text-white hover:bg-white/5">
+                        Cancelar
+                    </Button>
+                    <Button
+                        onClick={handleSave}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-8 shadow-[0_0_20px_rgba(37,99,235,0.3)] border-0"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                Guardando...
+                            </div>
+                        ) : 'Aplicar Vínculos'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }

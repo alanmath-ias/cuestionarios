@@ -22,6 +22,7 @@ import { calculusMapNodes } from '@/data/calculus-map-data';
 import { integralCalculusMapNodes } from '@/data/integral-calculus-map-data';
 import { statisticsMapNodes } from '@/data/statistics-map-data';
 import { useToast } from "@/hooks/use-toast";
+import { useSession } from "@/hooks/useSession";
 
 interface Category {
   id: number;
@@ -49,7 +50,7 @@ interface Quiz {
   totalQuestions: number;
 }
 
-interface Progress {
+interface QuizProgress {
   id: number;
   userId: number;
   quizId: number;
@@ -73,6 +74,29 @@ function QuizList() {
           arithmeticMapNodes;
   const initialViewMode = searchParams.get('view') as 'roadmap' | 'grid' | null;
   const { toast } = useToast();
+  const { session } = useSession();
+  const isAdmin = session?.role === 'admin';
+
+  const { data: nodeMappingsData = [] } = useQuery<any[]>({
+    queryKey: [`/api/node-mappings/${categoryId}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/node-mappings/${categoryId}`);
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
+
+  // Fetch ALL quizzes (all categories) so guest quizzes from other categories can be shown
+  const { data: allQuizzesForAdmin } = useQuery<Quiz[]>({
+    queryKey: ['/api/quizzes'],
+    queryFn: async () => {
+      const res = await fetch('/api/quizzes');
+      if (!res.ok) throw new Error('Error fetching all quizzes');
+      return res.json();
+    },
+    // Always enabled: needed to display guest quizzes from other categories for all users
+    enabled: true,
+  });
 
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [miniQuizId, setMiniQuizId] = useState<number | null>(null);
@@ -169,7 +193,7 @@ function QuizList() {
     queryKey: [`/api/categories/${categoryId}/quizzes`],
   });
 
-  const { data: progress, isLoading: loadingProgress } = useQuery<Progress[]>({
+  const { data: progress, isLoading: loadingProgress } = useQuery<QuizProgress[]>({
     queryKey: ['/api/progress', searchParams.get('user_id')],
     queryFn: async () => {
       const parentUserId = searchParams.get('user_id');
@@ -210,22 +234,8 @@ function QuizList() {
       (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId!))
     ) || [];
 
-    // Filter by keywords if they exist on the node
-    if (node.filterKeywords && node.filterKeywords.length > 0) {
-      const keywords = node.filterKeywords.map(k => k.toLowerCase());
-      contextQuizzes = contextQuizzes.filter(q => {
-        const titleLower = q.title.toLowerCase();
-        const matchesInclude = keywords.some(k => titleLower.includes(k));
+    // No keyword filtering needed anymore - using unique subcategories
 
-        if (!matchesInclude) return false;
-
-        if (node.excludeKeywords && node.excludeKeywords.length > 0) {
-          const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
-          if (excludeKeys.some(k => titleLower.includes(k))) return false;
-        }
-        return true;
-      });
-    }
 
     if (contextQuizzes.length === 0) return 0; // If no quizzes match filter, technically 0% complete or maybe 100? Let's say 0 but 'available' status handles visual.
 
@@ -257,24 +267,8 @@ function QuizList() {
       console.log(`[DEBUG NODE ${node.id}] Matches: ${contextQuizzes.length}. SubCat: ${node.subcategoryId}. Additional: ${node.additionalSubcategories?.join(',')}`);
     }
 
-    if (node.filterKeywords && node.filterKeywords.length > 0) {
-      const keywords = node.filterKeywords.map(k => k.toLowerCase());
-      contextQuizzes = contextQuizzes.filter(q => {
-        const titleLower = q.title.toLowerCase();
-        const matchesInclude = keywords.some(k => titleLower.includes(k));
+    // No keyword filtering needed anymore - using unique subcategories
 
-        if (!matchesInclude) return false;
-
-        // Check exclusions if they exist
-        if (node.excludeKeywords && node.excludeKeywords.length > 0) {
-          const excludeKeys = node.excludeKeywords.map(k => k.toLowerCase());
-          const matchesExclude = excludeKeys.some(k => titleLower.includes(k));
-          if (matchesExclude) return false;
-        }
-
-        return true;
-      });
-    }
 
     // Fallback: If no subcategory rules exist, return empty (standard node behavior)
     if (!node.subcategoryId && (!node.additionalSubcategories || node.additionalSubcategories.length === 0)) return [];
@@ -415,8 +409,13 @@ function QuizList() {
           >
             <ArrowLeft className="h-6 w-6" />
           </Button>
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
             {loadingCategory ? 'Cargando...' : category?.name}
+            {isAdmin && (
+              <span className="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded-full animate-pulse border border-red-400">
+                DEBUG V4 ACTIVO
+              </span>
+            )}
           </h1>
         </div>
       </div>
@@ -446,7 +445,7 @@ function QuizList() {
             ['1', '2', '4', '5', '19'].includes(categoryId) ? (
               <SkillTreeView
                 nodes={currentMapNodes}
-                allQuizzes={quizzes?.map(q => {
+                allQuizzes={(allQuizzesForAdmin || quizzes || []).map(q => {
                   const p = progress?.find(prog => prog.quizId === q.id);
                   return {
                     ...q,
@@ -466,61 +465,66 @@ function QuizList() {
                 })()}
                 progressMap={(() => {
                   const map: Record<string, 'locked' | 'available' | 'completed' | 'in_progress'> = {};
+                  
+                  // Helper to get filtered quizzes for a node (including guests)
+                  const getDynamicQuizzesForNode = (node: ArithmeticNode) => {
+                    const mapping = nodeMappingsData?.find(m => m.nodeId === node.id);
+                    const subId = mapping?.subcategoryId || node.subcategoryId;
+                    const additionalSubs = mapping?.additionalSubcategories || node.additionalSubcategories || [];
+                    const guestQuizzes = mapping?.additionalQuizzes || [];
+
+                    const quizSource = allQuizzesForAdmin || quizzes || [];
+                    let nodeQuizzes = quizSource.filter(q =>
+                      Number(q.subcategoryId) === Number(subId) ||
+                      (additionalSubs && additionalSubs.map(Number).includes(Number(q.subcategoryId))) ||
+                      (guestQuizzes && guestQuizzes.map(Number).includes(Number(q.id)))
+                    );
+
+                    return nodeQuizzes;
+
+                  };
 
                   // Pass 1: Intrinsic Status
                   currentMapNodes.forEach(node => {
-                    const filteredQuizzes = getFilteredQuizzesForNode(node);
-                    if (filteredQuizzes.length > 0) {
-                      const pct = calculateNodeProgress(node);
+                    const nodeQuizzes = getDynamicQuizzesForNode(node);
+                    if (nodeQuizzes.length > 0) {
+                      const completedCount = nodeQuizzes.filter(q =>
+                        progress?.some(p => p.quizId === q.id && p.status === 'completed')
+                      ).length;
+                      const pct = (completedCount / nodeQuizzes.length) * 100;
+                      
                       if (pct === 100) map[node.id] = 'completed';
                       else if (pct > 0) map[node.id] = 'in_progress';
-                      else map[node.id] = 'available'; // Content exists but 0% progress -> Available to play!
+                      else map[node.id] = 'available';
                     } else if (node.behavior !== 'container') {
-                      map[node.id] = 'locked'; // Empty content -> locked
+                      map[node.id] = 'locked';
                     }
                   });
 
-                  // Pass 2: Unlock Logic (Explorative Mode: No blocking)
-                  // Sort by level to ensure parents processed first
-                  const sortedNodes = [...currentMapNodes].sort((a, b) => a.level - b.level);
-
-                  sortedNodes.forEach(node => {
+                  // Pass 2: Unlock Logic (Explorative Mode)
+                  currentMapNodes.forEach(node => {
                     if (map[node.id] === 'completed' || map[node.id] === 'in_progress') return;
-
-                    // In Explorative Mode, we ignore prerequisites for access. 
-                    // We only check if content exists.
-                    const hasContent = getFilteredQuizzesForNode(node).length > 0;
-
+                    const hasContent = getDynamicQuizzesForNode(node).length > 0;
                     if (node.behavior === 'container') {
-                      // Container status is determined by children in Pass 3
                       map[node.id] = 'available';
                     } else {
-                      // Content nodes are available if they have content, otherwise locked
                       map[node.id] = (hasContent || node.id.endsWith('mastery')) ? 'available' : 'locked';
                     }
                   });
 
-                  // Pass 3: Container Aggregation (Recursive Family Logic)
-                  // A container is 'completed' if its entire family network (descendants until next container) is green.
+                  // Pass 3: Container Aggregation
                   currentMapNodes.filter(n => n.behavior === 'container').forEach(container => {
-                    // Helper to get all descendants recursively until another container is encountered
                     const getFamilyDescendants = (rootId: string) => {
                       const descendants: string[] = [];
                       const queue = [rootId];
                       const visited = new Set<string>();
-
                       while (queue.length > 0) {
                         const currentId = queue.shift()!;
                         if (visited.has(currentId)) continue;
                         visited.add(currentId);
-
-                        // Find nodes that require the current one
                         const children = currentMapNodes.filter(n => n.requires.includes(currentId));
-
                         for (const child of children) {
-                          // If child is another container, we STOP here and DON'T add it to this family
                           if (child.behavior === 'container') continue;
-
                           descendants.push(child.id);
                           queue.push(child.id);
                         }
@@ -529,22 +533,21 @@ function QuizList() {
                     };
 
                     const familyNetwork = getFamilyDescendants(container.id);
-                    const hasContent = getFilteredQuizzesForNode(container).length > 0;
+                    const hasContent = getDynamicQuizzesForNode(container).length > 0;
                     const intrinsicDone = hasContent ? map[container.id] === 'completed' : true;
 
                     if (familyNetwork.length === 0) {
-                      if (!hasContent) map[container.id] = 'locked'; // Empty container
+                      if (!hasContent) map[container.id] = 'locked';
                       return;
                     }
 
-                    // Check if EVERY member of the family network is completed
                     const allFamilyCompleted = familyNetwork.every(nodeId => map[nodeId] === 'completed');
                     const anyFamilyActive = familyNetwork.some(nodeId => map[nodeId] !== 'locked');
 
                     if (allFamilyCompleted && intrinsicDone) {
                       map[container.id] = 'completed';
                     } else if (anyFamilyActive || (hasContent && map[container.id] !== 'locked')) {
-                      map[container.id] = 'available'; // Play icon
+                      map[container.id] = 'available';
                     } else {
                       map[container.id] = 'locked';
                     }
@@ -552,14 +555,35 @@ function QuizList() {
 
                   return map;
                 })()}
+                isAdmin={isAdmin}
+                subcategories={subcategories}
+                categoryId={parseInt(categoryId || "0")}
+                nodeMappings={nodeMappingsData || []}
+                allQuizzesForAdmin={allQuizzesForAdmin || []}
                 onNodeClick={(node, highlightedQuizId) => {
                   if (node.id.endsWith('mastery')) {
                     setShowMasteryDialog(true);
                     return;
                   }
-                  if (node.subcategoryId) {
+                  
+                  const mapping = nodeMappingsData?.find(m => m.nodeId === node.id);
+                  const subId = mapping?.subcategoryId || node.subcategoryId;
+                  
+                  if (subId || mapping?.additionalQuizzes?.length > 0) {
                     // Find the actual subcategory object
-                    const sub = quizzesBySubcategory.find(s => s.id === node.subcategoryId);
+                    let sub = quizzesBySubcategory.find(s => s.id === subId);
+                    
+                    // If no sub found but we have guest quizzes, we might need a "virtual" subcategory or just use a dummy
+                    if (!sub && mapping?.additionalQuizzes?.length > 0) {
+                        sub = {
+                            id: Number(subId) || 0,
+                            name: node.label,
+                            description: "Contenido personalizado",
+                            categoryId: parseInt(categoryId),
+                            quizzes: []
+                        };
+                    }
+
                     if (sub) {
                       setSelectedSubcategory(sub);
                       setSelectedNode(node);
@@ -763,6 +787,11 @@ function QuizList() {
             </div>
             <DialogDescription className="text-slate-400">
               {selectedNode ? selectedNode.description : selectedSubcategory?.description}
+              {isAdmin && selectedNode && (
+                <div className="mt-1 text-[10px] text-blue-500 font-mono bg-blue-500/5 p-1 rounded inline-block">
+                  DEBUG: Node:{selectedNode.id} | Sub:{selectedNode.subcategoryId} | Guests:{(nodeMappingsData?.find(m => m.nodeId === selectedNode.id)?.additionalQuizzes || []).join(',')}
+                </div>
+              )}
             </DialogDescription>
           </DialogHeader>
 
@@ -781,36 +810,42 @@ function QuizList() {
 
                 {(() => {
                   let quizzesForSub = [];
+                  // Declare mapping at outer scope so keyword filter below can reference guest IDs
+                  const mapping = selectedNode ? nodeMappingsData?.find(m => m.nodeId === selectedNode.id) : null;
 
                   if (selectedNode) {
-                    quizzesForSub = quizzes?.filter(q =>
-                      q.subcategoryId == selectedNode.subcategoryId ||
-                      (selectedNode.additionalSubcategories && selectedNode.additionalSubcategories.includes(q.subcategoryId!))
-                    ) || [];
+                    const subId = mapping?.subcategoryId || selectedNode.subcategoryId;
+                    const additionalSubs = mapping?.additionalSubcategories || selectedNode.additionalSubcategories || [];
+                    const guestQuizIds = mapping?.additionalQuizzes || [];
+
+                    // Use global source for Dialog to ensure guests from other categories are visible
+                    const quizSource = allQuizzesForAdmin || quizzes || [];
+                    
+                    console.log(`[DEBUG] Node: ${selectedNode.id}, Source: ${quizSource.length}, Guests: ${guestQuizIds.length}`);
+
+                    quizzesForSub = quizSource.filter((q: Quiz) => {
+                      const qId = Number(q.id);
+                      const qSubId = q.subcategoryId ? Number(q.subcategoryId) : null;
+                      const targetSubId = subId ? Number(subId) : null;
+
+                      const isGuest = guestQuizIds && guestQuizIds.map(Number).includes(qId);
+                      const isMain = targetSubId !== null && qSubId === targetSubId;
+                      const isExtra = additionalSubs && additionalSubs.map(Number).includes(qSubId as number);
+                      
+                      return isGuest || isMain || isExtra;
+                    });
                   } else {
                     quizzesForSub = selectedSubcategory.quizzes || [];
-                  }
-
-                  // Apply Node-based Keyword Filtering if available
-                  if (selectedNode && selectedNode.filterKeywords && selectedNode.filterKeywords.length > 0) {
-                    const keywords = selectedNode.filterKeywords.map((k: string) => k.toLowerCase());
-                    quizzesForSub = quizzesForSub.filter((q: Quiz) =>
-                      keywords.some((k: string) => q.title.toLowerCase().includes(k))
-                    );
-
-                    // Apply Node-based Exclusion Filtering if available
-                    if (selectedNode.excludeKeywords && selectedNode.excludeKeywords.length > 0) {
-                      const excludeKeys = selectedNode.excludeKeywords.map((k: string) => k.toLowerCase());
-                      quizzesForSub = quizzesForSub.filter((q: Quiz) =>
-                        !excludeKeys.some((k: string) => q.title.toLowerCase().includes(k))
-                      );
-                    }
                   }
 
                   // Apply standard search filter
                   quizzesForSub = quizzesForSub.filter((q: Quiz) =>
                     q.title.toLowerCase().includes(quizSearchQuery.toLowerCase())
                   );
+
+                  if (quizzesForSub.length === 0 && isAdmin) {
+                    console.warn(`[DEBUG] No se encontraron cuestionarios para el nodo ${selectedNode?.id}. Intentando fallback...`);
+                  }
 
                   if (quizzesForSub.length === 0) {
                     return (

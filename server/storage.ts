@@ -203,6 +203,11 @@ export interface IStorage {
   deleteAllManagedChallenges(adminId: number): Promise<void>;
   editChatMessage(id: number, senderId: number, content: string): Promise<import("../shared/schema.js").Message | undefined>;
   deleteChatMessage(id: number, senderId: number): Promise<boolean>;
+
+  // Node Mapping methods
+  getNodeContentMappings(mapId: number): Promise<any[]>;
+  getNodeContentMapping(mapId: number, nodeId: string): Promise<any>;
+  upsertNodeContentMapping(mapping: any): Promise<any>;
 }
 
 export class MemStorage implements IStorage {
@@ -896,6 +901,11 @@ export class MemStorage implements IStorage {
   async cleanupOldMessages(): Promise<void> { }
   async getUnreadMessageCount(userId: number): Promise<number> { return 0; }
   async cleanupArenaQuizzes(): Promise<void> { }
+
+  // Node Mapping methods (Stub)
+  async getNodeContentMappings(mapId: number): Promise<any[]> { return []; }
+  async getNodeContentMapping(mapId: number, nodeId: string): Promise<any> { return undefined; }
+  async upsertNodeContentMapping(mapping: any): Promise<any> { return mapping; }
 }
 
 import { DatabaseStorage } from "./database-storage.js";

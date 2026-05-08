@@ -34,7 +34,7 @@ import { quizFeedback } from "../shared/schema.js";
 //chat gpt dashboard personalizado
 import { userCategories } from "../shared/schema.js";
 import { subcategories, Subcategory } from "../shared/schema.js";
-import { parents } from "../shared/schema.js";
+import { parents, nodeContentMappings, type NodeContentMapping, type InsertNodeContentMapping } from "../shared/schema.js";
 import bcrypt from 'bcryptjs';
 import { Child } from '../shared/quiz-types.js'; // Ajusta la ruta
 import { Pool } from 'pg';
@@ -264,10 +264,32 @@ export class DatabaseStorage implements IStorage {
 
   async getQuizzesByCategory(categoryId: number, userId?: number): Promise<any[]> {
     if (!userId) {
-      return await this.db.select().from(quizzes).where(eq(quizzes.categoryId, categoryId)).orderBy(asc(quizzes.sortOrder));
+      const baseQuizzes = await this.db.select().from(quizzes).where(eq(quizzes.categoryId, categoryId)).orderBy(asc(quizzes.sortOrder));
+      const mappings = await this.db.select().from(nodeContentMappings).where(eq(nodeContentMappings.mapId, categoryId));
+      const guestQuizIds = new Set<number>();
+      mappings.forEach(m => {
+        const qIds = m.additionalQuizzes as number[] || [];
+        qIds.forEach(id => guestQuizIds.add(id));
+      });
+      
+      let guestQuizzes: any[] = [];
+      if (guestQuizIds.size > 0) {
+        guestQuizzes = await this.db.select().from(quizzes).where(inArray(quizzes.id, Array.from(guestQuizIds)));
+      }
+      
+      const combined = [...baseQuizzes, ...guestQuizzes];
+      const seenIds = new Set();
+      const results = combined.filter(q => {
+        if (seenIds.has(q.id)) return false;
+        seenIds.add(q.id);
+        return true;
+      });
+      results.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      return results;
     }
 
-    const results = await this.db
+    // 1. Get base quizzes in category
+    const baseQuizzes = await this.db
       .select()
       .from(quizzes)
       .leftJoin(studentProgress, and(
@@ -280,6 +302,47 @@ export class DatabaseStorage implements IStorage {
       ))
       .where(eq(quizzes.categoryId, categoryId))
       .orderBy(asc(quizzes.sortOrder));
+
+    // 2. Get Guest Quizzes from nodeContentMappings
+    const mappings = await this.db
+      .select()
+      .from(nodeContentMappings)
+      .where(eq(nodeContentMappings.mapId, categoryId));
+
+    const guestQuizIds = new Set<number>();
+    mappings.forEach(m => {
+      const qIds = m.additionalQuizzes as number[] || [];
+      qIds.forEach(id => guestQuizIds.add(id));
+    });
+
+    // 3. Fetch Guest Quizzes if any
+    let guestResults: any[] = [];
+    if (guestQuizIds.size > 0) {
+      guestResults = await this.db
+        .select()
+        .from(quizzes)
+        .leftJoin(studentProgress, and(
+          eq(quizzes.id, studentProgress.quizId),
+          eq(studentProgress.userId, userId)
+        ))
+        .leftJoin(userQuizzes, and(
+          eq(quizzes.id, userQuizzes.quizId),
+          eq(userQuizzes.userId, userId)
+        ))
+        .where(inArray(quizzes.id, Array.from(guestQuizIds)));
+    }
+
+    // Combine and deduplicate
+    const combined = [...baseQuizzes, ...guestResults];
+    const seenIds = new Set();
+    const results = combined.filter(row => {
+      if (seenIds.has(row.quizzes.id)) return false;
+      seenIds.add(row.quizzes.id);
+      return true;
+    });
+
+    // Sort combined results by sortOrder
+    results.sort((a, b) => (a.quizzes.sortOrder || 0) - (b.quizzes.sortOrder || 0));
 
     return results.map(row => {
       const quiz = row.quizzes;
@@ -2536,6 +2599,36 @@ export class DatabaseStorage implements IStorage {
       await this.deleteQuiz(match.id);
     }
     console.log("🧹 [CLEANUP] Done.");
+  }
+
+  // Node Mapping methods
+  async getNodeContentMappings(mapId: number): Promise<NodeContentMapping[]> {
+    return this.db.select().from(nodeContentMappings).where(eq(nodeContentMappings.mapId, mapId));
+  }
+
+  async getNodeContentMapping(mapId: number, nodeId: string): Promise<NodeContentMapping | undefined> {
+    const [mapping] = await this.db.select().from(nodeContentMappings).where(
+      and(
+        eq(nodeContentMappings.mapId, mapId),
+        eq(nodeContentMappings.nodeId, nodeId)
+      )
+    );
+    return mapping;
+  }
+
+  async upsertNodeContentMapping(mapping: InsertNodeContentMapping): Promise<NodeContentMapping> {
+    const [result] = await this.db.insert(nodeContentMappings)
+      .values(mapping)
+      .onConflictDoUpdate({
+        target: [nodeContentMappings.mapId, nodeContentMappings.nodeId],
+        set: {
+          subcategoryId: mapping.subcategoryId,
+          additionalSubcategories: mapping.additionalSubcategories,
+          additionalQuizzes: mapping.additionalQuizzes,
+        }
+      })
+      .returning();
+    return result;
   }
 }
 

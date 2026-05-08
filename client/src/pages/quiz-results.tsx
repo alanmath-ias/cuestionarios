@@ -108,18 +108,7 @@ function QuizResults() {
 
       if (!isSubMatch) return false;
 
-      // Match by keywords if present
-      if (n.filterKeywords?.length) {
-        const kw = n.filterKeywords.map((k: string) => k.toLowerCase());
-        const matches = kw.some((k: string) => results.quiz?.title.toLowerCase().includes(k));
-        if (!matches) return false;
-      }
 
-      if (n.excludeKeywords?.length) {
-        const ex = n.excludeKeywords.map((k: string) => k.toLowerCase());
-        const excluded = ex.some((k: string) => results.quiz?.title.toLowerCase().includes(k));
-        if (excluded) return false;
-      }
 
       return true;
     });

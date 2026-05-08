@@ -389,6 +389,17 @@ export default function QuizzesAdmin() {
     }
   });
 
+  const { data: nodeMappings = [] } = useQuery<any[]>({
+    queryKey: [`/api/node-mappings/${activeMapCategory}`],
+    queryFn: async () => {
+      if (!activeMapCategory) return [];
+      const res = await fetch(`/api/node-mappings/${activeMapCategory}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!activeMapCategory,
+  });
+
   const isLoading = loadingCategories || loadingQuizzes || loadingSubcategoriesList;
 
   // Effect to restore selectedNode once categories/mapData are available
@@ -1511,15 +1522,21 @@ export default function QuizzesAdmin() {
                   const nodes = getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name)!.nodes;
                   const map: Record<string, 'locked' | 'available' | 'completed' | 'in_progress'> = {};
 
-                  // Filter quizzes for this category
-                  const categoryQuizzes = quizzes?.filter(q => q.categoryId === activeMapCategory) || [];
+                  // Use the full quizzes list for the admin progress map to include guests
+                  const quizSource = quizzes || [];
 
-                  // Helper to get quizzes for a node
+                  // Helper to get quizzes for a node (including dynamic mappings)
                   const getFilteredQuizzesForNode = (node: any) => {
-                    return categoryQuizzes.filter(q =>
-                      q.subcategoryId == node.subcategoryId ||
-                      (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId))
-                    ) || [];
+                    const mapping = nodeMappings?.find(m => m.nodeId === node.id);
+                    const subId = mapping?.subcategoryId || node.subcategoryId;
+                    const additionalSubs = mapping?.additionalSubcategories || node.additionalSubcategories || [];
+                    const guestIds = mapping?.additionalQuizzes || [];
+
+                    return quizSource.filter(q =>
+                      Number(q.subcategoryId) === Number(subId) ||
+                      (additionalSubs && additionalSubs.map(Number).includes(Number(q.subcategoryId))) ||
+                      (guestIds && guestIds.map(Number).includes(Number(q.id)))
+                    );
                   };
 
                   nodes.forEach(node => {
@@ -1535,7 +1552,8 @@ export default function QuizzesAdmin() {
 
                   return map;
                 })()}
-                allQuizzes={quizzes?.filter(q => q.categoryId === activeMapCategory) || []}
+                allQuizzes={quizzes || []}
+                allQuizzesForAdmin={quizzes || []}
                 onNodeClick={(node, highlightedQuizId) => {
                   if (node.id.endsWith('mastery')) {
                     setShowMasteryDialog(true);
@@ -1547,8 +1565,10 @@ export default function QuizzesAdmin() {
                   }
                 }}
                 isAdmin={true}
+                categoryId={activeMapCategory}
                 title={activeMapCategory ? getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name)?.title || "" : ""}
                 subcategories={subcategoriesResponse || []}
+                nodeMappings={nodeMappings}
               />
             )}
           </div>
@@ -1689,11 +1709,17 @@ export default function QuizzesAdmin() {
             {selectedNode && (
               (() => {
                 const node = selectedNode;
-                const categoryQuizzes = quizzes?.filter(q => q.categoryId === activeMapCategory) || [];
-                const nodeQuizzes = categoryQuizzes.filter(q =>
-                  q.subcategoryId == node.subcategoryId ||
-                  (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId))
-                ) || [];
+                const mapping = nodeMappings?.find(m => m.nodeId === node.id);
+                const subId = mapping?.subcategoryId || node.subcategoryId;
+                const additionalSubs = mapping?.additionalSubcategories || node.additionalSubcategories || [];
+                const guestIds = mapping?.additionalQuizzes || [];
+
+                // Use the full quizzes list and include dynamic mappings
+                const nodeQuizzes = (quizzes || []).filter(q =>
+                  Number(q.subcategoryId) === Number(subId) ||
+                  (additionalSubs && additionalSubs.map(Number).includes(Number(q.subcategoryId))) ||
+                  (guestIds && guestIds.map(Number).includes(Number(q.id)))
+                );
 
                 if (nodeQuizzes.length === 0) {
                   return (

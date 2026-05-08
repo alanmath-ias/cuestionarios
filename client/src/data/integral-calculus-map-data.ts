@@ -23,8 +23,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i0-area-curva'],
         description: 'Puntos medios, extremos izquierdo y derecho.',
         xOffset: -50,
-        subcategoryId: 130,
-        filterKeywords: ['rectángulo', 'rectangulo'],
+        subcategoryId: 453,
         behavior: 'quiz_list'
     },
     {
@@ -35,8 +34,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i0-area-curva'],
         description: 'Notación sigma y sumas infinitas.',
         xOffset: 50,
-        subcategoryId: 130,
-        filterKeywords: ['riemann', 'sigma'],
+        subcategoryId: 454,
         behavior: 'quiz_list'
     },
 
@@ -51,7 +49,6 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i0-riemann', 'i0-aprox-rect'],
         description: 'El límite de las sumas de Riemann.',
         xOffset: 0,
-        subcategoryId: 131,
         behavior: 'container'
     },
     {
@@ -62,8 +59,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i1-integral-definida'],
         description: 'Definición formal de la integral.',
         xOffset: -75,
-        subcategoryId: 131,
-        filterKeywords: ['límite'],
+        subcategoryId: 455,
         behavior: 'quiz_list'
     },
     {
@@ -74,8 +70,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i1-integral-definida'],
         description: 'Linealidad, intervalos y comparación.',
         xOffset: -37,
-        subcategoryId: 131,
-        filterKeywords: ['propiedad'],
+        subcategoryId: 456,
         behavior: 'quiz_list'
     },
     {
@@ -86,8 +81,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i1-integral-definida'],
         description: 'Evaluación de integrales definidas.',
         xOffset: 0,
-        subcategoryId: 131,
-        filterKeywords: ['cálculo', 'evaluación', 'definida'],
+        subcategoryId: 457,
         behavior: 'quiz_list'
     },
     {
@@ -98,7 +92,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i1-integral-definida'],
         description: 'Relación entre derivada e integral.',
         xOffset: 37,
-        subcategoryId: 132,
+        subcategoryId: 458,
         behavior: 'quiz_list'
     },
     {
@@ -109,9 +103,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i1-integral-definida'],
         description: 'Interpretación geométrica del signo.',
         xOffset: 75,
-        subcategoryId: 131,
-        additionalSubcategories: [133],
-        filterKeywords: ['neta', 'cambio neto'],
+        subcategoryId: 459,
         behavior: 'quiz_list'
     },
 
@@ -126,7 +118,6 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i1-tfc'],
         description: 'La antiderivada general.',
         xOffset: 0,
-        subcategoryId: 133,
         behavior: 'container'
     },
     {
@@ -137,9 +128,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i2-integral-indefinida'],
         description: 'Regla de la potencia inversa.',
         xOffset: -75,
-        subcategoryId: 133,
-        filterKeywords: ['polinomio', 'básica', 'fórmulas básicas', 'potencia'],
-        excludeKeywords: ['cambio neto', 'neta'],
+        subcategoryId: 460,
         behavior: 'quiz_list'
     },
     {
@@ -150,9 +139,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i2-integral-indefinida'],
         description: 'Funciones circulares básicas.',
         xOffset: -25,
-        subcategoryId: 133,
-        additionalSubcategories: [136],
-        filterKeywords: ['trigo', 'sen', 'cos', 'tan', 'arc'],
+        subcategoryId: 461,
         behavior: 'quiz_list'
     },
     {
@@ -163,9 +150,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i2-integral-indefinida'],
         description: 'e^x y 1/x.',
         xOffset: 25,
-        subcategoryId: 135,
-        additionalSubcategories: [143, 144],
-        filterKeywords: ['exponencial', 'logarítmica', 'ln', 'e^', 'crecimiento', 'decaimiento'],
+        subcategoryId: 462,
         behavior: 'quiz_list'
     },
     {
@@ -176,7 +161,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i2-integral-indefinida'],
         description: 'sinh, cosh y sus identidades.',
         xOffset: 75,
-        subcategoryId: 145,
+        subcategoryId: 463,
         behavior: 'quiz_list'
     },
 
@@ -201,8 +186,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i3-tecnicas'],
         description: 'Regla de la cadena inversa (u-sub).',
         xOffset: -75,
-        subcategoryId: 134,
-        filterKeywords: ['sustitución', 'cambio de variable'],
+        subcategoryId: 464,
         behavior: 'quiz_list'
     },
     {
@@ -213,7 +197,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i3-tecnicas'],
         description: 'Producto de funciones (udv).',
         xOffset: -25,
-        filterKeywords: ['partes'],
+        subcategoryId: 465,
         behavior: 'quiz_list'
     },
     {
@@ -224,7 +208,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i3-tecnicas'],
         description: 'Descomposición de funciones racionales.',
         xOffset: 25,
-        filterKeywords: ['parciales'],
+        subcategoryId: 466,
         behavior: 'quiz_list'
     },
     {
@@ -235,7 +219,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i3-tecnicas'],
         description: 'Uso de identidades para raíces cuadradas.',
         xOffset: 75,
-        filterKeywords: ['sustitución trigonométrica'],
+        subcategoryId: 467,
         behavior: 'quiz_list'
     },
 
@@ -260,8 +244,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i4-aplic-geo'],
         description: 'Regiones delimitadas por funciones.',
         xOffset: -75,
-        subcategoryId: 137,
-        filterKeywords: ['entre curvas'],
+        subcategoryId: 468,
         behavior: 'quiz_list'
     },
     {
@@ -272,8 +255,6 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i4-aplic-geo'],
         description: 'Rotación alrededor de ejes.',
         xOffset: -25,
-        subcategoryId: 138,
-        additionalSubcategories: [139],
         behavior: 'container'
     },
     {
@@ -284,8 +265,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i4-volumenes'],
         description: 'Sólidos sin agujeros.',
         xOffset: -60,
-        subcategoryId: 138,
-        filterKeywords: ['disco', 'rebanado'], // Included rebanado here
+        subcategoryId: 469,
         behavior: 'quiz_list'
     },
     {
@@ -296,8 +276,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i4-volumenes'],
         description: 'Sólidos con agujeros.',
         xOffset: -20,
-        subcategoryId: 138,
-        filterKeywords: ['arandela'],
+        subcategoryId: 470,
         behavior: 'quiz_list'
     },
     {
@@ -308,8 +287,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i4-volumenes'],
         description: 'Capas cilíndricas.',
         xOffset: 20,
-        subcategoryId: 139,
-        filterKeywords: ['cascarones'],
+        subcategoryId: 471,
         behavior: 'quiz_list'
     },
     {
@@ -320,7 +298,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i4-aplic-geo'],
         description: 'Curvas y superficies.',
         xOffset: 25,
-        subcategoryId: 140,
+        subcategoryId: 472,
         behavior: 'quiz_list'
     },
     {
@@ -331,7 +309,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i4-aplic-geo'],
         description: 'Centroides de láminas.',
         xOffset: 75,
-        subcategoryId: 142,
+        subcategoryId: 473,
         behavior: 'quiz_list'
     },
 
@@ -343,7 +321,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         label: 'APLICACIONES FÍSICAS Y REALES',
         level: 11,
         type: 'applied',
-        requires: ['i4-aplic-geo'], // Increased complexity dependency
+        requires: ['i4-aplic-geo'],
         description: 'Física y modelos matemáticos.',
         xOffset: 0,
         behavior: 'container'
@@ -356,7 +334,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i5-aplic-fisicas'],
         description: 'Posición, velocidad y aceleración.',
         xOffset: -40,
-        filterKeywords: ['movimiento', 'velocidad', 'posición'],
+        subcategoryId: 474,
         behavior: 'quiz_list'
     },
     {
@@ -367,8 +345,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i5-aplic-fisicas'],
         description: 'Cálculo de W = ∫ F dx.',
         xOffset: 0,
-        subcategoryId: 141,
-        filterKeywords: ['trabajo', 'fuerza'],
+        subcategoryId: 475,
         behavior: 'quiz_list'
     },
     {
@@ -379,8 +356,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i5-aplic-fisicas'],
         description: 'Valor medio en un intervalo.',
         xOffset: 40,
-        subcategoryId: 137,
-        filterKeywords: ['promedio'],
+        subcategoryId: 476,
         behavior: 'quiz_list'
     },
 
@@ -405,7 +381,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i6-impropias'],
         description: 'Convergencia y divergencia.',
         xOffset: -40,
-        filterKeywords: ['infinito'],
+        subcategoryId: 477,
         behavior: 'quiz_list'
     },
     {
@@ -416,7 +392,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: ['i6-impropias'],
         description: 'Asíntotas verticales.',
         xOffset: 40,
-        filterKeywords: ['discontinuidad'],
+        subcategoryId: 478,
         behavior: 'quiz_list'
     }
 ];

@@ -49,20 +49,7 @@ function getQuizzesForNode(node: any, allQuizzes: Quiz[]) {
         (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId!))
     );
 
-    if (node.filterKeywords && node.filterKeywords.length > 0) {
-        const keywords = node.filterKeywords.map((k: string) => k.toLowerCase());
-        matches = matches.filter(q => {
-            const title = q.title.toLowerCase();
-            const inKeywords = keywords.some((k: string) => title.includes(k));
-            if (!inKeywords) return false;
 
-            if (node.excludeKeywords) {
-                const exclude = node.excludeKeywords.map((k: string) => k.toLowerCase());
-                if (exclude.some((k: string) => title.includes(k))) return false;
-            }
-            return true;
-        });
-    }
     return matches;
 }
 

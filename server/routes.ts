@@ -5,7 +5,9 @@ import { z } from "zod";
 import {
   insertUserSchema,
   insertStudentProgressSchema,
-  insertStudentAnswerSchema
+  insertStudentAnswerSchema,
+  insertNodeContentMappingSchema,
+  nodeContentMappings
 } from "../shared/schema.js";
 import * as expressSession from "express-session";
 import { eq, sql, and, or, isNull, isNotNull } from "drizzle-orm";
@@ -519,6 +521,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Auth check error:", error);
       res.status(500).json({ message: "Error checking authentication" });
+    }
+  });
+
+  // Node Mapping Routes
+  apiRouter.get("/node-mappings/:mapId", async (req, res) => {
+    try {
+      const mapId = parseInt(req.params.mapId);
+      const mappings = await storage.getNodeContentMappings(mapId);
+      res.json(mappings);
+    } catch (error) {
+      console.error("Error fetching node mappings:", error);
+      res.status(500).json({ message: "Error al obtener vínculos de nodos" });
+    }
+  });
+
+  apiRouter.post("/node-mappings", requireAdmin, async (req, res) => {
+    try {
+      const mappingData = insertNodeContentMappingSchema.parse(req.body);
+      const mapping = await storage.upsertNodeContentMapping(mappingData);
+      res.json(mapping);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Datos de vínculo inválidos", errors: error.errors });
+      }
+      console.error("Error upserting node mapping:", error);
+      res.status(500).json({ message: "Error al guardar el vínculo del nodo" });
     }
   });
 
@@ -3491,6 +3519,19 @@ Ejemplo de formato:
       console.error("Category reorder error:", error);
       res.status(500).json({ message: "Error reordering categories" });
     }
+  });
+
+  // Node Mapping routes
+  apiRouter.get("/node-mappings/:mapId", async (req, res) => {
+    const mapId = parseInt(req.params.mapId);
+    const mappings = await storage.getNodeContentMappings(mapId);
+    res.json(mappings);
+  });
+
+  apiRouter.post("/node-mappings", requireAdmin, async (req, res) => {
+    const mapping = req.body;
+    const result = await storage.upsertNodeContentMapping(mapping);
+    res.json(result);
   });
 
   apiRouter.get("/quizzes/by-subcategory/:subcategoryId", async (req, res) => {

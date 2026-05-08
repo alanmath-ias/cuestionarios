@@ -677,9 +677,29 @@ export const managedChallengeParticipantsRelations = relations(managedChallengeP
   }),
 }));
 
+// New table for dynamic node-to-content mappings
+export const nodeContentMappings = pgTable("node_content_mappings", {
+	id: serial("id").primaryKey(),
+	mapId: integer("map_id").notNull(), // Corresponds to categoryId
+	nodeId: text("node_id").notNull(), // ID of the node from the map-data files
+	subcategoryId: integer("subcategory_id"), // Optional override for primary subcategory
+	additionalSubcategories: jsonb("additional_subcategories").default([]).notNull(), // Array of subcategory IDs
+	additionalQuizzes: jsonb("additional_quizzes").default([]).notNull(), // Array of specific quiz IDs ("invitados")
+}, (table) => [
+	unique("node_mapping_unique").on(table.mapId, table.nodeId),
+]);
+
+export const nodeContentMappingsRelations = relations(nodeContentMappings, ({ one }) => ({
+	category: one(categories, {
+		fields: [nodeContentMappings.mapId],
+		references: [categories.id],
+	}),
+}));
+
 export const insertFriendshipSchema = createInsertSchema(friendships);
 export const insertNotificationSchema = createInsertSchema(notifications);
 export const insertMessageSchema = createInsertSchema(messages);
+export const insertNodeContentMappingSchema = createInsertSchema(nodeContentMappings);
 
 export type Friendship = typeof friendships.$inferSelect;
 export type InsertFriendship = typeof friendships.$inferInsert;
@@ -693,3 +713,6 @@ export type ManagedChallenge = typeof managedChallenges.$inferSelect;
 export type InsertManagedChallenge = typeof managedChallenges.$inferInsert;
 export type ManagedChallengeParticipant = typeof managedChallengeParticipants.$inferSelect;
 export type InsertManagedChallengeParticipant = typeof managedChallengeParticipants.$inferInsert;
+export type NodeContentMapping = typeof nodeContentMappings.$inferSelect;
+export type InsertNodeContentMapping = typeof nodeContentMappings.$inferInsert;
+
