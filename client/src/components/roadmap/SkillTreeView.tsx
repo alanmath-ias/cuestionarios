@@ -155,7 +155,7 @@ export function SkillTreeView({
                     return true;
                 });
             } else {
-                const subId = overrideSubId || node.subcategoryId;
+                const subId = (mapping && mapping.subcategoryId !== undefined) ? mapping.subcategoryId : node.subcategoryId;
                 const subIds = dynamicSubIds.length > 0 ? dynamicSubIds : (node.additionalSubcategories || []);
                 
                 const hasSub = !!(subId || subIds.length > 0 || dynamicQuizIds.length > 0);
@@ -488,21 +488,39 @@ export function SkillTreeView({
         const ids = new Set<number>();
         if (!nodes || !allQuizzes) return ids;
 
-        nodes.forEach(node => {
+        // 1. Pre-calculate criteria for all nodes to avoid repeated finds/maps
+        const criteriaList = nodes.map(node => {
             const mapping = nodeMappings?.find(m => m.nodeId === node.id);
-            const subId = mapping?.subcategoryId || node.subcategoryId;
+            const subId = mapping ? mapping.subcategoryId : node.subcategoryId;
             const additionalSubs = mapping?.additionalSubcategories || node.additionalSubcategories || [];
             const guestQuizzes = mapping?.additionalQuizzes || [];
-
-            // Find all quizzes that match this node's criteria
-            allQuizzes.forEach(q => {
-                if (Number(q.subcategoryId) === Number(subId) || 
-                    (additionalSubs && additionalSubs.map(Number).includes(Number(q.subcategoryId))) ||
-                    (guestQuizzes && guestQuizzes.map(Number).includes(Number(q.id)))) {
-                    ids.add(q.id);
-                }
-            });
+            
+            return {
+                subId: subId ? Number(subId) : null,
+                additionalSubs: additionalSubs.map(Number),
+                guestQuizzes: guestQuizzes.map(Number)
+            };
         });
+
+        // 2. Single pass over quizzes to check against all criteria
+        allQuizzes.forEach(q => {
+            if (!q) return;
+            const qSubId = q.subcategoryId ? Number(q.subcategoryId) : null;
+            const qId = Number(q.id);
+
+            for (const criteria of criteriaList) {
+                const matches = 
+                    (criteria.subId !== null && qSubId === criteria.subId) ||
+                    (qSubId !== null && criteria.additionalSubs.includes(qSubId)) ||
+                    (criteria.guestQuizzes.includes(qId));
+
+                if (matches) {
+                    ids.add(qId);
+                    break; // Move to next quiz
+                }
+            }
+        });
+
         return ids;
     }, [nodes, nodeMappings, allQuizzes]);
 
@@ -518,6 +536,11 @@ export function SkillTreeView({
         return allQuizzes
             .filter(q => {
                 if (!q) return false;
+                
+                // CRITICAL: Only include quizzes that actually belong to this roadmap
+                // (Native quizzes, additional subcategories, or explicitly invited guest quizzes)
+                if (!mapQuizIds.has(q.id)) return false;
+
                 // Match by title OR exact ID
                 return q.title.toLowerCase().includes(lowerQuery) || 
                        q.id.toString() === searchQuery.trim();
@@ -540,7 +563,7 @@ export function SkillTreeView({
         // Find the node that contains this quiz (considering static data and dynamic mappings)
         let targetNode = nodes.find(n => {
             const mapping = nodeMappings?.find(m => m.nodeId === n.id);
-            const subId = mapping?.subcategoryId || n.subcategoryId;
+            const subId = mapping ? mapping.subcategoryId : n.subcategoryId;
             const additionalSubs = mapping?.additionalSubcategories || n.additionalSubcategories || [];
             const guestQuizzes = mapping?.additionalQuizzes || [];
             
@@ -1157,7 +1180,7 @@ export function SkillTreeView({
                                                             {/* Admin Subcategory Tooltip */}
                                                             {isAdmin && (() => {
                                                                 const mapping = nodeMappings?.find(m => m.nodeId === node.id);
-                                                                const subId = mapping?.subcategoryId || node.subcategoryId;
+                                                                const subId = mapping ? mapping.subcategoryId : node.subcategoryId;
                                                                 const additionalSubs = mapping?.additionalSubcategories || node.additionalSubcategories || [];
                                                                 const guestQuizzes = mapping?.additionalQuizzes || [];
                                                                 
@@ -1357,7 +1380,10 @@ function NodeConfigDialog({
     onSave: (data: any) => void,
     isLoading: boolean
 }) {
-    const [subId, setSubId] = useState(mapping?.subcategoryId?.toString() || node.subcategoryId?.toString() || "");
+    const [subId, setSubId] = useState(() => {
+        if (mapping) return mapping.subcategoryId?.toString() || "";
+        return node.subcategoryId?.toString() || "";
+    });
     const [subSearch, setSubSearch] = useState("");
     const [quizSearch, setQuizSearch] = useState("");
     const [additionalSubs, setAdditionalSubs] = useState<number[]>(mapping?.additionalSubcategories || node.additionalSubcategories || []);

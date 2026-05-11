@@ -449,7 +449,8 @@ function QuizList() {
                   const p = progress?.find(prog => prog.quizId === q.id);
                   return {
                     ...q,
-                    status: p?.status || 'not_started',
+                    status: p?.status || (q as any).userStatus || 'not_started',
+                    score: p?.score || (q as any).score || 0,
                     completedAt: p?.completedAt || null,
                     progressId: p?.id || 0
                   };

@@ -380,6 +380,10 @@ export default function QuizzesAdmin() {
     queryKey: ["/api/quizzes"],
   });
 
+  const { data: progress, isLoading: loadingProgress } = useQuery<any[]>({
+    queryKey: ["/api/progress"],
+  });
+
   const { data: subcategoriesResponse, isLoading: loadingSubcategoriesList } = useQuery<Subcategory[]>({
     queryKey: ["/api/admin/subcategories"],
     queryFn: async () => {
@@ -400,7 +404,7 @@ export default function QuizzesAdmin() {
     enabled: !!activeMapCategory,
   });
 
-  const isLoading = loadingCategories || loadingQuizzes || loadingSubcategoriesList;
+  const isLoading = loadingCategories || loadingQuizzes || loadingSubcategoriesList || loadingProgress;
 
   // Effect to restore selectedNode once categories/mapData are available
   useEffect(() => {
@@ -1552,7 +1556,16 @@ export default function QuizzesAdmin() {
 
                   return map;
                 })()}
-                allQuizzes={quizzes || []}
+                allQuizzes={(quizzes || []).map(q => {
+                  const p = progress?.find(prog => prog.quizId === q.id);
+                  return {
+                    ...q,
+                    status: p?.status || 'not_started',
+                    score: p?.score || 0,
+                    completedAt: p?.completedAt || null,
+                    progressId: p?.id || 0
+                  };
+                })}
                 allQuizzesForAdmin={quizzes || []}
                 onNodeClick={(node, highlightedQuizId) => {
                   if (node.id.endsWith('mastery')) {
