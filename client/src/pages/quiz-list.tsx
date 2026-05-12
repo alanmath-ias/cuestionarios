@@ -207,7 +207,8 @@ function QuizList() {
   const quizzesBySubcategory = Array.isArray(subcategories)
     ? subcategories.map(subcategory => ({
       ...subcategory,
-      quizzes: quizzes?.filter(quiz => quiz.subcategoryId === subcategory.id) || [],
+      quizzes: (quizzes?.filter(quiz => quiz.subcategoryId === subcategory.id) || [])
+        .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0)),
     }))
     : [];
 
@@ -783,7 +784,7 @@ function QuizList() {
                 <ListChecks className="h-6 w-6 text-blue-400" />
               </div>
               <DialogTitle className="text-xl font-bold text-white">
-                {selectedNode ? selectedNode.label : selectedSubcategory?.name}
+                {selectedNode ? (nodeMappingsData?.find(m => m.nodeId === selectedNode.id)?.overrideLabel || selectedNode.label) : selectedSubcategory?.name}
               </DialogTitle>
             </div>
             <DialogDescription className="text-slate-400">
@@ -834,7 +835,7 @@ function QuizList() {
                       const isExtra = additionalSubs && additionalSubs.map(Number).includes(qSubId as number);
                       
                       return isGuest || isMain || isExtra;
-                    });
+                    }).sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
                   } else {
                     quizzesForSub = selectedSubcategory.quizzes || [];
                   }

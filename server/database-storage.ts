@@ -246,7 +246,7 @@ export class DatabaseStorage implements IStorage {
       .from(quizzes)
       .leftJoin(categories, eq(quizzes.categoryId, categories.id))
       .leftJoin(subcategories, eq(quizzes.subcategoryId, subcategories.id))
-      .orderBy(desc(quizzes.id));
+      .orderBy(asc(quizzes.sortOrder));
 
     return results;
   }
@@ -2625,6 +2625,7 @@ export class DatabaseStorage implements IStorage {
           subcategoryId: mapping.subcategoryId,
           additionalSubcategories: mapping.additionalSubcategories,
           additionalQuizzes: mapping.additionalQuizzes,
+          overrideLabel: mapping.overrideLabel,
         }
       })
       .returning();

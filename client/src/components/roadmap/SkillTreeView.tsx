@@ -545,6 +545,7 @@ export function SkillTreeView({
                 return q.title.toLowerCase().includes(lowerQuery) || 
                        q.id.toString() === searchQuery.trim();
             })
+            .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
             .slice(0, 10);
     }, [searchQuery, allQuizzes]);
 
@@ -1282,7 +1283,7 @@ export function SkillTreeView({
                                                                             isLocked ? "bg-amber-950/50 border-amber-600/50 text-amber-400" :
                                                                                 "bg-slate-900/50 border-slate-700 text-slate-500"
                                                             )}>
-                                                                <span className="whitespace-pre-line">{node.label}</span>
+                                                                <span className="whitespace-pre-line">{nodeMappings?.find(m => m.nodeId === node.id)?.overrideLabel || node.label}</span>
                                                                 
                                                                 {nodeAverages[node.id] !== undefined && (isCompleted || (node.behavior === 'container' && nodeProgress[node.id] > 0)) && (
                                                                     <span className="text-[11px] md:text-[12px] font-black text-yellow-400 mt-1 pb-0.5 drop-shadow-[0_0_8px_rgba(234,179,8,0.4)]">
@@ -1309,7 +1310,7 @@ export function SkillTreeView({
                                                         className="bg-slate-900/95 border border-slate-700 text-white p-3 rounded-xl shadow-2xl backdrop-blur-md z-[1001]"
                                                     >
                                                         <div className="flex flex-col gap-1 min-w-[140px]">
-                                                            <p className="font-bold text-sm text-blue-400 border-b border-white/10 pb-1 mb-1">{node.label}</p>
+                                                            <p className="font-bold text-sm text-blue-400 border-b border-white/10 pb-1 mb-1">{nodeMappings?.find(m => m.nodeId === node.id)?.overrideLabel || node.label}</p>
                                                             <div className="flex items-center justify-between text-xs">
                                                                 <span className="text-slate-400">Promedio:</span>
                                                                 <span className="font-mono font-bold text-white text-sm">
@@ -1380,6 +1381,7 @@ function NodeConfigDialog({
     onSave: (data: any) => void,
     isLoading: boolean
 }) {
+    const [overrideLabel, setOverrideLabel] = useState(mapping?.overrideLabel || node.label);
     const [subId, setSubId] = useState(() => {
         if (mapping) return mapping.subcategoryId?.toString() || "";
         return node.subcategoryId?.toString() || "";
@@ -1425,11 +1427,12 @@ function NodeConfigDialog({
             nodeId: node.id,
             subcategoryId: subId ? parseInt(subId) : null,
             additionalSubcategories: additionalSubs,
-            additionalQuizzes: additionalQuizzes
+            additionalQuizzes: additionalQuizzes,
+            overrideLabel: overrideLabel
         });
         toast({
             title: "Configuración guardada",
-            description: `Se han actualizado los vínculos para el nodo ${node.label}.`,
+            description: `Se han actualizado los vínculos para el nodo ${overrideLabel || node.label}.`,
         });
     };
 
@@ -1439,7 +1442,7 @@ function NodeConfigDialog({
                 <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b border-white/5">
                     <DialogTitle className="text-xl font-bold flex items-center gap-2">
                         <Settings className="w-6 h-6 text-blue-400 animate-spin-slow" />
-                        Configurar Nodo: {node.label}
+                        Configurar Nodo: {overrideLabel || node.label}
                     </DialogTitle>
                     <DialogDescription className="text-slate-400">
                         Gestiona qué contenido se muestra en este nodo.
@@ -1448,6 +1451,20 @@ function NodeConfigDialog({
 
                 <ScrollArea className="flex-1 px-6">
                     <div className="space-y-8 py-4 pb-12">
+                        {/* Edición de Nombre del Nodo */}
+                        <div className="space-y-3 bg-blue-500/5 p-4 rounded-2xl border border-blue-500/20">
+                            <Label className="text-blue-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                                <Box className="w-3 h-3" />
+                                Nombre del Nodo en el Mapa
+                            </Label>
+                            <Input
+                                value={overrideLabel}
+                                onChange={(e) => setOverrideLabel(e.target.value)}
+                                placeholder="Nombre personalizado para este nodo..."
+                                className="bg-slate-950 border-slate-800 focus:ring-blue-500/50 text-blue-100 font-bold"
+                            />
+                            <p className="text-[10px] text-slate-500 italic">Este nombre reemplazará al original ("{node.label}") en el mapa.</p>
+                        </div>
                         {/* Subcategoría Principal */}
                         <div className="space-y-3 bg-slate-800/30 p-4 rounded-2xl border border-white/5">
                             <Label className="text-blue-300 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
@@ -1522,12 +1539,12 @@ function NodeConfigDialog({
                                 {additionalSubs.map(id => {
                                     const sub = subcategories.find(s => s.id === id);
                                     return (
-                                        <Badge key={id} variant="secondary" className="bg-slate-800 hover:bg-slate-700 border border-white/5 flex items-center gap-2 px-2 py-1 group transition-all">
+                                        <Badge key={id} variant="secondary" className="bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30 text-purple-200 flex items-center gap-2 px-3 py-1.5 group transition-all">
                                             <div className="flex flex-col items-start leading-none">
-                                                <span className="text-[9px] text-slate-500 font-mono">ID: {id}</span>
-                                                <span className="text-xs">{sub?.name || 'Cargando...'}</span>
+                                                <span className="text-[9px] text-purple-400/70 font-mono font-bold">ID: {id}</span>
+                                                <span className="text-xs font-semibold">{sub?.name || 'Cargando...'}</span>
                                             </div>
-                                            <X className="w-3 h-3 cursor-pointer text-slate-500 group-hover:text-red-400 transition-colors" onClick={() => setAdditionalSubs(additionalSubs.filter(s => s !== id))} />
+                                            <X className="w-3.5 h-3.5 cursor-pointer text-purple-500/50 group-hover:text-red-400 transition-colors" onClick={() => setAdditionalSubs(additionalSubs.filter(s => s !== id))} />
                                         </Badge>
                                     );
                                 })}
