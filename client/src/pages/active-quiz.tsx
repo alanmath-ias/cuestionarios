@@ -1550,7 +1550,7 @@ const ActiveQuiz = () => {
                           disabled={isAnswered || isReadOnly}
                           className={`w-full text-left ${hasMathContent ? 'py-3' : 'py-4'} px-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass} ${isReadOnly ? 'cursor-default opacity-80' : ''}`}
                         >
-                          <div className="flex items-center gap-4 relative z-10 w-full">
+                          <div className="flex items-center gap-4 relative z-10 w-full min-w-0">
                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors
                                     ${isSelected || (isAnswered && answer.isCorrect)
                                 ? 'bg-white/10 border-white/20 text-white'
@@ -1559,7 +1559,7 @@ const ActiveQuiz = () => {
                                   `}>
                               {String.fromCharCode(65 + index)}
                             </div>
-                            <div className={`font-medium flex-1 ${getAnswerSizeClass(answer.content)}`}>
+                            <div className={`font-medium flex-1 min-w-0 overflow-x-auto overflow-y-hidden custom-scrollbar ${getAnswerSizeClass(answer.content)}`}>
                               <ContentRenderer content={answer.content} tight={true} />
                             </div>
                           </div>

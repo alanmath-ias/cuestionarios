@@ -117,7 +117,7 @@ export function QuizOption({
       onClick={!disabled ? onClick : undefined}
     >
       <div className="flex items-start">
-        <div className={`w-7 h-7 rounded-full ${
+        <div className={`w-7 h-7 rounded-full shrink-0 ${
           state === 'default' ? 'bg-gray-100 border-gray-300' : 
           state === 'selected' ? 'bg-blue-100 border-blue-500' : 
           state === 'correct' ? 'bg-emerald-100 border-emerald-500' : 
@@ -131,7 +131,7 @@ export function QuizOption({
             {optionLabel}
           </span>
         </div>
-        <div className="quiz-content">
+        <div className="quiz-content flex-1 min-w-0 overflow-x-auto custom-scrollbar">
           {renderContent()}
         </div>
       </div>

@@ -59,10 +59,10 @@ REQUISITOS TÉCNICOS:
     
     REGLAS ESTRICTAS:
     1. Las preguntas DEBEN ajustarse exactamente al tema: "${topicDescription}".
-    2. Todo el contenido matemático debe usar delimitadores de apertura y cierre ¡¡ (ejemplo: ¡¡x + 2 = 5¡¡).
+    2. Todo el contenido matemático debe usar delimitadores de apertura y cierre ¡ (un solo símbolo de exclamación invertido, ejemplo: ¡x + 2 = 5¡). NO uses doble ¡¡.
     3. NUNCA uses el símbolo $ para fórmulas matemáticas.
     4. Usa únicamente el símbolo de EURO (€) si se requiere una unidad monetaria.
-    5. No mezcles palabras y números dentro de los delimitadores ¡¡ (ejemplo incorrecto: ¡¡3 Euros¡¡, correcto: ¡¡3¡¡ Euros o ¡¡3¡¡ ¡¡Euros¡¡).
+    5. No mezcles palabras y números dentro de los delimitadores ¡ (ejemplo incorrecto: ¡3 Euros¡, correcto: ¡3¡ Euros o ¡3¡ ¡Euros¡).
     
     Genera ${questionCount} preguntas en formato JSON.
 6.  **ALEATORIZACIÓN CRÍTICA**: La posición de la respuesta correcta (isCorrect: true) DEBE SER ALEATORIA para cada pregunta (no siempre la primera, ni siempre la misma posición).
@@ -72,7 +72,8 @@ REQUISITOS TÉCNICOS:
 10. **UNICIDAD OBLIGATORIA**: Los textos de las 4 opciones deben ser COMPLETAMENTE distintos entre sí. Nunca repitas el mismo valor o texto.
 11. Incluye una breve explicación pedagógica de la respuesta correcta (máximo 2 líneas).
 12. Prioriza ejercicios técnicos directos. Evita enunciados extensos, historias o contextos innecesarios.
-13. **IMPORTANTE**: No uses nunca los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡¡ x^2 ¡¡).
+13. **IMPORTANTE**: No uses nunca los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).
+14. **LATEX CRÍTICO**: Al generar código LaTeX dentro del JSON, DEBES escapar las barras invertidas con doble barra (ejemplo: \\frac, \\sqrt, \\mathbb, \\cdot, \\leq, \\geq, \\neq, \\approx, \\boxed). NUNCA escribas funciones matemáticas sin su barra invertida (incorrecto: sqrt, frac, boxed; correcto: \\sqrt, \\frac, \\boxed).
 
 DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
 {

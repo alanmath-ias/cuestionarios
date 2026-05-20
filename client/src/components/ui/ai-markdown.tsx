@@ -44,7 +44,7 @@ export function AIMarkdown({ content, className }: AIMarkdownProps) {
         <div className={`prose prose-sm max-w-none w-full overflow-x-auto custom-scrollbar ${className || ''}`}>
             <ReactMarkdown
                 remarkPlugins={[remarkMath]}
-                rehypePlugins={[rehypeKatex]}
+                rehypePlugins={[ [rehypeKatex, { macros: { "\\sen": "\\sin", "\\tg": "\\tan", "\\arcsen": "\\arcsin", "\\arctg": "\\arctan" } }] ]}
             >
                 {processedContent}
             </ReactMarkdown>

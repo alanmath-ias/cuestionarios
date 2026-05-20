@@ -24,6 +24,12 @@ export function MathDisplay({
         katex.render(math, containerRef.current, {
           throwOnError: false,
           displayMode: display,
+          macros: {
+            "\\sen": "\\sin",
+            "\\tg": "\\tan",
+            "\\arcsen": "\\arcsin",
+            "\\arctg": "\\arctan"
+          }
         });
       } catch (error) {
         console.error('Error rendering math:', error);
@@ -72,6 +78,12 @@ export function MathText({ children, className = '' }: { children: string, class
           katex.render(match[2], mathSpan, {
             throwOnError: false,
             displayMode: false,
+            macros: {
+              "\\sen": "\\sin",
+              "\\tg": "\\tan",
+              "\\arcsen": "\\arcsin",
+              "\\arctg": "\\arctan"
+            }
           });
           fragments.push(mathSpan);
 

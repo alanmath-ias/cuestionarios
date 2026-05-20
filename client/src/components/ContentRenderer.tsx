@@ -16,7 +16,7 @@ export const ContentRenderer = React.memo(function ContentRenderer({ content, cl
     const parts = normalizedContent.split(/((?:¡+|\\?\$+)(?:[\s\S]*?)(?:¡+|\\?\$+))/g);
 
     return (
-        <div className={`content-renderer ${tight ? 'leading-[1.1]' : 'leading-relaxed'} ${className}`}>
+        <div className={`content-renderer overflow-x-auto overflow-y-hidden custom-scrollbar ${tight ? 'leading-[1.1]' : 'leading-relaxed'} ${className}`}>
             {parts.map((part, index) => {
                 const trimmedPart = part.trim();
                 // Check if the part is wrapped in delimiters - use [\s\S] for multiline
