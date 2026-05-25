@@ -18,3 +18,6 @@ vite.config.ts.*
 /estadistica_imagenes/
 /scratch/
 /*.ts.local
+
+# Ignorar archivo autogenerado de versión
+client/public/version.json
