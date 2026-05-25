@@ -548,7 +548,7 @@ export default function UsersAdmin() {
                       <motion.button
                         key={cat.id}
                         whileHover={{ scale: 1.02, x: 5 }}
-                        whileActive={{ scale: 0.98 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setSelectedAwardsCategory(cat)}
                         className="w-full flex items-center justify-between p-5 rounded-[1.8rem] bg-slate-900/40 border border-white/5 hover:bg-slate-900/80 transition-all group"
                       >
