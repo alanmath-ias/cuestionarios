@@ -51,7 +51,18 @@ export const calculusMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
 
-    // NIETOS de Funciones: Composición, Inversas
+    // NIETOS de Funciones: Radicales, Composición, Inversas
+    {
+        id: 'c0-radicales',
+        label: 'Radicales',
+        level: 2,
+        type: 'basic',
+        requires: ['c0-polinomicas'],
+        description: 'Funciones con raíces.',
+        xOffset: -60,
+        subcategoryId: 480, // Radicales - Funciones
+        behavior: 'quiz_list'
+    },
     {
         id: 'c0-composicion',
         label: 'Composición',
@@ -59,7 +70,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['c0-polinomicas', 'c0-explog'],
         description: 'f(g(x))',
-        xOffset: -30,
+        xOffset: 0,
         subcategoryId: 443, // Composición - Funciones
         behavior: 'quiz_list'
     },
@@ -70,12 +81,23 @@ export const calculusMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['c0-trigo'],
         description: 'f^-1(x)',
-        xOffset: 30,
+        xOffset: 60,
         subcategoryId: 103, // Funciones Inversas
         behavior: 'quiz_list'
     },
 
-    // BISNIETO: Dominio y Rango
+    // BISNIETOS: Transformaciones, Dominio y Rango, Miscelánea
+    {
+        id: 'c0-transformaciones',
+        label: 'Transformaciones',
+        level: 3,
+        type: 'basic',
+        requires: ['c0-radicales', 'c0-composicion'],
+        description: 'Desplazamientos y reflexiones.',
+        xOffset: -60,
+        subcategoryId: 481, // Transformaciones - Funciones
+        behavior: 'quiz_list'
+    },
     {
         id: 'c0-dom-rango',
         label: 'Dominio y Rango',
@@ -94,7 +116,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['c0-dom-rango'],
         description: 'Repaso general y miscelánea de funciones.',
-        xOffset: 45,
+        xOffset: 60,
         subcategoryId: 441, // Miscelánea Funciones - Funciones
         additionalSubcategories: [100], // Repaso de Funciones
         behavior: 'quiz_list'
