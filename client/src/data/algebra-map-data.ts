@@ -101,7 +101,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     },
     {
         id: 'a2-2-multi',
-        label: 'Multiplicación y División',
+        label: 'Multiplicación',
         level: 5,
         type: 'basic',
         requires: ['a2-operaciones'],
@@ -111,13 +111,24 @@ export const algebraMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
     {
-        id: 'a2-3-mcm-mcd',
-        label: 'mcm y MCD Monomios',
+        id: 'a2-2-div',
+        label: 'División',
         level: 5,
         type: 'basic',
         requires: ['a2-operaciones'],
-        description: 'mcm y MCD - Operaciones Polinomios.',
+        description: 'División de polinomios algebraicos.',
         xOffset: 60,
+        subcategoryId: 482,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a2-3-mcm-mcd',
+        label: 'mcm y MCD Monomios',
+        level: 6,
+        type: 'basic',
+        requires: ['a2-operaciones'],
+        description: 'mcm y MCD - Operaciones Polinomios.',
+        xOffset: -30,
         subcategoryId: 432,
         behavior: 'quiz_list'
     },
@@ -128,7 +139,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         type: 'applied',
         requires: ['a2-operaciones'],
         description: 'Problemas - Operaciones Polinomios.',
-        xOffset: 0,
+        xOffset: 30,
         subcategoryId: 433,
         behavior: 'quiz_list'
     },
