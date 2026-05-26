@@ -82,13 +82,24 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
 
     // Grandchildren of Naturales
     {
+        id: 'n0-tablas-mult',
+        label: 'Tablas de Multiplicar',
+        level: 3,
+        type: 'basic',
+        requires: ['n2-multi'],
+        description: 'Práctica y dominio de las tablas de multiplicar.',
+        xOffset: -60,
+        subcategoryId: 483,
+        behavior: 'quiz_list'
+    },
+    {
         id: 'n0-problemas',
         label: 'Solución de Problemas',
         level: 3,
         type: 'applied',
         requires: ['n2-suma', 'n2-multi', 'n0-recta'],
         description: 'Aplicación de operaciones básicas.',
-        xOffset: -35,
+        xOffset: 0,
         subcategoryId: 303,
         behavior: 'quiz_list'
     },
@@ -99,7 +110,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['n2-suma', 'n2-multi', 'n0-recta'],
         description: 'Jerarquía de operaciones (PEMDAS/BODMAS) con números naturales.',
-        xOffset: 35,
+        xOffset: 60,
         subcategoryId: 434,
         behavior: 'quiz_list'
     },

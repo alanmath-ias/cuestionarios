@@ -98,7 +98,7 @@ export default function AiQuizzesAdmin() {
     return user ? (user.name || user.username) : "Usuario desconocido";
   };
 
-  const aiQuizzes = quizzes?.filter(q => q.isAiGenerated) || [];
+  const aiQuizzes = quizzes?.filter(q => q.isAiGenerated && !q.isPublic) || [];
   
   const filteredQuizzes = aiQuizzes.filter(quiz => {
     const creator = getUserName(quiz.createdByUserId).toLowerCase();
