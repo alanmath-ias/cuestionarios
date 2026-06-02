@@ -1,3 +1,4 @@
+import "./server/env-config.js";
 import { db } from "./server/db.js";
 import { questions, answers } from "./shared/schema.js";
 import { eq, like } from "drizzle-orm";
