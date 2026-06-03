@@ -15,7 +15,20 @@ vite.config.ts.*
  
 # Imágenes y archivos temporales
 /algebra_imagenes/
+/aritmetica_imagenes/
+/calculo_imagenes/
+/calculo_integral_imagenes/
 /estadistica_imagenes/
+/trigonometria_imagenes/
+/ecuaciones_diferenciales_imagenes/
+/fisica_imagenes/
+/geometria_analitica_imagenes/
+/algebra_lineal_imagenes/
+/series_fourier_edps_imagenes/
+/retos_matematicos_imagenes/
+/lenguaje_imagenes/
+/logica_matematica_imagenes/
+/test_nivelacion_imagenes/
 /scratch/
 /*.ts.local
 
