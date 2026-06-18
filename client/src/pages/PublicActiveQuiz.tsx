@@ -663,8 +663,8 @@ function PublicActiveQuiz() {
                         `}>
                         {String.fromCharCode(65 + index)}
                       </div>
-                      <div className="text-base font-medium flex-1">
-                        <ContentRenderer content={answer.content} />
+                      <div className="font-medium flex-1 min-w-0 overflow-x-auto overflow-y-hidden custom-scrollbar py-0.5 text-base">
+                        <ContentRenderer content={answer.content} tight={true} />
                       </div>
                     </div>
                     {isAnswered && answer.isCorrect && <CheckCircle2 className="h-6 w-6 text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)] shrink-0 ml-4" />}

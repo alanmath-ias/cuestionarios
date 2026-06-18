@@ -1271,11 +1271,11 @@ const ActiveQuiz = () => {
         <div className="mb-8">
           {isEditing ? (
             <div className="space-y-6 bg-slate-900/80 p-6 rounded-2xl border border-blue-500/30 shadow-2xl animate-in fade-in zoom-in duration-300">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
                 <h3 className="text-xl font-bold text-blue-400 flex items-center gap-2">
                   <Pencil className="h-5 w-5" /> Modo Edición de Pregunta
                 </h3>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -1559,7 +1559,7 @@ const ActiveQuiz = () => {
                                   `}>
                               {String.fromCharCode(65 + index)}
                             </div>
-                            <div className={`font-medium flex-1 min-w-0 overflow-x-auto overflow-y-hidden custom-scrollbar ${getAnswerSizeClass(answer.content)}`}>
+                            <div className={`font-medium flex-1 min-w-0 overflow-x-auto overflow-y-hidden custom-scrollbar py-0.5 ${getAnswerSizeClass(answer.content)}`}>
                               <ContentRenderer content={answer.content} tight={true} />
                             </div>
                           </div>

@@ -3241,13 +3241,49 @@ Ejemplo de formato:
         return res.status(404).json({ message: "Progress not found" });
       }
 
-      const quiz = await storage.getQuiz(progress.quizId);
+      let quiz = await storage.getQuiz(progress.quizId);
+      if (!quiz) {
+        console.warn(`[WARNING] Quiz ID ${progress.quizId} not found in DB for progress ID ${progressId}`);
+        quiz = {
+          id: progress.quizId,
+          title: "Cuestionario eliminado",
+          description: "Este cuestionario ya no está disponible",
+          categoryId: 1,
+          timeLimit: 3600,
+          difficulty: "easy",
+          totalQuestions: progress.completedQuestions || 10,
+          isPublic: false,
+          subcategoryId: 0,
+          url: null,
+          sortOrder: 0,
+          isVerified: false,
+          isAiGenerated: false,
+          createdByUserId: null,
+        };
+      }
       const answers = await storage.getStudentAnswersByProgress(progressId);
 
       // Obtener detalles de las preguntas para cada respuesta
       const detailedAnswers = await Promise.all(
         answers.map(async (answer) => {
-          const question = await storage.getQuestion(answer.questionId);
+          let question = await storage.getQuestion(answer.questionId);
+          if (!question) {
+            console.warn(`[WARNING] Question ID ${answer.questionId} not found in DB for student answer ID ${answer.id} (progressId: ${progressId})`);
+            question = {
+              id: answer.questionId,
+              quizId: progress.quizId,
+              content: "Pregunta eliminada o modificada",
+              type: "multiple_choice",
+              difficulty: 1,
+              points: 0,
+              variables: null,
+              imageUrl: null,
+              hint1: null,
+              hint2: null,
+              hint3: null,
+              explanation: null,
+            };
+          }
           const answerDetails = answer.answerId ? await storage.getAnswer(answer.answerId) : null;
 
           return {

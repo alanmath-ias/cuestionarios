@@ -477,7 +477,7 @@ function QuizResults() {
 
                     <div className="p-6">
                       <div className="mb-6 text-lg text-slate-200">
-                        {renderContent(answer.question.content)}
+                        {renderContent(answer.question?.content || "Pregunta no disponible")}
                         {/* Display image if the question has one */}
                         {(() => {
                            const qId = answer.question?.id;
@@ -535,8 +535,8 @@ function QuizResults() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleRequestExplanation(
-                                  answer.question.id,
-                                  answer.question.content,
+                                  answer.question?.id || 0,
+                                  answer.question?.content || '',
                                   correctContent || ''
                                 )}
                                 className="ml-2 border-white/10 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"

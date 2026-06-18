@@ -130,7 +130,7 @@ function AdminQuizReview() {
 
   const getCorrectAnswerContent = (answer: any): string | undefined => {
     if (!quizQuestions) return undefined;
-    const fullQuestion = quizQuestions.find(q => q.id === answer.question.id);
+    const fullQuestion = quizQuestions.find(q => q.id === answer.question?.id);
     const correctAnswer = fullQuestion?.answers.find((a: any) => a.isCorrect);
     return correctAnswer?.content;
   };
@@ -213,7 +213,7 @@ function AdminQuizReview() {
               <div className="space-y-4 mb-10">
                 {results.answers.map((answer, index) => {
                   const correctContent = getCorrectAnswerContent(answer);
-                  const question = quizQuestions?.find((q) => q.id === answer.question.id);
+                  const question = quizQuestions?.find((q) => q.id === answer.question?.id);
                   return (
                     <div key={answer.id} className="border border-white/10 rounded-lg overflow-hidden bg-slate-950">
                       <div className="bg-slate-900 p-3 flex justify-between items-center border-b border-white/5">

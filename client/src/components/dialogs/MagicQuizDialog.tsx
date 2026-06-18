@@ -167,7 +167,7 @@ export function MagicQuizDialog({ isOpen, onClose, categories, userId, credits, 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && !isGenerating && onClose()}>
-      <DialogContent className="sm:max-w-[500px] bg-slate-950 border border-amber-500/30 text-white overflow-hidden p-0 [&>button]:z-[100] [&>button]:opacity-100 [&>button]:text-slate-400 [&>button]:hover:text-amber-400 [&>button]:transition-colors">
+      <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] flex flex-col bg-slate-950 border border-amber-500/30 text-white overflow-hidden p-0 [&>button]:z-[100] [&>button]:opacity-100 [&>button]:text-slate-400 [&>button]:hover:text-amber-400 [&>button]:transition-colors">
         {/* Magic Background Effect */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-amber-500/10 rounded-full blur-[80px]" />
@@ -186,7 +186,7 @@ export function MagicQuizDialog({ isOpen, onClose, categories, userId, credits, 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-6 py-4 px-6 relative z-10">
+        <div className="flex-1 overflow-y-auto min-h-0 grid gap-6 py-4 px-6 relative z-10 custom-scrollbar">
           <AnimatePresence mode="wait">
             {!isGenerating ? (
               step === 0 ? (
