@@ -690,38 +690,15 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         subcategoryId: 341,
         behavior: 'quiz_list'
     },
-    {
-        id: 'n12-problemas-prog',
-        label: 'Funciones Lineales',
-        level: 30,
-        type: 'applied',
-        requires: ['n12-prog-arit', 'n12-prog-geom'],
-        description: 'Explora el comportamiento de las funciones lineales y su relación con las progresiones.',
-        xOffset: -30,
-        subcategoryId: 342,
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'n12-promedios',
-        label: 'Funciones Exponenciales',
-        level: 30,
-        type: 'basic',
-        requires: ['n12-prog-arit', 'n12-prog-geom'],
-        description: 'Domina las funciones exponenciales y su aplicación en problemas de crecimiento.',
-        xOffset: 30,
-        subcategoryId: 343,
-        behavior: 'quiz_list'
-    },
-
     // ==========================================
-    // NIVEL 31: APLICACIONES FINANCIERAS
+    // NIVEL 30: APLICACIONES FINANCIERAS
     // ==========================================
     {
         id: 'n14-aplicaciones-parent',
         label: 'Aplicaciones',
-        level: 31,
+        level: 30,
         type: 'applied',
-        requires: ['n12-problemas-prog', 'n12-promedios'],
+        requires: ['n12-prog-arit', 'n12-prog-geom'],
         description: 'Matemáticas del dinero y el crecimiento.',
         xOffset: 0,
         // subcategoryId removed (parent)
@@ -730,7 +707,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n14-interes-simple',
         label: 'Interés Simple',
-        level: 32,
+        level: 31,
         type: 'applied',
         requires: ['n14-aplicaciones-parent'],
         description: 'Crecimiento lineal del capital.',
@@ -741,7 +718,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n14-interes-compuesto',
         label: 'Interés Compuesto',
-        level: 32,
+        level: 31,
         type: 'critical',
         requires: ['n14-aplicaciones-parent'],
         description: 'Interés sobre interés (crecimiento exponencial).',
@@ -750,11 +727,11 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
 
-    // Final Mastery Evaluation (Level 33)
+    // Final Mastery Evaluation (Level 32)
     {
         id: 'n13-mastery',
         label: 'Maestría en Aritmética',
-        level: 33,
+        level: 32,
         type: 'evaluation',
         requires: ['n14-interes-simple', 'n14-interes-compuesto'],
         description: 'El desafío definitivo de todo el módulo.',

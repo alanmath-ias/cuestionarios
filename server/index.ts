@@ -76,7 +76,7 @@ export const sessionStore = new PgStore({
   poolOptions: {
     max: 2, // Reduced from 5 to prevent "too many clients" error
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 15000,
   },
   ssl: { rejectUnauthorized: false },
 } as any);
