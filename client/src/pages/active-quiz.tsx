@@ -1290,7 +1290,7 @@ const ActiveQuiz = () => {
                     {deleteQuestionMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
                     Eliminar
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={handleCancelEdit} className="text-slate-400 hover:text-white">
+                  <Button variant="ghost" size="sm" onClick={handleCancelEdit} className="text-slate-400 hover:text-white hover:bg-slate-800">
                     <CloseIcon className="h-4 w-4 mr-2" /> Cancelar
                   </Button>
                   <Button size="sm" onClick={handleSaveEdit} disabled={updateQuestionMutation.isPending} className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20">

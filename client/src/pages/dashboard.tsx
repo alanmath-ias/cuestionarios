@@ -1652,46 +1652,50 @@ export default function UserDashboard() {
               <div className="space-y-3 py-2">
                 {filteredPendingQuizzes.length > 0 ? (
                   filteredPendingQuizzes.map((quiz) => (
-                    <div key={quiz.id} className="group flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-yellow-500/30 hover:shadow-[0_0_15px_-3px_rgba(234,179,8,0.15)]">
-                      <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0 shadow-sm">
-                        <PlayCircle className="h-5 w-5 text-yellow-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm text-slate-200">{quiz.title}</h4>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs text-slate-500">{quiz.difficulty}</p>
-                          {quiz.responseMode === 'direct_input' ? (
-                            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-1.5 h-4 flex items-center gap-1">
-                              <Brain className="w-2.5 h-2.5" /> IA
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-[10px] bg-slate-800 text-slate-400 border-slate-700 px-1.5 h-4 flex items-center gap-1">
-                              <ListChecks className="w-2.5 h-2.5" /> Normal
-                            </Badge>
-                          )}
+                    <div key={quiz.id} className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/5 transition-all hover:bg-slate-800/60 hover:border-yellow-500/30 hover:shadow-[0_0_15px_-3px_rgba(234,179,8,0.15)]">
+                      <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0 shadow-sm">
+                          <PlayCircle className="h-5 w-5 text-yellow-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-sm text-slate-200">{quiz.title}</h4>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-slate-500">{quiz.difficulty}</p>
+                            {quiz.responseMode === 'direct_input' ? (
+                              <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-1.5 h-4 flex items-center gap-1">
+                                <Brain className="w-2.5 h-2.5" /> IA
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] bg-slate-800 text-slate-400 border-slate-700 px-1.5 h-4 flex items-center gap-1">
+                                <ListChecks className="w-2.5 h-2.5" /> Normal
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2 border-t border-white/5 pt-2 sm:pt-0 sm:border-none">
                         {(quiz.completedQuestions || 0) > 0 && (
-                          <span className="text-xs font-medium text-yellow-500/80 mr-2">
+                          <span className="text-xs font-medium text-yellow-500/80 mr-auto sm:mr-2">
                             Progreso: {quiz.completedQuestions}
                           </span>
                         )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 px-2 text-xs bg-transparent border-slate-700 text-slate-400 hover:text-white hover:bg-white/10"
-                          onClick={(e) => handleMiniStart(e, quiz.id!)}
-                        >
-                          Mini
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="h-7 px-3 text-xs bg-yellow-600 hover:bg-yellow-700 text-white border-none shadow-sm"
-                          onClick={() => setLocation(`/quiz/${quiz.id}`)}
-                        >
-                          Normal
-                        </Button>
+                        <div className="flex gap-2 ml-auto">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-xs bg-transparent border-slate-700 text-slate-400 hover:text-white hover:bg-white/10"
+                            onClick={(e) => handleMiniStart(e, quiz.id!)}
+                          >
+                            Mini
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-7 px-3 text-xs bg-yellow-600 hover:bg-yellow-700 text-white border-none shadow-sm"
+                            onClick={() => setLocation(`/quiz/${quiz.id}`)}
+                          >
+                            Normal
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))
