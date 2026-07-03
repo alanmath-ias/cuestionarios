@@ -7,14 +7,13 @@ import { TrainingSession, TrainingQuestion } from "@/components/TrainingSession"
 
 const CATEGORY_NAMES: Record<string, string> = {
   "1": "Aritmética",
-  "3": "Álgebra",
-  "4": "Trigonometría",
-  "5": "Cálculo",
+  "2": "Álgebra",
+  "3": "Trigonometría",
+  "4": "Cálculo Diferencial",
+  "5": "Cálculo Integral",
   "6": "Ecuaciones Diferenciales",
-  "7": "Cálculo Integral",
-  "8": "Física Mecánica",
   "10": "Física Mecánica",
-  "2": "Geometría"
+  "19": "Estadística"
 };
 
 const TrainingPage = ({ categoryId }: { categoryId: string }) => {

@@ -213,11 +213,13 @@ function QuizList() {
     : [];
 
   const totalCategoryProgress = useMemo(() => {
-    if (!quizzes || quizzes.length === 0) return 0;
-    const completedCount = quizzes.filter(q =>
+    if (!quizzes) return 0;
+    const normalQuizzes = quizzes.filter(q => q && !q.title.toLowerCase().includes("maestría"));
+    if (normalQuizzes.length === 0) return 0;
+    const completedCount = normalQuizzes.filter(q =>
       progress?.some(p => p.quizId === q.id && p.status === 'completed')
     ).length;
-    return (completedCount / quizzes.length) * 100;
+    return (completedCount / normalQuizzes.length) * 100;
   }, [quizzes, progress]);
 
   const getQuizProgress = (quizId: number) => {

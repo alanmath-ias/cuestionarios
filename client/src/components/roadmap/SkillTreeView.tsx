@@ -278,7 +278,7 @@ export function SkillTreeView({
     // Helper to get coordinates
     const getNodePos = (node: ArithmeticNode) => ({
         x: CENTER_X + (node.xOffset || 0) * SPREAD,
-        y: node.level * ROW_HEIGHT + 30
+        y: node.level * ROW_HEIGHT + 95
     });
 
     const totalHeight = (Math.max(...nodes.map(n => n.level)) + 1) * ROW_HEIGHT + 200;
@@ -1107,7 +1107,9 @@ export function SkillTreeView({
                                                                 whileTap={{ scale: 0.95 }}
                                                                 onClick={(e) => handleNodeInteraction(e, node, isLocked)}
                                                                 className={cn(
-                                                                    "relative w-20 h-20 flex items-center justify-center shadow-lg transition-all duration-300 hover:brightness-125 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]",
+                                                                    node.id.endsWith('mastery')
+                                                                        ? "relative w-28 h-28 flex items-center justify-center shadow-lg transition-all duration-300 hover:brightness-125 hover:shadow-[0_0_35px_rgba(192,38,211,0.6)]"
+                                                                        : "relative w-20 h-20 flex items-center justify-center shadow-lg transition-all duration-300 hover:brightness-125 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]",
                                                                     (node.type === 'critical' && node.behavior === 'container') ? 'hexagon-mask' :
                                                                         node.behavior === 'container' ? 'rotate-45 rounded-2xl' : 'rounded-full',
 
@@ -1143,14 +1145,14 @@ export function SkillTreeView({
                                                                 }}
                                                             >
                                                                 <div className={cn("flex items-center justify-center", node.behavior === 'container' && !(node.type === 'critical' && node.behavior === 'container') && "-rotate-45")}>
-                                                                    {isCompleted ? (
+                                                                    {isCompleted && !node.id.endsWith('mastery') ? (
                                                                         <CheckCircle className="w-8 h-8 text-green-400" />
                                                                     ) : node.id.endsWith('mastery') ? (
                                                                         <motion.div
                                                                             animate={{ rotate: [0, 10, -10, 0] }}
                                                                             transition={{ repeat: Infinity, duration: 2 }}
                                                                         >
-                                                                            <Crown className="w-10 h-10 text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
+                                                                            <Crown className="w-14 h-14 text-yellow-300 drop-shadow-[0_0_12px_rgba(253,224,71,0.9)]" />
                                                                         </motion.div>
                                                                     ) : isLocked ? (
                                                                         <Construction className="w-8 h-8 text-amber-500" />
@@ -1162,7 +1164,7 @@ export function SkillTreeView({
                                                                                         animate={{ rotate: [0, 10, -10, 0] }}
                                                                                         transition={{ repeat: Infinity, duration: 2 }}
                                                                                     >
-                                                                                        <Crown className="w-10 h-10 text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
+                                                                                        <Crown className="w-14 h-14 text-yellow-300 drop-shadow-[0_0_12px_rgba(253,224,71,0.9)]" />
                                                                                     </motion.div>
                                                                                 ) :
                                                                                     node.type === 'evaluation' ? <Trophy className="w-8 h-8 text-purple-400 fill-purple-400/20" /> :

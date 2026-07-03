@@ -398,15 +398,16 @@ export default function ParentDashboard() {
     }
   }, [categories, selectedVideo]);
 
-  const completedQuizzes: QuizWithFeedback[] = quizzes?.filter((q: any) => q.userStatus === 'completed') || [];
-  const pendingQuizzes: QuizWithFeedback[] = quizzes?.filter((q: any) => q.userStatus === 'pending') || [];
+  const normalQuizzesForProgress = quizzes?.filter((q: any) => !q.title.toLowerCase().includes("maestría")) || [];
+  const completedQuizzes: QuizWithFeedback[] = normalQuizzesForProgress.filter((q: any) => q.userStatus === 'completed') || [];
+  const pendingQuizzes: QuizWithFeedback[] = normalQuizzesForProgress.filter((q: any) => q.userStatus === 'pending') || [];
 
   // Dedup completed quizzes
   const uniqueCompletedQuizzes = Array.from(new Map(completedQuizzes.map(item => [item.id, item])).values())
     .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
 
-  const progressPercentage = quizzes && quizzes.length > 0
-    ? (completedQuizzes.length / quizzes.length) * 100
+  const progressPercentage = normalQuizzesForProgress.length > 0
+    ? (completedQuizzes.length / normalQuizzesForProgress.length) * 100
     : 0;
 
   const categoryBreakdown = categories?.reduce((acc, cat) => {
@@ -817,15 +818,15 @@ export default function ParentDashboard() {
           <div className="h-auto min-h-[220px]" id="tour-parent-stats">
             <StatCard
               title="Progreso General"
-              value={`${Math.round((completedQuizzes.length / (quizzes?.length || 1)) * 100)}%`}
+              value={`${Math.round((completedQuizzes.length / (normalQuizzesForProgress.length || 1)) * 100)}%`}
               subtitle="Completado"
               icon={Target}
               colorClass="bg-gradient-to-br from-indigo-600 to-purple-700 text-white shadow-lg shadow-indigo-900/20"
-              progress={(completedQuizzes.length / (quizzes?.length || 1)) * 100}
-              total={quizzes?.length || 0}
+              progress={(completedQuizzes.length / (normalQuizzesForProgress.length || 1)) * 100}
+              total={normalQuizzesForProgress.length}
               completed={completedQuizzes.length}
               breakdown={Object.fromEntries(
-                sortedCategories.map((c: any) => [c.name, quizzes?.filter((q: any) => q.categoryId === c.id && q.userStatus === 'completed').length || 0]) || []
+                sortedCategories.map((c: any) => [c.name, completedQuizzes.filter((q: any) => q.categoryId === c.id).length || 0]) || []
               )}
             />
           </div>

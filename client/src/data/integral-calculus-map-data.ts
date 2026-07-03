@@ -394,5 +394,16 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         xOffset: 40,
         subcategoryId: 478,
         behavior: 'quiz_list'
+    },
+    {
+        id: 'i-mastery',
+        label: 'Maestría en Cálculo Integral',
+        level: 15,
+        type: 'evaluation',
+        requires: [],
+        description: 'El desafío definitivo de todo el módulo.',
+        xOffset: 0,
+        subcategoryId: 477,
+        behavior: 'quiz_list'
     }
 ];

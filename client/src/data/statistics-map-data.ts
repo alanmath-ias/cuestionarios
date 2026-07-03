@@ -377,7 +377,7 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         label: 'Maestría en Estadística',
         level: 18,
         type: 'evaluation',
-        requires: ['s6-1-cuartiles', 's7-2-laplace', 's8-2-coeficiente'],
+        requires: [],
         description: 'El desafío final del módulo de estadística.',
         xOffset: 0,
         subcategoryId: 372,

@@ -733,7 +733,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         label: 'Maestría en Aritmética',
         level: 32,
         type: 'evaluation',
-        requires: ['n14-interes-simple', 'n14-interes-compuesto'],
+        requires: [],
         description: 'El desafío definitivo de todo el módulo.',
         xOffset: 0,
         subcategoryId: 347,

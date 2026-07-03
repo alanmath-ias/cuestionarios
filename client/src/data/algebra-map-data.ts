@@ -706,7 +706,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         label: 'Maestría en Álgebra',
         level: 32,
         type: 'evaluation',
-        requires: ['a12-1-lineal', 'a12-2-concepto'],
+        requires: [],
         description: 'El desafío definitivo de todo el módulo.',
         xOffset: 0,
         subcategoryId: 441,

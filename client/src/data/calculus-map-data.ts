@@ -423,5 +423,16 @@ export const calculusMapNodes: ArithmeticNode[] = [
         xOffset: 40,
         subcategoryId: 120, // Método de Newton
         behavior: 'quiz_list'
+    },
+    {
+        id: 'c-mastery',
+        label: 'Maestría en Cálculo',
+        level: 16,
+        type: 'evaluation',
+        requires: [],
+        description: 'El desafío definitivo de todo el módulo.',
+        xOffset: 0,
+        subcategoryId: 119,
+        behavior: 'quiz_list'
     }
 ];

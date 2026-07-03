@@ -449,15 +449,18 @@ export default function UserDashboard() {
   }, [categories]);
 
   // --- Data Preparation (Derived State) ---
-  const completedQuizzes = useMemo(() => {
+  const normalQuizzes = useMemo(() => {
     if (!quizzes) return [];
-    return quizzes.filter((q) => q && q.id && q.status === "completed");
+    return quizzes.filter(q => q && !q.title.toLowerCase().includes("maestría"));
   }, [quizzes]);
 
+  const completedQuizzes = useMemo(() => {
+    return normalQuizzes.filter((q) => q && q.id && q.status === "completed");
+  }, [normalQuizzes]);
+
   const allPendingQuizzes = useMemo(() => {
-    if (!quizzes) return [];
-    return quizzes.filter((q) => q && q.id && q.status !== "completed");
-  }, [quizzes]);
+    return normalQuizzes.filter((q) => q && q.id && q.status !== "completed");
+  }, [normalQuizzes]);
 
   const pendingQuizzes = useMemo(() => {
     return allPendingQuizzes.reduce((acc, current) => {
@@ -474,9 +477,9 @@ export default function UserDashboard() {
   }, [pendingQuizzes, pendingSearchQuery]);
 
   const progressPercentage = useMemo(() => {
-    if (!quizzes || quizzes.length === 0) return 0;
-    return (completedQuizzes.length / quizzes.length) * 100;
-  }, [completedQuizzes, quizzes]);
+    if (normalQuizzes.length === 0) return 0;
+    return (completedQuizzes.length / normalQuizzes.length) * 100;
+  }, [completedQuizzes, normalQuizzes]);
 
   const sortedCompletedQuizzes = useMemo(() => {
     return [...completedQuizzes].sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
@@ -1511,7 +1514,7 @@ export default function UserDashboard() {
                 icon={Trophy}
                 colorClass="bg-gradient-to-br from-indigo-600 to-purple-700 text-white shadow-lg shadow-purple-900/40"
                 progress={progressPercentage}
-                total={quizzes?.length || 0}
+                total={normalQuizzes.length}
                 completed={completedQuizzes.length}
                 breakdown={categoryBreakdown}
               />
