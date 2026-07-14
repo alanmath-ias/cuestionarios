@@ -669,7 +669,7 @@ export class DatabaseStorage implements IStorage {
 
   // Question methods
   async getQuestionsByQuiz(quizId: number): Promise<Question[]> {
-    return await this.db.select().from(questions).where(eq(questions.quizId, quizId));
+    return await this.db.select().from(questions).where(eq(questions.quizId, quizId)).orderBy(asc(questions.id));
   }
 
   async getQuestion(id: number): Promise<Question | undefined> {

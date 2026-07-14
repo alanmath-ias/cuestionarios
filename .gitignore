@@ -30,6 +30,7 @@ vite.config.ts.*
 /logica_matematica_imagenes/
 /test_nivelacion_imagenes/
 /scratch/
+/formato cuestionarios/
 /*.ts.local
 
 # Ignorar archivo autogenerado de versión
