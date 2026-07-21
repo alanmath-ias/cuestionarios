@@ -58,7 +58,8 @@ export function calculateMasteryStats(
     allQuizzes: any[], // User-quizzes with status
     availableQuizzes: Quiz[] // All base quizzes for category
 ): MasteryStats {
-    const nodes = MAP_DATA[categoryId] || [];
+    const rawNodes = MAP_DATA[categoryId] || [];
+    const nodes = rawNodes.filter(n => !n.id.endsWith('mastery'));
     if (nodes.length === 0) return { 
         silverMedals: 0, goldMedals: 0, silverTrophies: 0, goldTrophies: 0, progress: 0, 
         totalQuizzes: 0, completedQuizzes: 0, totalAverage: 0, bestQuizzes: [], worstQuizzes: [], 

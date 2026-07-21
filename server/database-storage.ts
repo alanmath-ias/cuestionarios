@@ -2626,6 +2626,7 @@ export class DatabaseStorage implements IStorage {
           additionalSubcategories: mapping.additionalSubcategories,
           additionalQuizzes: mapping.additionalQuizzes,
           overrideLabel: mapping.overrideLabel,
+          isSpecial: mapping.isSpecial,
         }
       })
       .returning();

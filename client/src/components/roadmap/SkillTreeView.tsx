@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
 
 interface SkillTreeViewProps {
     nodes: ArithmeticNode[];
@@ -1101,78 +1102,78 @@ export function SkillTreeView({
                                                     >
                                                         {/* Tooltip for Locked Items ("Próximamente") */}
                                                         <div className="relative group">
-                                                            <motion.button
-                                                                layoutId={`node-${node.id}`}
-                                                                whileHover={{ scale: 1.15 }}
-                                                                whileTap={{ scale: 0.95 }}
-                                                                onClick={(e) => handleNodeInteraction(e, node, isLocked)}
-                                                                className={cn(
-                                                                    node.id.endsWith('mastery')
-                                                                        ? "relative w-28 h-28 flex items-center justify-center shadow-lg transition-all duration-300 hover:brightness-125 hover:shadow-[0_0_35px_rgba(192,38,211,0.6)]"
-                                                                        : "relative w-20 h-20 flex items-center justify-center shadow-lg transition-all duration-300 hover:brightness-125 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]",
-                                                                    (node.type === 'critical' && node.behavior === 'container') ? 'hexagon-mask' :
-                                                                        node.behavior === 'container' ? 'rotate-45 rounded-2xl' : 'rounded-full',
+                                                            {(() => {
+                                                                const mapping = nodeMappings?.find(m => m.nodeId === node.id);
+                                                                const isSpecial = mapping ? mapping.isSpecial : (node.type === 'critical');
 
-                                                                    (!node.id.endsWith('mastery') && isLocked) && "cursor-not-allowed shadow-[0_0_20px_rgba(245,158,11,0.3)]",
-                                                                    (node.id.endsWith('mastery') || !isLocked) && "cursor-pointer",
+                                                                return (
+                                                                    <motion.button
+                                                                        layoutId={`node-${node.id}`}
+                                                                        whileHover={isAvailable ? { scale: 1.15 } : {}}
+                                                                        whileTap={isAvailable ? { scale: 0.95 } : {}}
+                                                                        onClick={(e) => handleNodeInteraction(e, node, isLocked)}
+                                                                        disabled={isLocked && !isAdmin}
+                                                                        className={cn(
+                                                                            "relative flex items-center justify-center shadow-lg transition-all duration-300 hover:brightness-125",
+                                                                            node.id.endsWith('mastery')
+                                                                                ? "w-28 h-28 hover:shadow-[0_0_35px_rgba(192,38,211,0.6)]"
+                                                                                : "w-20 h-20 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]",
+                                                                            (isSpecial && node.behavior === 'container') ? 'hexagon-mask' :
+                                                                                node.behavior === 'container' ? 'rotate-45 rounded-2xl' : 'rounded-full',
 
-                                                                    isHighlighted ? "ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_40px_rgba(251,191,36,0.6)] scale-110" : "",
-                                                                    !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
-                                                                        !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf]" :
-                                                                            node.id.endsWith('mastery') ? "shadow-[0_0_50px_rgba(192,38,211,0.8)] animate-pulse" :
-                                                                                !isHighlighted && isAvailable ? (
-                                                                                    node.type === 'critical' ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" :
-                                                                                        "shadow-[0_0_30px_#3b82f6]"
-                                                                                ) : ""
-                                                                )}
-                                                                style={{
-                                                                    background: isHighlighted ? 'linear-gradient(135deg, #b45309, #f59e0b)' :
-                                                                        node.id.endsWith('mastery') ? 'linear-gradient(135deg, #4c1d95, #701a75, #db2777)' :
-                                                                            isCompleted ? 'linear-gradient(135deg, #1f2937, #064e3b)' :
-                                                                                isInProgress ? 'linear-gradient(135deg, #134e4a, #2dd4bf)' :
-                                                                                    isAvailable ? (
-                                                                                        node.type === 'critical' ? 'linear-gradient(135deg, #881337, #f43f5e)' :
-                                                                                            'linear-gradient(135deg, #1e3a8a, #3b82f6)'
-                                                                                    ) : isLocked ? 'linear-gradient(135deg, #1e293b, #451a03)' : '#1e293b',
+                                                                            (!node.id.endsWith('mastery') && isLocked) && "cursor-not-allowed shadow-[0_0_20px_rgba(245,158,11,0.3)]",
+                                                                            (node.id.endsWith('mastery') || !isLocked) && "cursor-pointer",
 
-                                                                    border: `3px solid ${isHighlighted ? '#fbbf24' :
-                                                                        node.id.endsWith('mastery') ? '#fbbf24' :
-                                                                            isCompleted ? '#4ade80' :
-                                                                                isInProgress ? '#5eead4' :
-                                                                                    isAvailable ? (node.type === 'critical' ? '#fb7185' : '#3b82f6') :
-                                                                                        isLocked ? '#f59e0b' : '#475569'
-                                                                        }`
-                                                                }}
-                                                            >
-                                                                <div className={cn("flex items-center justify-center", node.behavior === 'container' && !(node.type === 'critical' && node.behavior === 'container') && "-rotate-45")}>
-                                                                    {isCompleted && !node.id.endsWith('mastery') ? (
-                                                                        <CheckCircle className="w-8 h-8 text-green-400" />
-                                                                    ) : node.id.endsWith('mastery') ? (
-                                                                        <motion.div
-                                                                            animate={{ rotate: [0, 10, -10, 0] }}
-                                                                            transition={{ repeat: Infinity, duration: 2 }}
-                                                                        >
-                                                                            <Crown className="w-14 h-14 text-yellow-300 drop-shadow-[0_0_12px_rgba(253,224,71,0.9)]" />
-                                                                        </motion.div>
-                                                                    ) : isLocked ? (
-                                                                        <Construction className="w-8 h-8 text-amber-500" />
-                                                                    ) : (
-                                                                        (node.type === 'critical' && node.behavior === 'container') ? <Hexagon className="w-8 h-8 text-yellow-400 fill-yellow-400/20" /> :
-                                                                            node.type === 'critical' ? <Star className="w-8 h-8 text-white fill-white/20" /> :
-                                                                                node.id.endsWith('mastery') ? (
-                                                                                    <motion.div
-                                                                                        animate={{ rotate: [0, 10, -10, 0] }}
-                                                                                        transition={{ repeat: Infinity, duration: 2 }}
-                                                                                    >
-                                                                                        <Crown className="w-14 h-14 text-yellow-300 drop-shadow-[0_0_12px_rgba(253,224,71,0.9)]" />
-                                                                                    </motion.div>
-                                                                                ) :
+                                                                            isHighlighted ? "ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_40px_rgba(251,191,36,0.6)] scale-110" : "",
+                                                                            !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
+                                                                                !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf]" :
+                                                                                    node.id.endsWith('mastery') ? "shadow-[0_0_50px_rgba(192,38,211,0.8)] animate-pulse" :
+                                                                                        !isHighlighted && isAvailable ? (
+                                                                                            isSpecial ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" :
+                                                                                                "shadow-[0_0_30px_#3b82f6]"
+                                                                                        ) : ""
+                                                                        )}
+                                                                        style={{
+                                                                            background: isHighlighted ? 'linear-gradient(135deg, #b45309, #f59e0b)' :
+                                                                                node.id.endsWith('mastery') ? 'linear-gradient(135deg, #4c1d95, #701a75, #db2777)' :
+                                                                                    isCompleted ? 'linear-gradient(135deg, #1f2937, #064e3b)' :
+                                                                                        isInProgress ? 'linear-gradient(135deg, #134e4a, #2dd4bf)' :
+                                                                                            isAvailable ? (
+                                                                                                isSpecial ? 'linear-gradient(135deg, #881337, #f43f5e)' :
+                                                                                                    'linear-gradient(135deg, #1e3a8a, #3b82f6)'
+                                                                                            ) : isLocked ? 'linear-gradient(135deg, #1e293b, #451a03)' : '#1e293b',
+
+                                                                            border: `3px solid ${isHighlighted ? '#fbbf24' :
+                                                                                node.id.endsWith('mastery') ? '#fbbf24' :
+                                                                                    isCompleted ? '#4ade80' :
+                                                                                        isInProgress ? '#5eead4' :
+                                                                                            isAvailable ? (isSpecial ? '#fb7185' : '#3b82f6') :
+                                                                                                isLocked ? '#f59e0b' : '#475569'
+                                                                                }`
+                                                                        }}
+                                                                    >
+                                                                        <div className={cn("flex items-center justify-center", node.behavior === 'container' && !isSpecial && "-rotate-45")}>
+                                                                            {isCompleted && !node.id.endsWith('mastery') ? (
+                                                                                <CheckCircle className="w-8 h-8 text-green-400" />
+                                                                            ) : node.id.endsWith('mastery') ? (
+                                                                                <motion.div
+                                                                                    animate={{ rotate: [0, 10, -10, 0] }}
+                                                                                    transition={{ repeat: Infinity, duration: 2 }}
+                                                                                >
+                                                                                    <Crown className="w-14 h-14 text-yellow-300 drop-shadow-[0_0_12px_rgba(253,224,71,0.9)]" />
+                                                                                </motion.div>
+                                                                            ) : isLocked ? (
+                                                                                <Construction className="w-8 h-8 text-amber-500" />
+                                                                            ) : (
+                                                                                isSpecial ? <Star className="w-8 h-8 text-white fill-white/20" /> :
                                                                                     node.type === 'evaluation' ? <Trophy className="w-8 h-8 text-purple-400 fill-purple-400/20" /> :
                                                                                         node.behavior === 'container' ? <BookOpen className="w-8 h-8 text-white fill-white/10" /> :
                                                                                             <Play className="w-8 h-8 text-white fill-white" />
-                                                                    )}
-                                                                </div>
-                                                            </motion.button>
+                                                                            )}
+                                                                        </div>
+                                                                    </motion.button>
+                                                                );
+                                                            })()}
 
                                                             {isLocked && !node.id.endsWith('mastery') && (
                                                                 <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-slate-400 text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none border border-slate-700 z-50">
@@ -1384,6 +1385,7 @@ function NodeConfigDialog({
     isLoading: boolean
 }) {
     const [overrideLabel, setOverrideLabel] = useState(mapping?.overrideLabel || node.label);
+    const [isSpecial, setIsSpecial] = useState<boolean>(mapping?.isSpecial ?? false);
     const [subId, setSubId] = useState(() => {
         if (mapping) return mapping.subcategoryId?.toString() || "";
         return node.subcategoryId?.toString() || "";
@@ -1430,7 +1432,8 @@ function NodeConfigDialog({
             subcategoryId: subId ? parseInt(subId) : null,
             additionalSubcategories: additionalSubs,
             additionalQuizzes: additionalQuizzes,
-            overrideLabel: overrideLabel
+            overrideLabel: overrideLabel,
+            isSpecial: isSpecial
         });
         toast({
             title: "Configuración guardada",
@@ -1447,12 +1450,30 @@ function NodeConfigDialog({
                         Configurar Nodo: {overrideLabel || node.label}
                     </DialogTitle>
                     <DialogDescription className="text-slate-400">
-                        Gestiona qué contenido se muestra en este nodo.
+                        Gestiona qué contenido y apariencia tiene este nodo.
                     </DialogDescription>
                 </DialogHeader>
 
                 <ScrollArea className="flex-1 px-6">
                     <div className="space-y-8 py-4 pb-12">
+                        {/* Configuración de Nodo Especial (Estrella) */}
+                        <div className="flex items-center justify-between bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20">
+                            <div className="space-y-1 pr-4">
+                                <Label className="text-rose-300 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                                    <Star className="w-3.5 h-3.5 text-rose-400 fill-rose-400/30" />
+                                    Nodo Especial (Estrella / Importancia Mayor)
+                                </Label>
+                                <p className="text-[11px] text-slate-400 leading-tight">
+                                    Destaca este nodo con resplandor especial rosado e ícono de estrella en el mapa.
+                                </p>
+                            </div>
+                            <Switch
+                                checked={isSpecial}
+                                onCheckedChange={setIsSpecial}
+                                className="data-[state=checked]:bg-rose-500 data-[state=unchecked]:bg-slate-950 hover:data-[state=unchecked]:bg-slate-800 border-2 border-slate-700 transition-colors"
+                            />
+                        </div>
+
                         {/* Edición de Nombre del Nodo */}
                         <div className="space-y-3 bg-blue-500/5 p-4 rounded-2xl border border-blue-500/20">
                             <Label className="text-blue-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
