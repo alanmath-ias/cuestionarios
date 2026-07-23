@@ -1572,6 +1572,7 @@ export default function QuizzesAdmin() {
                     setShowMasteryDialog(true);
                     return;
                   }
+                  const mapping = nodeMappings?.find(m => m.nodeId === node.id);
                   setSelectedNode(node);
                   if (highlightedQuizId) {
                     setHighlightedQuizId(highlightedQuizId);

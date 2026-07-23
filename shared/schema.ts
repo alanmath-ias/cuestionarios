@@ -686,6 +686,7 @@ export const nodeContentMappings = pgTable("node_content_mappings", {
 	additionalSubcategories: jsonb("additional_subcategories").default([]).notNull(), // Array of subcategory IDs
 	additionalQuizzes: jsonb("additional_quizzes").default([]).notNull(), // Array of specific quiz IDs ("invitados")
 	overrideLabel: text("override_label"), // Optional override for node name/label
+	isSpecial: boolean("is_special").default(false).notNull(), // Toggle for special star node appearance
 }, (table) => [
 	unique("node_mapping_unique").on(table.mapId, table.nodeId),
 ]);
