@@ -17,10 +17,11 @@ import {
   Wand2,
   Sword,
   PlayCircle,
-  ChevronDown
+  ChevronDown,
+  Trophy
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { DuelMonitor } from "@/components/admin/DuelMonitor";
 import { formatDistanceToNow } from "date-fns";
@@ -77,6 +78,29 @@ type StudentHistory = {
 };
 
 const AdminDashboard: React.FC = () => {
+  const [, setLocation] = useLocation();
+
+  const handleSimulateMap = async (categoryId: number) => {
+    try {
+      const response = await fetch('/api/admin/simulate-complete-map', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ categoryId }),
+      });
+      if (response.ok) {
+        // Redirect to the category page to trigger the celebration modal
+        setLocation(`/category/${categoryId}`);
+      } else {
+        alert("Error al simular la celebración");
+      }
+    } catch (error) {
+      console.error("Error simulating map:", error);
+      alert("Error al simular la celebración");
+    }
+  };
+
   const [kpis, setKpis] = useState<KPIStats>({
     totalAssigned: 0,
     completed: 0,
@@ -373,6 +397,51 @@ const AdminDashboard: React.FC = () => {
 
           {/* Columna Derecha: Actividad Reciente y Accesos Rápidos */}
           <div className="space-y-8">
+
+            {/* Simulador de Celebraciones (Herramienta de Desarrollo) */}
+            <Card className="border border-amber-500/30 bg-slate-900 shadow-xl overflow-hidden relative">
+              {/* Dev accent bar */}
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-yellow-500" />
+              <CardHeader className="pb-3 border-b border-white/5 bg-slate-900/50 flex flex-row items-center gap-2">
+                <Wand2 className="w-5 h-5 text-amber-400" />
+                <div>
+                  <CardTitle className="text-sm font-black text-slate-100 uppercase tracking-wider">
+                    Simulador de Logros
+                  </CardTitle>
+                  <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider">
+                    Developer Mode
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 space-y-4">
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Detona la celebración de manera realista para tu usuario. Se agregarán 1000 créditos a tu cuenta y serás redirigido para iniciar la experiencia completa de logros, créditos y el Cofre del Tesoro:
+                </p>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    onClick={() => handleSimulateMap(1)}
+                    className="w-full justify-between bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 hover:from-amber-600 hover:to-yellow-700 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/10"
+                  >
+                    <span>Simular Aritmética 🏆</span>
+                    <Trophy className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    onClick={() => handleSimulateMap(2)}
+                    className="w-full justify-between bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 font-black text-xs uppercase tracking-wider shadow-lg shadow-purple-500/10"
+                  >
+                    <span>Simular Álgebra 🏆</span>
+                    <Trophy className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    onClick={() => handleSimulateMap(4)}
+                    className="w-full justify-between bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/10"
+                  >
+                    <span>Simular Cálculo Diferencial 🏆</span>
+                    <Trophy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Actividad Reciente */}
             <Card className="border border-white/10 bg-slate-900 shadow-xl">

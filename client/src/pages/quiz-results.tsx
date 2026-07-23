@@ -18,6 +18,8 @@ import { algebraMapNodes } from "@/data/algebra-map-data";
 import { calculusMapNodes } from "@/data/calculus-map-data";
 import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
 import { statisticsMapNodes } from "@/data/statistics-map-data";
+import { calculateMasteryStats } from '@/lib/mastery-utils';
+import { apiRequest } from '@/lib/queryClient';
 
 interface Question {
   id: number;
@@ -86,6 +88,77 @@ function QuizResults() {
     enabled: !!results && session?.role === 'student',
   });
 
+  const categoryIdForMastery = results?.quiz?.categoryId;
+  const { data: allCategoryQuizzes } = useQuery<any[]>({
+    queryKey: ["category-quizzes-all", categoryIdForMastery],
+    queryFn: async () => {
+      const res = await fetch(`/api/categories/${categoryIdForMastery}/quizzes`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!categoryIdForMastery && session?.role === 'student',
+  });
+
+  const { data: nodeMappings } = useQuery<any[]>({
+    queryKey: [`/api/node-mappings/${categoryIdForMastery}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/node-mappings/${categoryIdForMastery}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!categoryIdForMastery && session?.role === 'student',
+  });
+
+  // Earn Medal / Map Completion Checking Effect
+  useEffect(() => {
+    if (!results?.quiz || session?.role !== 'student') return;
+
+    const checkAchievements = async () => {
+      const quizId = results.quiz.id;
+      const score = Number(results.progress?.score) || 0;
+      const tourStatus = (session as any).tourStatus || {};
+      const seenMedals = tourStatus.seenMedals || {};
+      const currentMedal = seenMedals[quizId];
+
+      // 1. Check if eligible for medal and hasn't claimed it yet
+      let eligibleForMedal = false;
+      if (score === 10.0 && currentMedal !== 'gold') {
+        eligibleForMedal = true;
+      } else if (score >= 8.0 && score < 10.0 && !currentMedal) {
+        eligibleForMedal = true;
+      }
+
+      if (eligibleForMedal) {
+        try {
+          const res = await apiRequest('POST', '/api/user/earn-medal', { quizId, score });
+          const updatedUser = await res.json();
+          // Update session cache locally
+          queryClient.setQueryData(['/api/user'], updatedUser);
+        } catch (e) {
+          console.error('Error earning medal in frontend:', e);
+        }
+      }
+
+      // 2. Check map completion
+      if (allUserQuizzes && allCategoryQuizzes) {
+        const stats = calculateMasteryStats(results.quiz.categoryId, allUserQuizzes, allCategoryQuizzes);
+        const completedMaps = tourStatus.completedMaps || {};
+        
+        if (stats.goldTrophies === 1 && !completedMaps[results.quiz.categoryId]) {
+          try {
+            const res = await apiRequest('POST', '/api/user/complete-map', { categoryId: results.quiz.categoryId });
+            const updatedUser = await res.json();
+            queryClient.setQueryData(['/api/user'], updatedUser);
+          } catch (e) {
+            console.error('Error completing map in frontend:', e);
+          }
+        }
+      }
+    };
+
+    checkAchievements();
+  }, [results, session, allUserQuizzes, allCategoryQuizzes]);
+
   // Memoized current node detection for cross-component use (navigation & celebration)
   const currentNode = useMemo(() => {
     if (!results) return null;
@@ -130,7 +203,123 @@ function QuizResults() {
         const categoryId = results?.quiz?.categoryId || params.categoryId;
         let p = '';
         if (currentNode) {
-          p = `&focusNode=${currentNode.id}&source=quiz`;
+          const quizTitle = results?.quiz?.title ? encodeURIComponent(results.quiz.title) : '';
+          let isNodeComplete = false;
+          let isFamilyComplete = false;
+
+          if (results?.quiz && allCategoryQuizzes) {
+            // allCategoryQuizzes: from /api/categories/:id/quizzes
+            // Each quiz has: id, subcategoryId, userStatus ('completed'|'pending'|'optional')
+            // NOTE: The current quiz may still show 'optional'/'pending' in cache, so we treat it as completed manually.
+            const nodeQuizzes = allCategoryQuizzes.filter(q =>
+              Number(q.subcategoryId) === Number(currentNode.subcategoryId) ||
+              (currentNode.additionalSubcategories && currentNode.additionalSubcategories.map(Number).includes(Number(q.subcategoryId))) ||
+              (currentNode.additionalQuizzes && currentNode.additionalQuizzes.map(Number).includes(Number(q.id)))
+            );
+
+            console.log('[NodeComplete] node:', currentNode.id, 'subcategoryId:', currentNode.subcategoryId);
+            console.log('[NodeComplete] nodeQuizzes:', nodeQuizzes.length, nodeQuizzes.map(q => ({ id: q.id, status: q.userStatus })));
+            console.log('[NodeComplete] current quiz id:', results.quiz.id, 'score:', results.progress?.score);
+
+            if (nodeQuizzes.length > 0) {
+              const completedCount = nodeQuizzes.filter(q => {
+                // Current quiz just completed - treat as completed regardless of cache
+                if (Number(q.id) === Number(results.quiz.id)) return true;
+                // Other quizzes: use userStatus from allCategoryQuizzes (has user-specific status)
+                return q.userStatus === 'completed';
+              }).length;
+              console.log('[NodeComplete] completedCount:', completedCount, '/', nodeQuizzes.length);
+              isNodeComplete = completedCount >= nodeQuizzes.length;
+            }
+
+            // Calculate family completion
+            const categoryIdVal = results.quiz.categoryId;
+            const categoryName = (results.quiz as any).categoryName?.toLowerCase() || "";
+            let mapNodes: any[] = [];
+            if (Number(categoryIdVal) === 1 || categoryName.includes("aritmética")) mapNodes = arithmeticMapNodes;
+            else if (Number(categoryIdVal) === 2 || categoryName.includes("álgebra")) mapNodes = algebraMapNodes;
+            else if (Number(categoryIdVal) === 4 || categoryName.includes("diferencial")) mapNodes = calculusMapNodes;
+            else if (Number(categoryIdVal) === 5 || categoryName.includes("integral")) mapNodes = integralCalculusMapNodes;
+            else if (Number(categoryIdVal) === 19 || categoryName.includes("estadística")) mapNodes = statisticsMapNodes;
+
+            const findParentContainer = (startNodeId: string) => {
+              const queue = [startNodeId];
+              const visited = new Set<string>();
+              while (queue.length > 0) {
+                const cid = queue.shift()!;
+                if (visited.has(cid)) continue;
+                visited.add(cid);
+                const cnode = mapNodes.find(n => n.id === cid);
+                if (!cnode) continue;
+                for (const rid of cnode.requires) {
+                  const rnode = mapNodes.find(n => n.id === rid);
+                  if (rnode?.behavior === 'container') return rnode;
+                  queue.push(rid);
+                }
+              }
+              return null;
+            };
+
+            const parentContainer = findParentContainer(currentNode.id);
+            if (parentContainer) {
+              const getDescendantIds = (rootId: string) => {
+                const descendants: string[] = [rootId];
+                const queue = [rootId];
+                const visited = new Set<string>();
+                while (queue.length > 0) {
+                  const currentId = queue.shift()!;
+                  if (visited.has(currentId)) continue;
+                  visited.add(currentId);
+                  const children = mapNodes.filter(n => n.requires.includes(currentId));
+                  for (const child of children) {
+                    if (child.behavior !== 'container') {
+                      descendants.push(child.id);
+                      queue.push(child.id);
+                    }
+                  }
+                }
+                return descendants;
+              };
+
+              const familyIds = getDescendantIds(parentContainer.id);
+              const familyNodes = mapNodes.filter(n => familyIds.includes(n.id));
+
+              const familyQuizzes: any[] = [];
+              familyNodes.forEach(fn => {
+                const mapping = nodeMappings?.find(m => m.nodeId === fn.id);
+                const subId = mapping?.subcategoryId !== undefined ? mapping.subcategoryId : fn.subcategoryId;
+                const subIds = mapping?.additionalSubcategories || fn.additionalSubcategories || [];
+                const guestQuizzes = mapping?.additionalQuizzes || [];
+
+                const nodeQuizzes = allCategoryQuizzes.filter(q =>
+                  Number(q.subcategoryId) === Number(subId) ||
+                  (subIds && subIds.map(Number).includes(Number(q.subcategoryId))) ||
+                  guestQuizzes.map(Number).includes(Number(q.id))
+                );
+                familyQuizzes.push(...nodeQuizzes);
+              });
+
+              const seenIds = new Set<number>();
+              const uniqueFamilyQuizzes = familyQuizzes.filter(q => {
+                if (seenIds.has(q.id)) return false;
+                seenIds.add(q.id);
+                return true;
+              });
+
+              if (uniqueFamilyQuizzes.length > 0) {
+                const completedCount = uniqueFamilyQuizzes.filter(q => {
+                  if (Number(q.id) === Number(results.quiz.id)) return true;
+                  return q.userStatus === 'completed';
+                }).length;
+                isFamilyComplete = completedCount >= uniqueFamilyQuizzes.length;
+                console.log('[FamilyComplete] parent:', parentContainer.id, 'completed:', isFamilyComplete, completedCount, '/', uniqueFamilyQuizzes.length);
+              }
+            }
+          } else {
+            console.log('[NodeComplete] Missing data - allCategoryQuizzes:', !!allCategoryQuizzes);
+          }
+
+          p = `&focusNode=${currentNode.id}&source=quiz${quizTitle ? `&quizTitle=${quizTitle}` : ''}${isNodeComplete ? '&nodeCompleted=true' : ''}${isFamilyComplete ? '&familyCompleted=true' : ''}`;
         }
         setLocation(`/category/${categoryId}?view=roadmap${p}`);
       } else if (isTraining && results?.quiz?.categoryId) {

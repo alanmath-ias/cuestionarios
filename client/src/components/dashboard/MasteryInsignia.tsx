@@ -107,11 +107,18 @@ export const MasteryInsignia: React.FC<MasteryInsigniaProps> = ({
                         </div>
 
                         {mastery.level === 'gold_trophy' && (
-                            <motion.div
-                                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                                className="absolute inset-0 bg-yellow-500/20 blur-xl rounded-full -z-10"
-                            />
+                            <>
+                                <motion.div
+                                    animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.8, 0.4] }}
+                                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                    className="absolute inset-0 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-600 blur-lg rounded-full -z-10"
+                                />
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                                    className="absolute -inset-1 border border-dashed border-yellow-400/40 rounded-full -z-10"
+                                />
+                            </>
                         )}
                     </motion.div>
                 </TooltipTrigger>

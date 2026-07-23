@@ -496,6 +496,220 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error updating tour status" });
     }
   });
+
+  apiRouter.post("/user/complete-map", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    const { categoryId } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    if (!categoryId) {
+      return res.status(400).json({ message: "Category ID is required" });
+    }
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const tourStatus = (user.tourStatus as any) || {};
+      const completedMaps = tourStatus.completedMaps || {};
+
+      // If already celebrated/pending, don't reward again
+      if (completedMaps[categoryId]) {
+        const { password: _, ...userWithoutPassword } = user;
+        return res.json(userWithoutPassword);
+      }
+
+      completedMaps[categoryId] = 'pending_celebration';
+      tourStatus.completedMaps = completedMaps;
+
+      const newCredits = (user.hintCredits || 0) + 1000;
+      const updatedUser = await storage.updateUser(userId, {
+        tourStatus,
+        hintCredits: newCredits
+      });
+
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error completing map:", error);
+      res.status(500).json({ message: "Error updating map completion" });
+    }
+  });
+
+  apiRouter.post("/user/earn-medal", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    const { quizId, score } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    if (!quizId || score === undefined) {
+      return res.status(400).json({ message: "Quiz ID and score are required" });
+    }
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const parsedScore = parseFloat(score);
+      let medalType: 'gold' | 'silver' | null = null;
+      let creditReward = 0;
+
+      if (parsedScore === 10.0) {
+        medalType = 'gold';
+        creditReward = 100;
+      } else if (parsedScore >= 8.0 && parsedScore < 10.0) {
+        medalType = 'silver';
+        creditReward = 50;
+      }
+
+      if (!medalType) {
+        const { password: _, ...userWithoutPassword } = user;
+        return res.json(userWithoutPassword);
+      }
+
+      const tourStatus = (user.tourStatus as any) || {};
+      const seenMedals = tourStatus.seenMedals || {};
+      const currentMedal = seenMedals[quizId];
+
+      // Only reward if they haven't achieved this medal (or better)
+      let shouldReward = false;
+      if (medalType === 'gold' && currentMedal !== 'gold') {
+        shouldReward = true;
+        seenMedals[quizId] = 'gold';
+      } else if (medalType === 'silver' && !currentMedal) {
+        shouldReward = true;
+        seenMedals[quizId] = 'silver';
+      }
+
+      if (shouldReward) {
+        tourStatus.seenMedals = seenMedals;
+        tourStatus.pendingMedalAlert = {
+          quizId,
+          type: medalType,
+          credits: creditReward
+        };
+        const newCredits = (user.hintCredits || 0) + creditReward;
+        const updatedUser = await storage.updateUser(userId, {
+          tourStatus,
+          hintCredits: newCredits
+        });
+        const { password: _, ...userWithoutPassword } = updatedUser;
+        return res.json(userWithoutPassword);
+      }
+
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error earning medal:", error);
+      res.status(500).json({ message: "Error processing medal earn" });
+    }
+  });
+
+  apiRouter.post("/user/clear-medal-alert", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const tourStatus = (user.tourStatus as any) || {};
+      delete tourStatus.pendingMedalAlert;
+
+      const updatedUser = await storage.updateUser(userId, { tourStatus });
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error clearing medal alert:", error);
+      res.status(500).json({ message: "Error clearing medal alert" });
+    }
+  });
+
+  apiRouter.post("/admin/simulate-complete-map", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    const { categoryId } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    if (!categoryId) {
+      return res.status(400).json({ message: "Category ID is required" });
+    }
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const catId = parseInt(categoryId.toString());
+      const tourStatus = (user.tourStatus as any) || {};
+      const completedMaps = tourStatus.completedMaps || {};
+
+      completedMaps[catId] = 'pending_celebration';
+      tourStatus.completedMaps = completedMaps;
+
+      const newCredits = (user.hintCredits || 0) + 1000;
+
+      const updatedUser = await storage.updateUser(userId, {
+        tourStatus,
+        hintCredits: newCredits
+      });
+
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json({ success: true, user: userWithoutPassword });
+    } catch (error) {
+      console.error("Error simulating map completion:", error);
+      res.status(500).json({ message: "Error simulating map completion" });
+    }
+  });
+
+  apiRouter.post("/user/clear-map-celebration", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    const { categoryId } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    if (!categoryId) {
+      return res.status(400).json({ message: "Category ID is required" });
+    }
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const tourStatus = (user.tourStatus as any) || {};
+      const completedMaps = tourStatus.completedMaps || {};
+      completedMaps[categoryId] = 'celebrated';
+      tourStatus.completedMaps = completedMaps;
+
+      const updatedUser = await storage.updateUser(userId, { tourStatus });
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error clearing map celebration:", error);
+      res.status(500).json({ message: "Error clearing map celebration" });
+    }
+  });
+
   // Add the /user endpoint as well
   apiRouter.get("/user", async (req: Request, res: Response) => {
     const userId = req.session.userId;

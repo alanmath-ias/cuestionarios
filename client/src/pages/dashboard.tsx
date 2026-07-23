@@ -70,6 +70,7 @@ import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
 import { MasteryInsignia } from "@/components/dashboard/MasteryInsignia";
 import { AwardsDialog } from "@/components/dashboard/AwardsDialog";
 import { MathTipCard } from "@/components/dashboard/MathTipCard";
+import { MedalCelebration } from "@/components/dashboard/MedalCelebration";
 
 
 interface QuizWithFeedback {
@@ -781,6 +782,35 @@ export default function UserDashboard() {
       }
     }
   }, [currentUser]);
+
+  // Trigger AwardsDialog or training dialog from query params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const openAwardsCatId = params.get('openAwardsCategory');
+    const reopenTrainingCatId = params.get('reopenTraining');
+
+    if (openAwardsCatId && categories && sortedCategories) {
+      const cat = sortedCategories.find(c => c.id === parseInt(openAwardsCatId));
+      if (cat) {
+        setSelectedAwardsCategory(cat);
+        // Clear query parameters
+        params.delete('openAwardsCategory');
+        const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+
+    if (reopenTrainingCatId && categories && sortedCategories) {
+      const cat = sortedCategories.find(c => c.id === parseInt(reopenTrainingCatId));
+      if (cat) {
+        handleTrainingClick(cat.id, cat.name);
+        // Clear query parameters
+        params.delete('reopenTraining');
+        const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [categories, sortedCategories, window.location.search]);
 
 
 
@@ -2225,6 +2255,13 @@ export default function UserDashboard() {
             />
           )
         }
+
+        {currentUser?.tourStatus?.pendingMedalAlert && (
+          <MedalCelebration
+            alert={currentUser.tourStatus.pendingMedalAlert}
+            currentCredits={currentUser.hintCredits || 0}
+          />
+        )}
 
         <AwardsDialog
           isOpen={!!selectedAwardsCategory}

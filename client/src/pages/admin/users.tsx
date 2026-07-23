@@ -293,7 +293,24 @@ export default function UsersAdmin() {
                     <TableCell className="font-mono text-slate-500">#{user.id}</TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium text-slate-200">{user.username}</div>
+                        <div className="font-medium text-slate-200 flex items-center gap-2 flex-wrap">
+                          <span>{user.username}</span>
+                          {(user.tourStatus?.completedMaps?.[1] || user.tourStatus?.completedMaps?.['1']) && (
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded-full font-black animate-pulse shadow-[0_0_10px_rgba(234,179,8,0.2)]">
+                              🏆 Aritmética 100%
+                            </span>
+                          )}
+                          {(user.tourStatus?.completedMaps?.[2] || user.tourStatus?.completedMaps?.['2']) && (
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-black animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                              🏆 Álgebra 100%
+                            </span>
+                          )}
+                          {(user.tourStatus?.completedMaps?.[4] || user.tourStatus?.completedMaps?.['4']) && (
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-black animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                              🏆 Cálculo Dif. 100%
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-slate-500">{user.email || "Sin email"}</div>
                       </div>
                     </TableCell>

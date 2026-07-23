@@ -23,6 +23,7 @@ import { integralCalculusMapNodes } from '@/data/integral-calculus-map-data';
 import { statisticsMapNodes } from '@/data/statistics-map-data';
 import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@/hooks/useSession";
+import { MapCompletionCelebration } from '@/components/dashboard/MapCompletionCelebration';
 
 interface Category {
   id: number;
@@ -1099,6 +1100,14 @@ function QuizList() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Map Completion Celebration Overlay */}
+      {session?.tourStatus && (session.tourStatus as any).completedMaps?.[categoryId || ""] === 'pending_celebration' && (
+        <MapCompletionCelebration
+          categoryId={parseInt(categoryId || "0")}
+          initialCredits={(session.hintCredits || 0) - 1000} // Subtracting 1000 since DB already added it, so count-up looks correct!
+        />
+      )}
     </div>
   );
 }

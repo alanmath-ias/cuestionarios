@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { cn } from '@/lib/utils';
 import { ArithmeticNode } from '../../data/arithmetic-map-data';
-import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw, LayoutDashboard, Search, X, CheckCircle2, AlertTriangle, PlayCircle, Medal } from 'lucide-react';
+import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw, LayoutDashboard, Search, X, CheckCircle2, AlertTriangle, PlayCircle, Medal, Award } from 'lucide-react';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { TransformWrapper, TransformComponent, ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { Button } from '@/components/ui/button';
@@ -75,14 +75,77 @@ export function SkillTreeView({
     const [containerWidth, setContainerWidth] = useState(1000);
     const [triggeredFamilies, setTriggeredFamilies] = useState<Set<string>>(new Set());
     const [celebratingNodeId, setCelebratingNodeId] = useState<string | null>(null);
+    const [celebratingQuizTitle, setCelebratingQuizTitle] = useState<string>('');
+    const [celebratingUnitTitle, setCelebratingUnitTitle] = useState<string>('');
     const [showCelebrationDialog, setShowCelebrationDialog] = useState(false);
     const [processedScrollId, setProcessedScrollId] = useState<string | null>(null); // state for scroll
     const [processedCelebrationId, setProcessedCelebrationId] = useState<string | null>(null); // state for node/family celebrate
-    const [celebrationType, setCelebrationType] = useState<'node' | 'family'>('node'); // type of celebration
+    const [celebrationType, setCelebrationType] = useState<'node' | 'family' | 'quiz' | 'double'>('node'); // type of celebration
     const [showSilverMedal, setShowSilverMedal] = useState(false); // State for silver medal overlay
+    const [showGoldMedal, setShowGoldMedal] = useState(false); // State for gold medal overlay
+    const [showSilverCup, setShowSilverCup] = useState(false); // State for silver cup trophy overlay
+    const [pendingSequence, setPendingSequence] = useState<'none' | 'silver' | 'gold' | 'silver_then_gold' | 'silver_then_gold_then_cup'>('none');
     const [processedSilverMedalId, setProcessedSilverMedalId] = useState<string | null>(null); // To avoid repeat
     const [showLastWorkedHint, setShowLastWorkedHint] = useState<string | null>(null); // Friendly indicator
     const lastWorkedScrollProcessed = useRef<boolean>(false);
+
+    const silverCupDeliveryImage = useMemo(() => {
+        if (categoryId === 2) return "/aritmetica_imagenes/entrega_copa_plata_algebra.png";
+        if (categoryId === 4) return "/aritmetica_imagenes/entrega_copa_plata_calculo_diferencial.png";
+        return "/aritmetica_imagenes/entrega_copa_plata.png";
+    }, [categoryId]);
+
+    const silverCupTrophyImage = useMemo(() => {
+        if (categoryId === 2) return "/aritmetica_imagenes/copa_de_plata_trofeo_algebra.png";
+        if (categoryId === 4) return "/aritmetica_imagenes/copa_de_plata_trofeo_calculo_diferencial.png";
+        return "/aritmetica_imagenes/copa_de_plata_trofeo.png";
+    }, [categoryId]);
+
+    const dialogImageSrc = useMemo(() => {
+        if (celebrationType === 'family') return silverCupDeliveryImage;
+        if (celebrationType === 'double') return "/aritmetica_imagenes/alanmath_medallas_plata_y_oro.png";
+        if (celebrationType === 'quiz') return "/aritmetica_imagenes/alanmath_medalla_plata.png";
+        return "/aritmetica_imagenes/alanmath_medalla_oro.png";
+    }, [celebrationType, silverCupDeliveryImage]);
+
+    const handleCloseCelebrationDialog = () => {
+        setShowCelebrationDialog(false);
+
+        if (pendingSequence === 'silver') {
+            setShowSilverMedal(true);
+            setTimeout(() => setShowSilverMedal(false), 3800);
+        } else if (pendingSequence === 'gold') {
+            setShowGoldMedal(true);
+            setTimeout(() => setShowGoldMedal(false), 3800);
+        } else if (pendingSequence === 'silver_then_gold') {
+            setShowSilverMedal(true);
+            setTimeout(() => {
+                setShowSilverMedal(false);
+                setTimeout(() => {
+                    setShowGoldMedal(true);
+                    setTimeout(() => setShowGoldMedal(false), 3800);
+                }, 300);
+            }, 3800);
+        } else if (pendingSequence === 'silver_then_gold_then_cup') {
+            // Plata → Oro → Copa de Plata (centro pantalla)
+            setShowSilverMedal(true);
+            setTimeout(() => {
+                setShowSilverMedal(false);
+                setTimeout(() => {
+                    setShowGoldMedal(true);
+                    setTimeout(() => {
+                        setShowGoldMedal(false);
+                        setTimeout(() => {
+                            setShowSilverCup(true);
+                            fireFamilyFireworks();
+                            setTimeout(() => setShowSilverCup(false), 5000);
+                        }, 300);
+                    }, 3800);
+                }, 300);
+            }, 3800);
+        }
+        setPendingSequence('none');
+    };
 
     // Calculate Multi-purpose progress metrics
     const { totalVisibleQuizzes, nodeProgress, nodeAverages, nodeCompletedCount, nodeTotalQuizzes } = React.useMemo(() => {
@@ -335,6 +398,7 @@ export function SkillTreeView({
         const searchParams = new URLSearchParams(window.location.search);
         const focusId = searchParams.get('focusNode');
         const source = searchParams.get('source');
+        const quizTitleParam = searchParams.get('quizTitle');
 
         if (!focusId || nodes.length === 0) return;
 
@@ -352,31 +416,23 @@ export function SkillTreeView({
             }, 500);
 
             // Clean URL after a delay to prevent "sticky" parameters (like source=quiz)
-            // that cause the medal to reappear when using the back button.
             setTimeout(() => {
-                const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
+                const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source|quizTitle)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
                 window.history.replaceState({}, '', newUrl);
-            }, 3000);
+            }, 6000);
         }
 
-        // 1.5 Process Silver Medal (Every quiz completion)
-        if (source === 'quiz' && focusId !== processedSilverMedalId) {
-            setProcessedSilverMedalId(focusId);
-            // Wait for scroll to start before showing medal
-            setTimeout(() => {
-                setShowSilverMedal(true);
-                // Hide after 2.5 seconds
-                setTimeout(() => setShowSilverMedal(false), 2500);
-            }, 800);
-        }
+        // 2. Process Celebrations & Overlay Trigger Sequences
+        if (focusId !== processedCelebrationId) {
+            const isNodeCompleted = 
+                searchParams.get('nodeCompleted') === 'true' ||
+                progressMap[focusId] === 'completed' || 
+                (nodeProgress[focusId] !== undefined && nodeProgress[focusId] >= 99.9) || 
+                (nodeTotalQuizzes[focusId] > 0 && nodeCompletedCount[focusId] === nodeTotalQuizzes[focusId]);
 
-        // 2. Process Celebration (Reactive to allQuizzes and nodeProgress updates)
-        if (source === 'quiz' && focusId !== processedCelebrationId && nodeProgress[focusId] === 100) {
-            const targetNode = nodes.find(n => n.id === focusId);
-            if (!targetNode) return;
+            const titleQuiz = quizTitleParam ? decodeURIComponent(quizTitleParam) : (targetNode.label || "cuestionario");
 
             // CHECK FAMILY COMPLETION
-            // We search UP the requires chain to find the nearest container ancestor.
             const findParentContainer = (startNodeId: string): ArithmeticNode | null => {
                 const queue = [startNodeId];
                 const visited = new Set<string>();
@@ -396,33 +452,71 @@ export function SkillTreeView({
             };
 
             const parentContainer = findParentContainer(focusId);
-            const isFamilyMastery = parentContainer ? (progressMap[parentContainer.id] === 'completed') : false;
-            const familyToCelebrate = isFamilyMastery && parentContainer ? parentContainer : targetNode;
+            const isFamilyMastery =
+                searchParams.get('familyCompleted') === 'true' ||
+                (parentContainer ? (progressMap[parentContainer.id] === 'completed') : false);
 
-            setProcessedCelebrationId(focusId);
-            setCelebrationType(isFamilyMastery ? 'family' : 'node');
-            setCelebratingNodeId(familyToCelebrate.id);
-
-            console.log(`[Celebration Check] Node: ${focusId}, ParentContainer: ${parentContainer?.id}, FamilyMastery: ${isFamilyMastery}`);
-
-            setTimeout(() => {
-                setShowCelebrationDialog(true);
+            if (source === 'quiz') {
+                setProcessedCelebrationId(focusId);
+                setCelebratingNodeId(focusId);
+                setCelebratingQuizTitle(titleQuiz);
+                const parentLabel = parentContainer?.label || 'la unidad';
+                setCelebratingUnitTitle(parentLabel);
 
                 if (isFamilyMastery) {
-                    fireFamilyFireworks();
+                    setCelebrationType('family');
+                    setPendingSequence('silver_then_gold_then_cup');
+                } else if (isNodeCompleted) {
+                    // Double reward (Quiz + Subtopic/Node completed!)
+                    setCelebrationType('double');
+                    setPendingSequence('silver_then_gold');
                 } else {
-                    confetti({
-                        particleCount: 150,
-                        spread: 70,
-                        origin: { y: 0.6 },
-                        colors: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
-                    });
+                    // Quiz only completed
+                    setCelebrationType('quiz');
+                    setPendingSequence('silver');
                 }
 
-                // Clean URL after celebration
-                const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
-                window.history.replaceState({}, '', newUrl);
-            }, 1200);
+                setTimeout(() => {
+                    setShowCelebrationDialog(true);
+                    if (isFamilyMastery) {
+                        fireFamilyFireworks();
+                    } else {
+                        confetti({
+                            particleCount: 150,
+                            spread: 70,
+                            origin: { y: 0.6 },
+                            colors: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
+                        });
+                    }
+                    const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source|quizTitle|nodeCompleted|familyCompleted)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
+                    window.history.replaceState({}, '', newUrl);
+                }, 700);
+
+            } else if (isNodeCompleted) {
+                const parentLabel = parentContainer?.label || 'la unidad';
+                setCelebratingUnitTitle(parentLabel);
+                // Subtopic/Node only completed
+                setProcessedCelebrationId(focusId);
+                setCelebratingNodeId(focusId);
+                setCelebrationType(isFamilyMastery ? 'family' : 'node');
+                setPendingSequence(isFamilyMastery ? 'silver_then_gold_then_cup' : 'silver_then_gold');
+
+                setTimeout(() => {
+                    setShowCelebrationDialog(true);
+                    if (isFamilyMastery) {
+                        fireFamilyFireworks();
+                    } else {
+                        confetti({
+                            particleCount: 150,
+                            spread: 70,
+                            origin: { y: 0.6 },
+                            colors: ['#f59e0b', '#eab308', '#ec4899']
+                        });
+                    }
+                    const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
+                    window.history.replaceState({}, '', newUrl);
+                }, 700);
+            }
         }
     }, [nodes, allQuizzes, processedScrollId, processedCelebrationId, nodeProgress, progressMap]);
 
@@ -605,6 +699,49 @@ export function SkillTreeView({
             <div
                 className="w-full relative"
             >
+                {/* Silver Cup Trophy Overlay (Center of screen, fixed) */}
+                <AnimatePresence>
+                    {showSilverCup && (
+                        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-slate-950/75 pointer-events-none">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.3, rotate: -35 }}
+                                animate={{
+                                    opacity: [0, 1, 1, 0],
+                                    scale: [0.3, 1.25, 1.1, 0.5],
+                                    rotate: [-35, 10, -10, 20]
+                                }}
+                                transition={{
+                                    duration: 5.0,
+                                    times: [0, 0.15, 0.85, 1],
+                                    ease: "easeOut"
+                                }}
+                                className="flex flex-col items-center justify-center"
+                            >
+                                <div className="relative">
+                                    {/* Large Glowing backdrop */}
+                                    <div className="absolute inset-0 bg-blue-500/30 blur-3xl rounded-full scale-150 animate-pulse" />
+                                    
+                                    {/* Circular Trophy Disc Badge */}
+                                    <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-full overflow-hidden border-8 border-slate-200/50 bg-slate-950/95 flex items-center justify-center shadow-[0_0_90px_rgba(203,213,225,0.8)] backdrop-blur-md">
+                                        <img 
+                                            src={silverCupTrophyImage} 
+                                            alt="Copa de Plata" 
+                                            className="w-44 h-44 md:w-48 md:h-48 object-contain drop-shadow-[0_0_35px_rgba(255,255,255,0.8)]"
+                                        />
+                                    </div>
+                                    
+                                    {/* Double Burst Rings */}
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 md:w-72 md:h-72 border-4 border-white/20 rounded-full animate-ping scale-125" />
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 md:w-72 md:h-72 border-2 border-blue-400/20 rounded-full animate-ping scale-150" />
+                                </div>
+                                <h3 className="mt-8 text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-white to-blue-200 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] tracking-wide">
+                                    ¡COPA DE PLATA OBTENIDA!
+                                </h3>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
                 {/* Celebration Dialog Modal */}
                 <AnimatePresence>
                     {showCelebrationDialog && celebratingNodeId && (
@@ -623,26 +760,19 @@ export function SkillTreeView({
                                         "absolute inset-0 blur-3xl rounded-full scale-110",
                                         celebrationType === 'family' ? "bg-slate-400/30" : "bg-yellow-500/30"
                                     )} />
-                                    <div className={cn(
-                                        "relative p-6 rounded-full border-4 shadow-2xl",
-                                        celebrationType === 'family'
-                                            ? "bg-gradient-to-br from-slate-400 via-slate-500 to-slate-700 border-slate-300/50 shadow-slate-900/50"
-                                            : "bg-gradient-to-br from-yellow-300 via-yellow-500 to-amber-700 border-yellow-200/50 shadow-amber-900/50"
-                                    )}>
-                                        {celebrationType === 'family' ? (
-                                            <Trophy className="w-16 h-16 text-slate-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
-                                        ) : (
-                                            <Medal className="w-16 h-16 text-yellow-50 fill-yellow-100/10 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
-                                        )}
-
-                                        {/* Shine effect */}
-                                        <div className="absolute top-2 left-2 w-4 h-4 bg-white/30 blur-sm rounded-full" />
+                                    <div className="relative p-1 rounded-3xl border border-white/10 shadow-2xl overflow-hidden bg-black w-56 h-56 flex items-center justify-center">
+                                        <img 
+                                            src={dialogImageSrc} 
+                                            alt="Celebración" 
+                                            className="w-full h-full object-cover object-top scale-[1.28] origin-top rounded-2xl"
+                                        />
+                                        {/* NO OVERLAY BADGE ON TOP OF IMAGE PER USER SPECIFICATION */}
                                     </div>
                                     <motion.div
                                         animate={{ scale: [1, 1.3, 1], rotate: [0, 15, -15, 0] }}
                                         transition={{ repeat: Infinity, duration: 2.5 }}
                                         className={cn(
-                                            "absolute -top-1 -right-1 p-2 rounded-full shadow-xl border-2",
+                                            "absolute -top-2 -right-2 p-2 rounded-full shadow-xl border-2 z-10",
                                             celebrationType === 'family' ? "bg-slate-200 border-slate-400 text-slate-900" : "bg-yellow-400 border-yellow-600 text-slate-900"
                                         )}
                                     >
@@ -651,62 +781,50 @@ export function SkillTreeView({
                                 </div>
 
                                 <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">
-                                    {celebrationType === 'family' ? '¡MAESTRÍA DE CATEGORÍA!' : '¡NODO COMPLETADO!'}
+                                    {celebrationType === 'family' && '¡UNIDAD COMPLETADA!'}
+                                    {celebrationType === 'double' && '¡DOBLE LOGRO ALCANZADO!'}
+                                    {celebrationType === 'quiz' && '¡CUESTIONARIO COMPLETADO!'}
+                                    {celebrationType === 'node' && '¡TEMA COMPLETADO!'}
                                 </h2>
-                                <p className="text-slate-400 mb-6 font-medium">
-                                    {celebrationType === 'family'
-                                        ? '¡Felicidades! Has completado todos los desafíos de esta familia.'
-                                        : 'Has demostrado gran maestría en'} <span className="text-yellow-400 font-bold">"{nodes.find(n => n.id === celebratingNodeId)?.label}"</span>. ¡Sigue así!
+
+                                <p className="text-slate-300 mb-6 font-medium leading-relaxed text-sm">
+                                    {celebrationType === 'family' && (
+                                        <>
+                                            <span className="block text-yellow-300 font-black text-base mb-1">¡Genial!</span>
+                                            Luego de un gran trabajo y mucha disciplina has logrado terminar la unidad <span className="text-yellow-400 font-bold">"{celebratingUnitTitle}"</span> completamente. ¡Sigue así, campeón! 🏆
+                                        </>
+                                    )}
+                                    {celebrationType === 'double' && (
+                                        <>
+                                            ¡Increíble! Has completado el cuestionario <span className="text-yellow-400 font-bold">"{celebratingQuizTitle}"</span> y además has dominado el subtema <span className="text-yellow-400 font-bold">"{nodes.find(n => n.id === celebratingNodeId)?.label}"</span>. ¡Premio doble!
+                                        </>
+                                    )}
+                                    {celebrationType === 'quiz' && (
+                                        <>
+                                            Genial, has completado el cuestionario <span className="text-yellow-400 font-bold">"{celebratingQuizTitle}"</span>, ¡vamos por el tema completo!
+                                        </>
+                                    )}
+                                    {celebrationType === 'node' && (
+                                        <>
+                                            Has demostrado gran maestría en <span className="text-yellow-400 font-bold">"{nodes.find(n => n.id === celebratingNodeId)?.label}"</span>. ¡Sigue así!
+                                        </>
+                                    )}
                                 </p>
 
                                 <Button
-                                    onClick={() => setShowCelebrationDialog(false)}
-                                    className="w-full bg-gradient-to-r from-yellow-600 to-amber-500 hover:from-yellow-500 hover:to-amber-400 text-slate-950 font-black py-6 rounded-2xl shadow-[0_10px_20px_rgba(202,138,4,0.3)] transition-all hover:scale-[1.02] active:scale-95"
+                                    onClick={handleCloseCelebrationDialog}
+                                    className="w-full bg-gradient-to-r from-yellow-600 to-amber-500 hover:from-yellow-500 hover:to-amber-400 text-slate-950 font-black py-6 rounded-2xl shadow-[0_10px_20px_rgba(202,138,4,0.3)] transition-all hover:scale-[1.02] active:scale-95 text-base tracking-wider uppercase"
                                 >
-                                    ¡EXCELENTE!
+                                    {celebrationType === 'quiz' && '🥈 ¡A ver mi Medalla de Plata!'}
+                                    {(celebrationType === 'double' || celebrationType === 'node') && '🥇🥈 ¡Dame mis Medallas!'}
+                                    {celebrationType === 'family' && '🏆 ¡Quiero mi Copa de Plata!'}
                                 </Button>
                             </motion.div>
                         </div>
                     )}
                 </AnimatePresence>
 
-                {/* Silver Medal Overlay (Quick Celebration) */}
-                <AnimatePresence>
-                    {showSilverMedal && (
-                        <div className="fixed inset-0 z-[10001] flex items-center justify-center pointer-events-none">
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
-                                animate={{
-                                    opacity: [0, 1, 1, 0],
-                                    scale: [0.5, 1.2, 1, 0.8],
-                                    rotate: [-20, 0, 0, 10]
-                                }}
-                                transition={{
-                                    duration: 2.5,
-                                    times: [0, 0.2, 0.8, 1],
-                                    ease: "easeOut"
-                                }}
-                                className="flex flex-col items-center"
-                            >
-                                <div className="relative">
-                                    {/* Outer Glow */}
-                                    <div className="absolute inset-0 bg-slate-400/30 blur-3xl rounded-full scale-150 animate-pulse" />
 
-                                    {/* Medal Icon */}
-                                    <div className="relative bg-gradient-to-br from-slate-200 via-slate-400 to-slate-500 p-8 rounded-full border-4 border-slate-300 shadow-[0_0_60px_rgba(148,163,184,0.6)]">
-                                        <Medal className="w-32 h-32 text-slate-100 drop-shadow-2xl" />
-
-                                        {/* Inner Shine */}
-                                        <div className="absolute top-4 left-4 w-8 h-8 bg-white/40 blur-md rounded-full rotate-45" />
-                                    </div>
-
-                                    {/* Particle Burst Effects (CSS animations) */}
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 border-white/20 rounded-full animate-ping scale-150" />
-                                </div>
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence>
                 {/* Search Bar - Top Right above Legend */}
                 <div className="md:absolute md:top-[110px] md:right-4 relative mt-4 md:mt-0 mb-4 md:mb-0 z-[90] flex flex-col items-center md:items-end gap-2 pointer-events-auto px-2 sm:px-4 w-full md:w-auto">
                     <div
@@ -990,6 +1108,101 @@ export function SkillTreeView({
                                             setIsInteractive(!isInteractive);
                                         }}
                                     >
+
+                                        {/* Silver / Gold Medal Node Overlays (Positioned directly on top of target node in map) */}
+                                        {celebratingNodeId && (() => {
+                                            const targetNode = nodes.find(n => n.id === celebratingNodeId);
+                                            if (!targetNode) return null;
+                                            const pos = getNodePos(targetNode);
+
+                                            return (
+                                                <>
+                                                    {/* Silver Medal Overlay */}
+                                                    <AnimatePresence>
+                                                        {showSilverMedal && (
+                                                            <div 
+                                                                className="absolute z-[10000] pointer-events-none flex items-center justify-center"
+                                                                style={{
+                                                                    left: pos.x,
+                                                                    top: pos.y,
+                                                                    transform: 'translate(-50%, -50%)'
+                                                                }}
+                                                            >
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, scale: 0.4, rotate: -25 }}
+                                                                    animate={{
+                                                                        opacity: [0, 1, 1, 0],
+                                                                        scale: [0.4, 1.25, 1.1, 0.7],
+                                                                        rotate: [-25, 0, 0, 15]
+                                                                    }}
+                                                                    transition={{
+                                                                        duration: 3.8,
+                                                                        times: [0, 0.2, 0.8, 1],
+                                                                        ease: "easeOut"
+                                                                    }}
+                                                                    className="flex flex-col items-center"
+                                                                >
+                                                                    <div className="relative">
+                                                                        {/* Outer Glow */}
+                                                                        <div className="absolute inset-0 bg-slate-300/40 blur-3xl rounded-full scale-150 animate-pulse" />
+
+                                                                        {/* Medal Circular Disc Badge */}
+                                                                        <div className="relative w-48 h-48 rounded-full overflow-hidden border-4 border-slate-200/50 bg-slate-950/90 flex items-center justify-center shadow-[0_0_60px_rgba(203,213,225,0.6)] backdrop-blur-md">
+                                                                            <Medal className="w-28 h-28 text-slate-100 drop-shadow-[0_0_20px_rgba(255,255,255,0.7)]" />
+                                                                        </div>
+
+                                                                        {/* Particle Burst Effects */}
+                                                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-white/40 rounded-full animate-ping scale-150" />
+                                                                    </div>
+                                                                </motion.div>
+                                                            </div>
+                                                        )}
+                                                    </AnimatePresence>
+
+                                                    {/* Gold Medal Overlay */}
+                                                    <AnimatePresence>
+                                                        {showGoldMedal && (
+                                                            <div 
+                                                                className="absolute z-[10000] pointer-events-none flex items-center justify-center"
+                                                                style={{
+                                                                    left: pos.x,
+                                                                    top: pos.y,
+                                                                    transform: 'translate(-50%, -50%)'
+                                                                }}
+                                                            >
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, scale: 0.4, rotate: -25 }}
+                                                                    animate={{
+                                                                        opacity: [0, 1, 1, 0],
+                                                                        scale: [0.4, 1.25, 1.1, 0.7],
+                                                                        rotate: [-25, 0, 0, 15]
+                                                                    }}
+                                                                    transition={{
+                                                                        duration: 3.8,
+                                                                        times: [0, 0.2, 0.8, 1],
+                                                                        ease: "easeOut"
+                                                                    }}
+                                                                    className="flex flex-col items-center"
+                                                                >
+                                                                    <div className="relative">
+                                                                        {/* Outer Gold Glow */}
+                                                                        <div className="absolute inset-0 bg-yellow-500/50 blur-3xl rounded-full scale-150 animate-pulse" />
+
+                                                                        {/* Medal Circular Disc Badge */}
+                                                                        <div className="relative w-48 h-48 rounded-full overflow-hidden border-4 border-yellow-400/60 bg-slate-950/90 flex items-center justify-center shadow-[0_0_70px_rgba(234,179,8,0.7)] backdrop-blur-md">
+                                                                            <Award className="w-28 h-28 text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_30px_rgba(234,179,8,0.9)]" />
+                                                                        </div>
+
+                                                                        {/* Particle Burst Effects */}
+                                                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-yellow-400/50 rounded-full animate-ping scale-150" />
+                                                                    </div>
+                                                                </motion.div>
+                                                            </div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </>
+                                            );
+                                        })()}
 
                                         {/* SVG Connections Layer */}
                                         <svg

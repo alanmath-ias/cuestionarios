@@ -485,7 +485,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
         label: 'Maestría en Cálculo',
         level: 18,
         type: 'evaluation',
-        requires: ['c3-lhopital', 'c3-newton'],
+        requires: [],
         description: 'El desafío definitivo de todo el módulo.',
         xOffset: 0,
         subcategoryId: 119,

@@ -113,6 +113,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                     delay={0.1}
                                                     onClick={() => !isPublicView && setSelectedType('gold_cup')}
                                                     disabled={isPublicView}
+                                                    categoryId={category?.id}
                                                 />
                                                 <StatCard
                                                     icon={Trophy}
@@ -228,6 +229,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                         stats={stats}
                                         onBack={() => setSelectedType(null)}
                                         onWhatsApp={handleWhatsApp}
+                                        categoryId={category?.id}
                                     />
                                 )}
                             </AnimatePresence>
@@ -239,35 +241,72 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
     );
 };
 
-const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick, disabled }: any) => (
-    <motion.button
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay, type: 'spring' }}
-        onClick={onClick}
-        disabled={disabled}
-        className={cn(
-            "bg-slate-900/60 rounded-[2.2rem] p-5 border border-white/5 flex flex-col items-center gap-1 shadow-2xl group transition-all border-b-2 border-b-transparent active:scale-95",
-            !disabled && "hover:bg-slate-900/80 hover:border-b-amber-500/40",
-            disabled && "cursor-default opacity-90"
-        )}
-    >
-        <div className={cn("relative mb-1", color)}>
-            <Icon className="w-7 h-7 drop-shadow-lg" fill="currentColor" fillOpacity={0.15} />
-            <div className="absolute inset-0 bg-white/20 blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-1" />
-        </div>
-        <span className="text-3xl font-black text-white tracking-tighter leading-none">{value}</span>
-        <div className="text-center mt-1">
-            <p className={cn("text-[9px] font-black uppercase tracking-widest", color)}>{label}</p>
-            <p className="text-[8px] font-bold text-slate-500 uppercase leading-none opacity-60">{sublabel}</p>
-        </div>
-        {!disabled && (
-            <div className="mt-2 text-[8px] text-amber-500/0 group-hover:text-amber-500/70 font-black uppercase tracking-widest transition-all">Ver Más</div>
-        )}
-    </motion.button>
-);
+const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick, disabled, categoryId }: any) => {
+    const isGoldCup = label === "Copa Oro" && value > 0;
+    let goldCupImage = "/aritmetica_imagenes/copa_de_oro_trofeo.png";
+    if (categoryId === 2) {
+        goldCupImage = "/aritmetica_imagenes/copa_de_oro_trofeo_algebra.png";
+    } else if (categoryId === 4) {
+        goldCupImage = "/aritmetica_imagenes/copa_de_oro_trofeo_calculo_diferencial.png";
+    }
+    return (
+        <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay, type: 'spring' }}
+            onClick={onClick}
+            disabled={disabled}
+            className={cn(
+                "relative bg-slate-900/60 rounded-[2.2rem] p-5 border flex flex-col items-center gap-1 shadow-2xl group transition-all border-b-2 active:scale-95 overflow-hidden",
+                isGoldCup 
+                    ? "border-yellow-500/50 border-b-yellow-500/80 shadow-[0_0_20px_rgba(234,179,8,0.2)] bg-gradient-to-b from-slate-900 via-slate-900 to-yellow-950/20" 
+                    : "border-white/5 border-b-transparent",
+                !disabled && "hover:bg-slate-900/80",
+                !disabled && !isGoldCup && "hover:border-b-amber-500/40",
+                disabled && "cursor-default opacity-90"
+            )}
+        >
+            {isGoldCup && (
+                <>
+                    <motion.div
+                        animate={{ scale: [1, 1.15, 1], opacity: [0.15, 0.35, 0.15] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        className="absolute inset-0 bg-yellow-500/20 blur-md rounded-[2.2rem]"
+                    />
+                    <motion.div
+                        animate={{ x: ['-100%', '200%'] }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "linear", delay: 1 }}
+                        className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12"
+                    />
+                </>
+            )}
+            <div className={cn("relative mb-1", color, isGoldCup && "animate-bounce-subtle")}>
+                {isGoldCup ? (
+                    <img src={goldCupImage} className="w-7 h-7 object-contain drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
+                ) : (
+                    <Icon className="w-7 h-7 drop-shadow-lg" fill="currentColor" fillOpacity={0.15} />
+                )}
+                <div className="absolute inset-0 bg-white/20 blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-1" />
+            </div>
+            <span className={cn("text-3xl font-black text-white tracking-tighter leading-none relative z-10", isGoldCup && "text-yellow-400")}>{value}</span>
+            <div className="text-center mt-1 relative z-10">
+                <p className={cn("text-[9px] font-black uppercase tracking-widest", color, isGoldCup && "text-yellow-400")}>{label}</p>
+                <p className="text-[8px] font-bold text-slate-500 uppercase leading-none opacity-60">{sublabel}</p>
+            </div>
+            {!disabled && (
+                <div className="mt-2 text-[8px] text-amber-500/0 group-hover:text-amber-500/70 font-black uppercase tracking-widest transition-all relative z-10">Ver Más</div>
+            )}
+        </motion.button>
+    );
+};
 
-const DetailView = ({ type, stats, onBack, onWhatsApp }: { type: DetailType, stats: any, onBack: () => void, onWhatsApp: (type: string, data: any) => void }) => {
+const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId }: { type: DetailType, stats: any, onBack: () => void, onWhatsApp: (type: string, data: any) => void, categoryId?: number }) => {
+    let goldCupImage = "/aritmetica_imagenes/copa_de_oro_trofeo.png";
+    if (categoryId === 2) {
+        goldCupImage = "/aritmetica_imagenes/copa_de_oro_trofeo_algebra.png";
+    } else if (categoryId === 4) {
+        goldCupImage = "/aritmetica_imagenes/copa_de_oro_trofeo_calculo_diferencial.png";
+    }
     const getGoldCupMotivation = (progress: number) => {
         if (progress === 0) return "¡El primer paso es el más importante! Comienza tu viaje hacia la maestría hoy mismo.";
         if (progress <= 25) return "¡Genial, ya comenzaste! Sigue con toda que vas por excelente camino.";
@@ -346,8 +385,19 @@ const DetailView = ({ type, stats, onBack, onWhatsApp }: { type: DetailType, sta
 
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="flex items-center gap-6">
-                    <div className={cn("p-6 rounded-[2rem] bg-slate-900 border border-white/5 shadow-2xl", c.colorClass)}>
-                        <c.icon className="w-12 h-12 drop-shadow-lg" fill="currentColor" fillOpacity={0.1} />
+                    <div className={cn("p-6 rounded-[2rem] bg-slate-900 border border-white/5 shadow-2xl relative overflow-hidden flex items-center justify-center min-w-[96px] min-h-[96px]", c.colorClass)}>
+                        {type === 'gold_cup' && stats.progress === 100 ? (
+                            <>
+                                <img src={goldCupImage} className="w-12 h-12 object-contain drop-shadow-[0_0_12px_rgba(251,191,36,0.6)]" />
+                                <motion.div
+                                    animate={{ scale: [1, 1.25, 1], opacity: [0.3, 0.6, 0.3] }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                    className="absolute inset-0 bg-yellow-500/20 blur-md rounded-full -z-10"
+                                />
+                            </>
+                        ) : (
+                            <c.icon className="w-12 h-12 drop-shadow-lg" fill="currentColor" fillOpacity={0.1} />
+                        )}
                     </div>
                     <div>
                         <p className={cn("text-xs font-black uppercase tracking-[0.3em]", c.colorClass)}>{c.subtitle}</p>
