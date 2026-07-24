@@ -638,6 +638,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Award variable bonus credits for node or family completion
+  apiRouter.post("/user/award-bonus", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    const { credits, reason } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    if (!credits || credits <= 0) {
+      return res.status(400).json({ message: "credits must be a positive number" });
+    }
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const newCredits = (user.hintCredits || 0) + credits;
+      const updatedUser = await storage.updateUser(userId, { hintCredits: newCredits });
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json({ ...userWithoutPassword, bonusAwarded: credits, reason: reason || 'completion_bonus' });
+    } catch (error) {
+      console.error("Error awarding bonus credits:", error);
+      res.status(500).json({ message: "Error awarding bonus credits" });
+    }
+  });
+
   apiRouter.post("/admin/simulate-complete-map", async (req: Request, res: Response) => {
     const userId = req.session.userId;
     const { categoryId } = req.body;
@@ -700,6 +727,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const completedMaps = tourStatus.completedMaps || {};
       completedMaps[categoryId] = 'celebrated';
       tourStatus.completedMaps = completedMaps;
+
+      // Suppress any pending medal alerts to avoid popups after map completion
+      if (tourStatus.pendingMedalAlert) {
+        delete tourStatus.pendingMedalAlert;
+      }
 
       const updatedUser = await storage.updateUser(userId, { tourStatus });
       const { password: _, ...userWithoutPassword } = updatedUser;

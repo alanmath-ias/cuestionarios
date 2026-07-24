@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
+import { useSession } from "@/hooks/useSession";
 
 interface SkillTreeViewProps {
     nodes: ArithmeticNode[];
@@ -43,6 +44,7 @@ export function SkillTreeView({
     allQuizzes = [], isAdmin = false, subcategories = [], 
     categoryId, nodeMappings = [], allQuizzesForAdmin = [] 
 }: SkillTreeViewProps) {
+    const { session } = useSession();
     const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
     const [isInteractive, setIsInteractive] = useState(false);
     
@@ -89,6 +91,7 @@ export function SkillTreeView({
     const [processedSilverMedalId, setProcessedSilverMedalId] = useState<string | null>(null); // To avoid repeat
     const [showLastWorkedHint, setShowLastWorkedHint] = useState<string | null>(null); // Friendly indicator
     const lastWorkedScrollProcessed = useRef<boolean>(false);
+    const [celebrationCredits, setCelebrationCredits] = useState<number>(0); // credits earned in current celebration
 
     const silverCupDeliveryImage = useMemo(() => {
         if (categoryId === 2) return "/aritmetica_imagenes/entrega_copa_plata_algebra.png";
@@ -423,6 +426,12 @@ export function SkillTreeView({
             }, 6000);
         }
 
+        // If map completion is pending, suppress the other local celebrations
+        const isMapCompletionPending = (session?.tourStatus as any)?.completedMaps?.[categoryId] === 'pending_celebration';
+        if (isMapCompletionPending) {
+            return;
+        }
+
         // 2. Process Celebrations & Overlay Trigger Sequences
         if (focusId !== processedCelebrationId) {
             const isNodeCompleted = 
@@ -489,6 +498,27 @@ export function SkillTreeView({
                             colors: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
                         });
                     }
+                    // Compute and award bonus credits
+                    const nodeQuizCount = nodeTotalQuizzes[focusId] || 1;
+                    const familyQuizCount = parentContainer ? (nodeTotalQuizzes[parentContainer.id] || nodeQuizCount) : nodeQuizCount;
+                    let bonusCredits = 5; // base: quiz completed = 5 credits
+                    let bonusReason = 'quiz_completed';
+                    if (isFamilyMastery) {
+                        bonusCredits = familyQuizCount * 5; // 5 per quiz in family
+                        bonusReason = 'family_completed';
+                    } else if (isNodeCompleted) {
+                        bonusCredits = nodeQuizCount * 5; // 5 per quiz in node
+                        bonusReason = 'node_completed';
+                    }
+                    setCelebrationCredits(bonusCredits);
+                    fetch('/api/user/award-bonus', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ credits: bonusCredits, reason: bonusReason })
+                    }).catch(() => {});
+                    // Clear pendingMedalAlert from server so dashboard doesn't show it again
+                    fetch('/api/user/clear-medal-alert', { method: 'POST', credentials: 'include' }).catch(() => {});
                     const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source|quizTitle|nodeCompleted|familyCompleted)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
                     window.history.replaceState({}, '', newUrl);
                 }, 700);
@@ -514,6 +544,20 @@ export function SkillTreeView({
                             colors: ['#f59e0b', '#eab308', '#ec4899']
                         });
                     }
+                    // Compute and award bonus credits
+                    const nodeQuizCount = nodeTotalQuizzes[focusId] || 1;
+                    const familyQuizCount = parentContainer ? (nodeTotalQuizzes[parentContainer.id] || nodeQuizCount) : nodeQuizCount;
+                    const bonusCredits = isFamilyMastery ? (familyQuizCount * 5) : (nodeQuizCount * 5);
+                    const bonusReason = isFamilyMastery ? 'family_completed' : 'node_completed';
+                    setCelebrationCredits(bonusCredits);
+                    fetch('/api/user/award-bonus', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ credits: bonusCredits, reason: bonusReason })
+                    }).catch(() => {});
+                    // Clear pendingMedalAlert from server so dashboard doesn't show it again
+                    fetch('/api/user/clear-medal-alert', { method: 'POST', credentials: 'include' }).catch(() => {});
                     const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
                     window.history.replaceState({}, '', newUrl);
                 }, 700);
@@ -788,6 +832,21 @@ export function SkillTreeView({
                                     {celebrationType === 'node' && '¡TEMA COMPLETADO!'}
                                 </h2>
 
+                                {/* Credits earned badge */}
+                                <div className={cn(
+                                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-black text-sm mb-3 border",
+                                    celebrationType === 'family'
+                                        ? "bg-blue-950/80 border-blue-400/50 text-blue-300 shadow-[0_0_16px_rgba(96,165,250,0.4)]"
+                                        : (celebrationType === 'quiz'
+                                            ? "bg-red-950/80 border-red-400/50 text-red-300 shadow-[0_0_12px_rgba(248,113,113,0.35)]"
+                                            : "bg-yellow-950/80 border-yellow-400/50 text-yellow-300 shadow-[0_0_16px_rgba(234,179,8,0.4)]")
+                                )}>
+                                    <span className="text-base">
+                                        {celebrationType === 'family' ? '💎' : (celebrationType === 'quiz' ? '🪙' : '⭐')}
+                                    </span>
+                                    <span>+{celebrationCredits} Créditos</span>
+                                </div>
+
                                 <p className="text-slate-300 mb-6 font-medium leading-relaxed text-sm">
                                     {celebrationType === 'family' && (
                                         <>
@@ -927,10 +986,10 @@ export function SkillTreeView({
                     <div className="flex flex-col gap-3 text-[11px] text-slate-400 font-medium">
                         {/* Parent Nodes */}
                         <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-2xl rotate-45 border-2 border-slate-500 bg-slate-800 flex items-center justify-center">
-                                <BookOpen className="w-3.5 h-3.5 -rotate-45 text-slate-300" />
+                            <div className="w-7 h-7 rounded-2xl rotate-45 border-2 border-orange-500 bg-gradient-to-br from-orange-800 to-orange-500 flex items-center justify-center shadow-[0_0_10px_rgba(251,146,60,0.4)]">
+                                <BookOpen className="w-3.5 h-3.5 -rotate-45 text-white" />
                             </div>
-                            <span>Temas Principales</span>
+                            <span className="text-orange-300 font-bold">Unidades / Temas Principales</span>
                         </div>
 
                         {/* Blue Play - Not Started */}
@@ -1330,7 +1389,9 @@ export function SkillTreeView({
                                                                             "relative flex items-center justify-center shadow-lg transition-all duration-300 hover:brightness-125",
                                                                             node.id.endsWith('mastery')
                                                                                 ? "w-28 h-28 hover:shadow-[0_0_35px_rgba(192,38,211,0.6)]"
-                                                                                : "w-20 h-20 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]",
+                                                                                : node.behavior === 'container'
+                                                                                    ? "w-20 h-20 hover:shadow-[0_0_30px_rgba(251,146,60,0.7)]"
+                                                                                    : "w-20 h-20 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]",
                                                                             (isSpecial && node.behavior === 'container') ? 'hexagon-mask' :
                                                                                 node.behavior === 'container' ? 'rotate-45 rounded-2xl' : 'rounded-full',
 
@@ -1342,27 +1403,40 @@ export function SkillTreeView({
                                                                                 !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf]" :
                                                                                     node.id.endsWith('mastery') ? "shadow-[0_0_50px_rgba(192,38,211,0.8)] animate-pulse" :
                                                                                         !isHighlighted && isAvailable ? (
-                                                                                            isSpecial ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" :
-                                                                                                "shadow-[0_0_30px_#3b82f6]"
+                                                                                            node.behavior === 'container' ? "shadow-[0_0_30px_rgba(251,146,60,0.7)] animate-pulse-slow" :
+                                                                                                isSpecial ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" :
+                                                                                                    "shadow-[0_0_30px_#3b82f6]"
                                                                                         ) : ""
                                                                         )}
                                                                         style={{
                                                                             background: isHighlighted ? 'linear-gradient(135deg, #b45309, #f59e0b)' :
                                                                                 node.id.endsWith('mastery') ? 'linear-gradient(135deg, #4c1d95, #701a75, #db2777)' :
-                                                                                    isCompleted ? 'linear-gradient(135deg, #1f2937, #064e3b)' :
-                                                                                        isInProgress ? 'linear-gradient(135deg, #134e4a, #2dd4bf)' :
-                                                                                            isAvailable ? (
-                                                                                                isSpecial ? 'linear-gradient(135deg, #881337, #f43f5e)' :
-                                                                                                    'linear-gradient(135deg, #1e3a8a, #3b82f6)'
-                                                                                            ) : isLocked ? 'linear-gradient(135deg, #1e293b, #451a03)' : '#1e293b',
+                                                                                    isCompleted
+                                                                                        ? (node.behavior === 'container'
+                                                                                            ? 'linear-gradient(135deg, #1c1007, #78350f)'
+                                                                                            : 'linear-gradient(135deg, #1f2937, #064e3b)')
+                                                                                        : isInProgress
+                                                                                            ? (node.behavior === 'container'
+                                                                                                ? 'linear-gradient(135deg, #431407, #c2410c)'
+                                                                                                : 'linear-gradient(135deg, #134e4a, #2dd4bf)')
+                                                                                            : isAvailable
+                                                                                                ? (node.behavior === 'container'
+                                                                                                    ? 'linear-gradient(135deg, #7c2d12, #f97316)'
+                                                                                                    : isSpecial
+                                                                                                        ? 'linear-gradient(135deg, #881337, #f43f5e)'
+                                                                                                        : 'linear-gradient(135deg, #1e3a8a, #3b82f6)')
+                                                                                                : isLocked ? 'linear-gradient(135deg, #1e293b, #451a03)' : '#1e293b',
 
                                                                             border: `3px solid ${isHighlighted ? '#fbbf24' :
                                                                                 node.id.endsWith('mastery') ? '#fbbf24' :
-                                                                                    isCompleted ? '#4ade80' :
-                                                                                        isInProgress ? '#5eead4' :
-                                                                                            isAvailable ? (isSpecial ? '#fb7185' : '#3b82f6') :
-                                                                                                isLocked ? '#f59e0b' : '#475569'
-                                                                                }`
+                                                                                    isCompleted
+                                                                                        ? (node.behavior === 'container' ? '#fb923c' : '#4ade80')
+                                                                                        : isInProgress
+                                                                                            ? (node.behavior === 'container' ? '#f97316' : '#5eead4')
+                                                                                            : isAvailable
+                                                                                                ? (node.behavior === 'container' ? '#f97316' : (isSpecial ? '#fb7185' : '#3b82f6'))
+                                                                                                : isLocked ? '#f59e0b' : '#475569'
+                                                                            }`
                                                                         }}
                                                                     >
                                                                         <div className={cn("flex items-center justify-center", node.behavior === 'container' && !isSpecial && "-rotate-45")}>
@@ -1489,16 +1563,31 @@ export function SkillTreeView({
                                                             </div>
                                                         )}
 
-                                                        {/* Label under node - Closer to progress bar and includes score */}
                                                         <div className="mt-1 w-32 md:w-40 text-center pointer-events-none flex flex-col items-center">
                                                             <div className={cn(
-                                                                "inline-flex flex-col items-center px-3 py-1 rounded-xl text-[10px] md:text-xs font-bold border backdrop-blur-md shadow-sm transition-colors duration-300 leading-tight",
-                                                                isHighlighted ? "bg-yellow-950/50 border-yellow-500/50 text-yellow-200" :
-                                                                    isCompleted ? "bg-green-950/50 border-green-500/50 text-green-300" :
+                                                                "inline-flex flex-col items-center px-3 py-1 rounded-xl border backdrop-blur-md shadow-sm transition-colors duration-300 leading-tight",
+                                                                node.behavior === 'container'
+                                                                    ? cn(
+                                                                        "text-[11px] md:text-[13px] font-extrabold uppercase tracking-wide",
+                                                                        isHighlighted ? "bg-yellow-950/60 border-yellow-500/60 text-yellow-200" :
+                                                                        isCompleted ? "bg-orange-950/60 border-orange-500/60 text-orange-200" :
+                                                                        isAvailable || isInProgress ? "bg-orange-950/70 border-orange-500/70 text-orange-300" :
+                                                                        "bg-amber-950/50 border-amber-600/50 text-amber-400"
+                                                                    )
+                                                                    : cn(
+                                                                        "text-[10px] md:text-xs font-bold",
+                                                                        isHighlighted ? "bg-yellow-950/50 border-yellow-500/50 text-yellow-200" :
+                                                                        isCompleted ? "bg-green-950/50 border-green-500/50 text-green-300" :
                                                                         isAvailable ? "bg-blue-950/50 border-blue-500/50 text-blue-200" :
-                                                                            isLocked ? "bg-amber-950/50 border-amber-600/50 text-amber-400" :
-                                                                                "bg-slate-900/50 border-slate-700 text-slate-500"
+                                                                        isLocked ? "bg-amber-950/50 border-amber-600/50 text-amber-400" :
+                                                                        "bg-slate-900/50 border-slate-700 text-slate-500"
+                                                                    )
                                                             )}>
+                                                                {node.behavior === 'container' && (
+                                                                    <span className="text-[8px] font-black uppercase tracking-widest text-orange-400/80 mb-0.5 block">
+                                                                        📚 Unidad
+                                                                    </span>
+                                                                )}
                                                                 <span className="whitespace-pre-line">{nodeMappings?.find(m => m.nodeId === node.id)?.overrideLabel || node.label}</span>
                                                                 
                                                                 {nodeAverages[node.id] !== undefined && (isCompleted || (node.behavior === 'container' && nodeProgress[node.id] > 0)) && (
