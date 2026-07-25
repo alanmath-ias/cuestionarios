@@ -120,13 +120,8 @@ function QuizResults() {
       const seenMedals = tourStatus.seenMedals || {};
       const currentMedal = seenMedals[quizId];
 
-      // 1. Check if eligible for medal and hasn't claimed it yet
-      let eligibleForMedal = false;
-      if (score === 10.0 && currentMedal !== 'gold') {
-        eligibleForMedal = true;
-      } else if (score >= 8.0 && score < 10.0 && !currentMedal) {
-        eligibleForMedal = true;
-      }
+      // 1. Check if eligible for medal (first time completing this quiz)
+      const eligibleForMedal = !currentMedal;
 
       if (eligibleForMedal) {
         try {
@@ -176,16 +171,18 @@ function QuizResults() {
     if (nodes.length === 0) return null;
 
     return nodes.find(n => {
-      const isSubMatch = n.subcategoryId === results.quiz?.subcategoryId ||
-        (n.additionalSubcategories && n.additionalSubcategories.includes(results.quiz?.subcategoryId));
+      const mapping = nodeMappings?.find(m => m.nodeId === n.id);
+      const subId = mapping?.subcategoryId !== undefined ? mapping.subcategoryId : n.subcategoryId;
+      const addSubIds = mapping?.additionalSubcategories || n.additionalSubcategories || [];
+      const addQuizIds = mapping?.additionalQuizzes || n.additionalQuizzes || [];
 
-      if (!isSubMatch) return false;
+      const isSubMatch = Number(subId) === Number(results.quiz?.subcategoryId) ||
+        (addSubIds && addSubIds.map(Number).includes(Number(results.quiz?.subcategoryId))) ||
+        (addQuizIds && addQuizIds.map(Number).includes(Number(results.quiz?.id)));
 
-
-
-      return true;
+      return isSubMatch;
     });
-  }, [results]);
+  }, [results, nodeMappings]);
 
   const handleGoBack = () => {
     // Invalidate queries to ensure map progress is fresh
@@ -211,10 +208,15 @@ function QuizResults() {
             // allCategoryQuizzes: from /api/categories/:id/quizzes
             // Each quiz has: id, subcategoryId, userStatus ('completed'|'pending'|'optional')
             // NOTE: The current quiz may still show 'optional'/'pending' in cache, so we treat it as completed manually.
+            const mapping = nodeMappings?.find(m => m.nodeId === currentNode.id);
+            const subId = mapping?.subcategoryId !== undefined ? mapping.subcategoryId : currentNode.subcategoryId;
+            const subIds = mapping?.additionalSubcategories || currentNode.additionalSubcategories || [];
+            const guestQuizzes = mapping?.additionalQuizzes || currentNode.additionalQuizzes || [];
+
             const nodeQuizzes = allCategoryQuizzes.filter(q =>
-              Number(q.subcategoryId) === Number(currentNode.subcategoryId) ||
-              (currentNode.additionalSubcategories && currentNode.additionalSubcategories.map(Number).includes(Number(q.subcategoryId))) ||
-              (currentNode.additionalQuizzes && currentNode.additionalQuizzes.map(Number).includes(Number(q.id)))
+              Number(q.subcategoryId) === Number(subId) ||
+              (subIds && subIds.map(Number).includes(Number(q.subcategoryId))) ||
+              (guestQuizzes && guestQuizzes.map(Number).includes(Number(q.id)))
             );
 
             console.log('[NodeComplete] node:', currentNode.id, 'subcategoryId:', currentNode.subcategoryId);
@@ -319,7 +321,7 @@ function QuizResults() {
             console.log('[NodeComplete] Missing data - allCategoryQuizzes:', !!allCategoryQuizzes);
           }
 
-          p = `&focusNode=${currentNode.id}&source=quiz${quizTitle ? `&quizTitle=${quizTitle}` : ''}${isNodeComplete ? '&nodeCompleted=true' : ''}${isFamilyComplete ? '&familyCompleted=true' : ''}`;
+          p = `&focusNode=${currentNode.id}&source=quiz${quizTitle ? `&quizTitle=${quizTitle}` : ''}&quizScore=${results?.progress?.score || 0}${isNodeComplete ? '&nodeCompleted=true' : ''}${isFamilyComplete ? '&familyCompleted=true' : ''}`;
         }
         setLocation(`/category/${categoryId}?view=roadmap${p}`);
       } else if (isTraining && results?.quiz?.categoryId) {

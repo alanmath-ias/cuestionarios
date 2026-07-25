@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { cn } from '@/lib/utils';
 import { ArithmeticNode } from '../../data/arithmetic-map-data';
-import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw, LayoutDashboard, Search, X, CheckCircle2, AlertTriangle, PlayCircle, Medal, Award } from 'lucide-react';
+import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw, LayoutDashboard, Search, X, CheckCircle2, AlertTriangle, PlayCircle, Medal, Award, Sparkles } from 'lucide-react';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { TransformWrapper, TransformComponent, ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { Button } from '@/components/ui/button';
@@ -92,6 +92,7 @@ export function SkillTreeView({
     const [showLastWorkedHint, setShowLastWorkedHint] = useState<string | null>(null); // Friendly indicator
     const lastWorkedScrollProcessed = useRef<boolean>(false);
     const [celebrationCredits, setCelebrationCredits] = useState<number>(0); // credits earned in current celebration
+    const [celebratingHasScoreBonus, setCelebratingHasScoreBonus] = useState<boolean>(false); // score >= 8.0 bonus
 
     const silverCupDeliveryImage = useMemo(() => {
         if (categoryId === 2) return "/aritmetica_imagenes/entrega_copa_plata_algebra.png";
@@ -434,11 +435,13 @@ export function SkillTreeView({
 
         // 2. Process Celebrations & Overlay Trigger Sequences
         if (focusId !== processedCelebrationId) {
-            const isNodeCompleted = 
-                searchParams.get('nodeCompleted') === 'true' ||
-                progressMap[focusId] === 'completed' || 
-                (nodeProgress[focusId] !== undefined && nodeProgress[focusId] >= 99.9) || 
-                (nodeTotalQuizzes[focusId] > 0 && nodeCompletedCount[focusId] === nodeTotalQuizzes[focusId]);
+            const isNodeCompleted = source === 'quiz'
+                ? (searchParams.get('nodeCompleted') === 'true')
+                : (
+                    progressMap[focusId] === 'completed' || 
+                    (nodeProgress[focusId] !== undefined && nodeProgress[focusId] >= 99.9) || 
+                    (nodeTotalQuizzes[focusId] > 0 && (nodeCompletedCount[focusId] || 0) >= nodeTotalQuizzes[focusId])
+                );
 
             const titleQuiz = quizTitleParam ? decodeURIComponent(quizTitleParam) : (targetNode.label || "cuestionario");
 
@@ -466,10 +469,15 @@ export function SkillTreeView({
                 searchParams.get('familyCompleted') === 'true' ||
                 (parentContainer ? (progressMap[parentContainer.id] === 'completed') : false);
 
+            const quizScoreParam = searchParams.get('quizScore') || searchParams.get('score');
+            const quizScoreNum = Number(quizScoreParam) || 0;
+            const hasScoreBonus = quizScoreNum >= 8.0;
+
             if (source === 'quiz') {
                 setProcessedCelebrationId(focusId);
                 setCelebratingNodeId(focusId);
                 setCelebratingQuizTitle(titleQuiz);
+                setCelebratingHasScoreBonus(hasScoreBonus);
                 const parentLabel = parentContainer?.label || 'la unidad';
                 setCelebratingUnitTitle(parentLabel);
 
@@ -501,13 +509,14 @@ export function SkillTreeView({
                     // Compute and award bonus credits
                     const nodeQuizCount = nodeTotalQuizzes[focusId] || 1;
                     const familyQuizCount = parentContainer ? (nodeTotalQuizzes[parentContainer.id] || nodeQuizCount) : nodeQuizCount;
-                    let bonusCredits = 5; // base: quiz completed = 5 credits
+                    const extraScoreBonus = hasScoreBonus ? 3 : 0;
+                    let bonusCredits = 5 + extraScoreBonus; // base: quiz completed = 5 credits (+3 if score >= 8)
                     let bonusReason = 'quiz_completed';
                     if (isFamilyMastery) {
-                        bonusCredits = familyQuizCount * 5; // 5 per quiz in family
+                        bonusCredits = (familyQuizCount * 5) + extraScoreBonus; // 5 per quiz in family + 3 if score >= 8
                         bonusReason = 'family_completed';
                     } else if (isNodeCompleted) {
-                        bonusCredits = nodeQuizCount * 5; // 5 per quiz in node
+                        bonusCredits = (nodeQuizCount * 5) + extraScoreBonus; // 5 per quiz in node + 3 if score >= 8
                         bonusReason = 'node_completed';
                     }
                     setCelebrationCredits(bonusCredits);
@@ -519,7 +528,7 @@ export function SkillTreeView({
                     }).catch(() => {});
                     // Clear pendingMedalAlert from server so dashboard doesn't show it again
                     fetch('/api/user/clear-medal-alert', { method: 'POST', credentials: 'include' }).catch(() => {});
-                    const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source|quizTitle|nodeCompleted|familyCompleted)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
+                    const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source|quizTitle|quizScore|score|nodeCompleted|familyCompleted)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
                     window.history.replaceState({}, '', newUrl);
                 }, 700);
 
@@ -811,7 +820,16 @@ export function SkillTreeView({
                                             alt="Celebración" 
                                             className="w-full h-full object-cover object-top scale-[1.28] origin-top rounded-2xl"
                                         />
-                                        {/* NO OVERLAY BADGE ON TOP OF IMAGE PER USER SPECIFICATION */}
+                                        {celebratingHasScoreBonus && (
+                                            <motion.div
+                                                initial={{ scale: 0.7, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                className="absolute top-2 left-2 z-20 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 font-black text-[11px] px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1 border border-yellow-200/60 uppercase tracking-wider animate-bounce"
+                                            >
+                                                <Sparkles className="w-3.5 h-3.5 text-slate-950 fill-current shrink-0" />
+                                                <span>¡Bonus +3 Cr!</span>
+                                            </motion.div>
+                                        )}
                                     </div>
                                     <motion.div
                                         animate={{ scale: [1, 1.3, 1], rotate: [0, 15, -15, 0] }}
@@ -870,6 +888,17 @@ export function SkillTreeView({
                                         </>
                                     )}
                                 </p>
+
+                                {celebratingHasScoreBonus && (
+                                    <motion.div
+                                        initial={{ scale: 0.9, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        className="mb-4 py-2.5 px-3 rounded-2xl bg-gradient-to-r from-amber-500/25 via-yellow-500/20 to-amber-500/25 border-2 border-yellow-400/60 text-yellow-300 font-extrabold text-xs flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(234,179,8,0.35)]"
+                                    >
+                                        <Sparkles className="w-4 h-4 text-yellow-400 shrink-0 animate-pulse" />
+                                        <span>⭐ ¡Excelente Nota (≥ 8.0)! +3 Créditos Extra</span>
+                                    </motion.div>
+                                )}
 
                                 <Button
                                     onClick={handleCloseCelebrationDialog}

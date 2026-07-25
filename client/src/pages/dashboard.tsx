@@ -70,7 +70,6 @@ import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
 import { MasteryInsignia } from "@/components/dashboard/MasteryInsignia";
 import { AwardsDialog } from "@/components/dashboard/AwardsDialog";
 import { MathTipCard } from "@/components/dashboard/MathTipCard";
-import { MedalCelebration } from "@/components/dashboard/MedalCelebration";
 
 
 interface QuizWithFeedback {
@@ -2256,20 +2255,7 @@ export default function UserDashboard() {
           )
         }
 
-        {(() => {
-          const completedMaps = currentUser?.tourStatus?.completedMaps || {};
-          const hasPendingMapCelebration = Object.values(completedMaps).includes('pending_celebration');
-          
-          if (currentUser?.tourStatus?.pendingMedalAlert && !hasPendingMapCelebration) {
-            return (
-              <MedalCelebration
-                alert={currentUser.tourStatus.pendingMedalAlert}
-                currentCredits={currentUser.hintCredits || 0}
-              />
-            );
-          }
-          return null;
-        })()}
+
 
         <AwardsDialog
           isOpen={!!selectedAwardsCategory}

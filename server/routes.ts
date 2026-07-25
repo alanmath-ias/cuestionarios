@@ -560,42 +560,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const parsedScore = parseFloat(score);
-      let medalType: 'gold' | 'silver' | null = null;
-      let creditReward = 0;
-
-      if (parsedScore === 10.0) {
-        medalType = 'gold';
-        creditReward = 100;
-      } else if (parsedScore >= 8.0 && parsedScore < 10.0) {
-        medalType = 'silver';
-        creditReward = 50;
-      }
-
-      if (!medalType) {
-        const { password: _, ...userWithoutPassword } = user;
-        return res.json(userWithoutPassword);
-      }
+      const hasScoreBonus = parsedScore >= 8.0;
+      const creditReward = hasScoreBonus ? 8 : 5; // 5 base + 3 bonus for score >= 8
+      const medalType = 'silver';
 
       const tourStatus = (user.tourStatus as any) || {};
       const seenMedals = tourStatus.seenMedals || {};
       const currentMedal = seenMedals[quizId];
 
-      // Only reward if they haven't achieved this medal (or better)
-      let shouldReward = false;
-      if (medalType === 'gold' && currentMedal !== 'gold') {
-        shouldReward = true;
-        seenMedals[quizId] = 'gold';
-      } else if (medalType === 'silver' && !currentMedal) {
-        shouldReward = true;
+      // Reward Silver Medal on first completion of the quiz
+      if (!currentMedal) {
         seenMedals[quizId] = 'silver';
-      }
-
-      if (shouldReward) {
         tourStatus.seenMedals = seenMedals;
         tourStatus.pendingMedalAlert = {
           quizId,
           type: medalType,
-          credits: creditReward
+          credits: creditReward,
+          hasScoreBonus
         };
         const newCredits = (user.hintCredits || 0) + creditReward;
         const updatedUser = await storage.updateUser(userId, {
