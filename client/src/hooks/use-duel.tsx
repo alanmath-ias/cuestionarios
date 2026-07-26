@@ -310,6 +310,14 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
               description: `El oponente ha actualizado las condiciones del duelo.` 
           });
           break;
+      case 'duel:counter_sent':
+          setIsResponding(true);
+          setSentChallengeInfo(null);
+          toast({
+              title: "Contra-oferta enviada",
+              description: "Esperando respuesta de tu amigo...",
+          });
+          break;
       case 'social:status_update':
           setOnlineUsers(prev => {
               const next = new Set(prev);
@@ -531,6 +539,8 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
     } else if (action === 'reject') {
         setInvite(null);
         setSentChallengeInfo(null);
+    } else if (action === 'counter') {
+        setIsResponding(true);
     }
   };
 

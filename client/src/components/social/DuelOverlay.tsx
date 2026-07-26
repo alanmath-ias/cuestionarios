@@ -1129,13 +1129,28 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                       <>
                         <Button 
                           className="bg-green-600 hover:bg-green-700 font-bold h-auto py-3 px-4 flex flex-col gap-0.5 min-w-[220px] rounded-xl shadow-lg shadow-green-900/20" 
-                          onClick={() => respondToInvite(invite.duelId, 'accept')}
+                          onClick={() => {
+                            const payload: any = {};
+                            const otherId = Number(myNumberId === Number(invite.challengerId) ? invite.receiverId : invite.challengerId);
+                            
+                            if (localHandicap.points !== 0) {
+                                payload.points = {
+                                    value: Math.abs(localHandicap.points),
+                                    targetId: localHandicap.points > 0 ? otherId : myNumberId
+                                };
+                            }
+                            if (localHandicap.time !== 0) {
+                                payload.time = {
+                                    value: Math.abs(localHandicap.time),
+                                    targetId: localHandicap.time > 0 ? otherId : myNumberId
+                                };
+                            }
+                            respondToInvite(invite.duelId, 'accept', counterWager, Object.keys(payload).length > 0 ? payload : null, counterQuestionsCount);
+                          }}
                         >
                           <span className="text-[10px] opacity-90 uppercase font-black tracking-widest leading-none">Aceptar Desafío</span>
                           <span className="text-[11px] font-black leading-tight">
-                            {invite.wager} Créditos 
-                            {invite.handicap?.points && ` + ${invite.handicap.points.value} PTS para ${invite.handicap.points.targetId === myNumberId ? 'ti' : 'él'}`}
-                            {invite.handicap?.time && ` + ${invite.handicap.time.value} SEG para ${invite.handicap.time.targetId === myNumberId ? 'ti' : 'él'}`}
+                            {counterWager} Créditos ({counterQuestionsCount} Preguntas)
                           </span>
                         </Button>
                         <Button 

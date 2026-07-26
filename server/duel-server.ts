@@ -380,7 +380,7 @@ export class DuelServer {
         isRevenge: !!isRevenge,
         handicap: newDuel.handicap
       }
-    });
+      });
 
     this.broadcastDuelListToAdmins();
   }
@@ -397,37 +397,138 @@ export class DuelServer {
       this.sendToUser(duelRecord.challengerId, message);
       this.sendToUser(duelRecord.receiverId, message);
     } else if (action === 'counter') {
+      const updatedWager = wager !== undefined ? wager : duelRecord.wager;
+      const updatedHandicap = handicap !== undefined ? handicap : duelRecord.handicap;
+      const updatedQuestionsCount = questionsCount !== undefined ? questionsCount : duelRecord.questionsCount;
+
       await db.update(duels).set({ 
-        wager: wager !== undefined ? wager : duelRecord.wager,
-        handicap: handicap !== undefined ? handicap : duelRecord.handicap,
-        questionsCount: questionsCount !== undefined ? questionsCount : duelRecord.questionsCount
+        wager: updatedWager,
+        handicap: updatedHandicap,
+        questionsCount: updatedQuestionsCount
       }).where(eq(duels.id, duelId));
       
       const targetId = Number(userId === duelRecord.challengerId ? duelRecord.receiverId : duelRecord.challengerId);
-      console.log(`📢 [COUNTER] User ${userId} countered. Wager: ${wager}, Handicap:`, handicap);
+      console.log(`📢 [COUNTER] User ${userId} countered. Wager: ${updatedWager}, Handicap:`, updatedHandicap);
       const challenger = await storage.getUser(duelRecord.challengerId);
       const receiver = await storage.getUser(duelRecord.receiverId);
 
-      this.sendToUser(targetId, { 
-        type: 'duel:countered', 
-        payload: { 
-          duelId, 
-          challengerId: duelRecord.challengerId,
-          receiverId: duelRecord.receiverId,
-          challengerName: challenger?.name || "Retador",
-          receiverName: receiver?.name || "Oponente",
-          wager: wager !== undefined ? wager : duelRecord.wager,
-          handicap: handicap !== undefined ? handicap : duelRecord.handicap,
-          questionsCount: questionsCount !== undefined ? questionsCount : duelRecord.questionsCount
-        } 
-      });
+      const counterPayload = { 
+        duelId, 
+        challengerId: duelRecord.challengerId,
+        receiverId: duelRecord.receiverId,
+        challengerName: challenger?.name || "Retador",
+        receiverName: receiver?.name || "Oponente",
+        wager: updatedWager,
+        handicap: updatedHandicap,
+        questionsCount: updatedQuestionsCount
+      };
+
+      // Notify target opponent
+      this.sendToUser(targetId, { type: 'duel:countered', payload: counterPayload });
+      // Acknowledge sender so their UI enters waiting state
+      this.sendToUser(userId, { type: 'duel:counter_sent', payload: counterPayload });
+
     } else if (action === 'accept') {
-      if (wager && wager !== duelRecord.wager) {
-        await db.update(duels).set({ wager }).where(eq(duels.id, duelId));
-        console.log(`📢 [ACCEPT WITH WAGER] Setting wager to ${wager} before starting duel ${duelId}`);
+      const updateData: any = {};
+      if (wager !== undefined) updateData.wager = wager;
+      if (handicap !== undefined) updateData.handicap = handicap;
+      if (questionsCount !== undefined) updateData.questionsCount = questionsCount;
+
+      if (Object.keys(updateData).length > 0) {
+        await db.update(duels).set(updateData).where(eq(duels.id, duelId));
+        console.log(`📢 [ACCEPT WITH UPDATES] Updated duel ${duelId} params:`, updateData);
       }
       await this.startDuel(duelId);
     }
+  }
+
+  private async generateFallbackQuiz(topic: string, questionCount: number = 5) {
+    try {
+      // 1. Query existing questions with options from DB
+      const existingQuestions = await db.query.questions.findMany({
+        with: { answers: true },
+        limit: 50
+      });
+
+      const validDbQuestions = existingQuestions.filter((q: any) => q.answers && q.answers.length >= 2);
+
+      if (validDbQuestions.length >= questionCount) {
+        const shuffled = this.shuffleArray([...validDbQuestions]).slice(0, questionCount);
+        return {
+          title: `Duelo de ${topic || 'Matemáticas'}`,
+          description: `Desafío rápido de ${topic || 'Matemáticas'}`,
+          questions: shuffled.map(q => ({
+            content: q.content,
+            explanation: q.explanation || "Respuesta basada en conceptos clave.",
+            options: q.answers.map((a: any) => ({
+              text: a.content,
+              content: a.content,
+              isCorrect: a.isCorrect
+            }))
+          }))
+        };
+      }
+    } catch (e) {
+      console.warn('⚠️ [DUEL FALLBACK] Querying DB questions failed, using procedural math generator:', e);
+    }
+
+    // 2. Procedural Math Generator (100% resilient)
+    const questions = [];
+    for (let i = 0; i < questionCount; i++) {
+      const a = Math.floor(Math.random() * 20) + 5;
+      const b = Math.floor(Math.random() * 15) + 2;
+      const opType = i % 4;
+
+      let content = '';
+      let correctVal = 0;
+      let explanation = '';
+
+      if (opType === 0) {
+        content = `¿Cuál es el resultado de ${a} + ${b}?`;
+        correctVal = a + b;
+        explanation = `${a} + ${b} = ${correctVal}`;
+      } else if (opType === 1) {
+        content = `¿Cuál es el producto de ${a} * ${b}?`;
+        correctVal = a * b;
+        explanation = `${a} * ${b} = ${correctVal}`;
+      } else if (opType === 2) {
+        const x = Math.floor(Math.random() * 10) + 2;
+        const res = a + x;
+        content = `Resuelve para x: x + ${a} = ${res}`;
+        correctVal = x;
+        explanation = `Restando ${a} en ambos miembros: x = ${res} - ${a} = ${correctVal}`;
+      } else {
+        const base = Math.floor(Math.random() * 6) + 2;
+        const exp = 2;
+        content = `¿Cuánto es ${base}^${exp}?`;
+        correctVal = Math.pow(base, exp);
+        explanation = `${base}^${exp} = ${base} * ${base} = ${correctVal}`;
+      }
+
+      const distractors = new Set<number>();
+      while (distractors.size < 3) {
+        const offset = (Math.floor(Math.random() * 7) + 1) * (Math.random() < 0.5 ? 1 : -1);
+        const d = correctVal + offset;
+        if (d !== correctVal && d >= 0) distractors.add(d);
+      }
+
+      const optionsArray = [
+        { text: `${correctVal}`, content: `${correctVal}`, isCorrect: true },
+        ...Array.from(distractors).map(d => ({ text: `${d}`, content: `${d}`, isCorrect: false }))
+      ];
+
+      questions.push({
+        content,
+        explanation,
+        options: this.shuffleArray(optionsArray)
+      });
+    }
+
+    return {
+      title: `Duelo de ${topic || 'Matemáticas'}`,
+      description: `Desafío directo de ${topic || 'Matemáticas'}`,
+      questions
+    };
   }
 
   private async startDuel(duelId: number) {
@@ -440,15 +541,21 @@ export class DuelServer {
     this.broadcastToDuel(duelId, { type: 'duel:preparing', payload: { duelId } });
     this.broadcastDuelListToAdmins();
 
+    let quizData: any;
     try {
-      // Generate AI Quiz using the stored topic
-      const quizData = await generateAiQuizData({
+      // Try generating AI Quiz using stored topic
+      quizData = await generateAiQuizData({
         topicDescription: duelRecord.topic || "Duelo de velocidad matemática",
         categoryName: "Duelo",
         difficulty: "medium",
         questionCount: duelRecord.questionsCount
       });
+    } catch (aiErr) {
+      console.warn(`⚠️ [DUEL AI FALLBACK] AI quiz generation failed (${(aiErr as any)?.message}). Using DB/procedural fallback.`);
+      quizData = await this.generateFallbackQuiz(duelRecord.topic || "Matemáticas", duelRecord.questionsCount);
+    }
 
+    try {
       // Persist quiz
       const result = await db.transaction(async (tx) => {
         const [newQuiz] = await tx.insert(quizzes).values({
@@ -566,7 +673,7 @@ export class DuelServer {
       setTimeout(() => this.sendNextQuestion(duelId), 3000);
 
     } catch (error) {
-      console.error('Failed to generate duel quiz:', error);
+      console.error('Failed to initialize duel room:', error);
       // Mark duel as cancelled in DB
       await db.update(duels).set({ status: 'cancelled' }).where(eq(duels.id, duelId));
       // Notify both users directly by ID (room may not be in activeDuels yet)
@@ -1320,17 +1427,23 @@ export class DuelServer {
               questionsList.push({ ...q, options: opts });
           }
       } else if (room.topic) {
-          const quizData = await generateAiQuizData({
-              topicDescription: room.topic,
-              categoryName: "Reto Grupal",
-              difficulty: "medium",
-              questionCount: room.questionsCount || 8
-          });
+          let quizData: any;
+          try {
+              quizData = await generateAiQuizData({
+                  topicDescription: room.topic,
+                  categoryName: "Reto Grupal",
+                  difficulty: "medium",
+                  questionCount: room.questionsCount || 8
+              });
+          } catch (aiErr) {
+              console.warn(`⚠️ [MANAGED AI FALLBACK] AI quiz generation failed (${(aiErr as any)?.message}). Falling back to DB/procedural questions.`);
+              quizData = await this.generateFallbackQuiz(room.topic, room.questionsCount || 8);
+          }
           // MAP OPTIONS CAREFULLY
           questionsList = quizData.questions.map((q: any) => {
               const options = q.options.map((opt: any, idx: number) => ({
                   id: idx,
-                  content: typeof opt === 'string' ? opt : opt.content,
+                  content: typeof opt === 'string' ? opt : (opt.content || opt.text),
                   isCorrect: typeof opt === 'string' ? (opt === q.correctAnswer) : !!opt.isCorrect
               }));
               
