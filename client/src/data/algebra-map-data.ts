@@ -466,58 +466,22 @@ export const algebraMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL A9.5: ECUACIONES INDETERMINADAS (NEW)
-    // ==========================================
-    {
-        id: 'a9-5-indet',
-        label: 'Ec. Indeterminadas',
-        level: 21, // Shifted UP (Children 20 -> 21)
-        type: 'basic',
-        requires: ['a7-ecuaciones'], // Requires basic equations
-        description: 'Infinitas soluciones.',
-        xOffset: 0,
-        behavior: 'container'
-    },
-    {
-        id: 'a9-5-res',
-        label: 'Resolución',
-        level: 22,
-        type: 'basic',
-        requires: ['a9-5-indet'],
-        description: 'Identidades.',
-        xOffset: -40,
-        subcategoryId: 406,
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'a9-5-prob',
-        label: 'Problemas',
-        level: 22,
-        type: 'applied',
-        requires: ['a9-5-indet'],
-        description: 'En contexto.',
-        xOffset: 40,
-        subcategoryId: 407,
-        behavior: 'quiz_list'
-    },
-
-    // ==========================================
-    // NIVEL A8: INECUACIONES (Shifted Down)
+    // NIVEL A8: INECUACIONES (Movido inmediatamente después de Ec. 1 Var)
     // ==========================================
     {
         id: 'a8-inecuaciones',
         label: 'Inecuaciones',
-        level: 23, // Shifted UP (Children 22 -> 23)
+        level: 21,
         type: 'basic',
-        requires: ['a2-operaciones'],
-        description: 'Desigualdades.',
+        requires: ['a7-1-teoria', 'a7-2-problemas', 'a9-ec-frac'],
+        description: 'Desigualdades y conjuntos solución.',
         xOffset: 0,
         behavior: 'container'
     },
     {
         id: 'a8-1-lineales',
         label: 'Lineales',
-        level: 24,
+        level: 22,
         type: 'basic',
         requires: ['a8-inecuaciones'],
         description: '1er grado > <',
@@ -528,7 +492,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a8-3-simultaneas',
         label: 'Simultáneas',
-        level: 24,
+        level: 22,
         type: 'applied',
         requires: ['a8-inecuaciones'],
         description: 'Sistemas desigualdades.',
@@ -539,7 +503,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a8-2-cuadraticas',
         label: 'Cuadráticas',
-        level: 24,
+        level: 22,
         type: 'basic',
         requires: ['a8-inecuaciones'],
         description: '2do grado.',
@@ -550,7 +514,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a8-4-miscelanea',
         label: 'Miscelánea',
-        level: 25,
+        level: 23,
         type: 'applied',
         requires: ['a8-1-lineales', 'a8-3-simultaneas'],
         description: 'Mezcla de casos de inecuaciones.',
@@ -561,7 +525,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a8-5-problemas',
         label: 'Problemas de Aplicación',
-        level: 25,
+        level: 23,
         type: 'applied',
         requires: ['a8-3-simultaneas', 'a8-2-cuadraticas'],
         description: 'Desigualdades en la vida real.',
@@ -571,14 +535,119 @@ export const algebraMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL A10: SISTEMAS DE ECUACIONES (Shifted Down)
+    // NIVEL A9: ECUACIONES DE DOS VARIABLES (NUEVA UNIDAD)
+    // ==========================================
+    {
+        id: 'a9-ec-dos-var',
+        label: 'Ec. 2 Variables',
+        level: 24,
+        type: 'critical',
+        requires: ['a8-4-miscelanea', 'a8-5-problemas'],
+        description: 'Análisis, pendiente y formas de la recta.',
+        xOffset: 0,
+        behavior: 'container'
+    },
+    {
+        id: 'a9-1-soluciones',
+        label: 'Pares Ordenados',
+        level: 25,
+        type: 'basic',
+        requires: ['a9-ec-dos-var'],
+        description: 'Verificación de soluciones (x, y) y tablas de valores.',
+        xOffset: -75,
+        subcategoryId: 491,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a9-2-grafica-interceptos',
+        label: 'Gráfica e Interceptos',
+        level: 25,
+        type: 'basic',
+        requires: ['a9-ec-dos-var'],
+        description: 'Cortes con los ejes X e Y (x=0, y=0) y gráfico cartesiano.',
+        xOffset: -25,
+        subcategoryId: 492,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a9-3-pendiente-formas',
+        label: 'Pendiente y Formas',
+        level: 25,
+        type: 'critical',
+        requires: ['a9-ec-dos-var'],
+        description: 'Pendiente m, y=mx+b, Ax+By=C y forma punto-pendiente.',
+        xOffset: 25,
+        subcategoryId: 493,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a9-4-dos-puntos-simetrica',
+        label: 'Dos Puntos y Simétrica',
+        level: 25,
+        type: 'basic',
+        requires: ['a9-ec-dos-var'],
+        description: 'Recta que pasa por 2 puntos y forma simétrica (x/a + y/b = 1).',
+        xOffset: 75,
+        subcategoryId: 494,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a9-5-problemas-2var',
+        label: 'Problemas de Aplicación',
+        level: 26,
+        type: 'applied',
+        requires: ['a9-1-soluciones', 'a9-2-grafica-interceptos', 'a9-3-pendiente-formas', 'a9-4-dos-puntos-simetrica'],
+        description: 'Modelos lineales de 2 variables en situaciones reales.',
+        xOffset: 0,
+        subcategoryId: 495,
+        behavior: 'quiz_list'
+    },
+
+    // ==========================================
+    // NIVEL A9.5: ECUACIONES INDETERMINADAS (Reubicado debajo de 2 Var)
+    // ==========================================
+    {
+        id: 'a9-5-indet',
+        label: 'Ec. Indeterminadas',
+        level: 27,
+        type: 'basic',
+        requires: ['a9-5-problemas-2var'],
+        description: 'Infinitas soluciones y ecuaciones diofánticas.',
+        xOffset: 0,
+        behavior: 'container'
+    },
+    {
+        id: 'a9-5-res',
+        label: 'Resolución',
+        level: 28,
+        type: 'basic',
+        requires: ['a9-5-indet'],
+        description: 'Identidades.',
+        xOffset: -40,
+        subcategoryId: 406,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a9-5-prob',
+        label: 'Problemas',
+        level: 28,
+        type: 'applied',
+        requires: ['a9-5-indet'],
+        description: 'En contexto.',
+        xOffset: 40,
+        subcategoryId: 407,
+        behavior: 'quiz_list'
+    },
+
+    // ==========================================
+    // NIVEL A10: SISTEMAS DE ECUACIONES 2X2
     // ==========================================
     {
         id: 'a10-sistemas',
         label: 'Sistemas 2x2',
-        level: 26, // Shifted from 25
+        level: 29,
         type: 'critical',
-        requires: ['a7-ecuaciones'],
+        requires: ['a9-5-res', 'a9-5-prob'],
         description: 'Dos variables, dos condiciones.',
         xOffset: 0,
         behavior: 'container'
@@ -586,7 +655,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-1-teoria',
         label: 'Teoría Sistemas',
-        level: 27, // Shifted from 26
+        level: 30,
         type: 'basic',
         requires: ['a10-sistemas'],
         description: 'Compatible, Incompatible.',
@@ -597,7 +666,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-2-metodos',
         label: 'Métodos Alg.',
-        level: 27, // Shifted from 26
+        level: 30,
         type: 'basic',
         requires: ['a10-sistemas'],
         description: 'Sustitución, Igualación.',
@@ -608,7 +677,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-3-grafico',
         label: 'Método Gráfico',
-        level: 27, // Shifted from 26
+        level: 30,
         type: 'applied',
         requires: ['a10-sistemas'],
         description: 'Intersección de rectas.',
@@ -619,7 +688,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a10-4-cramer',
         label: 'Cramer',
-        level: 27, // Shifted from 26
+        level: 30,
         type: 'critical',
         requires: ['a10-sistemas'],
         description: 'Determinantes.',
@@ -629,14 +698,14 @@ export const algebraMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL A11: ECUACIONES CUADRÁTICAS (Shifted Down)
+    // NIVEL A11: ECUACIONES CUADRÁTICAS
     // ==========================================
     {
         id: 'a11-cuadraticas',
         label: 'Ec. Cuadráticas',
-        level: 28, // Shifted from 27
+        level: 31,
         type: 'critical',
-        requires: ['a10-sistemas', 'a5-factorizacion'],
+        requires: ['a10-1-teoria', 'a10-2-metodos', 'a10-3-grafico', 'a10-4-cramer'],
         description: 'Segundo grado.',
         xOffset: 0,
         subcategoryId: 417,
@@ -645,7 +714,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a11-1-solucion',
         label: 'Resolución',
-        level: 29, // Shifted from 28
+        level: 32,
         type: 'basic',
         requires: ['a11-cuadraticas'],
         description: 'Fórmula general y factores.',
@@ -656,7 +725,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a11-2-problemas',
         label: 'Problemas',
-        level: 29,
+        level: 32,
         type: 'applied',
         requires: ['a11-cuadraticas'],
         description: 'Problemas - Ec. Cuadráticas.',
@@ -666,14 +735,14 @@ export const algebraMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL A12: FUNCIONES (Shifted Down)
+    // NIVEL A12: FUNCIONES
     // ==========================================
     {
         id: 'a12-funciones',
         label: 'Funciones',
-        level: 30, // Shifted down 2 levels
+        level: 33,
         type: 'evaluation',
-        requires: ['a10-sistemas'],
+        requires: ['a11-1-solucion', 'a11-2-problemas'],
         description: 'Relaciones funcionales.',
         xOffset: 0,
         subcategoryId: 419,
@@ -682,7 +751,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a12-1-lineal',
         label: 'Función Lineal',
-        level: 31,
+        level: 34,
         type: 'basic',
         requires: ['a12-funciones'],
         description: 'y = mx + b',
@@ -693,7 +762,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a12-2-concepto',
         label: 'Resúmen de Funciones',
-        level: 31,
+        level: 34,
         type: 'critical',
         requires: ['a12-funciones'],
         description: 'Dominio y rango.',
@@ -704,9 +773,9 @@ export const algebraMapNodes: ArithmeticNode[] = [
     {
         id: 'a13-mastery',
         label: 'Maestría en Álgebra',
-        level: 32,
+        level: 35,
         type: 'evaluation',
-        requires: [],
+        requires: ['a12-1-lineal', 'a12-2-concepto'],
         description: 'El desafío definitivo de todo el módulo.',
         xOffset: 0,
         subcategoryId: 441,

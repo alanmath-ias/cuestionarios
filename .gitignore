@@ -12,6 +12,8 @@ vite.config.ts.*
 # entorno
 .env
 .envproduction
+gcp-key.json
+project-*.json
  
 # Imágenes y archivos temporales
 /algebra_imagenes/
