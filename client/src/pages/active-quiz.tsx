@@ -981,16 +981,8 @@ const ActiveQuiz = () => {
 
       await createProgressMutation.mutateAsync(progressUpdate);
 
-      await fetch("/api/quiz-submission", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: session?.userId,
-          quizId: quiz?.id,
-          score,
-          progressId: progress.id,
-        }),
-      });
+      // El servidor ya guarda quizSubmission dentro de POST /api/progress cuando status='completed'.
+      // No se llama a /api/quiz-submission por separado para evitar race condition con el score autoritativo.
 
       setLocation(`/results/${progress.id}?source=quiz`, { replace: true });
     } catch (error) {

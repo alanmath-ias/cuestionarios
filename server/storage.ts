@@ -49,6 +49,7 @@ export interface IStorage {
   createAnswer(answer: InsertAnswer): Promise<Answer>;
   updateAnswer(id: number, answer: Partial<Answer>): Promise<Answer>;
   deleteAnswer(id: number): Promise<void>;
+  getQuestionsByQuiz(quizId: number): Promise<Question[]>;
 
   // Student Progress methods
   getStudentProgress(userId: number): Promise<StudentProgress[]>;

@@ -2841,16 +2841,32 @@ Genera SOLO el tip, sin saludos introductorios. Empieza directo con el concepto 
 
         // Si se completó (y no estaba completo antes), guardar en quizSubmissions y dar crédito
         if (progressForStorage.status === 'completed' && existingProgress.status !== 'completed') {
+          // FUENTE DE VERDAD: recalcular score desde las respuestas reales en DB
+          // (previene discrepancias por estado local desincronizado en el cliente)
+          const dbAnswers = await storage.getStudentAnswersByProgress(existingProgress.id);
+          const dbQuestions = await storage.getQuestionsByQuiz(progressData.quizId);
+          const totalQuestionsInDB = dbQuestions.length;
+          const correctAnswersInDB = dbAnswers.filter(a => a.isCorrect === true).length;
+          const authoritative_score = totalQuestionsInDB > 0
+            ? Number(Math.min((correctAnswersInDB / totalQuestionsInDB) * 10, 10).toFixed(1))
+            : (progressData.score || 0);
+
+          // Re-save with the authoritative score if it differs from the client-sent score
+          if (authoritative_score !== progressForStorage.score) {
+            progressForStorage.score = authoritative_score;
+            await storage.updateStudentProgress(existingProgress.id, { score: authoritative_score });
+          }
+
           await storage.saveQuizSubmission({
             userId: userId,
             quizId: progressData.quizId,
-            score: progressData.score || 0,
+            score: authoritative_score,
             progressId: existingProgress.id
           });
 
           // Calculate credits based on score and mode
           let creditsEarned = 0;
-          const score = progressData.score || 0;
+          const score = authoritative_score;
 
           if (mode === 'mini') {
             if (score > 8) creditsEarned = 2;
@@ -2904,16 +2920,30 @@ Genera SOLO el tip, sin saludos introductorios. Empieza directo con el concepto 
 
       // Si se completó, guardar en quizSubmissions y dar crédito
       if (progressForStorage.status === 'completed') {
+        // FUENTE DE VERDAD: recalcular score desde las respuestas reales en DB
+        const dbAnswers2 = await storage.getStudentAnswersByProgress(newProgress.id);
+        const dbQuestions2 = await storage.getQuestionsByQuiz(progressData.quizId);
+        const totalQuestionsInDB2 = dbQuestions2.length;
+        const correctAnswersInDB2 = dbAnswers2.filter(a => a.isCorrect === true).length;
+        const authoritative_score2 = totalQuestionsInDB2 > 0
+          ? Number(Math.min((correctAnswersInDB2 / totalQuestionsInDB2) * 10, 10).toFixed(1))
+          : (progressData.score || 0);
+
+        // Re-save with the authoritative score if it differs
+        if (authoritative_score2 !== progressData.score) {
+          await storage.updateStudentProgress(newProgress.id, { score: authoritative_score2 });
+        }
+
         await storage.saveQuizSubmission({
           userId: userId,
           quizId: progressData.quizId,
-          score: progressData.score || 0,
+          score: authoritative_score2,
           progressId: newProgress.id
         });
 
         // Calculate credits based on score and mode
         let creditsEarned = 0;
-        const score = progressData.score || 0;
+        const score = authoritative_score2;
 
         if (mode === 'mini') {
           if (score > 8) creditsEarned = 2;
