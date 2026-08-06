@@ -448,11 +448,16 @@ function QuizResults() {
 
   const preciseScore = totalQuestions > 0 ? ((correctAnswers / totalQuestions) * 10).toFixed(1) : "0.0";
 
+  const sortedAnswers = useMemo(() => {
+    if (!results?.answers) return [];
+    return [...results.answers].sort((a, b) => (a.question?.id || a.questionId || 0) - (b.question?.id || b.questionId || 0));
+  }, [results?.answers]);
+
   const handleDownloadResults = () => {
     if (!results) return;
 
     const headers = ['Pregunta', 'Tu Respuesta', 'Respuesta Correcta', 'Tiempo'];
-    const rows = results.answers.map((answer, index) => [
+    const rows = sortedAnswers.map((answer, index) => [
       `Pregunta ${index + 1}`,
       answer.answerDetails?.content || 'No respondida',
       getCorrectAnswerContent(answer) || 'No disponible',
@@ -646,7 +651,7 @@ function QuizResults() {
             <h4 className="font-bold text-xl text-white px-2">Revisión de Preguntas</h4>
 
             <div className="space-y-6">
-              {results.answers.map((answer, index) => {
+              {sortedAnswers.map((answer, index) => {
                 const correctContent = getCorrectAnswerContent(answer);
 
                 return (

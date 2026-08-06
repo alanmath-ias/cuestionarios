@@ -966,6 +966,9 @@ export class DatabaseStorage implements IStorage {
       })
     );
 
+    // Sort answers by question ID so they always match the quiz question sequence
+    enrichedAnswers.sort((a, b) => (a.question?.id || a.questionId || 0) - (b.question?.id || b.questionId || 0));
+
     return {
       progress: {
         id: progressWithRelations.id,

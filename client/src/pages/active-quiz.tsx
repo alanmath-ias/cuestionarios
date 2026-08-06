@@ -621,16 +621,38 @@ const ActiveQuiz = () => {
     let touchEndX = 0;
 
     const handleTouchStart = (e: TouchEvent) => {
+      // Ignorar gestos de deslizado si la interacción se origina en una imagen o si hay una imagen ampliada / diálogo abierto
+      const target = e.target as HTMLElement | null;
+      if (
+        target?.closest('[role="dialog"]') ||
+        target?.closest('[data-state="open"]') ||
+        target?.closest('img') ||
+        document.querySelector('[role="dialog"]') ||
+        document.querySelector('[data-state="open"]')
+      ) {
+        touchStartX = 0;
+        touchEndX = 0;
+        return;
+      }
       touchStartX = e.changedTouches[0].screenX;
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
+      if (touchStartX === 0) return; // Si la interacción inició dentro de un diálogo o imagen ampliada, no disparar cambio de pregunta
       touchEndX = e.changedTouches[0].screenX;
       handleSwipe();
     };
 
     const handleSwipe = () => {
-      const isModalOpen = isReportDialogOpen || isHintDialogOpen || isIncompleteDialogOpen || showExplanation || showChiquiResult;
+      const isModalOpen =
+        isReportDialogOpen ||
+        isHintDialogOpen ||
+        isIncompleteDialogOpen ||
+        showExplanation ||
+        showChiquiResult ||
+        !!document.querySelector('[role="dialog"]') ||
+        !!document.querySelector('[data-state="open"]');
+
       if (isModalOpen) return;
 
       const swipeThreshold = 80; // Umbral para evitar disparos accidentales
