@@ -574,62 +574,6 @@ export function SkillTreeView({
         }
     }, [nodes, allQuizzes, processedScrollId, processedCelebrationId, nodeProgress, progressMap]);
 
-    // NEW Logic: Automatic Scroll to Last Worked Node (if no focusNode in URL)
-    useEffect(() => {
-        const searchParams = new URLSearchParams(window.location.search);
-        const focusId = searchParams.get('focusNode');
-        const hasSubId = searchParams.get('subId');
-        const hasNodeId = searchParams.get('nodeId');
-
-        // If we have a focusNode, a subId (open dialog), or nodeId, we consider the "initial focus" 
-        // as handled by the URL and we should NOT trigger the automatic "Last Worked" scroll later.
-        if (focusId || hasSubId || hasNodeId) {
-            lastWorkedScrollProcessed.current = true;
-            return;
-        }
-
-        // We skip if nodes aren't ready or if we already processed the scroll for this mount.
-        if (nodes.length === 0 || allQuizzes.length === 0 || lastWorkedScrollProcessed.current) return;
-
-        // Find most recent interaction
-        const recentQuiz = [...allQuizzes]
-            .filter(q => q.status !== 'not_started')
-            .sort((a, b) => {
-                // Priority 1: Recent completion
-                if (a.completedAt && b.completedAt) {
-                    return new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime();
-                }
-                if (a.completedAt) return -1;
-                if (b.completedAt) return 1;
-                
-                // Priority 2: Most recently started (highest progressId)
-                return (b.progressId || 0) - (a.progressId || 0);
-            })[0];
-            
-        if (!recentQuiz) return;
-        
-        // Find node for this quiz
-        let targetNode = nodes.find(n => n.subcategoryId === recentQuiz.subcategoryId);
-        if (!targetNode && recentQuiz.subcategoryId) {
-            targetNode = nodes.find(n => n.additionalSubcategories?.includes(recentQuiz.subcategoryId));
-        }
-
-        if (targetNode) {
-            lastWorkedScrollProcessed.current = true;
-            const nodeId = targetNode.id;
-            
-            setTimeout(() => {
-                const element = document.getElementById(`node-container-${nodeId}`);
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    // Show a friendly hint
-                    setShowLastWorkedHint(nodeId);
-                    setTimeout(() => setShowLastWorkedHint(null), 5000);
-                }
-            }, 800);
-        }
-    }, [nodes, allQuizzes]);
-
     // Calculate a Set of all quiz IDs that belong to this specific roadmap
     // (Native, additional subcategories, or guest quizzes)
     const mapQuizIds = useMemo(() => {
@@ -671,6 +615,77 @@ export function SkillTreeView({
 
         return ids;
     }, [nodes, nodeMappings, allQuizzes]);
+
+    // NEW Logic: Automatic Scroll to Last Worked Node FOR THIS MAP (if no focusNode in URL)
+    useEffect(() => {
+        const searchParams = new URLSearchParams(window.location.search);
+        const focusId = searchParams.get('focusNode');
+        const hasSubId = searchParams.get('subId');
+        const hasNodeId = searchParams.get('nodeId');
+
+        // If we have a focusNode, a subId (open dialog), or nodeId, we consider the "initial focus" 
+        // as handled by the URL and we should NOT trigger the automatic "Last Worked" scroll later.
+        if (focusId || hasSubId || hasNodeId) {
+            lastWorkedScrollProcessed.current = true;
+            return;
+        }
+
+        // We skip if nodes aren't ready or if we already processed the scroll for this mount.
+        if (nodes.length === 0 || allQuizzes.length === 0 || lastWorkedScrollProcessed.current) return;
+
+        // Filter quizzes to ONLY those that belong to nodes in THIS map and have been worked on
+        const mapQuizzes = allQuizzes.filter(q => 
+            mapQuizIds.has(q.id) && (q.status !== 'not_started' || (q.progressId && q.progressId > 0))
+        );
+
+        if (mapQuizzes.length === 0) return;
+
+        // Find most recent interaction within THIS map
+        const recentQuiz = [...mapQuizzes].sort((a, b) => {
+            // Priority 1: Recent completion
+            if (a.completedAt && b.completedAt) {
+                return new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime();
+            }
+            if (a.completedAt) return -1;
+            if (b.completedAt) return 1;
+            
+            // Priority 2: Most recently started (highest progressId)
+            return (b.progressId || 0) - (a.progressId || 0);
+        })[0];
+            
+        if (!recentQuiz) return;
+        
+        // Find node for this quiz in current map
+        let targetNode = nodes.find(n => {
+            const mapping = nodeMappings?.find(m => m.nodeId === n.id);
+            const subId = mapping ? mapping.subcategoryId : n.subcategoryId;
+            const additionalSubs = mapping?.additionalSubcategories || n.additionalSubcategories || [];
+            const guestQuizzes = mapping?.additionalQuizzes || [];
+            const qSubId = recentQuiz.subcategoryId;
+            const qId = recentQuiz.id;
+
+            return (
+                (subId && Number(subId) === Number(qSubId)) ||
+                (additionalSubs && additionalSubs.map(Number).includes(Number(qSubId))) ||
+                (guestQuizzes && guestQuizzes.map(Number).includes(Number(qId)))
+            );
+        });
+
+        if (targetNode) {
+            lastWorkedScrollProcessed.current = true;
+            const nodeId = targetNode.id;
+            
+            setTimeout(() => {
+                const element = document.getElementById(`node-container-${nodeId}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Show a friendly hint
+                    setShowLastWorkedHint(nodeId);
+                    setTimeout(() => setShowLastWorkedHint(null), 5000);
+                }
+            }, 800);
+        }
+    }, [nodes, allQuizzes, mapQuizIds, nodeMappings]);
 
     // Search Logic
     const [searchQuery, setSearchQuery] = useState("");
@@ -1560,16 +1575,25 @@ export function SkillTreeView({
                                                                 {showLastWorkedHint === node.id && (
                                                                     <motion.div
                                                                         initial={{ opacity: 0, scale: 0.5, y: 10, x: "-50%" }}
-                                                                        animate={{ opacity: 1, scale: 1, y: 0, x: "-50%" }}
+                                                                        animate={{ 
+                                                                            opacity: 1, 
+                                                                            scale: [1, 1.06, 1], 
+                                                                            y: 0, 
+                                                                            x: "-50%" 
+                                                                        }}
+                                                                        transition={{ 
+                                                                            scale: { repeat: Infinity, duration: 1.5, ease: "easeInOut" },
+                                                                            opacity: { duration: 0.3 }
+                                                                        }}
                                                                         exit={{ opacity: 0, scale: 0.5, y: 10, x: "-50%" }}
                                                                         className="absolute bottom-full mb-2 left-1/2 z-[1000] pointer-events-none flex flex-col items-center"
                                                                     >
-                                                                        <div className="bg-blue-600 text-white text-[10px] md:text-[11px] font-bold px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-[0_4px_15px_rgba(59,130,246,0.5)] flex items-center gap-2 whitespace-nowrap border border-blue-400">
-                                                                            <Box className="w-3 md:w-3.5 h-3 md:h-3.5" />
-                                                                            ¡Aquí estuviste la última vez!
+                                                                        <div className="bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 text-[11px] md:text-[12px] font-extrabold px-3.5 py-1.5 md:px-4.5 md:py-2 rounded-full shadow-[0_0_22px_rgba(245,158,11,0.75)] flex items-center gap-2 whitespace-nowrap border-2 border-yellow-200">
+                                                                            <Box className="w-3.5 md:w-4 h-3.5 md:h-4 text-slate-950 stroke-[2.5]" />
+                                                                            <span>¡Aquí estuviste la última vez!</span>
                                                                         </div>
                                                                         {/* The "Punta" (Arrow) - Centered naturally by the flex-col parent */}
-                                                                        <div className="w-0 h-0 border-[6px] border-transparent border-t-blue-600 -mt-[1px]" />
+                                                                        <div className="w-0 h-0 border-[6px] border-transparent border-t-amber-400 -mt-[1px]" />
                                                                     </motion.div>
                                                                 )}
                                                             </AnimatePresence>
