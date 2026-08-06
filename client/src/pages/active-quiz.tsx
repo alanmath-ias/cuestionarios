@@ -151,7 +151,7 @@ const ActiveQuiz = () => {
   const [editQuizTitle, setEditQuizTitle] = useState("");
   const [editQuizTimeMinutes, setEditQuizTimeMinutes] = useState<number>(0);
 
-  const isAdmin = session?.role === 'admin' || session?.userId === 1 || session?.userId === 2;
+  const isAdmin = session?.role === 'admin' && !session?.isImpersonating;
 
   const updateQuizMetaMutation = useMutation({
     mutationFn: async ({ title, timeLimit }: { title: string; timeLimit: number }) => {
@@ -1576,7 +1576,7 @@ const ActiveQuiz = () => {
                 )}
 
                 {/* Admin: Show Correct Answer */}
-                {session?.userId === 1 && (
+                {isAdmin && (
                   <div className="mb-6 p-4 bg-green-900/20 border border-green-500/30 rounded-xl text-green-300 text-sm flex items-start gap-3">
                     <CheckCircle2 className="h-5 w-5 shrink-0 text-green-400" />
                     <div className="w-full">
@@ -1784,7 +1784,7 @@ const ActiveQuiz = () => {
           </div>
 
           <div className="flex items-center gap-2 z-10 ml-auto flex-wrap sm:flex-nowrap">
-            {session?.userId === 1 && (
+            {isAdmin && (
               <Button
                 variant="outline"
                 className={`flex items-center transition-all h-10 px-3 sm:px-4 ${(quiz as any)?.isVerified
@@ -1817,7 +1817,7 @@ const ActiveQuiz = () => {
                 )}
               </Button>
             )}
-            {session?.userId === 1 && (
+            {isAdmin && (
               <Button
                 variant="outline"
                 className="flex items-center border-amber-500/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 bg-amber-500/5 h-10 px-3 sm:px-4"
