@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, X as CloseIcon } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { startActiveQuizTour } from "@/lib/tour";
 import { useState, useEffect, useRef } from "react";
@@ -145,6 +145,51 @@ const ActiveQuiz = () => {
   const [editContent, setEditContent] = useState("");
   const [editImageUrl, setEditImageUrl] = useState("");
   const [editAnswers, setEditAnswers] = useState<any[]>([]);
+
+  // Admin Quiz Title & Time Edit State
+  const [isEditingQuizMeta, setIsEditingQuizMeta] = useState(false);
+  const [editQuizTitle, setEditQuizTitle] = useState("");
+  const [editQuizTimeMinutes, setEditQuizTimeMinutes] = useState<number>(0);
+
+  const isAdmin = session?.role === 'admin' || session?.userId === 1 || session?.userId === 2;
+
+  const updateQuizMetaMutation = useMutation({
+    mutationFn: async ({ title, timeLimit }: { title: string; timeLimit: number }) => {
+      const res = await apiRequest("PUT", `/api/admin/quizzes/${quizId}`, {
+        ...quiz,
+        title: title.trim(),
+        timeLimit,
+      });
+      if (!res.ok) throw new Error("Error al actualizar el cuestionario");
+      return res.json();
+    },
+    onSuccess: (updatedQuiz) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/quizzes/${quizId}`] });
+      queryClient.invalidateQueries({ queryKey: ["user-quizzes"] });
+      if (updatedQuiz?.timeLimit) {
+        reset(updatedQuiz.timeLimit);
+      }
+      setIsEditingQuizMeta(false);
+      toast({
+        title: "Cuestionario actualizado",
+        description: "El título y tiempo límite se han guardado correctamente.",
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Error",
+        description: err.message || "No se pudo actualizar el cuestionario",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const formatMaxTime = (timeInSeconds?: number) => {
+    if (!timeInSeconds) return "0:00";
+    const mins = Math.floor(timeInSeconds / 60);
+    const secs = timeInSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Queries — esperan a que la sesión esté confirmada para evitar 401 al iniciar
   const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
@@ -430,9 +475,11 @@ const ActiveQuiz = () => {
           setAnsweredQuestions(answeredMap);
         }
         setIsInitialized(true);
-        if (session?.userId !== 1 && quiz?.timeLimit) {
+        if (quiz?.timeLimit) {
           reset(quiz.timeLimit);
-          start();
+          if (!isAdmin) {
+            start();
+          }
         }
       } else if (isChiqui && questions) {
         // Check if there is already a result for today
@@ -1212,7 +1259,7 @@ const ActiveQuiz = () => {
       </div>
       <div className="container mx-auto px-4 py-8 max-w-5xl relative z-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
+          <div className="w-full md:w-auto">
             <div className="flex items-center gap-4 mb-2">
               <Button
                 variant="ghost"
@@ -1224,36 +1271,149 @@ const ActiveQuiz = () => {
                 Atrás
               </Button>
             </div>
-            <h1 className="text-2xl font-bold flex items-center gap-2 text-white">
-              {isChiqui ? "⚡ Repasito Diario" : quiz?.title}
-              {session?.userId === 1 && !isChiqui && (
-                <Badge variant="outline" className="text-yellow-500 border-yellow-500/50 bg-yellow-500/10">
-                  Modo Admin - Sin Guardar
-                </Badge>
-              )}
-              {isReadOnly && (
-                <Badge variant="outline" className="text-blue-400 border-blue-500/50 bg-blue-500/10 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Modo Solo Lectura
-                </Badge>
-              )}
-            </h1>
-            {!isReadOnly && (
-              <div className="flex items-center gap-2 mt-2">
-                <div id="tour-timer" className="flex items-center text-slate-400 bg-slate-900/50 px-3 py-1 rounded-full border border-white/5">
-                  <Timer className="h-4 w-4 mr-2 text-blue-400" />
-                  <span className={`font- mono font - medium ${elapsedTime > (quiz?.timeLimit || 0) * 0.9 ? 'text-red-400 animate-pulse' : 'text-slate-200'} `}>
-                    {formattedTime()}
-                  </span>
+
+            {isEditingQuizMeta ? (
+              <div className="bg-slate-900/95 border border-amber-500/40 rounded-2xl p-4 shadow-2xl space-y-4 my-2 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200 w-full max-w-2xl">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-sm border-b border-white/10 pb-2">
+                  <Pencil className="w-4 h-4" />
+                  <span>Editar Título y Tiempo del Cuestionario</span>
                 </div>
 
-                {/* New Cumulative Time Display */}
-                <div className="flex items-center text-slate-400 bg-slate-900/50 px-3 py-1 rounded-full border border-white/5" title="Tiempo total acumulado">
-                  <Clock className="h-4 w-4 mr-2 text-purple-400" />
-                  <span className="font-mono font-medium text-slate-200">
-                    {formatTotalTime(getTotalTime())}
-                  </span>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                  <div className="md:col-span-8 space-y-1">
+                    <label className="text-xs font-semibold text-slate-300 block">Título del Cuestionario</label>
+                    <Input
+                      value={editQuizTitle}
+                      onChange={(e) => setEditQuizTitle(e.target.value)}
+                      className="bg-slate-950 border-slate-700 text-white font-bold text-base h-10 focus:border-amber-500/60"
+                      placeholder="Título del cuestionario..."
+                    />
+                  </div>
+
+                  <div className="md:col-span-4 space-y-1">
+                    <label className="text-xs font-semibold text-slate-300 block">Tiempo Máximo (minutos)</label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="1"
+                        max="180"
+                        value={editQuizTimeMinutes}
+                        onChange={(e) => setEditQuizTimeMinutes(Math.max(1, parseInt(e.target.value) || 0))}
+                        className="bg-slate-950 border-slate-700 text-amber-400 font-mono font-bold text-base h-10 focus:border-amber-500/60"
+                      />
+                      <span className="text-xs font-bold text-slate-400">min</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditingQuizMeta(false)}
+                    disabled={updateQuizMetaMutation.isPending}
+                    className="text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border border-transparent hover:border-slate-700/50 transition-colors"
+                  >
+                    <CloseIcon className="w-4 h-4 mr-1.5" />
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (editQuizTitle.trim() && editQuizTimeMinutes > 0) {
+                        updateQuizMetaMutation.mutate({
+                          title: editQuizTitle.trim(),
+                          timeLimit: editQuizTimeMinutes * 60,
+                        });
+                      }
+                    }}
+                    disabled={updateQuizMetaMutation.isPending || !editQuizTitle.trim()}
+                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold shadow-lg shadow-emerald-500/20"
+                  >
+                    {updateQuizMetaMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4 mr-1.5" />
+                    )}
+                    Guardar Cambios
+                  </Button>
                 </div>
               </div>
+            ) : (
+              <>
+                <h1 className="text-2xl font-bold flex items-center gap-2 text-white flex-wrap">
+                  <span>{isChiqui ? "⚡ Repasito Diario" : quiz?.title}</span>
+                  {isAdmin && !isChiqui && (
+                    <Badge variant="outline" className="text-yellow-500 border-yellow-500/50 bg-yellow-500/10">
+                      Modo Admin - Sin Guardar
+                    </Badge>
+                  )}
+                  {isAdmin && !isChiqui && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditQuizTitle(quiz?.title || "");
+                        setEditQuizTimeMinutes(Math.round((quiz?.timeLimit || 0) / 60));
+                        setIsEditingQuizMeta(true);
+                      }}
+                      className="h-7 px-2 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs font-bold flex items-center gap-1.5 ml-1"
+                      title="Editar título y tiempo del cuestionario"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Editar</span>
+                    </Button>
+                  )}
+                  {isReadOnly && (
+                    <Badge variant="outline" className="text-blue-400 border-blue-500/50 bg-blue-500/10 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Modo Solo Lectura
+                    </Badge>
+                  )}
+                </h1>
+
+                {!isReadOnly && (
+                  <div className="flex items-center gap-2 mt-2">
+                    {isAdmin ? (
+                      <div
+                        id="tour-timer"
+                        onClick={() => {
+                          if (!isChiqui) {
+                            setEditQuizTitle(quiz?.title || "");
+                            setEditQuizTimeMinutes(Math.round((quiz?.timeLimit || 0) / 60));
+                            setIsEditingQuizMeta(true);
+                          }
+                        }}
+                        className="flex items-center text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1 rounded-full border border-amber-500/30 cursor-pointer transition-colors group"
+                        title="Tiempo máximo del cuestionario (Pausado para Admin). Haz clic para editar."
+                      >
+                        <Timer className="h-4 w-4 mr-2 text-amber-400" />
+                        <span className="font-mono font-bold text-amber-300">
+                          {formatMaxTime(quiz?.timeLimit)}
+                        </span>
+                        <span className="text-[10px] text-amber-400/80 font-bold uppercase ml-2">
+                          (Tiempo Máx.)
+                        </span>
+                        <Pencil className="h-3 w-3 ml-2 text-amber-400 opacity-60 group-hover:opacity-100" />
+                      </div>
+                    ) : (
+                      <div id="tour-timer" className="flex items-center text-slate-400 bg-slate-900/50 px-3 py-1 rounded-full border border-white/5">
+                        <Timer className="h-4 w-4 mr-2 text-blue-400" />
+                        <span className={`font-mono font-medium ${elapsedTime > (quiz?.timeLimit || 0) * 0.9 ? 'text-red-400 animate-pulse' : 'text-slate-200'}`}>
+                          {formattedTime()}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Cumulative Time Display */}
+                    <div className="flex items-center text-slate-400 bg-slate-900/50 px-3 py-1 rounded-full border border-white/5" title="Tiempo total acumulado">
+                      <Clock className="h-4 w-4 mr-2 text-purple-400" />
+                      <span className="font-mono font-medium text-slate-200">
+                        {formatTotalTime(getTotalTime())}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
