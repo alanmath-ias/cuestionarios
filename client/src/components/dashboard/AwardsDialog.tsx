@@ -52,10 +52,35 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
         enabled: !!category && isOpen,
     });
 
+    // Fetch ALL quizzes across all categories to capture guest/cross-category quizzes
+    const { data: allQuizzesPool } = useQuery<Quiz[]>({
+        queryKey: ["/api/quizzes"],
+        queryFn: async () => {
+            const res = await fetch("/api/quizzes");
+            if (!res.ok) return [];
+            return res.json();
+        },
+        staleTime: 1000 * 60 * 30,
+        enabled: isOpen,
+    });
+
+    const { data: nodeMappings } = useQuery<any[]>({
+        queryKey: [`/api/node-mappings/${category?.id}`],
+        queryFn: async () => {
+            if (!category) return [];
+            const res = await fetch(`/api/node-mappings/${category.id}`);
+            if (!res.ok) return [];
+            return res.json();
+        },
+        enabled: !!category && isOpen,
+    });
+
     const stats = React.useMemo(() => {
-        if (!category || !allCategoryQuizzes) return null;
-        return calculateMasteryStats(category.id, quizzes, allCategoryQuizzes);
-    }, [category, quizzes, allCategoryQuizzes]);
+        if (!category) return null;
+        // Merge category quizzes with all-quiz pool so guest quizzes from other categories are counted
+        const mergedPool = [...(allQuizzesPool || []), ...(allCategoryQuizzes || [])];
+        return calculateMasteryStats(category.id, quizzes, mergedPool, nodeMappings);
+    }, [category, quizzes, allCategoryQuizzes, allQuizzesPool, nodeMappings]);
 
     if (!category) return null;
 

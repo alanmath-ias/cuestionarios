@@ -109,6 +109,18 @@ function QuizResults() {
     enabled: !!categoryIdForMastery && session?.role === 'student',
   });
 
+  // Fetch ALL quizzes across all categories to capture cross-category guest quizzes
+  const { data: allQuizzesPool } = useQuery<any[]>({
+    queryKey: ["/api/quizzes"],
+    queryFn: async () => {
+      const res = await fetch("/api/quizzes");
+      if (!res.ok) return [];
+      return res.json();
+    },
+    staleTime: 1000 * 60 * 30,
+    enabled: session?.role === 'student',
+  });
+
   // Earn Medal / Map Completion Checking Effect
   useEffect(() => {
     if (!results?.quiz || session?.role !== 'student') return;
@@ -135,8 +147,9 @@ function QuizResults() {
       }
 
       // 2. Check map completion
-      if (allUserQuizzes && allCategoryQuizzes) {
-        const stats = calculateMasteryStats(results.quiz.categoryId, allUserQuizzes, allCategoryQuizzes);
+      if (allUserQuizzes) {
+        const mergedPool = [...(allQuizzesPool || []), ...(allCategoryQuizzes || [])];
+        const stats = calculateMasteryStats(results.quiz.categoryId, allUserQuizzes, mergedPool, nodeMappings);
         const completedMaps = tourStatus.completedMaps || {};
         
         if (stats.goldTrophies === 1 && !completedMaps[results.quiz.categoryId]) {

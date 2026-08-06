@@ -1,13 +1,18 @@
 import { arithmeticMapNodes } from '../data/arithmetic-map-data';
 import { algebraMapNodes } from '../data/algebra-map-data';
 import { calculusMapNodes } from '../data/calculus-map-data';
+import { integralCalculusMapNodes } from '../data/integral-calculus-map-data';
+import { statisticsMapNodes } from '../data/statistics-map-data';
 import { Category, Quiz, UserQuiz } from '@/types/types';
 
 // Map of categories to their ground-truth data
 const MAP_DATA: Record<number, any[]> = {
     1: arithmeticMapNodes,
     2: algebraMapNodes,
-    4: calculusMapNodes
+    4: calculusMapNodes,
+    5: integralCalculusMapNodes,
+    9: statisticsMapNodes,
+    19: statisticsMapNodes
 };
 
 export interface PerformanceItem {
@@ -37,26 +42,47 @@ export interface MasteryStats {
 }
 
 /**
- * Filter quizzes that belong to a specific map node based on subcategoryId and keywords.
+ * Filter quizzes that belong to a specific map node based on subcategoryId, additional subcategories, and guest quizzes.
  */
-function getQuizzesForNode(node: any, allQuizzes: Quiz[]) {
-    if (!node.subcategoryId && (!node.additionalSubcategories || node.additionalSubcategories.length === 0)) {
+export function getQuizzesForNode(node: any, allQuizzes: any[], nodeMappings?: any[]) {
+    const mapping = nodeMappings?.find(m => m.nodeId === node.id);
+    const subId = (mapping && mapping.subcategoryId !== undefined && mapping.subcategoryId !== null)
+        ? mapping.subcategoryId
+        : node.subcategoryId;
+
+    const additionalSubs = (mapping?.additionalSubcategories && mapping.additionalSubcategories.length > 0)
+        ? mapping.additionalSubcategories
+        : (node.additionalSubcategories || []);
+
+    const guestQuizzes = (mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0)
+        ? mapping.additionalQuizzes
+        : (node.additionalQuizzes || []);
+
+    if (!subId && additionalSubs.length === 0 && guestQuizzes.length === 0) {
         return [];
     }
 
-    let matches = allQuizzes.filter(q =>
-        q.subcategoryId === node.subcategoryId ||
-        (node.additionalSubcategories && node.additionalSubcategories.includes(q.subcategoryId!))
-    );
+    const subIdNum = subId ? Number(subId) : null;
+    const addSubNums = additionalSubs.map(Number);
+    const guestNums = guestQuizzes.map(Number);
 
-
-    return matches;
+    return (allQuizzes || []).filter(q => {
+        if (!q) return false;
+        const qSubId = q.subcategoryId ? Number(q.subcategoryId) : null;
+        const qId = Number(q.id);
+        return (
+            (subIdNum !== null && qSubId === subIdNum) ||
+            (qSubId !== null && addSubNums.includes(qSubId)) ||
+            (guestNums.includes(qId))
+        );
+    });
 }
 
 export function calculateMasteryStats(
     categoryId: number,
     allQuizzes: any[], // User-quizzes with status
-    availableQuizzes: Quiz[] // All base quizzes for category
+    availableQuizzes?: Quiz[], // All base quizzes in platform
+    nodeMappings?: any[]
 ): MasteryStats {
     const rawNodes = MAP_DATA[categoryId] || [];
     const nodes = rawNodes.filter(n => !n.id.endsWith('mastery'));
@@ -66,21 +92,28 @@ export function calculateMasteryStats(
         strongestNodes: [], weakestNodes: [], strongestUnits: [], weakestUnits: [], pendingNodes: [] 
     };
 
-    const categoryBaseQuizzes = availableQuizzes.filter(q => q.categoryId === categoryId);
-    const userProgressMap = new Map(allQuizzes.map(q => [q.id, q]));
+    // Combine availableQuizzes and allQuizzes to have the complete pool of quizzes (including guest quizzes)
+    const quizPoolMap = new Map<number, any>();
+    (allQuizzes || []).forEach(q => { if (q && q.id) quizPoolMap.set(Number(q.id), q); });
+    (availableQuizzes || []).forEach(q => {
+        if (q && q.id && !quizPoolMap.has(Number(q.id))) quizPoolMap.set(Number(q.id), q);
+    });
+    const quizPool = Array.from(quizPoolMap.values());
 
-    // 1. Identify "Children" (Gold Medals) and calculate their averages
-    const childNodes = nodes.filter(n => n.behavior === 'quiz_list');
+    const userProgressMap = new Map((allQuizzes || []).map(q => [Number(q.id), q]));
+
+    // 1. Identify non-container nodes (Gold Medals / topics) and calculate their averages
+    const childNodes = nodes.filter(n => n.behavior !== 'container');
     const nodeStats = childNodes.map(node => {
-        const nodeQuizzes = getQuizzesForNode(node, categoryBaseQuizzes);
+        const nodeQuizzes = getQuizzesForNode(node, quizPool, nodeMappings);
         if (nodeQuizzes.length === 0) return { id: node.id, label: node.label, complete: false, quizzes: [], average: 0, completedCount: 0 };
         
-        const completed = nodeQuizzes.filter(q => userProgressMap.get(q.id)?.status === 'completed');
+        const completed = nodeQuizzes.filter(q => userProgressMap.get(Number(q.id))?.status === 'completed');
         const complete = completed.length === nodeQuizzes.length && nodeQuizzes.length > 0;
         
         let average = 0;
         if (completed.length > 0) {
-            const totalScore = completed.reduce((sum, q) => sum + (Number(userProgressMap.get(q.id)?.score) || 0), 0);
+            const totalScore = completed.reduce((sum, q) => sum + (Number(userProgressMap.get(Number(q.id))?.score) || 0), 0);
             average = totalScore / completed.length;
         }
 
@@ -123,7 +156,7 @@ export function calculateMasteryStats(
 
     nodeStats.forEach(ns => {
         ns.quizzes.forEach(q => {
-            const userQuiz = userProgressMap.get(q.id);
+            const userQuiz = userProgressMap.get(Number(q.id));
             const score = Number(userQuiz?.score) || 0;
             const item = { id: q.id, label: q.title, score };
             
@@ -166,7 +199,7 @@ export function calculateMasteryStats(
 
     // Pending units (Incomplete nodes)
     const pendingNodes = nodes
-        .filter(n => n.behavior === 'quiz_list')
+        .filter(n => n.behavior !== 'container')
         .filter(n => !nodeStats.find(s => s.id === n.id)?.complete)
         .slice(0, 5)
         .map(n => n.label);

@@ -184,6 +184,8 @@ export function SkillTreeView({
         };
 
         nodes.forEach(node => {
+            if (node.id.endsWith('mastery')) return;
+
             let contextQuizzes: any[] = [];
             
             // Get dynamic mappings for this node

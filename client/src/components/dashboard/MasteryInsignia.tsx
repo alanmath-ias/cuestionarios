@@ -33,10 +33,30 @@ export const MasteryInsignia: React.FC<MasteryInsigniaProps> = ({
         staleTime: 1000 * 60 * 30, // 30 mins cache
     });
 
-    const mastery = useMemo(() => {
-        if (!allCategoryQuizzes || allCategoryQuizzes.length === 0) return { level: 'none' as MasteryLevel };
+    // Fetch ALL quizzes across all categories to capture cross-category guest quizzes
+    const { data: allQuizzesPool } = useQuery<Quiz[]>({
+        queryKey: ["/api/quizzes"],
+        queryFn: async () => {
+            const res = await fetch("/api/quizzes");
+            if (!res.ok) return [];
+            return res.json();
+        },
+        staleTime: 1000 * 60 * 30,
+    });
 
-        const stats = calculateMasteryStats(categoryId, quizzes, allCategoryQuizzes);
+    const { data: nodeMappings } = useQuery<any[]>({
+        queryKey: [`/api/node-mappings/${categoryId}`],
+        queryFn: async () => {
+            const res = await fetch(`/api/node-mappings/${categoryId}`);
+            if (!res.ok) return [];
+            return res.json();
+        },
+        staleTime: 1000 * 60 * 30, // 30 mins cache
+    });
+
+    const mastery = useMemo(() => {
+        const mergedPool = [...(allQuizzesPool || []), ...(allCategoryQuizzes || [])];
+        const stats = calculateMasteryStats(categoryId, quizzes, mergedPool, nodeMappings);
 
         if (stats.goldTrophies >= 1) return { level: 'gold_trophy' as MasteryLevel };
         if (stats.silverTrophies >= 1) return { level: 'silver_trophy' as MasteryLevel };
@@ -44,7 +64,7 @@ export const MasteryInsignia: React.FC<MasteryInsigniaProps> = ({
         if (stats.silverMedals >= 1) return { level: 'silver_medal' as MasteryLevel };
 
         return { level: 'none' as MasteryLevel };
-    }, [categoryId, quizzes, allCategoryQuizzes]);
+    }, [categoryId, quizzes, allCategoryQuizzes, allQuizzesPool, nodeMappings]);
 
     if (mastery.level === 'none') return null;
 

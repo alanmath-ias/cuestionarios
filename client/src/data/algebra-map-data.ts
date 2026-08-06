@@ -789,7 +789,6 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a12-1-lineal', 'a12-2-concepto'],
         description: 'El desafío definitivo de todo el módulo.',
         xOffset: 0,
-        subcategoryId: 441,
         behavior: 'quiz_list'
     }
 ];

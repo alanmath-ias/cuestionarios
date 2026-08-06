@@ -39,6 +39,27 @@ export const CategoryStarItem: React.FC<CategoryStarItemProps> = ({
     staleTime: 1000 * 60 * 30, // 30 mins cache
   });
 
+  // Fetch ALL quizzes across all categories to capture cross-category guest quizzes
+  const { data: allQuizzesPool } = useQuery<Quiz[]>({
+    queryKey: ["/api/quizzes"],
+    queryFn: async () => {
+      const res = await fetch("/api/quizzes");
+      if (!res.ok) return [];
+      return res.json();
+    },
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const { data: nodeMappings } = useQuery<any[]>({
+    queryKey: [`/api/node-mappings/${category.id}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/node-mappings/${category.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    staleTime: 1000 * 60 * 30, // 30 mins cache
+  });
+
   const { progress, isCompleted } = useMemo(() => {
     // Check map completion in user tourStatus first
     const isMapCompletedInTour = !!(
@@ -50,17 +71,15 @@ export const CategoryStarItem: React.FC<CategoryStarItemProps> = ({
       return { progress: 100, isCompleted: true };
     }
 
-    if (!categoryQuizzes || categoryQuizzes.length === 0) {
-      return { progress: 0, isCompleted: false };
-    }
-
-    const stats = calculateMasteryStats(category.id, quizzes, categoryQuizzes);
+    // Merge all quizzes pool with category quizzes so guest quizzes from other categories count
+    const mergedPool = [...(allQuizzesPool || []), ...(categoryQuizzes || [])];
+    const stats = calculateMasteryStats(category.id, quizzes, mergedPool, nodeMappings);
     let calcProgress = stats.progress;
 
     // Fallback calculation for categories without specific map node configurations
-    if (stats.totalQuizzes === 0) {
+    if (stats.totalQuizzes === 0 && categoryQuizzes && categoryQuizzes.length > 0) {
       const catBaseQuizzes = categoryQuizzes.filter((q) => q.categoryId === category.id);
-      const userProgressMap = new Map(quizzes.map((q) => [q.id, q]));
+      const userProgressMap = new Map((quizzes || []).map((q) => [q.id, q]));
       const completedCount = catBaseQuizzes.filter(
         (q) => userProgressMap.get(q.id)?.status === "completed"
       ).length;
@@ -71,7 +90,7 @@ export const CategoryStarItem: React.FC<CategoryStarItemProps> = ({
     const complete = finalProgress >= 100;
 
     return { progress: finalProgress, isCompleted: complete };
-  }, [category.id, quizzes, categoryQuizzes, currentUser]);
+  }, [category.id, quizzes, categoryQuizzes, allQuizzesPool, nodeMappings, currentUser]);
 
   return (
     <div className="flex flex-col items-center gap-1 relative group/star">
