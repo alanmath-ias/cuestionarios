@@ -70,6 +70,7 @@ import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
 import { MasteryInsignia } from "@/components/dashboard/MasteryInsignia";
 import { AwardsDialog } from "@/components/dashboard/AwardsDialog";
 import { MathTipCard } from "@/components/dashboard/MathTipCard";
+import { BonusCelebrationDialog } from "@/components/dialogs/BonusCelebrationDialog";
 
 
 interface QuizWithFeedback {
@@ -360,6 +361,7 @@ export default function UserDashboard() {
 
   // Welcome Dialog State
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+  const [showBonusDialog, setShowBonusDialog] = useState(false);
   const [lastActivity, setLastActivity] = useState<UserQuiz | null>(null);
   const [motivationalMessage, setMotivationalMessage] = useState("");
 
@@ -781,6 +783,13 @@ export default function UserDashboard() {
       }
     }
   }, [currentUser]);
+
+  // Trigger pending bonus celebration dialog
+  useEffect(() => {
+    if (currentUser?.tourStatus?.pendingBonus) {
+      setShowBonusDialog(true);
+    }
+  }, [currentUser?.tourStatus?.pendingBonus]);
 
   // Trigger AwardsDialog or training dialog from query params
   useEffect(() => {
@@ -2254,6 +2263,13 @@ export default function UserDashboard() {
             />
           )
         }
+
+        <BonusCelebrationDialog
+          open={showBonusDialog}
+          onOpenChange={setShowBonusDialog}
+          pendingBonus={currentUser?.tourStatus?.pendingBonus || null}
+          username={currentUser?.username || currentUser?.name || 'Estudiante'}
+        />
 
 
 

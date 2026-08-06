@@ -619,6 +619,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  apiRouter.post("/user/clear-pending-bonus", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const tourStatus = (user.tourStatus as any) || {};
+      const pendingBonus = tourStatus.pendingBonus;
+
+      let newCredits = user.hintCredits || 0;
+      if (pendingBonus && typeof pendingBonus.credits === 'number' && pendingBonus.credits > 0) {
+        newCredits += pendingBonus.credits;
+      }
+
+      delete tourStatus.pendingBonus;
+
+      const updatedUser = await storage.updateUser(userId, {
+        hintCredits: newCredits,
+        tourStatus,
+      });
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error clearing pending bonus:", error);
+      res.status(500).json({ message: "Error clearing pending bonus" });
+    }
+  });
+
   // Award variable bonus credits for node or family completion
   apiRouter.post("/user/award-bonus", async (req: Request, res: Response) => {
     const userId = req.session.userId;
@@ -3979,6 +4013,50 @@ Ejemplo de formato:
     } catch (error) {
       console.error("Error updating user credits:", error);
       res.status(500).json({ message: "Error updating user credits" });
+    }
+  });
+
+  // Admin: Send bonus credits to a student with a message
+  apiRouter.post("/admin/users/:userId/bonus", requireAdmin, async (req: Request, res: Response) => {
+    const targetUserId = parseInt(req.params.userId);
+    const { credits, message } = req.body;
+
+    if (isNaN(targetUserId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+    if (typeof credits !== 'number' || credits <= 0) {
+      return res.status(400).json({ message: "Credits must be a positive number" });
+    }
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ message: "A bonus message is required" });
+    }
+
+    try {
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Store pending bonus in tourStatus (credits are claimed by the student when they click "Recibir premio" in dashboard)
+      const currentTourStatus = (targetUser.tourStatus as any) || {};
+      const updatedTourStatus = {
+        ...currentTourStatus,
+        pendingBonus: {
+          credits,
+          message: message.trim(),
+          grantedAt: new Date().toISOString(),
+        }
+      };
+
+      const updatedUser = await storage.updateUser(targetUserId, {
+        tourStatus: updatedTourStatus,
+      });
+
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json({ success: true, user: userWithoutPassword, creditsPending: credits });
+    } catch (error) {
+      console.error("Error sending bonus:", error);
+      res.status(500).json({ message: "Error sending bonus" });
     }
   });
 

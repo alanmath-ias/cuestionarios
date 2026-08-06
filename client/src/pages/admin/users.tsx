@@ -16,7 +16,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Trash2, Eye, Search, BookOpen, Coins, LogIn, Gift, Trophy, ChevronRight, MessageCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Trash2, Eye, Search, BookOpen, Coins, LogIn, Gift, Trophy, ChevronRight, MessageCircle, Sparkles } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { AwardsDialog } from "@/components/dashboard/AwardsDialog";
 import { motion } from "framer-motion";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -48,6 +49,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { UserProgressDetails } from "@/components/admin/UserProgressDetails";
 import { Switch } from "@/components/ui/switch";
+
+const TreasureChestIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M4 9A3 3 0 0 1 7 6h10a3 3 0 0 1 3 3v2H4V9z" opacity="0.8"/>
+    <path d="M3 11h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9zm9 2a1.5 1.5 0 0 0-1.5 1.5c0 .54.29 1.01.72 1.27v1.46a.78.78 0 0 0 1.56 0v-1.46a1.49 1.49 0 0 0 .72-1.27A1.5 1.5 0 0 0 12 13z"/>
+  </svg>
+);
 
 export default function UsersAdmin() {
   const { data: users, isLoading } = useQuery<any[]>({
@@ -139,8 +147,35 @@ export default function UsersAdmin() {
   const [managingCategoriesUser, setManagingCategoriesUser] = useState<any>(null);
   const [managingCreditsUser, setManagingCreditsUser] = useState<any>(null);
   const [chestUser, setChestUser] = useState<any>(null);
+  const [bonusUser, setBonusUser] = useState<any>(null);
+  const [bonusCredits, setBonusCredits] = useState<number>(50);
+  const [bonusReason, setBonusReason] = useState<string>("");
   const [selectedAwardsCategory, setSelectedAwardsCategory] = useState<any>(null);
   const [creditsAmount, setCreditsAmount] = useState<string>("");
+
+  const sendBonusMutation = useMutation({
+    mutationFn: async ({ userId, credits, message }: { userId: number; credits: number; message: string }) => {
+      const res = await apiRequest("POST", `/api/admin/users/${userId}/bonus`, { credits, message });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "¡Bonus enviado con éxito! 🎉",
+        description: `Se han otorgado ${bonusCredits} créditos de premio a ${bonusUser?.username}.`,
+      });
+      setBonusUser(null);
+      setBonusCredits(50);
+      setBonusReason("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error al enviar bonus",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
   const updateCreditsMutation = useMutation({
     mutationFn: async ({ userId, credits }: { userId: number; credits: number }) => {
       await apiRequest("PATCH", `/api/users/${userId}/credits`, { credits });
@@ -238,8 +273,8 @@ export default function UsersAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 p-8 text-slate-200">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-slate-950 p-6 md:p-8 text-slate-200">
+      <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-center gap-4">
           <Link href="/admin">
             <Button variant="ghost" className="text-slate-400 hover:text-white">
@@ -268,21 +303,22 @@ export default function UsersAdmin() {
               />
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader className="bg-slate-950/50">
-                <TableRow className="border-white/5 hover:bg-transparent">
-                  <TableHead className="text-slate-400">ID</TableHead>
-                  <TableHead className="text-slate-400">Usuario</TableHead>
-                  <TableHead className="text-slate-400">Rol</TableHead>
-                  <TableHead className="text-slate-400">Créditos</TableHead>
-                  <TableHead className="text-slate-400">Total Reportes</TableHead>
-                  <TableHead className="text-slate-400">Permiso Reportar</TableHead>
-                  <TableHead className="text-slate-400">Permiso IA</TableHead>
-                  <TableHead className="text-slate-400 text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+          <CardContent className="p-0 overflow-hidden">
+            <div className="w-full overflow-x-auto">
+              <Table className="w-full min-w-[880px]">
+                <TableHeader className="bg-slate-950/50">
+                  <TableRow className="border-white/5 hover:bg-transparent">
+                    <TableHead className="w-12 text-center text-slate-400 px-2">ID</TableHead>
+                    <TableHead className="min-w-[160px] text-slate-400 px-2">Usuario</TableHead>
+                    <TableHead className="w-20 text-center text-slate-400 px-2">Rol</TableHead>
+                    <TableHead className="w-24 text-center text-slate-400 px-2">Créditos</TableHead>
+                    <TableHead className="w-24 text-center text-slate-400 px-2">Total Reportes</TableHead>
+                    <TableHead className="w-28 text-center text-slate-400 px-2">Permiso Reportar</TableHead>
+                    <TableHead className="w-24 text-center text-slate-400 px-2">Permiso IA</TableHead>
+                    <TableHead className="w-56 text-right text-slate-400 pr-3">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                 {filteredUsers?.map((user: any) => (
                   <TableRow
                     key={user.id}
@@ -290,8 +326,8 @@ export default function UsersAdmin() {
                     className={`border-white/5 hover:bg-white/5 transition-colors ${highlightId === user.id ? "bg-blue-500/20" : ""
                       }`}
                   >
-                    <TableCell className="font-mono text-slate-500">#{user.id}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-mono text-slate-500 text-center px-2">#{user.id}</TableCell>
+                    <TableCell className="px-2 py-2.5">
                       <div>
                         <div className="font-medium text-slate-200 flex items-center gap-2 flex-wrap">
                           <span>{user.username}</span>
@@ -314,7 +350,7 @@ export default function UsersAdmin() {
                         <div className="text-xs text-slate-500">{user.email || "Sin email"}</div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center px-2">
                       <Badge
                         variant={user.role === "admin" ? "default" : "secondary"}
                         className={
@@ -326,31 +362,31 @@ export default function UsersAdmin() {
                         {user.role}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-300">{user.hintCredits || 0}</span>
+                    <TableCell className="text-center px-2">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className="text-slate-300 font-semibold">{user.hintCredits || 0}</span>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10"
+                          className="h-6 w-6 text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10 p-0"
                           onClick={() => {
                             setManagingCreditsUser(user);
                             setCreditsAmount(user.hintCredits?.toString() || "0");
                           }}
                           title="Gestionar créditos"
                         >
-                          <Coins className="h-3 w-3" />
+                          <Coins className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center px-2">
                       <div className="flex justify-center">
                         <Badge variant="outline" className="bg-slate-800 text-slate-300 border-white/10">
                           {user.totalReports || 0}
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center px-2">
                       <div className="flex items-center justify-center">
                         <Switch
                           checked={user.canReport}
@@ -365,7 +401,7 @@ export default function UsersAdmin() {
                         />
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center px-2">
                       <div className="flex items-center justify-center">
                         <Switch
                           checked={user.canCreateAiQuizzes}
@@ -380,8 +416,8 @@ export default function UsersAdmin() {
                         />
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                    <TableCell className="text-right pr-3 whitespace-nowrap px-2">
+                      <div className="flex items-center justify-end gap-0.5">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -421,7 +457,20 @@ export default function UsersAdmin() {
                           title="Ver cofre de tesoros"
                           className="text-amber-400 hover:text-amber-300 hover:bg-amber-900/20"
                         >
-                          <Gift className="h-4 w-4" />
+                          <TreasureChestIcon className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setBonusUser(user);
+                            setBonusCredits(50);
+                            setBonusReason("");
+                          }}
+                          title="Otorgar bonus de premio"
+                          className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-900/20"
+                        >
+                          <Sparkles className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -483,8 +532,9 @@ export default function UsersAdmin() {
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
         <UserCategoriesDialog
           userId={managingCategoriesUser?.id ?? null}
@@ -610,6 +660,84 @@ export default function UsersAdmin() {
             isPublicView={false} // Admin has full access
           />
         )}
+
+        {/* Bonus Dialog */}
+        <Dialog open={!!bonusUser} onOpenChange={(open) => !open && setBonusUser(null)}>
+          <DialogContent className="bg-slate-900 border border-amber-500/30 text-slate-200 rounded-[2rem] max-w-md shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-amber-400" />
+                Otorgar Bonus a {bonusUser?.username}
+              </DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Premia a este estudiante enviándole créditos y un mensaje motivacional de su profesor.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-2">
+              <div className="grid gap-2">
+                <Label htmlFor="bonus-credits" className="text-slate-300 font-semibold flex items-center gap-2">
+                  <Coins className="h-4 w-4 text-amber-400" />
+                  Cantidad de Créditos
+                </Label>
+                <Input
+                  id="bonus-credits"
+                  type="number"
+                  min="1"
+                  max="10000"
+                  value={bonusCredits}
+                  onChange={(e) => setBonusCredits(Math.max(1, parseInt(e.target.value) || 0))}
+                  className="bg-slate-950 border-slate-800 text-amber-400 font-bold text-lg"
+                  placeholder="Ej. 50"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="bonus-reason" className="text-slate-300 font-semibold">
+                  Razón o Mensaje del Profesor
+                </Label>
+                <Textarea
+                  id="bonus-reason"
+                  rows={3}
+                  value={bonusReason}
+                  onChange={(e) => setBonusReason(e.target.value)}
+                  className="bg-slate-950 border-slate-800 text-slate-200 placeholder:text-slate-600 focus:border-amber-500/50"
+                  placeholder="Ej: ¡Excelente trabajo y dedicación en los cuestionarios de esta semana! Sigue así. Profe AlanMath."
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => setBonusUser(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  if (bonusUser && bonusCredits > 0 && bonusReason.trim()) {
+                    sendBonusMutation.mutate({
+                      userId: bonusUser.id,
+                      credits: bonusCredits,
+                      message: bonusReason.trim(),
+                    });
+                  }
+                }}
+                disabled={sendBonusMutation.isPending || !bonusReason.trim()}
+                className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold shadow-lg shadow-amber-500/20"
+              >
+                {sendBonusMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                Enviar Premio
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
