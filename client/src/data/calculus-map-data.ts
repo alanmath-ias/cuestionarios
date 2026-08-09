@@ -17,9 +17,20 @@ export const calculusMapNodes: ArithmeticNode[] = [
 
     // HIJOS directos de Funciones: Polinómicas, Exp y Log
     {
+        id: 'c0-fundamentos',
+        label: 'Fundamentos de Funciones',
+        level: 1,
+        type: 'basic',
+        requires: ['c0-funciones'],
+        description: 'Conceptos y fundamentos de funciones.',
+        xOffset: 0,
+        subcategoryId: 499,
+        behavior: 'quiz_list'
+    },
+    {
         id: 'c0-polinomicas',
         label: 'Polinómicas',
-        level: 1,
+        level: 2,
         type: 'basic',
         requires: ['c0-funciones'],
         description: 'Lineales, Cuadráticas, Racionales...',
@@ -30,7 +41,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c0-explog',
         label: 'Exp y Log',
-        level: 1,
+        level: 2,
         type: 'basic',
         requires: ['c0-funciones'],
         description: 'Crecimiento y logaritmos.',
@@ -43,7 +54,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c0-trigo',
         label: 'Trigonométricas',
-        level: 2,
+        level: 3,
         type: 'basic',
         requires: ['c0-funciones'],
         description: 'Funciones circulares.',
@@ -54,7 +65,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c0-radicales',
         label: 'Radicales',
-        level: 2,
+        level: 3,
         type: 'basic',
         requires: ['c0-polinomicas'],
         description: 'Funciones con raíces.',
@@ -65,7 +76,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c0-composicion',
         label: 'Composición',
-        level: 2,
+        level: 3,
         type: 'basic',
         requires: ['c0-polinomicas', 'c0-explog'],
         description: 'f(g(x))',
@@ -78,7 +89,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c0-inversas',
         label: 'Inversas',
-        level: 3,
+        level: 4,
         type: 'basic',
         requires: ['c0-trigo'],
         description: 'f^-1(x)',
@@ -89,7 +100,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c0-transformaciones',
         label: 'Transformaciones',
-        level: 3,
+        level: 4,
         type: 'critical',
         requires: ['c0-radicales', 'c0-composicion'],
         description: 'Desplazamientos y reflexiones.',
@@ -102,7 +113,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c0-simetria',
         label: 'Simetría (Par/Impar)',
-        level: 4,
+        level: 5,
         type: 'basic',
         requires: ['c0-transformaciones'],
         description: 'Funciones pares e impares.',
@@ -113,7 +124,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c0-dom-rango',
         label: 'Dominio y Rango',
-        level: 4,
+        level: 5,
         type: 'critical',
         requires: ['c0-composicion', 'c0-inversas'],
         description: 'Análisis completo.',
@@ -124,7 +135,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c0-miscelanea-funciones',
         label: 'Miscelánea Funciones',
-        level: 4,
+        level: 5,
         type: 'basic',
         requires: ['c0-dom-rango'],
         description: 'Repaso general y miscelánea de funciones.',
@@ -140,7 +151,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c1-limites-intro',
         label: 'Límites',
-        level: 5,
+        level: 6,
         type: 'critical',
         requires: ['c0-dom-rango'],
         description: 'Fundamento del Cálculo.',
@@ -152,7 +163,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c1-def-formal',
         label: 'Def. Formal',
-        level: 6,
+        level: 7,
         type: 'basic',
         requires: ['c1-limites-intro'],
         description: 'Epsilon-Delta.',
@@ -163,7 +174,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c1-algebraico',
         label: 'Cálculo Algebraico',
-        level: 6,
+        level: 7,
         type: 'basic',
         requires: ['c1-limites-intro'],
         description: 'Leyes y técnicas.',
@@ -174,7 +185,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c1-laterales',
         label: 'Límites Laterales',
-        level: 6,
+        level: 7,
         type: 'basic',
         requires: ['c1-limites-intro'],
         description: 'Límites por izquierda y derecha.',
@@ -185,7 +196,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c1-infinitos',
         label: 'Límites al Infinito',
-        level: 6,
+        level: 7,
         type: 'basic',
         requires: ['c1-limites-intro'],
         description: 'Comportamiento en los extremos.',
@@ -196,7 +207,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c1-asintotas',
         label: 'Asíntotas',
-        level: 7,
+        level: 8,
         type: 'critical',
         requires: ['c1-infinitos'],
         description: 'Verticales, Horizontales y Oblicuas.',
@@ -207,7 +218,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c1-limites-trig-esp',
         label: 'Límites Trigonométricos',
-        level: 7,
+        level: 8,
         type: 'basic',
         requires: ['c1-algebraico'],
         description: 'Especiales y emparedado.',
@@ -220,7 +231,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c1-2-continuidad',
         label: 'Continuidad',
-        level: 8,
+        level: 9,
         type: 'critical',
         requires: ['c1-def-formal', 'c1-algebraico', 'c1-laterales', 'c1-asintotas', 'c1-limites-trig-esp'],
         description: 'Puente a Derivadas.',
@@ -235,7 +246,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c2-derivadas',
         label: 'Derivadas',
-        level: 9,
+        level: 10,
         type: 'critical',
         requires: ['c1-2-continuidad'],
         description: 'Cálculo Diferencial.',
@@ -248,7 +259,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c3-derivada-origen',
         label: 'Definición Derivada',
-        level: 10,
+        level: 11,
         type: 'basic',
         requires: ['c2-derivadas'],
         description: 'Tasa Instantánea.',
@@ -259,7 +270,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c2-nociones',
         label: 'Nociones Básicas',
-        level: 10,
+        level: 11,
         type: 'basic',
         requires: ['c2-derivadas'],
         description: 'Concepto.',
@@ -270,7 +281,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c2-diferenciabilidad',
         label: 'Diferenciabilidad',
-        level: 10,
+        level: 11,
         type: 'critical',
         requires: ['c3-derivada-origen'],
         description: 'Esquinas, cúspides y continuidad.',
@@ -283,7 +294,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c2-reglas',
         label: 'Reglas Básicas',
-        level: 11,
+        level: 12,
         type: 'basic',
         requires: ['c2-nociones'],
         description: 'Potencia, Producto, Cociente.',
@@ -294,7 +305,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c2-trigo',
         label: 'Trigonométricas',
-        level: 11,
+        level: 12,
         type: 'basic',
         requires: ['c2-reglas'],
         description: 'Sen, Cos, Tan...',
@@ -305,7 +316,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c2-explog',
         label: 'Exp y Log',
-        level: 11,
+        level: 12,
         type: 'basic',
         requires: ['c2-reglas'],
         description: 'e^x, ln(x).',
@@ -316,7 +327,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c2-inversas',
         label: 'Inv / Trig Inv',
-        level: 11,
+        level: 12,
         type: 'applied',
         requires: ['c2-trigo'],
         description: 'Arcoseno...',
@@ -329,7 +340,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c2-implicita',
         label: 'Dif. Implícita',
-        level: 12,
+        level: 13,
         type: 'applied',
         requires: ['c2-cadena'],
         description: 'dy/dx.',
@@ -340,7 +351,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c2-cadena',
         label: 'Regla Cadena',
-        level: 12,
+        level: 13,
         type: 'critical',
         requires: ['c2-reglas'],
         description: 'Composición f(g(x)).',
@@ -351,7 +362,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c2-hiper',
         label: 'Hiperbólicas',
-        level: 12,
+        level: 13,
         type: 'applied',
         requires: ['c2-explog', 'c2-cadena'],
         description: 'sinh, cosh.',
@@ -364,7 +375,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c2-orden-superior',
         label: 'Orden Superior',
-        level: 13,
+        level: 14,
         type: 'basic',
         requires: ['c2-cadena'],
         description: 'Derivadas sucesivas.',
@@ -375,7 +386,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c2-dif-logaritmica',
         label: 'Dif. Logarítmica',
-        level: 13,
+        level: 14,
         type: 'applied',
         requires: ['c2-implicita', 'c2-explog'],
         description: 'Derivación de f(x)^g(x).',
@@ -390,7 +401,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c3-aplicaciones',
         label: 'Aplicaciones',
-        level: 14,
+        level: 15,
         type: 'critical',
         requires: [],
         description: 'Uso de la derivada.',
@@ -402,7 +413,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c3-tasas',
         label: 'Tasas Relacionadas',
-        level: 15,
+        level: 16,
         type: 'applied',
         requires: ['c3-aplicaciones'],
         description: 'Cambio temporal.',
@@ -413,7 +424,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c6-2-valor-medio',
         label: 'Valor Medio',
-        level: 15,
+        level: 16,
         type: 'basic',
         requires: ['c3-aplicaciones'],
         description: 'Teorema Rolle.',
@@ -424,7 +435,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c3-aprox',
         label: 'Aprox Lineal',
-        level: 15,
+        level: 16,
         type: 'applied',
         requires: ['c3-aplicaciones'],
         description: 'Diferenciales.',
@@ -437,7 +448,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c3-criterios',
         label: 'Criterios 1ra/2da',
-        level: 16,
+        level: 17,
         type: 'critical',
         requires: ['c3-tasas', 'c6-2-valor-medio', 'c3-aprox'],
         description: 'Análisis gráfico.',
@@ -448,7 +459,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c3-maxmin',
         label: 'Máximos y Mínimos',
-        level: 16,
+        level: 17,
         type: 'basic',
         requires: ['c3-tasas', 'c6-2-valor-medio', 'c3-aprox'],
         description: 'Extremos.',
@@ -461,7 +472,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c3-trazado-curvas',
         label: 'Trazado de Curvas',
-        level: 17,
+        level: 18,
         type: 'critical',
         requires: ['c3-criterios', 'c3-maxmin'],
         description: 'Análisis cualitativo y gráfico.',
@@ -474,7 +485,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c3-optimizacion',
         label: 'Optimización',
-        level: 18,
+        level: 19,
         type: 'applied',
         requires: ['c3-trazado-curvas'],
         description: 'Problemas reales.',
@@ -487,7 +498,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c3-lhopital',
         label: 'Regla L\'Hôpital',
-        level: 19,
+        level: 20,
         type: 'evaluation',
         requires: ['c3-criterios'],
         description: 'Indeterminaciones.',
@@ -498,7 +509,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c3-newton',
         label: 'Método Newton',
-        level: 19,
+        level: 20,
         type: 'applied',
         requires: ['c3-optimizacion'],
         description: 'Raíces.',
@@ -511,7 +522,7 @@ export const calculusMapNodes: ArithmeticNode[] = [
     {
         id: 'c-mastery',
         label: 'Maestría en Cálculo',
-        level: 20,
+        level: 21,
         type: 'evaluation',
         requires: [],
         description: 'El desafío definitivo de todo el módulo.',

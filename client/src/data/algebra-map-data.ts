@@ -778,7 +778,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         requires: ['a12-funciones'],
         description: 'Dominio y rango.',
         xOffset: -45,
-        subcategoryId: 431,
+        subcategoryId: 498,
         behavior: 'quiz_list'
     },
     {
@@ -786,7 +786,7 @@ export const algebraMapNodes: ArithmeticNode[] = [
         label: 'Maestría en Álgebra',
         level: 37,
         type: 'evaluation',
-        requires: ['a12-1-lineal', 'a12-2-concepto'],
+        requires: [],
         description: 'El desafío definitivo de todo el módulo.',
         xOffset: 0,
         behavior: 'quiz_list'
