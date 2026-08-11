@@ -16,11 +16,14 @@ export function cleanAiJson(content: string) {
   
   cleaned = cleaned.trim();
 
-  // 2. Corregir escapes de barra invertida comunes en LaTeX que rompen JSON.parse
+  // 2. Corregir escapes de barra invertida en LaTeX que rompen JSON.parse.
+  // Solo preservamos \" \\ \/ y \uXXXX (escapes JSON reales).
+  // NO excluimos \t \n \r \b \f porque en matemáticas son siempre comandos
+  // LaTeX (\times, \to, \nabla, \beta, \frac, \begin...) y nunca control chars.
   try {
     return JSON.parse(cleaned);
   } catch (initialError) {
-    const fixedContent = cleaned.replace(/\\(?![\\\/bfnrtu])/g, '\\\\');
+    const fixedContent = cleaned.replace(/\\(?!["\\/u])/g, '\\\\');
     try {
       return JSON.parse(fixedContent);
     } catch (secondError) {
