@@ -432,10 +432,10 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
   if (!hasContent) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 pointer-events-none">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 lg:p-6 pointer-events-none">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950/85 backdrop-blur-md pointer-events-auto" />
 
-      <div className="relative z-10 w-full max-w-2xl md:max-w-3xl lg:max-w-4xl pointer-events-auto">
+      <div className="relative z-10 w-full max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl pointer-events-auto">
         <AnimatePresence mode="popLayout">
 
           {/* ── MANAGED GAME ARENA ───────────────────────────────────── */}
@@ -468,7 +468,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                 <div className="flex items-center justify-between relative z-10 w-full px-4 mb-4">
                     <div className="flex flex-col items-center flex-1">
                         <span className="text-[9px] text-blue-400 font-black uppercase mb-1">TÚ</span>
-                        <motion.span key={`score-${myScore}`} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-3xl sm:text-4xl lg:text-6xl font-black text-white">{myScore}</motion.span>
+                        <motion.span key={`score-${myScore}`} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-3xl sm:text-4xl lg:text-6xl xl:text-7xl font-black text-white">{myScore}</motion.span>
                     </div>
 
                     <div className="px-6">
@@ -481,7 +481,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
 
                     <div className="flex flex-col items-center flex-1">
                         <span className="text-[9px] text-red-500 font-black uppercase mb-1">{displayOppName}</span>
-                        <motion.span key={`other-score-${displayOppScore}`} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-3xl sm:text-4xl lg:text-6xl font-black text-white">{displayOppScore}</motion.span>
+                        <motion.span key={`other-score-${displayOppScore}`} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="text-3xl sm:text-4xl lg:text-6xl xl:text-7xl font-black text-white">{displayOppScore}</motion.span>
                     </div>
                 </div>
 
@@ -511,7 +511,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                     <Badge className="bg-slate-800 text-slate-400 border-white/10 mb-3 px-4 py-1 uppercase tracking-[0.2em] text-[8px] font-black rounded-full ring-1 ring-white/5">
                         Pregunta {(managedChallenge.currentQuestion?.index ?? 0) + 1} / {managedChallenge.questionsCount}
                     </Badge>
-                    <div className={`text-lg sm:text-xl lg:text-2xl font-bold text-white text-center leading-[1.1] max-w-lg md:max-w-2xl mb-6 transition-all duration-700 ${blurActive ? 'blur-2xl grayscale opacity-30 select-none scale-95 pointer-events-none' : ''}`}>
+                    <div className={`text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-white text-center leading-[1.1] max-w-lg md:max-w-2xl mb-6 transition-all duration-700 ${blurActive ? 'blur-2xl grayscale opacity-30 select-none scale-95 pointer-events-none' : ''}`}>
                         <ContentRenderer content={managedChallenge.currentQuestion?.content || ""} tight={true} />
                     </div>
                     {blurActive && (
@@ -1228,7 +1228,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                         key={isSpectator ? `challenger-${challengerScore}` : `me-${myScore}`} 
                         initial={{ scale: 1.4 }} 
                         animate={{ scale: 1 }} 
-                        className="text-2xl sm:text-4xl lg:text-6xl font-black text-white"
+                        className="text-2xl sm:text-4xl lg:text-6xl xl:text-7xl font-black text-white"
                     >
                         {isSpectator ? challengerScore : myScore}
                     </motion.span>
@@ -1251,7 +1251,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                         key={isSpectator ? `receiver-${receiverScore}` : `opp-${oppScore}`} 
                         initial={{ scale: 1.4 }} 
                         animate={{ scale: 1 }} 
-                        className="text-2xl sm:text-4xl lg:text-6xl font-black text-white"
+                        className="text-2xl sm:text-4xl lg:text-6xl xl:text-7xl font-black text-white"
                     >
                       {isSpectator ? receiverScore : oppScore}
                     </motion.span>
@@ -1306,7 +1306,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                     </AnimatePresence>
                     
                     {/* RESTORED: Question Content with Blur Effect */}
-                    <div className={`text-base md:text-xl lg:text-2xl font-bold text-white mb-4 md:mb-6 leading-tight text-center transition-all duration-700 ${blurActive ? 'blur-xl grayscale opacity-30 select-none scale-95 pointer-events-none' : ''}`}>
+                    <div className={`text-base md:text-xl lg:text-2xl xl:text-3xl font-bold text-white mb-4 md:mb-6 leading-tight text-center transition-all duration-700 ${blurActive ? 'blur-xl grayscale opacity-30 select-none scale-95 pointer-events-none' : ''}`}>
                         <ContentRenderer content={duel.currentQuestion.content} tight={true} />
                     </div>
 
