@@ -1,5 +1,4 @@
-
-export interface ArithmeticNode {
+﻿export interface ArithmeticNode {
     id: string;
     label: string;
     level: number;
@@ -14,14 +13,24 @@ export interface ArithmeticNode {
 
 export const arithmeticMapNodes: ArithmeticNode[] = [
     // ==========================================
-    // NIVEL 0: CLASIFICACIÓN
+    // NIVEL 0: LOS NÚMEROS
     // ==========================================
     {
-        id: 'n0-clasificacion',
-        label: 'Clasificación de los Números',
+        id: 'n0-los-numeros-container',
+        label: 'Los Números',
         level: 0,
         type: 'basic',
         requires: [],
+        description: 'Los cimientos de la matemática y los conjuntos numéricos.',
+        xOffset: 0,
+        behavior: 'container'
+    },
+    {
+        id: 'n0-clasificacion',
+        label: 'Clasificación de los Números',
+        level: 1,
+        type: 'basic',
+        requires: ['n0-los-numeros-container'],
         description: 'Mapa general de los conjuntos numéricos.',
         xOffset: 0,
         subcategoryId: 300,
@@ -29,27 +38,26 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL 1: SISTEMA NUMÉRICO
+    // NIVEL 2: SISTEMA NUMÉRICO (NÚMEROS NATURALES)
     // ==========================================
     {
         id: 'n1-naturales',
         label: 'Números Naturales',
-        level: 1,
+        level: 2,
         type: 'basic',
         requires: ['n0-clasificacion'],
         description: 'Los bloques de construcción básicos del conteo.',
         xOffset: 0,
-        // subcategoryId removed (parent)
         behavior: 'container'
     },
 
     // ==========================================
-    // NIVEL 1: OPERACIONES BÁSICAS
+    // NIVEL 3: OPERACIONES BÁSICAS
     // ==========================================
     {
         id: 'n2-suma',
         label: 'Suma y Resta',
-        level: 2,
+        level: 3,
         type: 'basic',
         requires: ['n1-naturales'],
         description: 'Adición y sustracción fundamental.',
@@ -60,7 +68,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n2-multi',
         label: 'Multiplicación y División',
-        level: 2,
+        level: 3,
         type: 'critical',
         requires: ['n1-naturales'],
         description: 'Operaciones multiplicativas básicas.',
@@ -71,7 +79,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n0-recta',
         label: 'Recta Numérica y Comparación',
-        level: 2,
+        level: 3,
         type: 'basic',
         requires: ['n1-naturales'],
         description: 'Orden en los naturales.',
@@ -80,11 +88,11 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
 
-    // Grandchildren of Naturales
+    // Grandchildren of Naturales (Nivel 4)
     {
         id: 'n0-tablas-mult',
         label: 'Tablas de Multiplicar',
-        level: 3,
+        level: 4,
         type: 'basic',
         requires: ['n2-multi'],
         description: 'Práctica y dominio de las tablas de multiplicar.',
@@ -95,7 +103,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n0-problemas',
         label: 'Solución de Problemas',
-        level: 3,
+        level: 4,
         type: 'applied',
         requires: ['n2-suma', 'n2-multi', 'n0-recta'],
         description: 'Aplicación de operaciones básicas.',
@@ -106,7 +114,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n0-jerarquia-nat',
         label: 'Jerarquía - Números Naturales',
-        level: 3,
+        level: 4,
         type: 'basic',
         requires: ['n2-suma', 'n2-multi', 'n0-recta'],
         description: 'Jerarquía de operaciones (PEMDAS/BODMAS) con números naturales.',
@@ -115,27 +123,25 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
 
-
     // ==========================================
-    // NIVEL 2: ENTEROS
+    // NIVEL 5: NÚMEROS ENTEROS
     // ==========================================
     {
         id: 'n4-enteros',
         label: 'Números Enteros',
-        level: 4,
+        level: 5,
         type: 'basic',
         requires: ['n0-problemas', 'n0-jerarquia-nat'],
         description: 'El mundo de los números negativos.',
         xOffset: 0,
-        // subcategoryId removed (parent)
         behavior: 'container'
     },
 
-    // Children of Enteros
+    // Children of Enteros (Nivel 6)
     {
         id: 'n1-recta',
         label: 'Recta Numérica y Comparación',
-        level: 5,
+        level: 6,
         type: 'basic',
         requires: ['n4-enteros'],
         description: 'Ubicación y orden en la línea.',
@@ -146,7 +152,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n3-jerarquia',
         label: 'Jerarquía y Propiedades',
-        level: 5,
+        level: 6,
         type: 'basic',
         requires: ['n4-enteros'],
         description: 'Orden correcto (PEMDAS) y leyes numéricas.',
@@ -157,7 +163,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n4-ops-enteros',
         label: 'Operaciones Enteros',
-        level: 5,
+        level: 6,
         type: 'basic',
         requires: ['n4-enteros'],
         description: 'Suma, resta y mult con signos.',
@@ -167,11 +173,11 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
 
-    // Grandchildren of Enteros
+    // Grandchildren of Enteros (Nivel 7)
     {
         id: 'n4-valor-absoluto',
         label: 'Valor Absoluto',
-        level: 6,
+        level: 7,
         type: 'basic',
         requires: ['n1-recta'],
         description: 'Distancia al origen.',
@@ -182,7 +188,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n4-problemas-enteros',
         label: 'Problemas con Enteros',
-        level: 6,
+        level: 7,
         type: 'critical',
         requires: ['n4-ops-enteros'],
         description: 'Ejercicios de aplicación con enteros.',
@@ -192,25 +198,49 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL 7: DIVISIBILIDAD Y FACTORIZACIÓN
+    // NIVEL 8 y 9: NÚMEROS ROMANOS
+    // ==========================================
+    {
+        id: 'n4-romanos-container',
+        label: 'Números Romanos',
+        level: 8,
+        type: 'basic',
+        requires: ['n4-valor-absoluto', 'n4-problemas-enteros'],
+        description: 'El antiguo sistema numérico basado en letras del alfabeto.',
+        xOffset: 0,
+        behavior: 'container'
+    },
+    {
+        id: 'n4-escritura-romanos',
+        label: 'Escritura de Números Romanos',
+        level: 9,
+        type: 'basic',
+        requires: ['n4-romanos-container'],
+        description: 'Reglas y símbolos para escribir y leer números romanos.',
+        xOffset: 0,
+        subcategoryId: 500,
+        behavior: 'quiz_list'
+    },
+
+    // ==========================================
+    // NIVEL 10: DIVISIBILIDAD Y FACTORIZACIÓN
     // ==========================================
     {
         id: 'n5-divisibilidad',
         label: 'Divisibilidad y Factorización',
-        level: 7,
+        level: 10,
         type: 'basic',
-        requires: ['n4-valor-absoluto', 'n4-problemas-enteros'],
-        description: 'Propiedades de los números and descomposición.',
+        requires: ['n4-escritura-romanos'],
+        description: 'Propiedades de los números y descomposición.',
         xOffset: 0,
-        // subcategoryId removed (parent)
         behavior: 'container'
     },
 
-    // Children of Divisibilidad
+    // Children of Divisibilidad (Nivel 11)
     {
         id: 'n6-primos',
         label: 'Primos, múltiplos y divisores',
-        level: 8,
+        level: 11,
         type: 'basic',
         requires: ['n5-divisibilidad'],
         description: 'Conceptos básicos de divisibilidad.',
@@ -221,7 +251,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n6-criterios',
         label: 'Criterios de Divisibilidad',
-        level: 8,
+        level: 11,
         type: 'basic',
         requires: ['n5-divisibilidad'],
         description: 'Reglas para dividir rápidamente.',
@@ -232,7 +262,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n6-descomposicion',
         label: 'Descomposición Factorial',
-        level: 8,
+        level: 11,
         type: 'basic',
         requires: ['n5-divisibilidad'],
         description: 'Factores primos de un número.',
@@ -241,11 +271,11 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
 
-    // Grandchildren of Divisibilidad
+    // Grandchildren of Divisibilidad (Nivel 12)
     {
         id: 'n7-mcd',
         label: 'MCM y MCD',
-        level: 9,
+        level: 12,
         type: 'basic',
         requires: ['n6-descomposicion'],
         description: 'Cálculo de múltiplos y divisores comunes.',
@@ -256,7 +286,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n7-problemas-aplicacion',
         label: 'Problemas de Aplicación',
-        level: 9,
+        level: 12,
         type: 'applied',
         requires: ['n6-descomposicion'],
         description: 'Problemas de MCM y MCD.',
@@ -266,23 +296,22 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL 10: POTENCIAS Y RAÍCES
+    // NIVEL 13: POTENCIAS Y RAÍCES
     // ==========================================
     {
         id: 'n9-main',
         label: 'Potencias, Raíces y Logaritmos',
-        level: 10,
+        level: 13,
         type: 'basic',
         requires: ['n7-mcd', 'n7-problemas-aplicacion'],
         description: 'Exponentes y radicales.',
         xOffset: 0,
-        // subcategoryId removed (parent)
         behavior: 'container'
     },
     {
         id: 'n9-logaritmos',
         label: 'Logaritmos',
-        level: 11,
+        level: 14,
         type: 'basic',
         requires: ['n9-main'],
         description: 'Concepto y propiedades de los logaritmos.',
@@ -293,7 +322,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n9-potencias',
         label: 'Potencias',
-        level: 11,
+        level: 14,
         type: 'basic',
         requires: ['n9-main'],
         description: 'Leyes de exponentes.',
@@ -304,7 +333,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n9-radicales',
         label: 'Radicales',
-        level: 11,
+        level: 14,
         type: 'critical',
         requires: ['n9-main'],
         description: 'Raíces y racionalización.',
@@ -314,24 +343,23 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL 12: FRACCIONES
+    // NIVEL 15: FRACCIONES
     // ==========================================
     {
         id: 'n5-fracciones',
         label: 'Fracciones\n(Números Racionales)',
-        level: 12,
+        level: 15,
         type: 'critical',
         requires: ['n9-potencias', 'n9-radicales'],
         description: 'Partes de un todo.',
         xOffset: 0,
-        // subcategoryId removed (parent)
         behavior: 'container'
     },
-    // Children of Fracciones (Level 12)
+    // Children of Fracciones (Nivel 16)
     {
         id: 'n5-concepto',
         label: 'Concepto, dibujos',
-        level: 13,
+        level: 16,
         type: 'basic',
         requires: ['n5-fracciones'],
         description: 'Numerador y denominador.',
@@ -342,7 +370,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n5-equiv',
         label: 'Fracciones Equivalentes',
-        level: 13,
+        level: 16,
         type: 'basic',
         requires: ['n5-fracciones'],
         description: 'Simplificación y amplificación.',
@@ -353,7 +381,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n5-mixtos',
         label: 'Números Mixtos',
-        level: 13,
+        level: 16,
         type: 'basic',
         requires: ['n5-fracciones'],
         description: 'Enteros y fracciones combinados.',
@@ -362,11 +390,11 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
 
-    // Grandchildren of Fracciones (Level 12)
+    // Grandchildren of Fracciones (Nivel 17)
     {
         id: 'n5-sumas-restas',
         label: 'Sumas y Restas',
-        level: 14,
+        level: 17,
         type: 'critical',
         requires: ['n5-concepto', 'n5-equiv', 'n5-mixtos'],
         description: 'Adición y sustracción de fracciones.',
@@ -377,10 +405,10 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n5-multi-div',
         label: 'Productos y Divisiones',
-        level: 14,
+        level: 17,
         type: 'basic',
         requires: ['n5-concepto', 'n5-equiv', 'n5-mixtos'],
-        description: 'Multiplicación and división de fracciones.',
+        description: 'Multiplicación y división de fracciones.',
         xOffset: 0,
         subcategoryId: 319,
         behavior: 'quiz_list'
@@ -388,20 +416,20 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n5-combinadas',
         label: 'Operaciones Combinadas',
-        level: 14,
+        level: 17,
         type: 'basic',
         requires: ['n5-concepto', 'n5-equiv', 'n5-mixtos'],
-        description: 'Mezcla de sumas, productos y parentesis.',
+        description: 'Mezcla de sumas, productos y paréntesis.',
         xOffset: 60,
         subcategoryId: 320,
         behavior: 'quiz_list'
     },
 
-    // Great-Grandchild of Fracciones (Level 13)
+    // Great-Grandchild of Fracciones (Nivel 18)
     {
         id: 'n13-problemas-frac',
         label: 'Problemas con Fracciones',
-        level: 15,
+        level: 18,
         type: 'applied',
         requires: ['n5-sumas-restas', 'n5-multi-div', 'n5-combinadas'],
         description: 'Ejercicios de aplicación con fracciones.',
@@ -411,12 +439,12 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL 16: NÚMEROS CON DECIMALES
+    // NIVEL 19: NÚMEROS CON DECIMALES
     // ==========================================
     {
         id: 'n6-decimales',
         label: 'Números con decimales',
-        level: 16,
+        level: 19,
         type: 'basic',
         requires: ['n13-problemas-frac'],
         description: 'Números con punto decimal.',
@@ -425,11 +453,11 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         behavior: 'container'
     },
 
-    // Children of Decimales (Level 17)
+    // Children of Decimales (Nivel 20)
     {
         id: 'n6-comp',
         label: 'Comparación de Decimales y Redondeo',
-        level: 17,
+        level: 20,
         type: 'basic',
         requires: ['n6-decimales'],
         description: 'Orden, magnitud y redondeo decimal.',
@@ -440,10 +468,10 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n6-suma-resta',
         label: 'Suma y Resta',
-        level: 17,
+        level: 20,
         type: 'basic',
         requires: ['n6-decimales'],
-        description: 'Adición and sustracción decimal.',
+        description: 'Adición y sustracción decimal.',
         xOffset: 0,
         subcategoryId: 323,
         behavior: 'quiz_list'
@@ -451,20 +479,20 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n6-prod-div',
         label: 'Producto y División',
-        level: 17,
+        level: 20,
         type: 'critical',
         requires: ['n6-decimales'],
-        description: 'Multiplicación and división decimal.',
+        description: 'Multiplicación y división decimal.',
         xOffset: 50,
         subcategoryId: 324,
         behavior: 'quiz_list'
     },
 
-    // Grandchildren of Decimales (Level 18 & 19)
+    // Grandchildren of Decimales (Nivel 21 & 22)
     {
         id: 'n6-problemas',
         label: 'Problemas de Aplicación',
-        level: 18,
+        level: 21,
         type: 'applied',
         requires: ['n6-comp', 'n6-suma-resta', 'n6-prod-div'],
         description: 'Ejercicios reales con decimales.',
@@ -475,10 +503,10 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n6-notacion',
         label: 'Notación Científica',
-        level: 18,
+        level: 21,
         type: 'basic',
         requires: ['n6-prod-div'],
-        description: 'Potencias de 10 para números grandes and pequeños.',
+        description: 'Potencias de 10 para números grandes y pequeños.',
         xOffset: 40,
         subcategoryId: 325,
         behavior: 'quiz_list'
@@ -486,7 +514,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n6-decimales-frac',
         label: 'Decimales y Fracciones',
-        level: 19,
+        level: 22,
         type: 'basic',
         requires: ['n6-problemas', 'n6-notacion'],
         description: 'Conversión entre sistemas.',
@@ -496,23 +524,22 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL 20: PLANO CARTESIANO 
+    // NIVEL 23: PLANO CARTESIANO 
     // ==========================================
     {
         id: 'n10-plano-parent',
         label: 'Plano Cartesiano',
-        level: 20,
+        level: 23,
         type: 'basic',
         requires: ['n6-decimales-frac'],
-        description: 'Coordenadas and el sistema cartesiano.',
+        description: 'Coordenadas y el sistema cartesiano.',
         xOffset: 0,
-        // subcategoryId removed (parent)
         behavior: 'container'
     },
     {
         id: 'n10-puntos',
         label: 'Puntos en el Plano',
-        level: 21,
+        level: 24,
         type: 'basic',
         requires: ['n10-plano-parent'],
         description: 'Ubicación de coordenadas (x, y).',
@@ -523,38 +550,37 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n10-plano',
         label: 'Transformaciones Rígidas',
-        level: 21,
+        level: 24,
         type: 'critical',
         requires: ['n10-plano-parent'],
-        description: 'Rotación, traslación and simetría.',
+        description: 'Rotación, traslación y simetría.',
         xOffset: 40,
         subcategoryId: 11,
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // NIVEL 22: REGLA DE TRES 
+    // NIVEL 25: REGLA DE TRES 
     // ==========================================
     {
         id: 'n7-regla-tres',
         label: 'Regla de Tres',
-        level: 22,
+        level: 25,
         type: 'basic',
         requires: ['n10-puntos', 'n10-plano'],
         description: 'Relaciones de proporcionalidad.',
         xOffset: 0,
-        // subcategoryId removed (parent)
         behavior: 'container'
     },
 
-    // Children of Regla de Tres (Level 23)
+    // Children of Regla de Tres (Nivel 26)
     {
         id: 'n7-razones-prop',
         label: 'Razones y Proporciones',
-        level: 23,
+        level: 26,
         type: 'basic',
         requires: ['n7-regla-tres'],
-        description: 'Comparación and escala.',
+        description: 'Comparación y escala.',
         xOffset: -60,
         subcategoryId: 330,
         behavior: 'quiz_list'
@@ -562,10 +588,10 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n7-simple',
         label: 'Simple',
-        level: 23,
+        level: 26,
         type: 'basic',
         requires: ['n7-regla-tres'],
-        description: 'Proporcionalidad directa and inversa.',
+        description: 'Proporcionalidad directa e inversa.',
         xOffset: 0,
         subcategoryId: 331,
         behavior: 'quiz_list'
@@ -573,7 +599,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n7-compuesta',
         label: 'Compuesta',
-        level: 23,
+        level: 26,
         type: 'critical',
         requires: ['n7-regla-tres'],
         description: 'Múltiples magnitudes relacionadas.',
@@ -582,11 +608,11 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
 
-    // Grandchild of Regla de Tres (Level 24)
+    // Grandchild of Regla de Tres (Nivel 27)
     {
         id: 'n7-porc-calc',
         label: 'Cálculo de Porcentajes',
-        level: 24,
+        level: 27,
         type: 'basic',
         requires: ['n7-simple', 'n7-compuesta'],
         description: 'Aplicación de la regla de tres al %.',
@@ -596,23 +622,22 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL 25: CONVERSIÓN DE UNIDADES
+    // NIVEL 28: CONVERSIÓN DE UNIDADES
     // ==========================================
     {
         id: 'n11-conversion-parent',
         label: 'Conversión de Unidades',
-        level: 25,
+        level: 28,
         type: 'basic',
         requires: ['n7-porc-calc'],
         description: 'Medidas y sus transformaciones.',
         xOffset: 0,
-        // subcategoryId removed (parent)
         behavior: 'container'
     },
     {
         id: 'n11-longitud',
         label: 'Unidades de Longitud',
-        level: 26,
+        level: 29,
         type: 'basic',
         requires: ['n11-conversion-parent'],
         description: 'Metros, kilómetros y más.',
@@ -623,7 +648,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n11-masa',
         label: 'Unidades de Masa',
-        level: 26,
+        level: 29,
         type: 'basic',
         requires: ['n11-conversion-parent'],
         description: 'Gramos, kilogramos y toneladas.',
@@ -634,7 +659,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n11-volumen',
         label: 'Unidades de Volumen',
-        level: 26,
+        level: 29,
         type: 'basic',
         requires: ['n11-conversion-parent'],
         description: 'Litros, mililitros y capacidad.',
@@ -645,7 +670,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n11-tiempo',
         label: 'Unidades de Tiempo',
-        level: 27,
+        level: 30,
         type: 'basic',
         requires: ['n11-longitud', 'n11-masa', 'n11-volumen'],
         description: 'Horas, minutos y segundos.',
@@ -655,23 +680,22 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL 28: PATRONES ARITMÉTICOS
+    // NIVEL 31: PATRONES ARITMÉTICOS
     // ==========================================
     {
         id: 'n12-patrones-parent',
         label: 'Patrones Aritméticos',
-        level: 28,
+        level: 31,
         type: 'basic',
         requires: ['n11-tiempo'],
         description: 'Secuencias y regularidades numéricas.',
         xOffset: 0,
-        // subcategoryId removed (parent)
         behavior: 'container'
     },
     {
         id: 'n12-prog-arit',
         label: 'Progresión Aritmética',
-        level: 29,
+        level: 32,
         type: 'basic',
         requires: ['n12-patrones-parent'],
         description: 'Sucesiones con diferencia constante.',
@@ -682,7 +706,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n12-prog-geom',
         label: 'Progresión Geométrica',
-        level: 29,
+        level: 32,
         type: 'basic',
         requires: ['n12-patrones-parent'],
         description: 'Sucesiones con razón constante.',
@@ -690,24 +714,24 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         subcategoryId: 341,
         behavior: 'quiz_list'
     },
+
     // ==========================================
-    // NIVEL 30: APLICACIONES FINANCIERAS
+    // NIVEL 33: APLICACIONES FINANCIERAS
     // ==========================================
     {
         id: 'n14-aplicaciones-parent',
         label: 'Aplicaciones',
-        level: 30,
+        level: 33,
         type: 'applied',
         requires: ['n12-prog-arit', 'n12-prog-geom'],
         description: 'Matemáticas del dinero y el crecimiento.',
         xOffset: 0,
-        // subcategoryId removed (parent)
         behavior: 'container'
     },
     {
         id: 'n14-interes-simple',
         label: 'Interés Simple',
-        level: 31,
+        level: 34,
         type: 'applied',
         requires: ['n14-aplicaciones-parent'],
         description: 'Crecimiento lineal del capital.',
@@ -718,7 +742,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
     {
         id: 'n14-interes-compuesto',
         label: 'Interés Compuesto',
-        level: 31,
+        level: 34,
         type: 'critical',
         requires: ['n14-aplicaciones-parent'],
         description: 'Interés sobre interés (crecimiento exponencial).',
@@ -727,11 +751,11 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
 
-    // Final Mastery Evaluation (Level 32)
+    // Final Mastery Evaluation (Nivel 35)
     {
         id: 'n13-mastery',
         label: 'Maestría en Aritmética',
-        level: 32,
+        level: 35,
         type: 'evaluation',
         requires: [],
         description: 'El desafío definitivo de todo el módulo.',

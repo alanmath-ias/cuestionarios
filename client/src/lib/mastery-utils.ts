@@ -25,7 +25,19 @@ export interface MasteryStats {
     silverMedals: number;   // Quizzes completed (only those in map)
     goldMedals: number;     // Children Nodes (quiz_list) completed
     silverTrophies: number; // Parent Nodes (container) completed
-    goldTrophies: number;   // Full Map completed
+    goldTrophies: number;   // Full Map completed (real-time)
+
+    // Copa persistida: true si el mapa fue completado alguna vez, aunque luego
+    // el admin haya añadido contenido nuevo sin completar.
+    earnedGoldTrophy: boolean;
+
+    // true cuando el mapa fue ganado previamente PERO ahora hay nodos sin completar
+    // (porque el admin añadió quizzes nuevos después de que el estudiante completó el mapa)
+    hasPendingNewContent: boolean;
+
+    // Labels de los nodos con contenido nuevo (para tooltip y scroll)
+    newContentNodes: string[];
+
     progress: number;       // Percent
     totalQuizzes: number;
     completedQuizzes: number;
@@ -82,15 +94,23 @@ export function calculateMasteryStats(
     categoryId: number,
     allQuizzes: any[], // User-quizzes with status
     availableQuizzes?: Quiz[], // All base quizzes in platform
-    nodeMappings?: any[]
+    nodeMappings?: any[],
+    wasPreviouslyCompleted?: boolean // true si tourStatus.completedMaps[categoryId] existe
 ): MasteryStats {
+    const emptyResult: MasteryStats = {
+        silverMedals: 0, goldMedals: 0, silverTrophies: 0, goldTrophies: 0,
+        earnedGoldTrophy: !!wasPreviouslyCompleted,
+        hasPendingNewContent: false,
+        newContentNodes: [],
+        progress: wasPreviouslyCompleted ? 100 : 0,
+        totalQuizzes: 0, completedQuizzes: 0, totalAverage: 0,
+        bestQuizzes: [], worstQuizzes: [],
+        strongestNodes: [], weakestNodes: [], strongestUnits: [], weakestUnits: [], pendingNodes: []
+    };
+
     const rawNodes = MAP_DATA[categoryId] || [];
     const nodes = rawNodes.filter(n => !n.id.endsWith('mastery'));
-    if (nodes.length === 0) return { 
-        silverMedals: 0, goldMedals: 0, silverTrophies: 0, goldTrophies: 0, progress: 0, 
-        totalQuizzes: 0, completedQuizzes: 0, totalAverage: 0, bestQuizzes: [], worstQuizzes: [], 
-        strongestNodes: [], weakestNodes: [], strongestUnits: [], weakestUnits: [], pendingNodes: [] 
-    };
+    if (nodes.length === 0) return emptyResult;
 
     // Combine availableQuizzes and allQuizzes to have the complete pool of quizzes (including guest quizzes)
     const quizPoolMap = new Map<number, any>();
@@ -204,14 +224,33 @@ export function calculateMasteryStats(
         .slice(0, 5)
         .map(n => n.label);
 
-    // 4. Gold Trophy
+    // 4. Gold Trophy (real-time)
     const isMapComplete = unitStats.length > 0 && unitStats.every(u => u.complete);
+    const goldTrophies = isMapComplete ? 1 : 0;
+
+    // 5. Earned Gold Trophy (persisted logro)
+    // true si el mapa está actualmente completo OR si fue completado antes
+    const earnedGoldTrophy = isMapComplete || !!wasPreviouslyCompleted;
+
+    // 6. Pending new content detection
+    // Ocurre cuando el estudiante ganó la copa pero el admin añadió quizzes que aún no ha hecho
+    const hasPendingNewContent = !!wasPreviouslyCompleted && !isMapComplete;
+
+    // Nodos que tienen quizzes sin completar y existen en el mapa (contenido añadido)
+    const newContentNodes = hasPendingNewContent
+        ? nodeStats
+            .filter(ns => !ns.complete && ns.quizzes.length > 0)
+            .map(ns => ns.label)
+        : [];
 
     return {
         silverMedals: completedQuizzesCount,
         goldMedals,
         silverTrophies,
-        goldTrophies: isMapComplete ? 1 : 0,
+        goldTrophies,
+        earnedGoldTrophy,
+        hasPendingNewContent,
+        newContentNodes,
         progress,
         totalQuizzes,
         completedQuizzes: completedQuizzesCount,
@@ -225,3 +264,6 @@ export function calculateMasteryStats(
         pendingNodes
     };
 }
+
+
+// Map of categories to their ground-truth data

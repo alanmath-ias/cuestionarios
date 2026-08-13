@@ -526,7 +526,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                     )}
                 </div>
 
-                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 relative z-10 transition-all duration-700 ${blurActive ? 'blur-xl opacity-10 pointer-events-none grayscale select-none' : ''}`}>
+                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 pb-4 relative z-10 transition-all duration-700 ${blurActive ? 'blur-xl opacity-10 pointer-events-none grayscale select-none' : ''}`}>
                     {managedChallenge.currentQuestion?.options?.map((opt: any) => {
                         const styleClass = getOptionStyle(opt);
                         const who = getWhoAnswered(opt);
@@ -546,7 +546,7 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
                                 <div className="h-7 w-7 rounded-lg flex-shrink-0 flex items-center justify-center bg-black/20">
                                   {who?.meCorrect || who?.oppCorrect ? <CheckCircle2 className="h-4 w-4" /> : (who?.meWrong || who?.oppWrong) ? <XCircle className="h-4 w-4 text-red-300" /> : <div className="w-1.5 h-1.5 rounded-full bg-white/20" />}
                                 </div>
-                                <span className="text-base font-bold flex-1"><ContentRenderer content={opt.content} tight={true} /></span>
+                                <span className="text-base md:text-lg font-bold flex-1"><ContentRenderer content={opt.content} tight={true} /></span>
                                 {who && (
                                   <div className="flex flex-col gap-1.5 items-end ml-1">
                                     {(who.meCorrect || who.meWrong) && (

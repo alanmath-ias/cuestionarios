@@ -24,6 +24,7 @@ interface AwardsDialogProps {
     wonDuels?: number;
     hintCredits?: number;
     isPublicView?: boolean;
+    tourStatus?: any; // tourStatus del estudiante — para detectar copa ganada previamente
 }
 
 type DetailType = 'gold_cup' | 'silver_cup' | 'gold_medal' | 'silver_medal' | null;
@@ -36,7 +37,8 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
     username,
     wonDuels = 0,
     hintCredits = 0,
-    isPublicView = false
+    isPublicView = false,
+    tourStatus
 }) => {
     const [selectedType, setSelectedType] = useState<DetailType>(null);
 
@@ -77,10 +79,14 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
 
     const stats = React.useMemo(() => {
         if (!category) return null;
+        const wasPreviouslyCompleted = !!(
+            tourStatus?.completedMaps?.[category.id] ||
+            tourStatus?.completedMaps?.[String(category.id)]
+        );
         // Merge category quizzes with all-quiz pool so guest quizzes from other categories are counted
         const mergedPool = [...(allQuizzesPool || []), ...(allCategoryQuizzes || [])];
-        return calculateMasteryStats(category.id, quizzes, mergedPool, nodeMappings);
-    }, [category, quizzes, allCategoryQuizzes, allQuizzesPool, nodeMappings]);
+        return calculateMasteryStats(category.id, quizzes, mergedPool, nodeMappings, wasPreviouslyCompleted);
+    }, [category, quizzes, allCategoryQuizzes, allQuizzesPool, nodeMappings, tourStatus]);
 
     if (!category) return null;
 
@@ -133,12 +139,13 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                     icon={Trophy}
                                                     label="Copa Oro"
                                                     sublabel="Materia Completa"
-                                                    value={stats.goldTrophies}
-                                                    color="text-yellow-500"
+                                                    value={stats.earnedGoldTrophy ? 1 : 0}
+                                                    color={stats.hasPendingNewContent ? "text-red-400" : "text-yellow-500"}
                                                     delay={0.1}
                                                     onClick={() => !isPublicView && setSelectedType('gold_cup')}
                                                     disabled={isPublicView}
                                                     categoryId={category?.id}
+                                                    hasPendingNewContent={stats.hasPendingNewContent}
                                                 />
                                                 <StatCard
                                                     icon={Trophy}
@@ -266,7 +273,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
     );
 };
 
-const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick, disabled, categoryId }: any) => {
+const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick, disabled, categoryId, hasPendingNewContent }: any) => {
     const isGoldCup = label === "Copa Oro" && value > 0;
     let goldCupImage = "/aritmetica_imagenes/copa_de_oro_trofeo.png";
     if (categoryId === 2) {
@@ -283,7 +290,9 @@ const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick, d
             disabled={disabled}
             className={cn(
                 "relative bg-slate-900/60 rounded-[2.2rem] p-5 border flex flex-col items-center gap-1 shadow-2xl group transition-all border-b-2 active:scale-95 overflow-hidden",
-                isGoldCup 
+                isGoldCup && hasPendingNewContent
+                    ? "border-red-500/50 border-b-red-500/80 shadow-[0_0_20px_rgba(239,68,68,0.2)] bg-gradient-to-b from-slate-900 via-slate-900 to-red-950/20"
+                    : isGoldCup 
                     ? "border-yellow-500/50 border-b-yellow-500/80 shadow-[0_0_20px_rgba(234,179,8,0.2)] bg-gradient-to-b from-slate-900 via-slate-900 to-yellow-950/20" 
                     : "border-white/5 border-b-transparent",
                 !disabled && "hover:bg-slate-900/80",
@@ -296,7 +305,10 @@ const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick, d
                     <motion.div
                         animate={{ scale: [1, 1.15, 1], opacity: [0.15, 0.35, 0.15] }}
                         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute inset-0 bg-yellow-500/20 blur-md rounded-[2.2rem]"
+                        className={cn(
+                            "absolute inset-0 blur-md rounded-[2.2rem]",
+                            hasPendingNewContent ? "bg-red-500/20" : "bg-yellow-500/20"
+                        )}
                     />
                     <motion.div
                         animate={{ x: ['-100%', '200%'] }}
@@ -307,20 +319,35 @@ const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick, d
             )}
             <div className={cn("relative mb-1", color, isGoldCup && "animate-bounce-subtle")}>
                 {isGoldCup ? (
-                    <img src={goldCupImage} className="w-7 h-7 object-contain drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
+                    <div className="relative">
+                        <img src={goldCupImage} className={cn("w-7 h-7 object-contain", hasPendingNewContent ? "drop-shadow-[0_0_8px_rgba(239,68,68,0.6)] opacity-75" : "drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]")} />
+                        {hasPendingNewContent && (
+                            <motion.div
+                                animate={{ scale: [1, 1.2, 1] }}
+                                transition={{ duration: 1.2, repeat: Infinity }}
+                                className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center"
+                            >
+                                <span className="text-[6px] text-white font-black">!</span>
+                            </motion.div>
+                        )}
+                    </div>
                 ) : (
                     <Icon className="w-7 h-7 drop-shadow-lg" fill="currentColor" fillOpacity={0.15} />
                 )}
                 <div className="absolute inset-0 bg-white/20 blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-1" />
             </div>
-            <span className={cn("text-3xl font-black text-white tracking-tighter leading-none relative z-10", isGoldCup && "text-yellow-400")}>{value}</span>
+            <span className={cn("text-3xl font-black text-white tracking-tighter leading-none relative z-10", isGoldCup && (hasPendingNewContent ? "text-red-400" : "text-yellow-400"))}>{value}</span>
             <div className="text-center mt-1 relative z-10">
-                <p className={cn("text-[9px] font-black uppercase tracking-widest", color, isGoldCup && "text-yellow-400")}>{label}</p>
+                <p className={cn("text-[9px] font-black uppercase tracking-widest", color, isGoldCup && (hasPendingNewContent ? "text-red-400" : "text-yellow-400"))}>{label}</p>
                 <p className="text-[8px] font-bold text-slate-500 uppercase leading-none opacity-60">{sublabel}</p>
+                {isGoldCup && hasPendingNewContent && (
+                    <p className="text-[7px] font-black text-red-400/80 uppercase tracking-widest mt-0.5">Pendiente</p>
+                )}
             </div>
             {!disabled && (
                 <div className="mt-2 text-[8px] text-amber-500/0 group-hover:text-amber-500/70 font-black uppercase tracking-widest transition-all relative z-10">Ver Más</div>
             )}
+
         </motion.button>
     );
 };

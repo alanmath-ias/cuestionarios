@@ -12,6 +12,7 @@ export type MasteryLevel = 'none' | 'silver_medal' | 'gold_medal' | 'silver_trop
 interface MasteryInsigniaProps {
     categoryId: number;
     quizzes: any[]; // User-quizzes with status
+    tourStatus?: any; // tourStatus del usuario (para detectar copa ganada previamente)
     onClick?: (categoryId: number) => void;
     size?: 'sm' | 'md' | 'lg';
 }
@@ -19,6 +20,7 @@ interface MasteryInsigniaProps {
 export const MasteryInsignia: React.FC<MasteryInsigniaProps> = ({
     categoryId,
     quizzes,
+    tourStatus,
     onClick,
     size = 'md'
 }) => {
@@ -55,16 +57,20 @@ export const MasteryInsignia: React.FC<MasteryInsigniaProps> = ({
     });
 
     const mastery = useMemo(() => {
+        const wasPreviouslyCompleted = !!(
+            tourStatus?.completedMaps?.[categoryId] ||
+            tourStatus?.completedMaps?.[String(categoryId)]
+        );
         const mergedPool = [...(allQuizzesPool || []), ...(allCategoryQuizzes || [])];
-        const stats = calculateMasteryStats(categoryId, quizzes, mergedPool, nodeMappings);
+        const stats = calculateMasteryStats(categoryId, quizzes, mergedPool, nodeMappings, wasPreviouslyCompleted);
 
-        if (stats.goldTrophies >= 1) return { level: 'gold_trophy' as MasteryLevel };
-        if (stats.silverTrophies >= 1) return { level: 'silver_trophy' as MasteryLevel };
-        if (stats.goldMedals >= 1) return { level: 'gold_medal' as MasteryLevel };
-        if (stats.silverMedals >= 1) return { level: 'silver_medal' as MasteryLevel };
+        if (stats.earnedGoldTrophy) return { level: 'gold_trophy' as MasteryLevel, hasPendingNewContent: stats.hasPendingNewContent };
+        if (stats.silverTrophies >= 1) return { level: 'silver_trophy' as MasteryLevel, hasPendingNewContent: false };
+        if (stats.goldMedals >= 1) return { level: 'gold_medal' as MasteryLevel, hasPendingNewContent: false };
+        if (stats.silverMedals >= 1) return { level: 'silver_medal' as MasteryLevel, hasPendingNewContent: false };
 
-        return { level: 'none' as MasteryLevel };
-    }, [categoryId, quizzes, allCategoryQuizzes, allQuizzesPool, nodeMappings]);
+        return { level: 'none' as MasteryLevel, hasPendingNewContent: false };
+    }, [categoryId, quizzes, allCategoryQuizzes, allQuizzesPool, nodeMappings, tourStatus]);
 
     if (mastery.level === 'none') return null;
 
@@ -131,12 +137,22 @@ export const MasteryInsignia: React.FC<MasteryInsigniaProps> = ({
                                 <motion.div
                                     animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.8, 0.4] }}
                                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                                    className="absolute inset-0 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-600 blur-lg rounded-full -z-10"
+                                    className={cn(
+                                        "absolute inset-0 blur-lg rounded-full -z-10",
+                                        mastery.hasPendingNewContent
+                                            ? "bg-gradient-to-r from-red-600 via-orange-500 to-red-700"
+                                            : "bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-600"
+                                    )}
                                 />
                                 <motion.div
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                                    className="absolute -inset-1 border border-dashed border-yellow-400/40 rounded-full -z-10"
+                                    className={cn(
+                                        "absolute -inset-1 border border-dashed rounded-full -z-10",
+                                        mastery.hasPendingNewContent
+                                            ? "border-red-400/40"
+                                            : "border-yellow-400/40"
+                                    )}
                                 />
                             </>
                         )}

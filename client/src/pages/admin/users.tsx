@@ -658,6 +658,7 @@ export default function UsersAdmin() {
             wonDuels={chestProfile.wonDuels || 0}
             hintCredits={chestUser?.hintCredits || 0}
             isPublicView={false} // Admin has full access
+            tourStatus={chestUser?.tourStatus}
           />
         )}
 

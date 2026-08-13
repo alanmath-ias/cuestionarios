@@ -2207,6 +2207,7 @@ export default function UserDashboard() {
           username={currentUser?.username || "Estudiante"}
           wonDuels={wonDuelsData?.count || 0}
           hintCredits={currentUser?.hintCredits || 0}
+          tourStatus={currentUser?.tourStatus}
         />
 
         {/* Magic Quiz IA Dialog */}

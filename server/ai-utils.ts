@@ -72,7 +72,7 @@ REQUISITOS TÉCNICOS:
 7.  Todas las preguntas deben ser de tipo 'multiple_choice' con exactamente 4 opciones.
 8.  El lenguaje debe ser claro, educativo y en español.
 9.  Las opciones de respuesta deben estar bien pensadas (incluye distractores comunes).
-10. **UNICIDAD OBLIGATORIA**: Los textos de las 4 opciones deben ser COMPLETAMENTE distintos entre sí. Nunca repitas el mismo valor o texto.
+10. **UNICIDAD MATEMÁTICA ESTRICTA**: Las 4 opciones deben ser MATEMÁTICAMENTE DISTINTAS entre sí. Antes de incluir un distractor, verifica que NO sea equivalente a la respuesta correcta ni a ningún otro distractor. Ejemplos de error: si la respuesta es ¡\\frac{1}{2}¡, no pongas ¡0.5¡ ni ¡\\frac{2}{4}¡ como distractor; si la respuesta es ¡4¡, no pongas ¡\\frac{8}{2}¡. Cada opción debe tener un valor numérico o expresión simplificada diferente.
 11. Incluye una breve explicación pedagógica de la respuesta correcta (máximo 2 líneas).
 12. Prioriza ejercicios técnicos directos. Evita enunciados extensos, historias o contextos innecesarios.
 13. **IMPORTANTE**: No uses nunca los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).

@@ -90,6 +90,7 @@ export function SkillTreeView({
     const [pendingSequence, setPendingSequence] = useState<'none' | 'silver' | 'gold' | 'silver_then_gold' | 'silver_then_gold_then_cup'>('none');
     const [processedSilverMedalId, setProcessedSilverMedalId] = useState<string | null>(null); // To avoid repeat
     const [showLastWorkedHint, setShowLastWorkedHint] = useState<string | null>(null); // Friendly indicator
+    const [showNewContentHint, setShowNewContentHint] = useState<string | null>(null); // Indicator for new content added by admin
     const lastWorkedScrollProcessed = useRef<boolean>(false);
     const [celebrationCredits, setCelebrationCredits] = useState<number>(0); // credits earned in current celebration
     const [celebratingHasScoreBonus, setCelebratingHasScoreBonus] = useState<boolean>(false); // score >= 8.0 bonus
@@ -635,6 +636,35 @@ export function SkillTreeView({
         // We skip if nodes aren't ready or if we already processed the scroll for this mount.
         if (nodes.length === 0 || allQuizzes.length === 0 || lastWorkedScrollProcessed.current) return;
 
+        const isUserAdmin = isAdmin || session?.role === 'admin';
+        const isMapPreviouslyCompleted = !isUserAdmin && !!(
+            (session?.tourStatus as any)?.completedMaps?.[categoryId] ||
+            (session?.tourStatus as any)?.completedMaps?.[String(categoryId)]
+        );
+
+        // If map was previously completed, check if admin added new quizzes to any node
+        const newContentNode = nodes.find(n => {
+            if (n.behavior === 'container' || n.id.endsWith('mastery')) return false;
+            const total = nodeTotalQuizzes[n.id] || 0;
+            const done = nodeCompletedCount[n.id] || 0;
+            return total > 0 && done < total;
+        });
+
+        if (isMapPreviouslyCompleted && newContentNode) {
+            lastWorkedScrollProcessed.current = true;
+            const nodeId = newContentNode.id;
+
+            setTimeout(() => {
+                const element = document.getElementById(`node-container-${nodeId}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setShowNewContentHint(nodeId);
+                    setTimeout(() => setShowNewContentHint(null), 6000);
+                }
+            }, 800);
+            return;
+        }
+
         // Filter quizzes to ONLY those that belong to nodes in THIS map and have been worked on
         const mapQuizzes = allQuizzes.filter(q => 
             mapQuizIds.has(q.id) && (q.status !== 'not_started' || (q.progressId && q.progressId > 0))
@@ -687,7 +717,7 @@ export function SkillTreeView({
                 }
             }, 800);
         }
-    }, [nodes, allQuizzes, mapQuizIds, nodeMappings]);
+    }, [nodes, allQuizzes, mapQuizIds, nodeMappings, categoryId, session, nodeTotalQuizzes, nodeCompletedCount]);
 
     // Search Logic
     const [searchQuery, setSearchQuery] = useState("");
@@ -1572,6 +1602,33 @@ export function SkillTreeView({
                                                                 </motion.button>
                                                             )}
 
+                                                            {/* New Content Badge for Previously Completed Maps (Students only) */}
+                                                            {(() => {
+                                                                const isUserAdmin = isAdmin || session?.role === 'admin';
+                                                                if (isUserAdmin) return null;
+
+                                                                const isMapPreviouslyCompleted = !!(
+                                                                    (session?.tourStatus as any)?.completedMaps?.[categoryId] ||
+                                                                    (session?.tourStatus as any)?.completedMaps?.[String(categoryId)]
+                                                                );
+                                                                const total = nodeTotalQuizzes[node.id] || 0;
+                                                                const done = nodeCompletedCount[node.id] || 0;
+                                                                const isNodeNewContent = isMapPreviouslyCompleted && node.behavior !== 'container' && !node.id.endsWith('mastery') && total > 0 && done < total;
+
+                                                                if (!isNodeNewContent) return null;
+
+                                                                return (
+                                                                    <motion.div
+                                                                        animate={{ scale: [1, 1.15, 1] }}
+                                                                        transition={{ duration: 1.5, repeat: Infinity }}
+                                                                        className="absolute -top-2 -left-2 z-[110] bg-gradient-to-r from-red-600 to-orange-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-[0_0_12px_rgba(239,68,68,0.8)] border border-white/30 flex items-center gap-1 uppercase tracking-wider pointer-events-none"
+                                                                    >
+                                                                        <AlertTriangle className="w-2.5 h-2.5" />
+                                                                        <span>NUEVO</span>
+                                                                    </motion.div>
+                                                                );
+                                                            })()}
+
                                                             {/* Friendly "Last Worked" Hint */}
                                                             <AnimatePresence>
                                                                 {showLastWorkedHint === node.id && (
@@ -1596,6 +1653,30 @@ export function SkillTreeView({
                                                                         </div>
                                                                         {/* The "Punta" (Arrow) - Centered naturally by the flex-col parent */}
                                                                         <div className="w-0 h-0 border-[6px] border-transparent border-t-amber-400 -mt-[1px]" />
+                                                                    </motion.div>
+                                                                )}
+
+                                                                {showNewContentHint === node.id && (
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, scale: 0.5, y: 10, x: "-50%" }}
+                                                                        animate={{ 
+                                                                            opacity: 1, 
+                                                                            scale: [1, 1.06, 1], 
+                                                                            y: 0, 
+                                                                            x: "-50%" 
+                                                                        }}
+                                                                        transition={{ 
+                                                                            scale: { repeat: Infinity, duration: 1.5, ease: "easeInOut" },
+                                                                            opacity: { duration: 0.3 }
+                                                                        }}
+                                                                        exit={{ opacity: 0, scale: 0.5, y: 10, x: "-50%" }}
+                                                                        className="absolute bottom-full mb-2 left-1/2 z-[1000] pointer-events-none flex flex-col items-center"
+                                                                    >
+                                                                        <div className="bg-gradient-to-r from-red-500 via-orange-500 to-red-600 text-white text-[11px] md:text-[12px] font-extrabold px-3.5 py-1.5 md:px-4.5 md:py-2 rounded-full shadow-[0_0_22px_rgba(239,68,68,0.75)] flex items-center gap-2 whitespace-nowrap border-2 border-red-200">
+                                                                            <AlertTriangle className="w-3.5 md:w-4 h-3.5 md:h-4 text-white stroke-[2.5]" />
+                                                                            <span>¡Nuevo cuestionario disponible aquí!</span>
+                                                                        </div>
+                                                                        <div className="w-0 h-0 border-[6px] border-transparent border-t-red-500 -mt-[1px]" />
                                                                     </motion.div>
                                                                 )}
                                                             </AnimatePresence>
