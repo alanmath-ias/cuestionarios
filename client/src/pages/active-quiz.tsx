@@ -665,28 +665,36 @@ const ActiveQuiz = () => {
   // Gestos Táctiles (Swipe para Móvil)
   useEffect(() => {
     let touchStartX = 0;
+    let touchStartY = 0;
     let touchEndX = 0;
+    let touchEndY = 0;
 
     const handleTouchStart = (e: TouchEvent) => {
-      // Ignorar gestos de deslizado si la interacción se origina en una imagen o si hay una imagen ampliada / diálogo abierto
       const target = e.target as HTMLElement | null;
-      if (
-        target?.closest('[role="dialog"]') ||
-        target?.closest('[data-state="open"]') ||
-        target?.closest('img') ||
-        document.querySelector('[role="dialog"]') ||
-        document.querySelector('[data-state="open"]')
-      ) {
+
+      // Deshabilitar gestos de deslizado si hay una imagen ampliada (modal) o un diálogo abierto
+      const isModalOpen =
+        isReportDialogOpen ||
+        isHintDialogOpen ||
+        isIncompleteDialogOpen ||
+        showExplanation ||
+        showChiquiResult ||
+        !!document.querySelector('[role="dialog"]');
+
+      if (isModalOpen || target?.closest('[role="dialog"]')) {
         touchStartX = 0;
-        touchEndX = 0;
+        touchStartY = 0;
         return;
       }
+
       touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
-      if (touchStartX === 0) return; // Si la interacción inició dentro de un diálogo o imagen ampliada, no disparar cambio de pregunta
+      if (touchStartX === 0) return; // Si inició con modal abierto o ampliado, ignorar
       touchEndX = e.changedTouches[0].screenX;
+      touchEndY = e.changedTouches[0].screenY;
       handleSwipe();
     };
 
@@ -697,20 +705,21 @@ const ActiveQuiz = () => {
         isIncompleteDialogOpen ||
         showExplanation ||
         showChiquiResult ||
-        !!document.querySelector('[role="dialog"]') ||
-        !!document.querySelector('[data-state="open"]');
+        !!document.querySelector('[role="dialog"]');
 
       if (isModalOpen) return;
 
-      const swipeThreshold = 80; // Umbral para evitar disparos accidentales
-      const diff = touchStartX - touchEndX;
+      const swipeThreshold = 50; // Umbral táctil para deslizar en móvil
+      const diffX = touchStartX - touchEndX;
+      const diffY = touchStartY - touchEndY;
 
-      if (Math.abs(diff) > swipeThreshold) {
-        if (diff > 0) {
-          // Swipe Izquierda -> Siguiente
+      // Verificar desplazamiento horizontal predominante frente al desplazamiento vertical
+      if (Math.abs(diffX) > swipeThreshold && Math.abs(diffX) > Math.abs(diffY) * 1.2) {
+        if (diffX > 0) {
+          // Swipe Izquierda -> Siguiente pregunta
           handleNextQuestion();
         } else {
-          // Swipe Derecha -> Anterior
+          // Swipe Derecha -> Pregunta anterior
           handlePreviousQuestion();
         }
       }
@@ -725,7 +734,7 @@ const ActiveQuiz = () => {
   }, [
     currentQuestionIndex, questions, selectedAnswerId, isDirectInput,
     directResponse, textAnswers, isReportDialogOpen, isHintDialogOpen,
-    isIncompleteDialogOpen, showExplanation, showChiquiResult
+    isIncompleteDialogOpen, showExplanation, showChiquiResult, answeredQuestions
   ]);
 
   const handleMathInput = (value: string, offset = 0) => {
@@ -830,13 +839,12 @@ const ActiveQuiz = () => {
       const updatedAnsweredQuestions = { ...answeredQuestions };
       if (hasUnconfirmedAnswer) updatedAnsweredQuestions[currentQuestionIndex] = true;
 
-      // Check if we are finishing the quiz
-      const isFinishing = (currentQuestionIndex >= questions.length - 1) ||
-        (Object.keys(updatedAnsweredQuestions).length >= questions.length);
+      // Solo finalizar si estamos en la última pregunta del array
+      const isFinishing = currentQuestionIndex >= questions.length - 1;
 
       if (!isFinishing) {
-        // En modo opción múltiple, añadimos una pequeña pausa para que el usuario vea si acertó
-        if (!isDirectInput) {
+        // En modo opción múltiple, solo hacemos la pequeña pausa de 800ms si el usuario acaba de seleccionar/confirmar una respuesta nueva
+        if (!isDirectInput && hasUnconfirmedAnswer) {
           await new Promise(resolve => setTimeout(resolve, 800));
         }
 
