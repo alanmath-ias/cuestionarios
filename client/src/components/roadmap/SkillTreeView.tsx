@@ -162,7 +162,9 @@ export function SkillTreeView({
         const completedCountMapLocal: Record<string, number> = {};
         const totalQuizzesMapLocal: Record<string, number> = {};
 
-        // Helper to get all descendant IDs recursively
+        // Helper to get direct-family descendant IDs for a container node.
+        // Traversal STOPS at the next sub-container so each parent node only
+        // counts its own quiz_list family (not the entire subtree).
         const getDescendantIds = (rootId: string) => {
             const descendants: string[] = [rootId];
             const queue = [rootId];
@@ -175,7 +177,8 @@ export function SkillTreeView({
 
                 const children = nodes.filter(n => n.requires.includes(currentId));
                 for (const child of children) {
-                    if (child.behavior !== 'container') {
+                    // Stop at the next container boundary so counts stay within one family
+                    if (child.behavior !== 'container' && !visited.has(child.id)) {
                         descendants.push(child.id);
                         queue.push(child.id);
                     }

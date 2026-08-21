@@ -97,6 +97,7 @@ function QuizList() {
     },
     // Always enabled: needed to display guest quizzes from other categories for all users
     enabled: true,
+    staleTime: 5 * 60 * 1000, // 5 minutes — ensures map counts update after new quizzes are added
   });
 
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
@@ -192,6 +193,7 @@ function QuizList() {
 
   const { data: quizzes, isLoading: loadingQuizzes } = useQuery<Quiz[]>({
     queryKey: [`/api/categories/${categoryId}/quizzes`],
+    staleTime: 5 * 60 * 1000, // 5 minutes — ensures map counts update after new quizzes are added
   });
 
   const { data: progress, isLoading: loadingProgress } = useQuery<QuizProgress[]>({
@@ -529,6 +531,8 @@ function QuizList() {
                         visited.add(currentId);
                         const children = currentMapNodes.filter(n => n.requires.includes(currentId));
                         for (const child of children) {
+                          // Stop at the next container boundary — each container only
+                          // aggregates its own direct quiz_list family
                           if (child.behavior === 'container') continue;
                           descendants.push(child.id);
                           queue.push(child.id);
