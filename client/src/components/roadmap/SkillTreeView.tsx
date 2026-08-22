@@ -229,7 +229,7 @@ export function SkillTreeView({
                     return true;
                 });
             } else {
-                const subId = (mapping && mapping.subcategoryId !== undefined) ? mapping.subcategoryId : node.subcategoryId;
+                const subId = (mapping && mapping.subcategoryId != null) ? mapping.subcategoryId : node.subcategoryId;
                 const subIds = dynamicSubIds.length > 0 ? dynamicSubIds : (node.additionalSubcategories || []);
                 
                 const hasSub = !!(subId || subIds.length > 0 || dynamicQuizIds.length > 0);

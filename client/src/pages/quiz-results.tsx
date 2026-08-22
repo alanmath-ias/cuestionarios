@@ -185,7 +185,7 @@ function QuizResults() {
 
     return nodes.find(n => {
       const mapping = nodeMappings?.find(m => m.nodeId === n.id);
-      const subId = mapping?.subcategoryId !== undefined ? mapping.subcategoryId : n.subcategoryId;
+      const subId = mapping?.subcategoryId != null ? mapping.subcategoryId : n.subcategoryId;
       const addSubIds = mapping?.additionalSubcategories || n.additionalSubcategories || [];
       const addQuizIds = mapping?.additionalQuizzes || n.additionalQuizzes || [];
 
@@ -222,7 +222,7 @@ function QuizResults() {
             // Each quiz has: id, subcategoryId, userStatus ('completed'|'pending'|'optional')
             // NOTE: The current quiz may still show 'optional'/'pending' in cache, so we treat it as completed manually.
             const mapping = nodeMappings?.find(m => m.nodeId === currentNode.id);
-            const subId = mapping?.subcategoryId !== undefined ? mapping.subcategoryId : currentNode.subcategoryId;
+            const subId = mapping?.subcategoryId != null ? mapping.subcategoryId : currentNode.subcategoryId;
             const subIds = mapping?.additionalSubcategories || currentNode.additionalSubcategories || [];
             const guestQuizzes = mapping?.additionalQuizzes || currentNode.additionalQuizzes || [];
 
@@ -302,7 +302,7 @@ function QuizResults() {
               const familyQuizzes: any[] = [];
               familyNodes.forEach(fn => {
                 const mapping = nodeMappings?.find(m => m.nodeId === fn.id);
-                const subId = mapping?.subcategoryId !== undefined ? mapping.subcategoryId : fn.subcategoryId;
+                const subId = mapping?.subcategoryId != null ? mapping.subcategoryId : fn.subcategoryId;
                 const subIds = mapping?.additionalSubcategories || fn.additionalSubcategories || [];
                 const guestQuizzes = mapping?.additionalQuizzes || [];
 
