@@ -1,4 +1,4 @@
-﻿export interface ArithmeticNode {
+export interface ArithmeticNode {
     id: string;
     label: string;
     level: number;
@@ -581,8 +581,19 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['n7-regla-tres'],
         description: 'Comparación y escala.',
-        xOffset: -60,
+        xOffset: -75,
         subcategoryId: 330,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'n7-repartos',
+        label: 'Repartos',
+        level: 26,
+        type: 'basic',
+        requires: ['n7-regla-tres'],
+        description: 'Reparto proporcional directo e inverso.',
+        xOffset: -25,
+        subcategoryId: 504,
         behavior: 'quiz_list'
     },
     {
@@ -592,7 +603,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['n7-regla-tres'],
         description: 'Proporcionalidad directa e inversa.',
-        xOffset: 0,
+        xOffset: 25,
         subcategoryId: 331,
         behavior: 'quiz_list'
     },
@@ -603,7 +614,7 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         type: 'critical',
         requires: ['n7-regla-tres'],
         description: 'Múltiples magnitudes relacionadas.',
-        xOffset: 60,
+        xOffset: 75,
         subcategoryId: 332,
         behavior: 'quiz_list'
     },
