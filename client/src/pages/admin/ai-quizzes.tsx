@@ -43,6 +43,17 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -74,6 +85,8 @@ interface Quiz {
 export default function AiQuizzesAdmin() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [selectedQuizIds, setSelectedQuizIds] = useState<number[]>([]);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [promotingQuiz, setPromotingQuiz] = useState<Quiz | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>("");
@@ -111,6 +124,26 @@ export default function AiQuizzesAdmin() {
   const filteredSubcategories = subcategories.filter(sub => 
     sub.name.toLowerCase().includes(subSearch.toLowerCase())
   );
+
+  const isAllSelected = filteredQuizzes.length > 0 && filteredQuizzes.every((q) => selectedQuizIds.includes(q.id));
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      const filteredSet = new Set(filteredQuizzes.map((q) => q.id));
+      setSelectedQuizIds(selectedQuizIds.filter((id) => !filteredSet.has(id)));
+    } else {
+      const newIds = new Set([...selectedQuizIds, ...filteredQuizzes.map((q) => q.id)]);
+      setSelectedQuizIds(Array.from(newIds));
+    }
+  };
+
+  const toggleSelectOne = (id: number) => {
+    if (selectedQuizIds.includes(id)) {
+      setSelectedQuizIds(selectedQuizIds.filter((i) => i !== id));
+    } else {
+      setSelectedQuizIds([...selectedQuizIds, id]);
+    }
+  };
 
   // Fetch subcategories when category changes in promotion dialog
   useEffect(() => {
@@ -151,13 +184,62 @@ export default function AiQuizzesAdmin() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-        // Assuming there is a general delete endpoint
       await apiRequest("DELETE", `/api/admin/quizzes/${id}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/quizzes"] });
+    onMutate: async (id: number) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/quizzes"] });
+      const previous = queryClient.getQueryData(["/api/quizzes"]);
+      queryClient.setQueryData(["/api/quizzes"], (old: Quiz[] | undefined) =>
+        old ? old.filter((q) => q.id !== id) : []
+      );
       toast({ title: "Cuestionario eliminado" });
-    }
+      setSelectedQuizIds(prev => prev.filter(i => i !== id));
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["/api/quizzes"], context.previous);
+      }
+      toast({
+        title: "Error al eliminar",
+        description: "No se pudo eliminar el cuestionario. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quizzes"] });
+    },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await apiRequest("DELETE", "/api/admin/quizzes/bulk", { ids });
+    },
+    onMutate: async (ids: number[]) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/quizzes"] });
+      const previous = queryClient.getQueryData(["/api/quizzes"]);
+      const idsSet = new Set(ids);
+      queryClient.setQueryData(["/api/quizzes"], (old: Quiz[] | undefined) =>
+        old ? old.filter((q) => !idsSet.has(q.id)) : []
+      );
+      toast({ title: `${ids.length} cuestionario(s) eliminado(s)` });
+      setSelectedQuizIds([]);
+      setIsBulkDeleteOpen(false);
+      return { previous };
+    },
+    onError: (_err, _ids, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["/api/quizzes"], context.previous);
+      }
+      toast({
+        title: "Error al eliminar en masa",
+        description: "No se pudieron eliminar los cuestionarios seleccionados.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quizzes"] });
+    },
   });
 
   const handlePromote = () => {
@@ -197,11 +279,50 @@ export default function AiQuizzesAdmin() {
         </div>
       </div>
 
+      {selectedQuizIds.length > 0 && (
+        <div className="flex items-center justify-between p-4 bg-red-950/40 border border-red-500/30 rounded-xl animate-in fade-in duration-200 shadow-xl">
+          <div className="flex items-center gap-3">
+            <Badge variant="destructive" className="bg-red-600 text-white px-3 py-1 font-semibold">
+              {selectedQuizIds.length} seleccionado{selectedQuizIds.length > 1 ? "s" : ""}
+            </Badge>
+            <span className="text-sm text-slate-300">
+              Has marcado {selectedQuizIds.length} cuestionario{selectedQuizIds.length > 1 ? "s" : ""} para acción en lote.
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-slate-300 hover:text-white hover:bg-white/10 border border-white/10"
+              onClick={() => setSelectedQuizIds([])}
+            >
+              Desmarcar todos
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-500 text-white gap-2 font-medium shadow-lg shadow-red-600/20"
+              onClick={() => setIsBulkDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Eliminar seleccionados ({selectedQuizIds.length})
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-6">
         <div className="rounded-2xl border border-white/5 bg-slate-900/50 overflow-hidden shadow-2xl">
           <Table>
             <TableHeader className="bg-white/5">
               <TableRow className="hover:bg-transparent border-white/5">
+                <TableHead className="w-12 text-center">
+                  <Checkbox 
+                    checked={isAllSelected}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Seleccionar todos"
+                  />
+                </TableHead>
                 <TableHead className="text-slate-300">Cuestionario</TableHead>
                 <TableHead className="text-slate-300">Creado por</TableHead>
                 <TableHead className="text-slate-300">Fecha</TableHead>
@@ -212,7 +333,17 @@ export default function AiQuizzesAdmin() {
             <TableBody>
               {filteredQuizzes.length > 0 ? (
                 filteredQuizzes.map((quiz) => (
-                  <TableRow key={quiz.id} className="border-white/5 hover:bg-white/5 transition-colors group">
+                  <TableRow key={quiz.id} className={cn(
+                    "border-white/5 hover:bg-white/5 transition-colors group",
+                    selectedQuizIds.includes(quiz.id) && "bg-amber-500/5 hover:bg-amber-500/10"
+                  )}>
+                    <TableCell className="text-center">
+                      <Checkbox 
+                        checked={selectedQuizIds.includes(quiz.id)}
+                        onCheckedChange={() => toggleSelectOne(quiz.id)}
+                        aria-label={`Seleccionar ${quiz.title}`}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-100">{quiz.title}</span>
@@ -401,6 +532,33 @@ export default function AiQuizzesAdmin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+        <AlertDialogContent className="bg-slate-900 border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-400">
+              <Trash2 className="h-5 w-5" />
+              ¿Eliminar {selectedQuizIds.length} cuestionario{selectedQuizIds.length > 1 ? "s" : ""}?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Esta acción eliminará de forma permanente los {selectedQuizIds.length} cuestionarios seleccionados, incluyendo sus preguntas y opciones de respuesta. No se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-white/10 text-slate-300 hover:bg-white/5 hover:text-white">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-500 text-white font-medium px-6"
+              onClick={() => bulkDeleteMutation.mutate(selectedQuizIds)}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              {bulkDeleteMutation.isPending ? "Eliminando..." : "Sí, eliminar todos"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

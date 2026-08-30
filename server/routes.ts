@@ -1484,6 +1484,23 @@ Genera SOLO el tip, sin saludos introductorios. Empieza directo con el concepto 
     }
   });
 
+  // Bulk Delete Quizzes (Admin only)
+  apiRouter.delete("/admin/quizzes/bulk", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: "No se proporcionaron IDs válidos para eliminar." });
+      }
+      for (const id of ids) {
+        await storage.deleteQuiz(Number(id));
+      }
+      res.json({ message: `${ids.length} cuestionarios eliminados con éxito` });
+    } catch (error) {
+      console.error("Error bulk deleting quizzes:", error);
+      res.status(500).json({ message: "Error al eliminar los cuestionarios." });
+    }
+  });
+
   // Delete Quiz (Admin only)
   apiRouter.delete("/admin/quizzes/:id", requireAdmin, async (req: Request, res: Response) => {
     try {
