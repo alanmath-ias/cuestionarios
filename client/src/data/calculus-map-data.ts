@@ -518,16 +518,178 @@ export const calculusMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     },
 
-    // LEVEL 20: Maestría
+    // ==========================================
+    // NIVEL CP: COORDENADAS POLARES
+    // Prerequisitos: Funciones Trigonométricas + Diferenciación Implícita
+    // ==========================================
+    {
+        id: 'cp-polares',
+        label: 'Coordenadas Polares',
+        level: 21,
+        type: 'applied',
+        requires: ['c0-trigo', 'c2-implicita'],
+        description: 'Sistema de referencia polar y su cálculo.',
+        xOffset: 0,
+        subcategoryId: 505,
+        behavior: 'container'
+    },
+
+    // ── Nivel 1 del árbol polar: Fundamentos de representación ──
+    {
+        id: 'cp-conversion',
+        label: 'Conversión Cart.↔Polar',
+        level: 22,
+        type: 'basic',
+        requires: ['cp-polares'],
+        description: 'r, θ, x=r cosθ, y=r sinθ.',
+        xOffset: -60,
+        subcategoryId: 506,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'cp-curvas',
+        label: 'Curvas Polares',
+        level: 22,
+        type: 'basic',
+        requires: ['cp-polares'],
+        description: 'Graficación y trazado en el plano polar.',
+        xOffset: 0,
+        subcategoryId: 507,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'cp-simetria',
+        label: 'Simetría Polar',
+        level: 22,
+        type: 'basic',
+        requires: ['cp-polares'],
+        description: 'Simetría respecto a ejes y polo.',
+        xOffset: 60,
+        subcategoryId: 508,
+        behavior: 'quiz_list'
+    },
+
+    // ── Nivel 2: Curvas especiales ──
+    {
+        id: 'cp-curvas-especiales',
+        label: 'Curvas Especiales',
+        level: 23,
+        type: 'applied',
+        requires: ['cp-curvas', 'cp-simetria'],
+        description: 'Cardioide, limaçon, rosa, lemniscata, espiral.',
+        xOffset: -30,
+        subcategoryId: 515,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'cp-interseccion',
+        label: 'Intersección de Curvas',
+        level: 23,
+        type: 'applied',
+        requires: ['cp-curvas', 'cp-conversion'],
+        description: 'Puntos de intersección entre curvas polares.',
+        xOffset: 30,
+        subcategoryId: 516,
+        behavior: 'quiz_list'
+    },
+
+    // ── Nivel 3: Límites y Continuidad en polares ──
+    {
+        id: 'cp-limites',
+        label: 'Límites en Polares',
+        level: 24,
+        type: 'critical',
+        requires: ['cp-curvas-especiales'],
+        description: 'lim(r,θ)→(r₀,θ₀) f(r,θ).',
+        xOffset: -40,
+        subcategoryId: 509,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'cp-continuidad',
+        label: 'Continuidad en Polares',
+        level: 24,
+        type: 'critical',
+        requires: ['cp-limites'],
+        description: 'Análisis de continuidad de funciones polares.',
+        xOffset: 40,
+        subcategoryId: 510,
+        behavior: 'quiz_list'
+    },
+
+    // ── Nivel 4: Derivadas en polares ──
+    {
+        id: 'cp-derivadas',
+        label: 'Derivadas en Polares',
+        level: 25,
+        type: 'critical',
+        requires: ['cp-continuidad', 'cp-interseccion'],
+        description: 'dy/dx en curvas polares, dr/dθ.',
+        xOffset: -40,
+        subcategoryId: 511,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'cp-tangentes',
+        label: 'Tangentes y Normales',
+        level: 25,
+        type: 'applied',
+        requires: ['cp-derivadas'],
+        description: 'Rectas tangentes y normales a curvas polares.',
+        xOffset: 40,
+        subcategoryId: 512,
+        behavior: 'quiz_list'
+    },
+
+    // ── Nivel 5: Aplicaciones geométricas ──
+    {
+        id: 'cp-longitud-arco',
+        label: 'Longitud de Arco',
+        level: 26,
+        type: 'applied',
+        requires: ['cp-derivadas'],
+        description: 'L = ∫√(r² + (dr/dθ)²) dθ.',
+        xOffset: -50,
+        subcategoryId: 513,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'cp-area',
+        label: 'Área de Regiones Polares',
+        level: 26,
+        type: 'applied',
+        requires: ['cp-derivadas'],
+        description: 'A = ½∫r² dθ. Puente a Cálculo Integral.',
+        xOffset: 0,
+        subcategoryId: 514,
+        behavior: 'quiz_list'
+    },
+
+    // ── Nivel 6: Aplicaciones físicas e ingeniería ──
+    {
+        id: 'cp-aplicaciones',
+        label: 'Aplicaciones Físicas',
+        level: 27,
+        type: 'evaluation',
+        requires: ['cp-longitud-arco', 'cp-area', 'cp-tangentes'],
+        description: 'Órbitas, fuerzas, movimiento angular.',
+        xOffset: 0,
+        subcategoryId: 517,
+        behavior: 'quiz_list'
+    },
+
+    // ==========================================
+    // NIVEL FINAL: MAESTRÍA — Nodo independiente
+    // ==========================================
     {
         id: 'c-mastery',
         label: 'Maestría en Cálculo',
-        level: 21,
+        level: 28,
         type: 'evaluation',
         requires: [],
         description: 'El desafío definitivo de todo el módulo.',
         xOffset: 0,
         subcategoryId: 119,
         behavior: 'quiz_list'
-    }
+    },
 ];

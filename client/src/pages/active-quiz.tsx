@@ -2,8 +2,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import { startActiveQuizTour } from "@/lib/tour";
 import { useState, useEffect, useRef } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -108,6 +109,17 @@ const ActiveQuiz = () => {
   const [answeredQuestions, setAnsweredQuestions] = useState<Record<number, boolean>>({});
   const [textAnswers, setTextAnswers] = useState<Record<number, string>>({});
   const [shuffledAnswers, setShuffledAnswers] = useState<any[]>([]);
+  const [hideAnswersMode, setHideAnswersMode] = useState<boolean>(() => {
+    return localStorage.getItem("quiz_hide_answers_mode") === "true";
+  });
+
+  const toggleHideAnswersMode = () => {
+    setHideAnswersMode(prev => {
+      const next = !prev;
+      localStorage.setItem("quiz_hide_answers_mode", String(next));
+      return next;
+    });
+  };
   const { session, loading: sessionLoading } = useSession();
   const [isHintDialogOpen, setIsHintDialogOpen] = useState(false);
   const [hintsRevealed, setHintsRevealed] = useState<Record<number, string[]>>({});
@@ -1446,6 +1458,33 @@ const ActiveQuiz = () => {
                 return sum + (a.isCorrect ? (question?.points || 0) : 0);
               }, 0)} pts
             </span>
+            <div className="h-4 w-px bg-white/10" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleHideAnswersMode}
+              className={cn(
+                "h-7 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5",
+                hideAnswersMode
+                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.25)]"
+                  : "bg-slate-800/80 text-slate-400 border border-white/10 hover:text-white hover:bg-slate-700"
+              )}
+              title={hideAnswersMode ? "Modo Clase Activo: Las respuestas están ocultas" : "Activar Modo Clase para ocultar las opciones de respuesta"}
+            >
+              {hideAnswersMode ? (
+                <>
+                  <EyeOff className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                  <span className="hidden sm:inline">Modo Clase (Oculto)</span>
+                  <span className="sm:hidden">Oculto</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Modo Clase</span>
+                  <span className="sm:hidden">Clase</span>
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
@@ -1585,10 +1624,20 @@ const ActiveQuiz = () => {
 
                 {/* Admin: Show Correct Answer */}
                 {isAdmin && (
-                  <div className="mb-6 p-4 bg-green-900/20 border border-green-500/30 rounded-xl text-green-300 text-sm flex items-start gap-3">
+                  <div className={cn(
+                    "mb-6 p-4 bg-green-900/20 border border-green-500/30 rounded-xl text-green-300 text-sm flex items-start gap-3 transition-all duration-300",
+                    hideAnswersMode && !answeredQuestions[currentQuestionIndex] && "filter blur-md select-none opacity-30 hover:filter-none hover:opacity-100 cursor-pointer"
+                  )}>
                     <CheckCircle2 className="h-5 w-5 shrink-0 text-green-400" />
                     <div className="w-full">
-                      <span className="font-bold block mb-2 text-green-400">Respuesta Correcta (Solo Admin):</span>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold block text-green-400">Respuesta Correcta (Solo Admin):</span>
+                        {hideAnswersMode && !answeredQuestions[currentQuestionIndex] && (
+                          <span className="text-[10px] text-amber-400/90 font-medium italic bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 select-none">
+                            🙈 Oculta por Modo Clase (Pasa el cursor)
+                          </span>
+                        )}
+                      </div>
                       {currentQuestion.type === 'text' ? (
                         <span className="font-mono bg-slate-950/50 px-2 py-1 rounded border border-green-500/20 block w-full">
                           {currentQuestion.answers?.map(a => a.content).join(' O ')}
@@ -1699,58 +1748,91 @@ const ActiveQuiz = () => {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-2.5">
-                  {(() => {
-                    const hasMathContent = shuffledAnswers.some(a =>
-                      a.content && (a.content.includes('¡') || a.content.includes('\\'))
-                    );
-                    return shuffledAnswers.map((answer, index) => {
-                      const existingAnswer = studentAnswers.find(sa =>
-                        sa.questionId === currentQuestion.id && sa.answerId === answer.id
+                <div className="space-y-3">
+                  {hideAnswersMode && !answeredQuestions[currentQuestionIndex] && (
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-amber-300 text-xs sm:text-sm animate-in fade-in duration-300 shadow-lg">
+                      <div className="flex items-center gap-2">
+                        <EyeOff className="h-4 w-4 shrink-0 text-amber-400 animate-pulse" />
+                        <span>
+                          <strong>Modo Clase Activo:</strong> Respuestas difuminadas para obligar al trabajo independiente. Pasa el cursor sobre una opción o haz clic en <strong>Mostrar</strong>.
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={toggleHideAnswersMode}
+                        className="h-7 px-3 text-xs text-amber-300 hover:bg-amber-500/20 hover:text-amber-100 border border-amber-500/30 shrink-0 font-bold rounded-lg transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5 mr-1" />
+                        Mostrar
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {(() => {
+                      const hasMathContent = shuffledAnswers.some(a =>
+                        a.content && (a.content.includes('¡') || a.content.includes('\\'))
                       );
-                      const isSelected = selectedAnswerId === answer.id || !!existingAnswer;
-                      const isAnswered = answeredQuestions[currentQuestionIndex];
+                      const isBlurActive = hideAnswersMode && !answeredQuestions[currentQuestionIndex];
 
-                      let variantClass = "bg-slate-800/30 border-white/5 hover:bg-slate-800/60 hover:border-blue-500/30 text-slate-300";
+                      return shuffledAnswers.map((answer, index) => {
+                        const existingAnswer = studentAnswers.find(sa =>
+                          sa.questionId === currentQuestion.id && sa.answerId === answer.id
+                        );
+                        const isSelected = selectedAnswerId === answer.id || !!existingAnswer;
+                        const isAnswered = answeredQuestions[currentQuestionIndex];
 
-                      if (isAnswered) {
-                        if (answer.isCorrect) {
-                          variantClass = "bg-green-500/10 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.1)]";
+                        let variantClass = "bg-slate-800/30 border-white/5 hover:bg-slate-800/60 hover:border-blue-500/30 text-slate-300";
+
+                        if (isAnswered) {
+                          if (answer.isCorrect) {
+                            variantClass = "bg-green-500/10 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.1)]";
+                          } else if (isSelected) {
+                            variantClass = "bg-red-500/10 border-red-500/50 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]";
+                          } else {
+                            variantClass = "opacity-60 border-white/5 bg-slate-900/20 text-slate-500";
+                          }
                         } else if (isSelected) {
-                          variantClass = "bg-red-500/10 border-red-500/50 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]";
-                        } else {
-                          variantClass = "opacity-60 border-white/5 bg-slate-900/20 text-slate-500";
+                          variantClass = "bg-blue-600/20 border-blue-500 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.15)]";
                         }
-                      } else if (isSelected) {
-                        variantClass = "bg-blue-600/20 border-blue-500 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.15)]";
-                      }
 
-                      return (
-                        <button
-                          key={answer.id}
-                          onClick={() => !isAnswered && !isReadOnly && handleSelectAnswer(answer.id)}
-                          disabled={isAnswered || isReadOnly}
-                          className={`w-full text-left ${hasMathContent ? 'py-3' : 'py-4'} px-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass} ${isReadOnly ? 'cursor-default opacity-80' : ''}`}
-                        >
-                          <div className="flex items-center gap-4 relative z-10 w-full min-w-0">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors
-                                    ${isSelected || (isAnswered && answer.isCorrect)
-                                ? 'bg-white/10 border-white/20 text-white'
-                                : 'bg-slate-900/50 border-white/10 text-slate-500 group-hover:text-slate-300 group-hover:border-white/20'
-                              }
-                                  `}>
-                              {String.fromCharCode(65 + index)}
+                        return (
+                          <button
+                            key={answer.id}
+                            onClick={() => !isAnswered && !isReadOnly && handleSelectAnswer(answer.id)}
+                            disabled={isAnswered || isReadOnly}
+                            className={`w-full text-left ${hasMathContent ? 'py-3' : 'py-4'} px-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass} ${isReadOnly ? 'cursor-default opacity-80' : ''}`}
+                          >
+                            <div className="flex items-center gap-4 relative z-10 w-full min-w-0">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors
+                                      ${isSelected || (isAnswered && answer.isCorrect)
+                                  ? 'bg-white/10 border-white/20 text-white'
+                                  : 'bg-slate-900/50 border-white/10 text-slate-500 group-hover:text-slate-300 group-hover:border-white/20'
+                                }
+                                    `}>
+                                {String.fromCharCode(65 + index)}
+                              </div>
+                              <div className={cn(
+                                "font-medium flex-1 min-w-0 overflow-x-auto overflow-y-hidden custom-scrollbar py-0.5 transition-all duration-300",
+                                getAnswerSizeClass(answer.content),
+                                isBlurActive && "filter blur-md select-none opacity-30 group-hover:filter-none group-hover:opacity-100 group-hover:select-text"
+                              )}>
+                                <ContentRenderer content={answer.content} tight={true} />
+                              </div>
+                              {isBlurActive && (
+                                <span className="text-[11px] text-amber-400/80 font-medium italic group-hover:hidden shrink-0 ml-2 select-none bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                                  🙈 Oculta
+                                </span>
+                              )}
                             </div>
-                            <div className={`font-medium flex-1 min-w-0 overflow-x-auto overflow-y-hidden custom-scrollbar py-0.5 ${getAnswerSizeClass(answer.content)}`}>
-                              <ContentRenderer content={answer.content} tight={true} />
-                            </div>
-                          </div>
-                          {isAnswered && answer.isCorrect && <CheckCircle2 className="h-6 w-6 text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)] shrink-0 ml-4" />}
-                          {isAnswered && isSelected && !answer.isCorrect && <XCircle className="h-6 w-6 text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] shrink-0 ml-4" />}
-                        </button>
-                      );
-                    });
-                  })()}
+                            {isAnswered && answer.isCorrect && <CheckCircle2 className="h-6 w-6 text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)] shrink-0 ml-4" />}
+                            {isAnswered && isSelected && !answer.isCorrect && <XCircle className="h-6 w-6 text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] shrink-0 ml-4" />}
+                          </button>
+                        );
+                      });
+                    })()}
+                  </div>
                 </div>
               )}
             </>

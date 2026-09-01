@@ -8,7 +8,7 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         id: 'i0-sumatorias',
         label: 'NOTACIÓN SIGMA Y SUMATORIAS',
         level: 0,
-        type: 'container',
+        type: 'basic',
         requires: [],
         description: 'Fundamentos de sumatorias e índice de suma.',
         xOffset: 0,
@@ -445,10 +445,129 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         subcategoryId: 478,
         behavior: 'quiz_list'
     },
+    // ==========================================
+    // NIVEL IP: COORDENADAS POLARES EN CÁLCULO INTEGRAL
+    // Prerequisito: Técnicas de integración + Aplicaciones geométricas
+    // ==========================================
+    {
+        id: 'ip-polares',
+        label: 'Coordenadas Polares',
+        level: 18,
+        type: 'applied',
+        requires: ['i3-sustitucion', 'i4-area-curvas'],
+        description: 'Integración en el sistema de referencia polar.',
+        xOffset: 0,
+        subcategoryId: 518,
+        behavior: 'container'
+    },
+
+    // ── Nivel 1: Repaso de curvas polares ──
+    {
+        id: 'ip-repaso',
+        label: 'Repaso: Curvas Polares',
+        level: 19,
+        type: 'basic',
+        requires: ['ip-polares'],
+        description: 'r=f(θ), conversión y graficación. Base para integrar.',
+        xOffset: 0,
+        subcategoryId: 519,
+        behavior: 'quiz_list'
+    },
+
+    // ── Nivel 2: Área ──
+    {
+        id: 'ip-area-region',
+        label: 'Área de una Región Polar',
+        level: 20,
+        type: 'critical',
+        requires: ['ip-repaso'],
+        description: 'A = ½∫r² dθ sobre un arco.',
+        xOffset: -50,
+        subcategoryId: 520,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'ip-area-dos-curvas',
+        label: 'Área entre dos Curvas',
+        level: 20,
+        type: 'critical',
+        requires: ['ip-repaso'],
+        description: 'A = ½∫(r₁²−r₂²) dθ. Intersección y límites.',
+        xOffset: 50,
+        subcategoryId: 521,
+        behavior: 'quiz_list'
+    },
+
+    // ── Nivel 3: Longitud y superficie ──
+    {
+        id: 'ip-longitud-arco',
+        label: 'Longitud de Arco Polar',
+        level: 21,
+        type: 'applied',
+        requires: ['ip-area-region'],
+        description: 'L = ∫√(r²+(dr/dθ)²) dθ.',
+        xOffset: -50,
+        subcategoryId: 522,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'ip-superficie',
+        label: 'Superficie de Revolución',
+        level: 21,
+        type: 'applied',
+        requires: ['ip-area-dos-curvas'],
+        description: 'Rotar curva polar alrededor de un eje.',
+        xOffset: 50,
+        subcategoryId: 523,
+        behavior: 'quiz_list'
+    },
+
+    // ── Nivel 4: Integrales dobles ──
+    {
+        id: 'ip-integrales-dobles',
+        label: 'Integrales Dobles Polares',
+        level: 22,
+        type: 'critical',
+        requires: ['ip-longitud-arco', 'ip-superficie'],
+        description: '∬f(r,θ)·r dr dθ — cambio de variable fundamental.',
+        xOffset: -30,
+        subcategoryId: 524,
+        behavior: 'quiz_list'
+    },
+
+    // ── Nivel 5: Centroide y Centro de Masa ──
+    {
+        id: 'ip-centroide',
+        label: 'Centroide y Centro de Masa',
+        level: 23,
+        type: 'applied',
+        requires: ['ip-integrales-dobles'],
+        description: 'Cálculo de centroides con integrales polares.',
+        xOffset: 30,
+        subcategoryId: 525,
+        behavior: 'quiz_list'
+    },
+
+    // ── Nivel 6: Aplicaciones físicas ──
+    {
+        id: 'ip-aplicaciones',
+        label: 'Aplicaciones Físicas',
+        level: 24,
+        type: 'evaluation',
+        requires: ['ip-centroide'],
+        description: 'Momento angular, fuerzas y campos en polares.',
+        xOffset: 0,
+        subcategoryId: 526,
+        behavior: 'quiz_list'
+    },
+
+    // ==========================================
+    // NIVEL FINAL: MAESTRÍA — Nodo independiente
+    // ==========================================
     {
         id: 'i-mastery',
         label: 'Maestría en Cálculo Integral',
-        level: 18,
+        level: 25,
         type: 'evaluation',
         requires: [],
         description: 'El desafío definitivo de todo el módulo.',
@@ -457,3 +576,4 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         behavior: 'quiz_list'
     }
 ];
+
