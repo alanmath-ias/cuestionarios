@@ -746,45 +746,139 @@ export const algebraMapNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // NIVEL A12: FUNCIONES
+    // NIVEL A12: ECUACIONES EXPONENCIALES (NUEVA UNIDAD 1)
     // ==========================================
     {
-        id: 'a12-funciones',
-        label: 'Funciones',
+        id: 'a12-exponenciales-container',
+        label: 'Ecuaciones Exponenciales',
         level: 35,
-        type: 'evaluation',
+        type: 'critical',
         requires: ['a11-2-problemas'],
+        description: 'Resolución de ecuaciones y sistemas con potencias y exponentes.',
+        xOffset: 0,
+        behavior: 'container'
+    },
+    {
+        id: 'a12-1-exp-monomicas',
+        label: 'Ecuaciones Monómicas',
+        level: 36,
+        type: 'basic',
+        requires: ['a12-exponenciales-container'],
+        description: 'Igualación de bases y exponentes.',
+        xOffset: -60,
+        subcategoryId: 527,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a12-2-exp-trinómicas',
+        label: 'Polinómicas y Trinómicas',
+        level: 36,
+        type: 'basic',
+        requires: ['a12-exponenciales-container'],
+        description: 'Factor común y cambio de variable u = a^x.',
+        xOffset: 0,
+        subcategoryId: 528,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a12-3-sistemas-exp',
+        label: 'Sistemas Exponenciales',
+        level: 36,
+        type: 'critical',
+        requires: ['a12-exponenciales-container'],
+        description: 'Sistemas de ecuaciones con potencias.',
+        xOffset: 60,
+        subcategoryId: 529,
+        behavior: 'quiz_list'
+    },
+
+    // ==========================================
+    // NIVEL A13: ECUACIONES LOGARÍTMICAS (NUEVA UNIDAD 2)
+    // ==========================================
+    {
+        id: 'a13-logaritmos-container',
+        label: 'Ecuaciones Logarítmicas',
+        level: 37,
+        type: 'critical',
+        requires: ['a12-1-exp-monomicas', 'a12-2-exp-trinómicas', 'a12-3-sistemas-exp'],
+        description: 'Propiedades, ecuaciones y relación con la función exponencial.',
+        xOffset: 0,
+        behavior: 'container'
+    },
+    {
+        id: 'a13-1-prop-log',
+        label: 'Propiedades de Logaritmos',
+        level: 38,
+        type: 'basic',
+        requires: ['a13-logaritmos-container'],
+        description: 'Compresión, expansión y simplificación.',
+        xOffset: -60,
+        subcategoryId: 530,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a13-2-ec-log',
+        label: 'Ecuaciones Logarítmicas',
+        level: 38,
+        type: 'basic',
+        requires: ['a13-logaritmos-container'],
+        description: 'Igualación de argumentos y dominio real.',
+        xOffset: 0,
+        subcategoryId: 531,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'a13-3-rel-exp-log',
+        label: 'Relación Exponencial-Logarítmica',
+        level: 38,
+        type: 'critical',
+        requires: ['a13-logaritmos-container'],
+        description: 'Ecuaciones mixtas y cambio de base.',
+        xOffset: 60,
+        subcategoryId: 532,
+        behavior: 'quiz_list'
+    },
+
+    // ==========================================
+    // NIVEL A14: FUNCIONES (REUBICADO A NIVEL 39)
+    // ==========================================
+    {
+        id: 'a14-funciones',
+        label: 'Funciones',
+        level: 39,
+        type: 'evaluation',
+        requires: ['a13-1-prop-log', 'a13-2-ec-log', 'a13-3-rel-exp-log'],
         description: 'Relaciones funcionales.',
         xOffset: 0,
         subcategoryId: 419,
         behavior: 'container'
     },
     {
-        id: 'a12-1-lineal',
+        id: 'a14-1-lineal',
         label: 'Función Lineal',
-        level: 36,
+        level: 40,
         type: 'basic',
-        requires: ['a12-funciones'],
+        requires: ['a14-funciones'],
         description: 'y = mx + b',
         xOffset: 45,
         subcategoryId: 420,
         behavior: 'quiz_list'
     },
     {
-        id: 'a12-2-concepto',
+        id: 'a14-2-concepto',
         label: 'Resúmen de Funciones',
-        level: 36,
+        level: 40,
         type: 'critical',
-        requires: ['a12-funciones'],
+        requires: ['a14-funciones'],
         description: 'Dominio y rango.',
         xOffset: -45,
         subcategoryId: 498,
         behavior: 'quiz_list'
     },
     {
-        id: 'a13-mastery',
+        id: 'a15-mastery',
         label: 'Maestría en Álgebra',
-        level: 37,
+        level: 41,
         type: 'evaluation',
         requires: [],
         description: 'El desafío definitivo de todo el módulo.',
