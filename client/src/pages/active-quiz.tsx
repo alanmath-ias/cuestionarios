@@ -1065,7 +1065,8 @@ const ActiveQuiz = () => {
         status: 'completed' as const,
         score,
         timeSpent: totalTime, // Save cumulative time
-        completedAt: new Date().toISOString()
+        completedAt: new Date().toISOString(),
+        finalAnswers: uniqueAnswers, // Enviar respuestas para evitar race condition
       };
 
       await createProgressMutation.mutateAsync(progressUpdate);

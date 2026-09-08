@@ -2892,7 +2892,24 @@ Genera SOLO el tip, sin saludos introductorios. Empieza directo con el concepto 
 
         // Si se completó (y no estaba completo antes), guardar en quizSubmissions y dar crédito
         if (progressForStorage.status === 'completed' && existingProgress.status !== 'completed') {
-          // FUENTE DE VERDAD: recalcular score desde las respuestas reales en DB
+          // PASO 1: Si el cliente envía finalAnswers, hacer upsert antes de recalcular
+          // Esto previene el race condition donde la última respuesta aún no llegó al servidor
+          const clientFinalAnswers = Array.isArray(req.body.finalAnswers) ? req.body.finalAnswers : null;
+          if (clientFinalAnswers && clientFinalAnswers.length > 0) {
+            for (const ans of clientFinalAnswers) {
+              if (ans.questionId && ans.progressId === existingProgress.id) {
+                await storage.createStudentAnswer({
+                  progressId: existingProgress.id,
+                  questionId: ans.questionId,
+                  answerId: ans.answerId ?? null,
+                  isCorrect: ans.isCorrect ?? null,
+                  timeSpent: ans.timeSpent ?? 0,
+                });
+              }
+            }
+          }
+
+          // PASO 2: FUENTE DE VERDAD: recalcular score desde las respuestas reales en DB
           // (previene discrepancias por estado local desincronizado en el cliente)
           const dbAnswers = await storage.getStudentAnswersByProgress(existingProgress.id);
           const dbQuestions = await storage.getQuestionsByQuiz(progressData.quizId);
@@ -2971,7 +2988,23 @@ Genera SOLO el tip, sin saludos introductorios. Empieza directo con el concepto 
 
       // Si se completó, guardar en quizSubmissions y dar crédito
       if (progressForStorage.status === 'completed') {
-        // FUENTE DE VERDAD: recalcular score desde las respuestas reales en DB
+        // PASO 1: Si el cliente envía finalAnswers, hacer upsert antes de recalcular
+        const clientFinalAnswers2 = Array.isArray(req.body.finalAnswers) ? req.body.finalAnswers : null;
+        if (clientFinalAnswers2 && clientFinalAnswers2.length > 0) {
+          for (const ans of clientFinalAnswers2) {
+            if (ans.questionId && ans.progressId === newProgress.id) {
+              await storage.createStudentAnswer({
+                progressId: newProgress.id,
+                questionId: ans.questionId,
+                answerId: ans.answerId ?? null,
+                isCorrect: ans.isCorrect ?? null,
+                timeSpent: ans.timeSpent ?? 0,
+              });
+            }
+          }
+        }
+
+        // PASO 2: FUENTE DE VERDAD: recalcular score desde las respuestas reales en DB
         const dbAnswers2 = await storage.getStudentAnswersByProgress(newProgress.id);
         const dbQuestions2 = await storage.getQuestionsByQuiz(progressData.quizId);
         const totalQuestionsInDB2 = dbQuestions2.length;
