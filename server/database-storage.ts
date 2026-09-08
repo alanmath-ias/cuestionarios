@@ -1455,7 +1455,21 @@ export class DatabaseStorage implements IStorage {
     await this.db.delete(userQuizzes).where(eq(userQuizzes.userId, id));
     await this.db.delete(userCategories).where(eq(userCategories.userId, id));
 
-    // 5. Borrar el usuario finalmente
+    // 5. Gestión de relaciones familiares (Padre / Hijo)
+    // Si el usuario eliminado es un estudiante con padre, desvincularlo (childId = null) para que el padre no pierda su cuenta ni su ficha
+    await this.db.update(parents)
+      .set({ childId: null })
+      .where(eq(parents.childId, id));
+    // Si el usuario eliminado es un padre, limpiar su registro de la tabla parents
+    await this.db.delete(parents).where(eq(parents.userId, id));
+
+    // 6. Nullificar referencias fromId en notificaciones de OTROS usuarios que apuntaban a este usuario.
+    //    No se borran esas notificaciones (pertenecen al receptor), solo se elimina la referencia al emisor.
+    await this.db.update(notifications)
+      .set({ fromId: null } as any)
+      .where(eq(notifications.fromId as any, id));
+
+    // 7. Borrar el usuario finalmente (CASCADE DB limpia el resto: friendships, messages, duels, etc.)
     await this.db.delete(users).where(eq(users.id, id));
   }
 

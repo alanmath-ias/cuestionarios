@@ -65,7 +65,7 @@ export default function AdminChallengeManager() {
     const { data: allQuizzes = [] } = useQuery<Quiz[]>({ queryKey: ["/api/quizzes"] });
     const { data: challengeHistory = [], refetch: refetchHistory } = useQuery<any[]>({ 
         queryKey: ["/api/admin/managed-challenges"],
-        enabled: view === 'history' || !!managedChallenge
+        enabled: true // always enabled so we get history on mount
     });
 
     // Auto-refetch history when a challenge ends to update leaderboard
@@ -74,6 +74,20 @@ export default function AdminChallengeManager() {
             refetchHistory();
         }
     }, [managedChallenge?.status, refetchHistory]);
+
+    // Refetch history when switching to history view
+    React.useEffect(() => {
+        if (view === 'history') {
+            refetchHistory();
+        }
+    }, [view, refetchHistory]);
+
+    // On mount: if no active challenge, immediately refresh history (catches retos finished while away)
+    React.useEffect(() => {
+        if (!managedChallenge) {
+            refetchHistory();
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleAddStudent = (student: User) => {
         if (selectedStudents.find(s => s.id === student.id)) return;

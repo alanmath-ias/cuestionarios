@@ -81,6 +81,8 @@ export class DuelServer {
   private activeManagedChallenges = new Map<number, ManagedChallengeRoom>();
   private adminSockets = new Set<WebSocket>();
   private duelTimers = new Map<number, NodeJS.Timeout>();
+  // Temporarily stores final results for finished challenges so admin can recover them on reconnect (TTL: 5 min)
+  private recentlyFinishedChallenges = new Map<number, { adminId: number; resultsMsg: any; expiresAt: number }>();
 
   constructor(server: Server) {
     DuelServer.instance = this;
@@ -90,8 +92,20 @@ export class DuelServer {
     
     // Periodic cleanup of stale duels (every 2 minutes)
     setInterval(() => this.cleanupStaleDuels(), 120000);
+    // Periodic cleanup of expired recently-finished challenge results (every minute)
+    setInterval(() => this.cleanupRecentlyFinished(), 60000);
     
     console.log('🚀 Duel WebSocket Server initialized at /ws/duels');
+  }
+
+  private cleanupRecentlyFinished() {
+      const now = Date.now();
+      for (const [id, entry] of this.recentlyFinishedChallenges.entries()) {
+          if (now > entry.expiresAt) {
+              this.recentlyFinishedChallenges.delete(id);
+              console.log(`🧹 [CLEANUP] Expired recently-finished challenge ${id} removed.`);
+          }
+      }
   }
 
   private cleanupStaleDuels() {
@@ -179,21 +193,33 @@ export class DuelServer {
     }
 
     // RECOVERY: Check for active managed challenges
+    let managedRecoveryDone = false;
     for (const room of this.activeManagedChallenges.values()) {
         const player = room.players.get(userId);
         if (player) {
             console.log(`🔄 [SYNC-MANAGED] User ${userId} reconnected to managed challenge ${room.id} (${room.status}).`);
             player.socket = socket;
             await this.sendManagedSyncState(userId, room);
-            // We usually don't break because a user might be in multiple maps? 
-            // But they can only play one Managed challenge at a time.
+            managedRecoveryDone = true;
             break; 
         }
         if (room.adminId === userId) {
             console.log(`🔄 [SYNC-ADMIN] Admin ${userId} reconnected to monitor room ${room.id}.`);
             room.adminSocket = socket;
             await this.sendManagedSyncState(userId, room);
+            managedRecoveryDone = true;
             break;
+        }
+    }
+
+    // RECOVERY: If admin missed the finish event, replay it from recentlyFinished cache
+    if (!managedRecoveryDone) {
+        for (const [challengeId, entry] of this.recentlyFinishedChallenges.entries()) {
+            if (Number(entry.adminId) === Number(userId) && Date.now() < entry.expiresAt) {
+                console.log(`🔄 [SYNC-FINISHED] Admin ${userId} missed results for challenge ${challengeId}. Replaying managed:results.`);
+                this.sendToUser(userId, entry.resultsMsg);
+                break;
+            }
         }
     }
 
@@ -1584,56 +1610,24 @@ export class DuelServer {
             }
         });
 
-        // Credit Logic: If it's a wager mode, handle transfers
-        if (room.wager > 0) {
-            const transferAmount = room.wager;
-            await db.transaction(async (tx) => {
-                // Award round winner reward
-                await tx.update(users)
-                    .set({ hintCredits: sql`hint_credits + ${transferAmount}` })
-                    .where(eq(users.id, userId));
-                
-                // If redistribute mode, subtract from everyone else who is still in the game
-                if (room.creditsMode === 'redistribute') {
-                    const otherPlayerIds = Array.from(room.players.keys()).filter(id => id !== userId);
-                    if (otherPlayerIds.length > 0) {
-                        await tx.update(users)
-                            .set({ hintCredits: sql`CASE WHEN hint_credits >= ${transferAmount} THEN hint_credits - ${transferAmount} ELSE 0 END` })
-                            .where(inArray(users.id, otherPlayerIds));
-                    }
-                }
-            });
-        }
-
-        // SPEED BONUS: Independent of wager — always check if answered before 4 seconds
+        // SPEED BONUS: Track in memory only — will be applied at the end of the challenge
         const elapsed = Date.now() - room.questionStartTime;
         if (elapsed < 4000) {
-            await db.transaction(async (tx) => {
-                await tx.update(users)
-                    .set({ hintCredits: sql`hint_credits + 1` })
-                    .where(eq(users.id, userId));
-                room.bonusCredits[userId] = (room.bonusCredits[userId] || 0) + 1;
-                
-                // If redistribute mode, subtract 1 from everyone else too
-                if (room.creditsMode === 'redistribute') {
-                    const otherPlayerIds = Array.from(room.players.keys()).filter(id => id !== userId);
-                    if (otherPlayerIds.length > 0) {
-                        await tx.update(users)
-                            .set({ hintCredits: sql`CASE WHEN hint_credits > 0 THEN hint_credits - 1 ELSE 0 END` })
-                            .where(inArray(users.id, otherPlayerIds));
-                        
-                        for (const otherId of otherPlayerIds) {
-                            room.bonusCredits[otherId] = (room.bonusCredits[otherId] || 0) - 1;
-                        }
-                    }
+            room.bonusCredits[userId] = (room.bonusCredits[userId] || 0) + 1;
+
+            // If redistribute mode, also track the deduction for others
+            if (room.creditsMode === 'redistribute') {
+                const otherPlayerIds = Array.from(room.players.keys()).filter(id => id !== userId);
+                for (const otherId of otherPlayerIds) {
+                    room.bonusCredits[otherId] = (room.bonusCredits[otherId] || 0) - 1;
                 }
-            });
-            
+            }
+
             this.broadcastToManaged(challengeId, {
                 type: 'managed:speed_bonus',
                 payload: { userId, userName: player.username }
             });
-            console.log(`⚡ [MANAGED] Speed Bonus (+1) awarded to ${userId} in ${elapsed}ms`);
+            console.log(`⚡ [MANAGED] Speed Bonus (+1 tracked) for ${userId} in ${elapsed}ms — will be paid at end`);
         }
 
         // Notify Admin of progress
@@ -1768,14 +1762,14 @@ export class DuelServer {
     }
     await storage.updateManagedChallenge(challengeId, { status: 'finished', winnerIds: winners });
 
-    // Apply Credit Logic
+    // Apply Credit Logic — all credits are distributed here at the end
     await db.transaction(async (tx) => {
         if (room.creditsMode === 'redistribute' && room.prizeConfig) {
             // Losers pay
             for (const [lId, amount] of Object.entries(room.prizeConfig.losers)) {
                 await tx.execute(sql`UPDATE users SET hint_credits = hint_credits - ${Number(amount)} WHERE id = ${Number(lId)}`);
             }
-            // Winners get
+            // Winners get prizes
             for (const [rank, amount] of Object.entries(room.prizeConfig.winners)) {
                 const playerAtRank = sortedPlayers[Number(rank) - 1];
                 if (playerAtRank) {
@@ -1791,7 +1785,16 @@ export class DuelServer {
                 }
             }
         }
+        // Apply accumulated speed bonuses for all players
+        for (const [playerId, bonusAmount] of Object.entries(room.bonusCredits)) {
+            if (bonusAmount > 0) {
+                await tx.execute(sql`UPDATE users SET hint_credits = hint_credits + ${bonusAmount} WHERE id = ${Number(playerId)}`);
+            } else if (bonusAmount < 0) {
+                await tx.execute(sql`UPDATE users SET hint_credits = CASE WHEN hint_credits + ${bonusAmount} >= 0 THEN hint_credits + ${bonusAmount} ELSE 0 END WHERE id = ${Number(playerId)}`);
+            }
+        }
     });
+    console.log(`💰 [MANAGED] Final credit payout applied for challenge ${challengeId}. Bonuses:`, room.bonusCredits);
 
     // Calculate session leaderboard from all finished challenges by this admin
     let sessionLeaderboard: any[] = [];
@@ -1835,6 +1838,14 @@ export class DuelServer {
             sessionLeaderboard
         }
     };
+
+    // Cache results so the admin can recover them if they were disconnected (TTL: 5 minutes)
+    this.recentlyFinishedChallenges.set(challengeId, {
+        adminId: room.adminId,
+        resultsMsg,
+        expiresAt: Date.now() + 5 * 60 * 1000
+    });
+    console.log(`💾 [MANAGED] Results cached for challenge ${challengeId} (admin ${room.adminId}). TTL: 5min.`);
 
     this.broadcastToManaged(challengeId, resultsMsg);
     this.activeManagedChallenges.delete(challengeId);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, memo } from "react";
 import { useDuel } from "@/hooks/use-duel";
 import { useSession } from "@/hooks/useSession";
 import { motion, AnimatePresence } from "framer-motion";
@@ -280,8 +280,9 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
   const [blurActive, setBlurActive] = useState(false);
   const [blurTimeLeft, setBlurTimeLeft] = useState(0);
 
-  // Time handicap effect
-  useEffect(() => {
+  // Time handicap effect — uses useLayoutEffect so blur is active BEFORE the browser paints
+  // (useEffect runs after paint, causing a visible frame of unblurred content)
+  useLayoutEffect(() => {
     let timer: any;
     
     // Normal Duel
@@ -320,7 +321,6 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
     
     setBlurActive(false);
     setBlurTimeLeft(0);
-    setBlurActive(false);
   }, [duel?.currentQuestion?.index, duel?.status, duel?.handicap, managedChallenge?.currentQuestion?.index, managedChallenge?.status, myId]);
 
   // Digital ticker for the blur countdown display
@@ -367,7 +367,6 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
     
     const isSelectedByMe = selectedOptionId === option.id;
     const isWrongAnswer = wrongs.some((w: any) => w.answerId === option.id);
-    const iFailedThis = wrongs.some((w: any) => w.answerId === option.id && Number(w.userId) === Number(myId));
 
     if (!fb && wrongs.length === 0) {
       if (isSelectedByMe) return "bg-blue-600/40 border-blue-400 ring-1 ring-blue-400/50 text-white";
@@ -375,6 +374,23 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
     }
 
     const correctId = (fb as any)?.correctAnswerId;
+    const answeredId = fb?.answerId;
+
+    // STALE FEEDBACK GUARD: verify the feedback's answer IDs belong to the CURRENT question's options.
+    // If they don't match any current option, this is leftover feedback from the previous round — ignore it
+    // to prevent a green flash on the new question's options.
+    if (fb) {
+      const currentOptions = (isManaged ? managedChallenge?.currentQuestion?.options : duel?.currentQuestion?.options) || [];
+      const currentOptionIds = new Set(currentOptions.map((o: any) => o.id));
+      const feedbackBelongsHere =
+        (correctId ? currentOptionIds.has(correctId) : true) &&
+        (answeredId ? currentOptionIds.has(answeredId) : true);
+      if (!feedbackBelongsHere) {
+        // Stale feedback — render as neutral
+        if (isSelectedByMe) return "bg-blue-600/40 border-blue-400 ring-1 ring-blue-400/50 text-white";
+        return "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 text-white cursor-pointer";
+      }
+    }
     
     // In managed challenges, we reveal the correct answer once SOMEONE hits it or it's provided in feedback
     const isCorrect = correctId 
@@ -396,6 +412,18 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
     const fb = isManaged ? managedChallenge?.lastFeedback : duel?.lastFeedback;
     
     const correctId = (fb as any)?.correctAnswerId;
+    const answeredId = fb?.answerId;
+
+    // STALE FEEDBACK GUARD: same as getOptionStyle — ignore feedback from previous round
+    if (fb) {
+      const currentOptions = (isManaged ? managedChallenge?.currentQuestion?.options : duel?.currentQuestion?.options) || [];
+      const currentOptionIds = new Set(currentOptions.map((o: any) => o.id));
+      const feedbackBelongsHere =
+        (correctId ? currentOptionIds.has(correctId) : true) &&
+        (answeredId ? currentOptionIds.has(answeredId) : true);
+      if (!feedbackBelongsHere) return null;
+    }
+
     const isCorrect = correctId ? option.id === correctId : (fb?.answerId === option.id && fb?.isCorrect);
     const wrongBy = wrongs.filter((w: any) => w.answerId === option.id);
     const isWinnerAnswer = isCorrect && fb?.userId && fb.userId !== null;
@@ -410,7 +438,6 @@ const rivalLeader = isManaged ? (managedChallenge?.players || [])
     let name = fb?.userName || fb?.winnerName;
     if (!name) {
         if (isManaged) {
-            // Find in wrongBy
             const lastWrong = wrongBy[wrongBy.length - 1];
             name = lastWrong?.userName || "Alguien";
         } else {

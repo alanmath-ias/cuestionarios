@@ -3904,6 +3904,12 @@ Ejemplo de formato:
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) return res.status(400).json({ message: "Invalid user ID" });
 
+    // CUENTAS PROTEGIDAS: Evitar eliminación accidental del admin principal y cuenta root
+    if (userId === 1 || userId === 2) {
+      console.warn(`⛔ Attempted to delete protected user ${userId} via admin panel`);
+      return res.status(403).json({ message: "Esta cuenta está protegida y no puede eliminarse." });
+    }
+
     try {
       await storage.deleteUser(userId);
       res.status(204).end();

@@ -410,10 +410,23 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
           });
           break;
       case 'managed:results':
-          setManagedChallenge((prev: any) => ({ ...prev, status: 'finished', results: payload }));
+          // Works even if managedChallenge is null (admin reconnected after the challenge ended)
+          setManagedChallenge((prev: any) => ({
+              ...(prev || { challengeId: payload.challengeId }),
+              status: 'finished',
+              results: payload
+          }));
           queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/managed-challenges"] });
           break;
       case 'managed:sync':
+          // If the sync arrives with a finished status AND results (recovery path), treat as managed:results
+          if (payload.status === 'finished' && payload.results) {
+              setManagedChallenge({ ...payload });
+              queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/admin/managed-challenges"] });
+              break;
+          }
           setManagedChallenge(payload);
           setIsPreparing(false); // Clear preparing state on sync
 
