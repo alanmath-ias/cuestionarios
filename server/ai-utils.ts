@@ -68,15 +68,21 @@ REQUISITOS TÉCNICOS:
     5. No mezcles palabras y números dentro de los delimitadores ¡ (ejemplo incorrecto: ¡3 Euros¡, correcto: ¡3¡ Euros o ¡3¡ ¡Euros¡).
     
     Genera ${questionCount} preguntas en formato JSON.
-6.  **ALEATORIZACIÓN CRÍTICA**: La posición de la respuesta correcta (isCorrect: true) DEBE SER ALEATORIA para cada pregunta (no siempre la primera, ni siempre la misma posición).
-7.  Todas las preguntas deben ser de tipo 'multiple_choice' con exactamente 4 opciones.
-8.  El lenguaje debe ser claro, educativo y en español.
-9.  Las opciones de respuesta deben estar bien pensadas (incluye distractores comunes).
-10. **UNICIDAD MATEMÁTICA ESTRICTA**: Las 4 opciones deben ser MATEMÁTICAMENTE DISTINTAS entre sí. Antes de incluir un distractor, verifica que NO sea equivalente a la respuesta correcta ni a ningún otro distractor. Ejemplos de error: si la respuesta es ¡\\frac{1}{2}¡, no pongas ¡0.5¡ ni ¡\\frac{2}{4}¡ como distractor; si la respuesta es ¡4¡, no pongas ¡\\frac{8}{2}¡. Cada opción debe tener un valor numérico o expresión simplificada diferente.
-11. Incluye una breve explicación pedagógica de la respuesta correcta (máximo 2 líneas).
-12. Prioriza ejercicios técnicos directos. Evita enunciados extensos, historias o contextos innecesarios.
-13. **IMPORTANTE**: No uses nunca los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).
-14. **LATEX CRÍTICO**: Al generar código LaTeX dentro del JSON, DEBES escapar las barras invertidas con doble barra (ejemplo: \\frac, \\sqrt, \\mathbb, \\cdot, \\leq, \\geq, \\neq, \\approx, \\boxed). NUNCA escribas funciones matemáticas sin su barra invertida (incorrecto: sqrt, frac, boxed; correcto: \\sqrt, \\frac, \\boxed).
+    6.  **ALEATORIZACIÓN CRÍTICA**: La posición de la respuesta correcta (isCorrect: true) DEBE SER ALEATORIA para cada pregunta (no siempre la primera, ni siempre la misma posición).
+    7.  Todas las preguntas deben ser de tipo 'multiple_choice' con exactamente 4 opciones.
+    8.  El lenguaje debe ser claro, educativo y en español.
+    9.  Las opciones de respuesta deben estar bien pensadas (incluye distractores comunes).
+    10. ⚠️ **UNICIDAD ABSOLUTA Y OBLIGATORIA DE LAS 4 OPCIONES (PROHIBIDO DUPLICAR O REPETIR)**:
+        - Las 4 opciones ("options") de CADA pregunta DEBEN SER ESTRICTAMENTE DIFERENTES Y MUTUAMENTE EXCLUYENTES entre sí, tanto en valor numérico o algebraico como en redacción textual.
+        - **CERO TOLERANCIA A REPETICIONES**: Queda TERMINANTEMENTE PROHIBIDO que un distractor ("isCorrect: false") sea idéntico, equivalente o tenga el mismo texto o resultado que la respuesta correcta ("isCorrect: true").
+        - Queda TERMINANTEMENTE PROHIBIDO que existan dos distractores idénticos entre sí.
+        - Ejemplo de error grave a evitar: si la respuesta correcta es ¡4¡, NINGÚN distractor puede ser ¡4¡ ni ¡\\frac{8}{2}¡ ni ¡2+2¡. Si la respuesta es ¡2x + 1¡, ningún distractor puede ser ¡2x + 1¡ ni ¡1 + 2x¡.
+        - Antes de emitir el JSON, revisa minuciosamente cada una de las 4 opciones para asegurar que las cuatro sean 100% distintas.
+        - Cada pregunta debe contener EXACTAMENTE UNA opción con "isCorrect": true y EXACTAMENTE TRES opciones con "isCorrect": false.
+    11. Incluye una breve explicación pedagógica de la respuesta correcta (máximo 2 líneas).
+    12. Prioriza ejercicios técnicos directos. Evita enunciados extensos, historias o contextos innecesarios.
+    13. **IMPORTANTE**: No uses nunca los signos de exclamación '¡' ni '!' para puntuación de texto. Úsalos ÚNICAMENTE para delimitar fórmulas matemáticas en LaTeX (ejemplo: ¡ x^2 ¡).
+    14. **LATEX CRÍTICO**: Al generar código LaTeX dentro del JSON, DEBES escapar las barras invertidas con doble barra (ejemplo: \\frac, \\sqrt, \\mathbb, \\cdot, \\leq, \\geq, \\neq, \\approx, \\boxed). NUNCA escribas funciones matemáticas sin su barra invertida (incorrecto: sqrt, frac, boxed; correcto: \\sqrt, \\frac, \\boxed).
 
 DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
 {
@@ -137,9 +143,136 @@ DEVUELVE ÚNICAMENTE UN OBJETO JSON CON ESTE FORMATO (sin markdown):
 
   const aiData: any = await aiResponse.json();
   try {
-    return cleanAiJson(aiData.choices[0].message.content);
+    const parsed = cleanAiJson(aiData.choices[0].message.content);
+    return sanitizeAndDeduplicateQuiz(parsed);
   } catch (e) {
     console.error("JSON Parsing Error from AI:", aiData.choices[0].message.content);
     throw new Error("La IA generó un formato inválido. Por favor intenta de nuevo.");
   }
+}
+
+function normalizeOpt(text: string): string {
+  return String(text || '')
+    .trim()
+    .replace(/^¡\s*/, '¡')
+    .replace(/\s*¡$/, '¡')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+export function sanitizeAndDeduplicateQuiz(data: any): any {
+  if (!data || !Array.isArray(data.questions)) return data;
+
+  for (const q of data.questions) {
+    if (!Array.isArray(q.options) || q.options.length === 0) continue;
+
+    // 1. Ensure exactly one correct answer
+    const correctIndices: number[] = [];
+    q.options.forEach((opt: any, idx: number) => {
+      if (opt && opt.isCorrect === true) {
+        correctIndices.push(idx);
+      }
+    });
+
+    if (correctIndices.length === 0) {
+      if (q.options[0]) q.options[0].isCorrect = true;
+    } else if (correctIndices.length > 1) {
+      for (let i = 1; i < correctIndices.length; i++) {
+        const dupCorrectIdx = correctIndices[i];
+        if (q.options[dupCorrectIdx]) {
+          q.options[dupCorrectIdx].isCorrect = false;
+        }
+      }
+    }
+
+    // 2. Identify correct option content
+    const correctOpt = q.options.find((o: any) => o && o.isCorrect === true);
+    const correctNorm = correctOpt ? normalizeOpt(correctOpt.content) : '';
+
+    // 3. Deduplicate options
+    const seenContents = new Set<string>();
+    if (correctNorm) {
+      seenContents.add(correctNorm);
+    }
+
+    q.options.forEach((opt: any) => {
+      if (!opt) return;
+      if (opt.isCorrect === true) return; // Keep correct as anchor
+
+      const optContent = String(opt.content || '').trim();
+      const norm = normalizeOpt(optContent);
+
+      // If duplicate of correct answer or duplicate of previous distractor
+      if (seenContents.has(norm) || (norm === correctNorm && correctNorm !== '')) {
+        console.warn(`⚠️ [AI DEDUPLICATOR] Duplicate option detected: "${optContent}". Fixing distractor...`);
+        const fixedContent = alterMathContent(optContent, seenContents);
+        opt.content = fixedContent;
+        seenContents.add(normalizeOpt(fixedContent));
+      } else {
+        seenContents.add(norm);
+      }
+    });
+
+    // 4. Ensure we have exactly 4 options
+    if (q.options.length < 4) {
+      let counter = 1;
+      while (q.options.length < 4) {
+        const filler = `¡${counter * 3}¡`;
+        if (!seenContents.has(normalizeOpt(filler))) {
+          q.options.push({ content: filler, isCorrect: false });
+          seenContents.add(normalizeOpt(filler));
+        }
+        counter++;
+      }
+    } else if (q.options.length > 4) {
+      const correct = q.options.filter((o: any) => o.isCorrect);
+      const distractors = q.options.filter((o: any) => !o.isCorrect).slice(0, 3);
+      q.options = [...correct, ...distractors];
+    }
+  }
+
+  return data;
+}
+
+function alterMathContent(content: string, seen: Set<string>): string {
+  // If content contains a number, offset it
+  const numMatch = content.match(/(-?\d+)/);
+  if (numMatch) {
+    const num = parseInt(numMatch[1], 10);
+    const offsets = [1, -1, 2, -2, 3, -3, 5, -5, 7, -7, 10, -10];
+    for (const off of offsets) {
+      const candidateVal = num + off;
+      const candidate = content.replace(numMatch[1], String(candidateVal));
+      if (!seen.has(normalizeOpt(candidate))) {
+        return candidate;
+      }
+    }
+  }
+
+  // If algebraic or text, add alternative modifiers
+  const modifiers = [
+    (c: string) => c.includes('+') ? c.replace(/\+/, '-') : (c.includes('-') ? c.replace(/-/, '+') : `-${c}`),
+    (c: string) => c.includes('¡') ? c.replace(/¡(.*?)¡/, '¡2($1)¡') : `2(${c})`,
+    (c: string) => c.includes('¡') ? c.replace(/¡(.*?)¡/, '¡$1 + 1¡') : `${c} + 1`,
+    (c: string) => c.includes('¡') ? c.replace(/¡(.*?)¡/, '¡$1 - 1¡') : `${c} - 1`,
+    (c: string) => `¡${c.replace(/¡/g, '')} + 2¡`
+  ];
+
+  for (const mod of modifiers) {
+    const candidate = mod(content);
+    if (!seen.has(normalizeOpt(candidate))) {
+      return candidate;
+    }
+  }
+
+  // Safe distinct fallback
+  let salt = 1;
+  while (salt < 100) {
+    const fallback = `¡${Math.floor(Math.random() * 80) + 10 + salt}¡`;
+    if (!seen.has(normalizeOpt(fallback))) {
+      return fallback;
+    }
+    salt++;
+  }
+  return `¡${Date.now() % 100}¡`;
 }

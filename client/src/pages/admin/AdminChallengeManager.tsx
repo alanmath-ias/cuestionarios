@@ -4,10 +4,11 @@ import { useSession } from "@/hooks/useSession";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Users, Sword, Trophy, Coins, Settings2, Play, AlertCircle, CheckCircle2, UserMinus, Wand2, ClipboardList, ShieldAlert, Clock, Zap, Loader2, Trash2, XCircle, Plus, Minus, History, ArrowLeft, Search } from "lucide-react";
+import { Users, Sword, Trophy, Coins, Settings2, Play, AlertCircle, CheckCircle2, UserMinus, Wand2, ClipboardList, ShieldAlert, Clock, Zap, Loader2, Trash2, XCircle, Plus, Minus, History, ArrowLeft, Search, Eraser, Sparkles, FileText } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -16,6 +17,31 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { User, Quiz } from "@shared/schema";
 import { ContentRenderer } from "@/components/ContentRenderer";
+
+const PendingCountdown = ({ expiresAt }: { expiresAt?: number }) => {
+    const [secondsLeft, setSecondsLeft] = useState<number>(() => {
+        if (!expiresAt) return 60;
+        return Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+    });
+
+    useEffect(() => {
+        if (!expiresAt) return;
+        const tick = () => {
+            const left = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+            setSecondsLeft(left);
+        };
+        tick();
+        const interval = setInterval(tick, 1000);
+        return () => clearInterval(interval);
+    }, [expiresAt]);
+
+    return (
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 rounded-xl border border-amber-500/30 text-amber-300 font-mono font-black text-xs shrink-0 shadow-sm" title="Tiempo restante para recibir respuestas antes de la auto-cancelación">
+            <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span>{secondsLeft}s</span>
+        </div>
+    );
+};
 
 export default function AdminChallengeManager() {
     const duelContext = useDuel();
@@ -40,9 +66,10 @@ export default function AdminChallengeManager() {
     const [selectedHistoryChallenge, setSelectedHistoryChallenge] = useState<any | null>(null);
     const [showParticipantsList, setShowParticipantsList] = useState(false);
     const [wager, setWager] = useState(10);
-    const [creditsMode, setCreditsMode] = useState<'redistribute' | 'system_pay'>('redistribute');
+    const [creditsMode, setCreditsMode] = useState<'redistribute' | 'system_pay'>('system_pay');
     const [quizType, setQuizType] = useState<'ai' | 'database'>('ai');
     const [aiTopic, setAiTopic] = useState("");
+    const [aiInstructions, setAiInstructions] = useState("");
     const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
     const [winnersPrize, setWinnersPrize] = useState<{ 1: number; 2: number; 3: number }>({ 1: 0, 2: 0, 3: 0 });
     const [questionCount, setQuestionCount] = useState(10);
@@ -223,7 +250,11 @@ export default function AdminChallengeManager() {
             },
             advantages,
             questionsCount: questionCount,
-            quizConfig: quizType === 'ai' ? { type: 'ai', topic: aiTopic } : { type: 'database', quizId: parseInt(selectedQuizId!) }
+            quizConfig: quizType === 'ai' ? { 
+                type: 'ai', 
+                topic: aiTopic.trim(), 
+                instructions: aiInstructions.trim() 
+            } : { type: 'database', quizId: parseInt(selectedQuizId!) }
         });
 
         toast({ title: "Reto creado", description: "Invitaciones enviadas a los estudiantes" });
@@ -310,28 +341,43 @@ export default function AdminChallengeManager() {
                         </CardHeader>
                         <CardContent className="p-8 space-y-8">
 
-                            {/* 1. Student Selection */}
-                            <div className="space-y-3">
-                                <Label className="text-white text-sm font-black flex items-center gap-2 uppercase tracking-[0.2em] opacity-80">
-                                    <Users className="w-5 h-5 text-blue-400" />
-                                    PARTICIPANTES ({selectedStudents.length})
-                                </Label>
+                            {/* 1. Student Selection (ZONA DESTACADA DE PARTICIPANTES) */}
+                            <div className="rounded-2xl border-2 border-indigo-500/40 bg-gradient-to-b from-indigo-950/40 via-slate-900/90 to-slate-950 p-5 shadow-xl shadow-indigo-950/20 space-y-4 relative overflow-hidden">
+                                <div className="flex items-center justify-between pb-2 border-b border-indigo-500/20">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="h-9 w-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-md">
+                                            <Users className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <Label className="text-white text-sm font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                                                PARTICIPANTES ({selectedStudents.length})
+                                            </Label>
+                                            <p className="text-[10px] text-indigo-300/80 font-bold uppercase tracking-wider">
+                                                Busca y añade a los duelistas de este reto
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 text-[10px] font-black uppercase tracking-wider">
+                                        Paso 1
+                                    </Badge>
+                                </div>
+
                                 <div className="space-y-2 relative">
                                     <div className="relative group">
-                                        <Users className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-blue-400 transition-colors" />
+                                        <Users className="absolute left-4 top-3.5 w-5 h-5 text-indigo-400/60 group-focus-within:text-indigo-400 transition-colors" />
                                         <Input
-                                            placeholder="Busca por nombre o @usuario..."
+                                            placeholder="Buscar y añadir alumnos por nombre o @usuario..."
                                             value={studentSearch}
                                             onChange={(e) => setStudentSearch(e.target.value)}
                                             onFocus={() => setIsStudentSearchFocused(true)}
                                             onBlur={() => setTimeout(() => setIsStudentSearchFocused(false), 200)}
-                                            className="pl-12 bg-slate-950 border-white/20 text-white placeholder:text-slate-700 h-12 text-lg focus:ring-2 focus:ring-blue-500/50 transition-all font-medium"
+                                            className="pl-12 bg-indigo-950/30 border-indigo-500/30 text-white placeholder:text-indigo-300/40 h-12 text-base focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400 transition-all font-medium rounded-xl"
                                         />
                                     </div>
 
                                     {/* Dropdown de estudiantes */}
                                     {isStudentSearchFocused && (
-                                        <Card className="absolute z-[100] w-full bg-slate-900 border-white/20 shadow-2xl mt-2 max-h-[400px] overflow-hidden flex flex-col ring-1 ring-blue-500/30">
+                                        <Card className="absolute z-[100] w-full bg-slate-900 border-indigo-500/30 shadow-2xl mt-2 max-h-[400px] overflow-hidden flex flex-col ring-1 ring-indigo-500/40">
                                             <ScrollArea className="flex-1 overflow-y-auto">
                                                 <div className="p-2 space-y-1">
                                                     {filteredUsers.length === 0 ? (
@@ -346,19 +392,19 @@ export default function AdminChallengeManager() {
                                                             <button
                                                                 key={u.id}
                                                                 onClick={() => handleAddStudent(u)}
-                                                                className="w-full text-left p-4 hover:bg-blue-600/20 rounded-2xl flex items-center justify-between group transition-all border-2 border-transparent hover:border-blue-500/30 mb-1"
+                                                                className="w-full text-left p-4 hover:bg-indigo-600/20 rounded-2xl flex items-center justify-between group transition-all border-2 border-transparent hover:border-indigo-500/30 mb-1"
                                                             >
                                                                 <div className="flex items-center gap-4">
-                                                                    <div className="w-12 h-12 rounded-xl bg-blue-600/20 flex items-center justify-center text-blue-400 font-black border border-blue-500/10 group-hover:bg-blue-600/30 group-hover:border-blue-400 transitions-all">
+                                                                    <div className="w-12 h-12 rounded-xl bg-indigo-600/20 flex items-center justify-center text-indigo-300 font-black border border-indigo-500/20 group-hover:bg-indigo-600/30 group-hover:border-indigo-400 transitions-all">
                                                                         {u.name?.[0].toUpperCase() || u.username?.[0].toUpperCase()}
                                                                     </div>
                                                                     <div>
-                                                                        <p className="font-bold text-white text-base group-hover:text-blue-200 transition-colors">{u.name}</p>
-                                                                        <p className="text-[10px] text-slate-500 group-hover:text-blue-300 font-black tracking-[0.2em] uppercase transition-colors">@{u.username}</p>
+                                                                        <p className="font-bold text-white text-base group-hover:text-indigo-200 transition-colors">{u.name}</p>
+                                                                        <p className="text-[10px] text-slate-400 group-hover:text-indigo-300 font-black tracking-[0.2em] uppercase transition-colors">@{u.username}</p>
                                                                     </div>
                                                                 </div>
-                                                                <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-blue-500 group-hover:rotate-90 transition-all shadow-lg">
-                                                                    <Plus className="w-4 h-4 text-slate-500 group-hover:text-white" />
+                                                                <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-indigo-500 group-hover:rotate-90 transition-all shadow-lg">
+                                                                    <Plus className="w-4 h-4 text-slate-400 group-hover:text-white" />
                                                                 </div>
                                                             </button>
                                                         ))
@@ -369,16 +415,16 @@ export default function AdminChallengeManager() {
                                     )}
                                 </div>
 
-                                <div className="flex flex-wrap gap-2 pt-1 min-h-[50px] p-3 bg-slate-950/50 rounded-2xl border border-white/5">
+                                <div className="flex flex-wrap gap-2 pt-1 min-h-[50px] p-3 bg-slate-950/70 rounded-xl border border-indigo-500/20">
                                     {selectedStudents.length === 0 ? (
-                                        <p className="text-xs text-slate-600 font-medium italic w-full text-center py-2">Escribe arriba para añadir estudiantes...</p>
+                                        <p className="text-xs text-indigo-300/60 font-medium italic w-full text-center py-2">Escribe en la barra para añadir duelistas...</p>
                                     ) : (
                                         selectedStudents.map(s => {
                                             const adv = advantages[s.id];
                                             return (
                                                 <div 
                                                     key={s.id} 
-                                                    className="flex items-center gap-0.5 bg-blue-600/20 text-blue-100 border border-blue-500/40 rounded-xl overflow-hidden shadow-lg animate-in zoom-in-95 duration-200"
+                                                    className="flex items-center gap-0.5 bg-indigo-600/20 text-indigo-100 border border-indigo-500/40 rounded-xl overflow-hidden shadow-lg animate-in zoom-in-95 duration-200"
                                                 >
                                                     {/* Botón de Configuración (Principal) */}
                                                     <button 
@@ -387,13 +433,13 @@ export default function AdminChallengeManager() {
                                                             console.log("Opening advantages for:", s.name);
                                                             setEditingStudent(s);
                                                         }}
-                                                        className="flex items-center gap-2 py-1.5 pl-3 pr-2 hover:bg-blue-600/30 transition-all active:scale-95 group"
+                                                        className="flex items-center gap-2 py-1.5 pl-3 pr-2 hover:bg-indigo-600/30 transition-all active:scale-95 group"
                                                     >
                                                         <span className="text-xs font-medium uppercase tracking-tight">{s.name}</span>
                                                         
                                                         {/* Advantage Indicators */}
                                                         {(adv && (adv.points > 0 || adv.timeDelay > 0)) && (
-                                                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-950/40 rounded-lg border border-white/5">
+                                                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-950/60 rounded-lg border border-white/5">
                                                                 {adv.points > 0 && <span className="text-[9px] font-black text-amber-400">⚡+{adv.points}</span>}
                                                                 {adv.timeDelay > 0 && <span className="text-[9px] font-black text-purple-400">⏳{adv.timeDelay}s</span>}
                                                             </div>
@@ -403,7 +449,7 @@ export default function AdminChallengeManager() {
                                                     {/* Botón de Eliminar (Separado) */}
                                                     <button 
                                                         type="button"
-                                                        className="py-1.5 px-2 hover:bg-red-500/60 hover:text-white text-blue-300/50 transition-all border-l border-blue-500/20" 
+                                                        className="py-1.5 px-2 hover:bg-red-500/60 hover:text-white text-indigo-300/50 transition-all border-l border-indigo-500/20" 
                                                         onClick={() => handleRemoveStudent(s.id)}
                                                     >
                                                         <UserMinus className="w-3.5 h-3.5" />
@@ -443,16 +489,71 @@ export default function AdminChallengeManager() {
                                 </div>
 
                                 {quizType === 'ai' ? (
-                                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                        <Input
-                                            placeholder="Ej: Historia de la computación..."
-                                            value={aiTopic}
-                                            onChange={(e) => setAiTopic(e.target.value)}
-                                            className="bg-slate-950 border-white/20 text-white h-12 text-base placeholder:text-slate-800 font-bold focus:border-blue-500/50"
-                                        />
-                                        <div className="flex items-center gap-2 text-blue-400 font-bold text-[10px] bg-blue-500/5 p-2 rounded-lg border border-blue-500/10 uppercase tracking-tight">
-                                            <Wand2 className="w-3 h-3" />
-                                            <span>La IA creará {questionCount} preguntas desafiantes sobre este tema.</span>
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        {/* Campo 1: Título o Tema del Reto (Visible para los alumnos) */}
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-white text-xs font-black uppercase tracking-wider flex items-center gap-1.5 text-blue-300">
+                                                    <FileText className="w-3.5 h-3.5 text-blue-400" />
+                                                    TÍTULO O TEMA DEL RETO <span className="text-[10px] font-bold text-amber-400/90 lowercase tracking-normal">(visible en la invitación)</span>
+                                                </Label>
+                                                {aiTopic && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setAiTopic("")}
+                                                        className="h-6 px-2 text-[10px] font-bold text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-md flex items-center gap-1"
+                                                    >
+                                                        <Eraser className="w-3 h-3" /> Limpiar título
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <Input
+                                                placeholder="Ej: Sumas y restas de números enteros con paréntesis"
+                                                value={aiTopic}
+                                                onChange={(e) => setAiTopic(e.target.value)}
+                                                className="bg-slate-950 border-white/20 text-white h-11 text-base placeholder:text-slate-700 font-bold focus:border-blue-500/60 rounded-xl"
+                                            />
+                                            <p className="text-[10px] text-slate-400 font-medium">
+                                                Título limpio que verán los estudiantes en su invitación y pantalla de duelo.
+                                            </p>
+                                        </div>
+
+                                        {/* Campo 2: Instrucciones y Ajustes adicionales para la IA (Multilínea y herramientas) */}
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-white text-xs font-black uppercase tracking-wider flex items-center gap-1.5 text-purple-300">
+                                                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                                                    INSTRUCCIONES ADICIONALES PARA LA IA <span className="text-[10px] font-bold text-slate-400 lowercase tracking-normal">(opcional / detalles del prompt)</span>
+                                                </Label>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[9px] font-mono text-slate-500">
+                                                        {aiInstructions.length} caracteres
+                                                    </span>
+                                                    {aiInstructions && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setAiInstructions("")}
+                                                            className="h-6 px-2 text-[10px] font-bold text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-md flex items-center gap-1"
+                                                        >
+                                                            <Trash2 className="w-3 h-3" /> Limpiar
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <Textarea
+                                                placeholder="Ej: Los primeros más fáciles, luego complica por cantidad de términos. Todos de una sola cifra. Acompañar los enteros por la misma parte literal X, Y..."
+                                                value={aiInstructions}
+                                                onChange={(e) => setAiInstructions(e.target.value)}
+                                                className="bg-slate-950 border-white/20 text-white min-h-[110px] text-sm placeholder:text-slate-700 font-medium focus:border-purple-500/60 rounded-xl resize-y leading-relaxed p-3"
+                                            />
+                                            <div className="flex items-center gap-2 text-purple-300/90 font-bold text-[10px] bg-purple-500/10 p-2.5 rounded-xl border border-purple-500/20">
+                                                <Wand2 className="w-3.5 h-3.5 shrink-0 text-purple-400" />
+                                                <span>La IA combinará el título y las instrucciones para generar las {questionCount} preguntas. Los alumnos NO verán este texto en su invitación.</span>
+                                            </div>
                                         </div>
                                     </div>
                                 ) : (
@@ -545,8 +646,8 @@ export default function AdminChallengeManager() {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent className="bg-slate-900 border-white/20 text-white shadow-2xl p-1">
-                                            <SelectItem value="redistribute" className="font-bold py-3 text-sm focus:bg-blue-600 focus:text-white rounded-lg transition-colors cursor-pointer">💸 APUESTA ENTRE JUGADORES</SelectItem>
                                             <SelectItem value="system_pay" className="font-bold py-3 text-sm focus:bg-blue-600 focus:text-white rounded-lg transition-colors cursor-pointer">🏢 SISTEMA PAGA</SelectItem>
+                                            <SelectItem value="redistribute" className="font-bold py-3 text-sm focus:bg-blue-600 focus:text-white rounded-lg transition-colors cursor-pointer">💸 APUESTA ENTRE JUGADORES</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -922,11 +1023,19 @@ export default function AdminChallengeManager() {
                                     <div className="pt-6 border-t border-white/10">
                                         {managedChallenge.status === 'pending' ? (
                                             <div className="space-y-4">
-                                                <div className="bg-amber-500/5 p-4 rounded-2xl flex items-center gap-3 border border-amber-500/20">
-                                                    <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
-                                                    <p className="text-xs font-bold text-amber-200/80 leading-tight uppercase tracking-tighter">
-                                                        LOS QUE NO ACEPTEN AL DAR "COMENZAR" QUEDARÁN FUERA.
-                                                    </p>
+                                                <div className="bg-amber-500/10 p-4 rounded-2xl flex items-center justify-between border border-amber-500/20 gap-3">
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-bold text-amber-200/90 leading-tight uppercase tracking-tight">
+                                                                LOS QUE NO ACEPTEN AL DAR "COMENZAR" QUEDARÁN FUERA.
+                                                            </p>
+                                                            <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                                                                Si ningún participante responde, el reto se cancelará automáticamente.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <PendingCountdown expiresAt={managedChallenge.pendingExpiresAt} />
                                                 </div>
                                                 <Button 
                                                     className="w-full bg-emerald-500 hover:bg-emerald-600 font-black h-14 rounded-2xl text-xl shadow-lg shadow-emerald-900/20 group relative overflow-hidden"

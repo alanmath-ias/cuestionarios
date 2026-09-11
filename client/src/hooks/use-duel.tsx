@@ -499,6 +499,25 @@ export function DuelProvider({ children }: { children: React.ReactNode }) {
                 }
             }
             break;
+       case 'managed:auto_cancelled':
+             setManagedInvite(null);
+             setManagedChallenge(null);
+             setIsPreparing(false);
+             setIsResponding(false);
+             setManagedCancellation(null);
+             break;
+       case 'managed:auto_cancelled_admin':
+             setManagedInvite(null);
+             setManagedChallenge(null);
+             setIsPreparing(false);
+             setIsResponding(false);
+             setManagedCancellation(null);
+             toast({
+                 title: "Reto cancelado automáticamente",
+                 description: payload.message || "El reto fue cancelado automáticamente porque ningún participante respondió.",
+                 variant: "destructive"
+             });
+             break;
       case 'managed:error':
           setManagedInvite(null);
           toast({ title: "Aviso", description: payload.message || "Ocurrió un error en el reto.", variant: "destructive" });

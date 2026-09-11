@@ -66,11 +66,14 @@ interface ManagedChallengeRoom {
   questionStartTime: number;
   history: any[];
   topic?: string;
+  instructions?: string;
   failedUserIds: number[];
   currentRoundAnswers: { userId: number; answerId: number }[];
   bonusCredits: { [userId: number]: number };
   questionsCount: number;
   timerId?: NodeJS.Timeout;
+  pendingTimerId?: NodeJS.Timeout;
+  pendingExpiresAt?: number;
 }
 
 export class DuelServer {
@@ -1267,8 +1270,9 @@ export class DuelServer {
     const existingChallenges = Array.from(this.activeManagedChallenges.entries())
         .filter(([_, room]) => room.adminId === adminId);
         
-    for (const [id, _] of existingChallenges) {
+    for (const [id, oldRoom] of existingChallenges) {
         console.log(`♻️ [MANAGED CLEANUP] Removing previous active challenge ${id} for admin ${adminId}`);
+        if (oldRoom.pendingTimerId) clearTimeout(oldRoom.pendingTimerId);
         this.activeManagedChallenges.delete(id);
     }
 
@@ -1276,6 +1280,7 @@ export class DuelServer {
     // Extract actual config from the nested quizConfig object
     const quizId = quizConfig?.type === 'database' ? quizConfig.quizId : null;
     const aiTopic = quizConfig?.type === 'ai' ? quizConfig.topic : null;
+    const aiInstructions = quizConfig?.type === 'ai' ? quizConfig.instructions : null;
     
     try {
       const challenge = await storage.createManagedChallenge({
@@ -1312,8 +1317,22 @@ export class DuelServer {
             pointsHandicap: playerAdvantage.points || 0,
             timeHandicap: playerAdvantage.timeDelay || 0
           });
+        }
+      }
 
-          // Notify student
+      const participantsSummary = (studentIds as number[]).map((sId: number) => {
+        const p = playerMap.get(sId);
+        return {
+          userId: sId,
+          username: p?.username || "Jugador",
+          pointsAdvantage: p?.pointsHandicap || 0,
+          timeAdvantage: p?.timeHandicap || 0
+        };
+      });
+
+      // Notify students with enriched participants and advantages
+      for (const studentId of studentIds) {
+        if (playerMap.has(studentId)) {
           this.sendToUser(studentId, {
             type: 'managed:invited',
             payload: {
@@ -1323,11 +1342,15 @@ export class DuelServer {
               creditsMode,
               prizeConfig,
               topic: aiTopic || "Reto Administrado",
-              participantIds: studentIds
+              participantIds: studentIds,
+              participants: participantsSummary
             }
           });
         }
       }
+
+      const PENDING_TIMEOUT_MS = 60000; // 60s timeout if nobody responds
+      const pendingExpiresAt = Date.now() + PENDING_TIMEOUT_MS;
 
       const room: ManagedChallengeRoom = {
         id: challenge.id,
@@ -1345,9 +1368,14 @@ export class DuelServer {
         questionStartTime: 0,
         history: [],
         topic: aiTopic || undefined,
+        instructions: aiInstructions || undefined,
         failedUserIds: [],
         currentRoundAnswers: [],
-        bonusCredits: {}
+        bonusCredits: {},
+        pendingExpiresAt,
+        pendingTimerId: setTimeout(async () => {
+            await this.checkManagedPendingTimeout(challenge.id);
+        }, PENDING_TIMEOUT_MS)
       };
 
       this.activeManagedChallenges.set(challenge.id, room);
@@ -1360,6 +1388,7 @@ export class DuelServer {
               challengeId: room.id,
               topic: room.topic || "Reto Administrado",
               status: room.status,
+              pendingExpiresAt: room.pendingExpiresAt,
               players: Array.from(room.players.values()).map(p => ({
                   userId: p.userId,
                   username: p.username,
@@ -1410,12 +1439,26 @@ export class DuelServer {
 
     // Notify everyone including Admin
     this.broadcastToManaged(challengeId, updateMsg);
+
+    // If ALL participants have explicitly abandoned/ignored, cancel automatically immediately
+    if (room.status === 'pending') {
+        const allAbandoned = Array.from(room.players.values()).every(p => p.status === 'abandoned');
+        if (allAbandoned) {
+            console.log(`🚫 [MANAGED ALL ABANDONED] All participants rejected challenge ${challengeId}. Auto-cancelling immediately...`);
+            await this.cancelManagedChallengeAutomatically(challengeId, 'Todos los participantes rechazaron la invitación al reto.');
+        }
+    }
   }
 
   private async handleManagedStart(adminId: number, payload: { challengeId: number }) {
     const { challengeId } = payload;
     const room = this.activeManagedChallenges.get(challengeId);
     if (!room || room.adminId !== adminId) return;
+
+    if (room.pendingTimerId) {
+        clearTimeout(room.pendingTimerId);
+        room.pendingTimerId = undefined;
+    }
 
     // NEW: Remove anyone who hasn't accepted (status !== 'ready') before starting
     const pendingParticipants = Array.from(room.players.entries())
@@ -1454,9 +1497,13 @@ export class DuelServer {
           }
       } else if (room.topic) {
           let quizData: any;
+          const fullTopicDescription = room.instructions
+              ? `${room.topic}\n\nInstrucciones específicas adicionales:\n${room.instructions}`
+              : room.topic;
+
           try {
               quizData = await generateAiQuizData({
-                  topicDescription: room.topic,
+                  topicDescription: fullTopicDescription,
                   categoryName: "Reto Grupal",
                   difficulty: "medium",
                   questionCount: room.questionsCount || 8
@@ -1465,18 +1512,33 @@ export class DuelServer {
               console.warn(`⚠️ [MANAGED AI FALLBACK] AI quiz generation failed (${(aiErr as any)?.message}). Falling back to DB/procedural questions.`);
               quizData = await this.generateFallbackQuiz(room.topic, room.questionsCount || 8);
           }
-          // MAP OPTIONS CAREFULLY
+          // MAP OPTIONS CAREFULLY & ENSURE ZERO DUPLICATES
           questionsList = quizData.questions.map((q: any) => {
-              const options = q.options.map((opt: any, idx: number) => ({
+              const rawOptions = q.options.map((opt: any, idx: number) => ({
                   id: idx,
                   content: typeof opt === 'string' ? opt : (opt.content || opt.text),
                   isCorrect: typeof opt === 'string' ? (opt === q.correctAnswer) : !!opt.isCorrect
               }));
+
+              // Extra defense against duplicates:
+              const seen = new Set<string>();
+              const deduplicatedOptions = rawOptions.map((opt: any, idx: number) => {
+                  let text = String(opt.content || '').trim();
+                  const key = text.replace(/^¡\s*/, '¡').replace(/\s*¡$/, '¡').replace(/\s+/g, ' ').toLowerCase();
+                  if (seen.has(key)) {
+                      // Duplicate detected!
+                      if (!opt.isCorrect) {
+                          text = text.includes('¡') ? text.replace(/¡(.*?)¡/, '¡$1 + 1¡') : `${text} + 1`;
+                      }
+                  }
+                  seen.add(text.replace(/^¡\s*/, '¡').replace(/\s*¡$/, '¡').replace(/\s+/g, ' ').toLowerCase());
+                  return { ...opt, id: idx, content: text };
+              });
               
               return {
                   id: Math.floor(Math.random() * 1000000), // Random ID for the question
                   content: q.content,
-                  options: this.shuffleArray(options)
+                  options: this.shuffleArray(deduplicatedOptions)
               };
           });
       }
@@ -1868,6 +1930,7 @@ export class DuelServer {
           payload: {
               challengeId: room.id,
               status: room.status,
+              pendingExpiresAt: room.pendingExpiresAt,
               adminName: adminUser?.username || "El Administrador",
               topic: room.topic || "Cuestionario",
               wager: room.wager,
@@ -1923,6 +1986,10 @@ export class DuelServer {
       // 1. Notify participants if it's an active room
       const room = this.activeManagedChallenges.get(challengeId);
       if (room && Number(room.adminId) === Number(adminId)) {
+          if (room.pendingTimerId) {
+              clearTimeout(room.pendingTimerId);
+              room.pendingTimerId = undefined;
+          }
           const adminUser = await storage.getUser(adminId);
           this.broadcastToManaged(challengeId, {
               type: 'managed:deleted',
@@ -1940,6 +2007,69 @@ export class DuelServer {
       await storage.deleteManagedChallenge(challengeId);
 
       // 3. Update all admins lists
+      this.broadcastManagedChallengeListToAdmins();
+  }
+
+  private async checkManagedPendingTimeout(challengeId: number) {
+      const room = this.activeManagedChallenges.get(challengeId);
+      if (!room || room.status !== 'pending') return;
+
+      // Check if ANY participant responded with 'ready'
+      const hasAnyReady = Array.from(room.players.values()).some(p => p.status === 'ready');
+      if (hasAnyReady) {
+          console.log(`⏰ [MANAGED TIMEOUT] Challenge ${challengeId} has at least one ready player. Skipping auto-cancel.`);
+          return;
+      }
+
+      console.log(`⏰ [MANAGED TIMEOUT] No participants responded in challenge ${challengeId}. Auto-cancelling...`);
+      await this.cancelManagedChallengeAutomatically(challengeId, 'Ningún participante respondió a la invitación a tiempo.');
+  }
+
+  private async cancelManagedChallengeAutomatically(challengeId: number, reason: string) {
+      const room = this.activeManagedChallenges.get(challengeId);
+      if (!room) return;
+
+      if (room.pendingTimerId) {
+          clearTimeout(room.pendingTimerId);
+          room.pendingTimerId = undefined;
+      }
+
+      const adminId = room.adminId;
+      const adminUser = await storage.getUser(adminId);
+
+      // 1. Notify challenged students: clean up their dialog/invitation without leaving modal dialogs
+      for (const [studentId, _] of room.players.entries()) {
+          this.sendToUser(studentId, {
+              type: 'managed:auto_cancelled',
+              payload: {
+                  challengeId,
+                  message: 'La invitación al reto ha expirado.'
+              }
+          });
+      }
+
+      // 2. Notify the Admin specifically about the auto-cancellation
+      this.sendToUser(adminId, {
+          type: 'managed:auto_cancelled_admin',
+          payload: {
+              challengeId,
+              adminName: adminUser?.username || adminUser?.name || "Administrador",
+              reason,
+              message: `El reto fue cancelado automáticamente: ${reason}`
+          }
+      });
+
+      // 3. Remove room from active challenges
+      this.activeManagedChallenges.delete(challengeId);
+
+      // 4. Delete from database
+      try {
+          await storage.deleteManagedChallenge(challengeId);
+      } catch (e) {
+          console.error(`Error deleting challenge ${challengeId} from DB on auto-cancel:`, e);
+      }
+
+      // 5. Broadcast updated challenge list to all admins
       this.broadcastManagedChallengeListToAdmins();
   }
 
