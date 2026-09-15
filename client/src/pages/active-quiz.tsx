@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff, Copy } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { startActiveQuizTour } from "@/lib/tour";
@@ -74,7 +74,17 @@ interface Progress {
 }
 
 // Componente para renderizar contenido con saltos de línea y matemáticas
-const QuestionContent = ({ content }: { content: string }) => {
+const QuestionContent = ({
+  content,
+  canCopy = false,
+  onCopy,
+  isCopied = false
+}: {
+  content: string;
+  canCopy?: boolean;
+  onCopy?: () => void;
+  isCopied?: boolean;
+}) => {
   // Helper to determine font size class based on question content length
   const getQuestionSizeClass = (text: string) => {
     // Remove LaTeX delimiters to estimate "visual" length more accurately
@@ -87,8 +97,32 @@ const QuestionContent = ({ content }: { content: string }) => {
   };
 
   return (
-    <div className={`mb-6 text-slate-200 leading-relaxed transition-all duration-300 ${getQuestionSizeClass(content)}`}>
-      <ContentRenderer content={content} />
+    <div className="flex items-start justify-between gap-3 mb-6">
+      <div className={`text-slate-200 leading-relaxed transition-all duration-300 flex-1 min-w-0 ${getQuestionSizeClass(content)}`}>
+        <ContentRenderer content={content} />
+      </div>
+      {canCopy && onCopy && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onCopy}
+          className="shrink-0 text-slate-400 hover:text-white hover:bg-slate-800/80 h-8 px-2.5 rounded-lg border border-white/10 hover:border-white/25 transition-all flex items-center gap-1.5 text-xs font-medium"
+          title="Copiar texto de la pregunta (formato LaTeX/delimitadores)"
+        >
+          {isCopied ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-green-400" />
+              <span className="text-green-400 font-bold">Copiado</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Copiar</span>
+            </>
+          )}
+        </Button>
+      )}
     </div>
   );
 };
@@ -164,6 +198,54 @@ const ActiveQuiz = () => {
   const [editQuizTimeMinutes, setEditQuizTimeMinutes] = useState<number>(0);
 
   const isAdmin = session?.role === 'admin' && !session?.isImpersonating;
+  const canCopyRawContent = isAdmin || session?.userId === 2;
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const handleCopyRaw = (text: string, key: string, label: string = "Pregunta") => {
+    if (!navigator?.clipboard?.writeText) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopiedKey(key);
+        toast({
+          title: "Copiado",
+          description: `${label} copiada al portapapeles.`,
+        });
+        setTimeout(() => {
+          setCopiedKey(prev => prev === key ? null : prev);
+        }, 2000);
+      } catch (err) {
+        toast({
+          title: "Error al copiar",
+          description: "No se pudo copiar el texto.",
+          variant: "destructive"
+        });
+      }
+      document.body.removeChild(textArea);
+      return;
+    }
+
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedKey(key);
+      toast({
+        title: "Copiado",
+        description: `${label} copiada al portapapeles.`,
+      });
+      setTimeout(() => {
+        setCopiedKey(prev => prev === key ? null : prev);
+      }, 2000);
+    }).catch((err) => {
+      console.error("Error al copiar:", err);
+      toast({
+        title: "Error al copiar",
+        description: "No se pudo acceder al portapapeles.",
+        variant: "destructive"
+      });
+    });
+  };
 
   const updateQuizMetaMutation = useMutation({
     mutationFn: async ({ title, timeLimit }: { title: string; timeLimit: number }) => {
@@ -1656,7 +1738,12 @@ const ActiveQuiz = () => {
                   </div>
                 )}
 
-                <QuestionContent content={currentQuestion.content} />
+                <QuestionContent
+                  content={currentQuestion.content}
+                  canCopy={canCopyRawContent}
+                  onCopy={() => handleCopyRaw(currentQuestion.content, `question-${currentQuestion.id}`, "Pregunta")}
+                  isCopied={copiedKey === `question-${currentQuestion.id}`}
+                />
 
                 {hintsRevealed[currentQuestion.id]?.map((hint, index) => (
                   <div key={index} className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl animate-in fade-in slide-in-from-top-2">
@@ -1824,6 +1911,32 @@ const ActiveQuiz = () => {
                               {isBlurActive && (
                                 <span className="text-[11px] text-amber-400/80 font-medium italic group-hover:hidden shrink-0 ml-2 select-none bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
                                   🙈 Oculta
+                                </span>
+                              )}
+                              {canCopyRawContent && (
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    handleCopyRaw(answer.content, `answer-${answer.id}`, `Opción ${String.fromCharCode(65 + index)}`);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.stopPropagation();
+                                      e.preventDefault();
+                                      handleCopyRaw(answer.content, `answer-${answer.id}`, `Opción ${String.fromCharCode(65 + index)}`);
+                                    }
+                                  }}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors opacity-60 hover:opacity-100 cursor-pointer shrink-0 ml-2 z-20 flex items-center justify-center"
+                                  title={`Copiar texto de la opción ${String.fromCharCode(65 + index)}`}
+                                >
+                                  {copiedKey === `answer-${answer.id}` ? (
+                                    <Check className="w-4 h-4 text-green-400" />
+                                  ) : (
+                                    <Copy className="w-4 h-4" />
+                                  )}
                                 </span>
                               )}
                             </div>
