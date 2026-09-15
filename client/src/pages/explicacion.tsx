@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, X, BookOpen, CheckCircle2, HelpCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AIMarkdown } from '@/components/ui/ai-markdown';
+import { ContentRenderer } from '@/components/ContentRenderer';
 
 interface ExplanationModalProps {
     questionId: number;
@@ -118,7 +119,7 @@ export function ExplanationModal({ questionId, question, correctAnswer, quizTitl
                                         Pregunta
                                     </h4>
                                     <div className="text-white text-lg leading-relaxed">
-                                        <AIMarkdown content={question} className="text-white prose-invert" />
+                                        <ContentRenderer content={question} />
                                     </div>
                                 </div>
 
@@ -128,7 +129,7 @@ export function ExplanationModal({ questionId, question, correctAnswer, quizTitl
                                         Respuesta Correcta
                                     </h4>
                                     <div className="text-white text-lg font-medium">
-                                        <AIMarkdown content={correctAnswer} className="text-white prose-invert" />
+                                        <ContentRenderer content={correctAnswer} />
                                     </div>
                                 </div>
 
