@@ -5,7 +5,7 @@ import {
     Card,
     CardContent,
 } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Trash2, Eye, Search, RotateCcw, ListChecks, Pencil, ChevronUp, ChevronDown } from "lucide-react";
+import { Loader2, ArrowLeft, Trash2, Eye, Search, RotateCcw, ListChecks, Pencil, ChevronUp, ChevronDown, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -34,12 +34,33 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Brain } from "lucide-react";
+import { QuizBreadcrumb } from "@/components/QuizBreadcrumb";
+import { getNodeMeta } from "@/lib/quiz-node-lookup";
+
+type SortField = 'date' | 'name' | 'subject';
+type SortDir = 'asc' | 'desc';
 
 export function UserProgressDetails({ userId, username, onBack }: { userId: number, username: string, onBack: () => void }) {
     const [searchTerm, setSearchTerm] = useState("");
+    const [sortField, setSortField] = useState<SortField>('date');
+    const [sortDir, setSortDir] = useState<SortDir>('desc');
     const [editingScore, setEditingScore] = useState<{ progressId: number; title: string; currentScore: number } | null>(null);
     const [newScore, setNewScore] = useState<string>("");
     const { toast } = useToast();
+
+    const handleSort = (field: SortField) => {
+        if (sortField === field) {
+            setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDir(field === 'date' ? 'desc' : 'asc');
+        }
+    };
+
+    const SortIcon = ({ field }: { field: SortField }) => {
+        if (sortField !== field) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+        return sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+    };
 
     // Fetch comprehensive dashboard data (quizzes + categories)
     const { data: dashboardData, isLoading } = useQuery<any>({
@@ -201,7 +222,21 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
         return (a.title || "").localeCompare(b.title || "");
     });
 
-    const completedQuizzes = filteredQuizzes.filter((q: any) => q.status === 'completed');
+    const completedQuizzes = filteredQuizzes.filter((q: any) => q.status === 'completed').sort((a: any, b: any) => {
+        let cmp = 0;
+        if (sortField === 'date') {
+            cmp = new Date(a.completedAt || 0).getTime() - new Date(b.completedAt || 0).getTime();
+        } else if (sortField === 'name') {
+            cmp = (a.title || "").localeCompare(b.title || "");
+        } else if (sortField === 'subject') {
+            const metaA = getNodeMeta(a.subcategoryId);
+            const metaB = getNodeMeta(b.subcategoryId);
+            const subjA = a.categoryName || metaA?.subject || '';
+            const subjB = b.categoryName || metaB?.subject || '';
+            cmp = subjA.localeCompare(subjB);
+        }
+        return sortDir === 'asc' ? cmp : -cmp;
+    });
     const pendingOrInProgressQuizzes = filteredQuizzes.filter((q: any) => q.status !== 'completed').sort((a: any, b: any) => {
         // Sort by status: In Progress (has status) comes before Pending (no status)
         if (a.status && !b.status) return -1;
@@ -280,6 +315,25 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                             )}
                         </div>
 
+                        {/* Sort controls */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs text-slate-500">Ordenar:</span>
+                            {(['date', 'name', 'subject'] as SortField[]).map((field) => (
+                                <button
+                                    key={field}
+                                    onClick={() => handleSort(field)}
+                                    className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                                        sortField === field
+                                            ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40'
+                                            : 'bg-white/5 text-slate-400 border border-white/5 hover:border-white/15 hover:text-slate-200'
+                                    }`}
+                                >
+                                    {field === 'date' ? 'Fecha' : field === 'name' ? 'Nombre' : 'Materia'}
+                                    <SortIcon field={field} />
+                                </button>
+                            ))}
+                        </div>
+
                         {completedQuizzes.length === 0 ? (
                             <Card className="bg-slate-900/50 border border-dashed border-slate-700">
                                 <CardContent className="pt-6 text-center text-slate-500">
@@ -293,6 +347,7 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                         <CardContent className="p-4">
                                             <div className="flex justify-between items-start gap-4">
                                                 <div className="flex-1">
+                                                    <QuizBreadcrumb categoryName={q.categoryName} subcategoryId={q.subcategoryId} />
                                                     <h3 className="font-medium text-slate-200 mb-1">{q.title}</h3>
                                                     <div className="flex items-center gap-2 text-sm text-slate-400 mb-2">
                                                         <span>Completado: {q.completedAt ? new Date(q.completedAt).toLocaleDateString() : 'N/A'}</span>
@@ -468,6 +523,7 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                             <CardContent className="p-4">
                                                 <div className="flex justify-between items-start gap-4">
                                                     <div className="flex-1">
+                                                        <QuizBreadcrumb categoryName={q.categoryName} subcategoryId={q.subcategoryId} />
                                                         <h3 className="font-medium text-slate-200 mb-1">{q.title}</h3>
                                                         {!isStarted && <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700">Pendiente</Badge>}
                                                     </div>

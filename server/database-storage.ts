@@ -33,7 +33,7 @@ import { quizFeedback } from "../shared/schema.js";
 
 //chat gpt dashboard personalizado
 import { userCategories } from "../shared/schema.js";
-import { subcategories, Subcategory } from "../shared/schema.js";
+import { subcategories, type Subcategory } from "../shared/schema.js";
 import { parents, nodeContentMappings, type NodeContentMapping, type InsertNodeContentMapping } from "../shared/schema.js";
 import bcrypt from 'bcryptjs';
 import { Child } from '../shared/quiz-types.js'; // Ajusta la ruta
@@ -561,11 +561,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getQuizzesByUserId(userId: number) {
+    // Aliases to avoid column name collision
+    const cat = categories;
+    const sub = subcategories;
+
     const result = await this.db
       .select({
         id: quizzes.id,
         title: quizzes.title,
         categoryId: quizzes.categoryId,
+        categoryName: cat.name,
+        subcategoryId: quizzes.subcategoryId,
+        subcategoryName: sub.name,
         difficulty: quizzes.difficulty,
         status: studentProgress.status,
         reviewed: quizSubmissions.reviewed,
@@ -579,12 +586,13 @@ export class DatabaseStorage implements IStorage {
         feedback: quizFeedback.feedback,
         totalQuestions: quizzes.totalQuestions,
         description: quizzes.description,
-        subcategoryId: quizzes.subcategoryId,
         responseMode: userQuizzes.responseMode,
         progressResponseMode: studentProgress.responseMode,
         isAiGenerated: quizzes.isAiGenerated,
       })
       .from(quizzes)
+      .leftJoin(cat, eq(quizzes.categoryId, cat.id))
+      .leftJoin(sub, eq(quizzes.subcategoryId, sub.id))
       .leftJoin(userQuizzes, and(
         eq(userQuizzes.quizId, quizzes.id),
         eq(userQuizzes.userId, userId)

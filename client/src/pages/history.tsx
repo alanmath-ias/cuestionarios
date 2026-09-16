@@ -2,12 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { CheckCircle2, ChevronLeft, Clock, Calendar, Search, Trophy, MessageSquare, Brain, ListChecks } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Clock, Calendar, Search, Trophy, MessageSquare, Brain, ListChecks, ArrowUpDown, ArrowUp, ArrowDown, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { UserQuiz } from "@/types/types";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { QuizBreadcrumb } from "@/components/QuizBreadcrumb";
 
 interface QuizWithFeedback extends UserQuiz {
     progressId?: string;
@@ -33,21 +34,50 @@ async function fetchQuizzes() {
     return response.json();
 }
 
+type SortField = 'date' | 'name' | 'subject';
+type SortDir = 'asc' | 'desc';
+
 export default function HistoryPage() {
     const [searchTerm, setSearchTerm] = useState("");
+    const [sortField, setSortField] = useState<SortField>('date');
+    const [sortDir, setSortDir] = useState<SortDir>('desc');
     const { data: quizzes, isLoading } = useQuery<QuizWithFeedback[]>({
         queryKey: ["user-quizzes"],
         queryFn: fetchQuizzes,
     });
 
+    const handleSort = (field: SortField) => {
+        if (sortField === field) {
+            setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDir(field === 'date' ? 'desc' : 'asc');
+        }
+    };
+
+    const SortIcon = ({ field }: { field: SortField }) => {
+        if (sortField !== field) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+        return sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+    };
+
     if (isLoading) {
         return <div className="flex justify-center items-center min-h-screen bg-slate-950"><Spinner className="h-12 w-12 text-blue-500" /></div>;
     }
 
-    const completedQuizzes = quizzes?.filter((q) =>
+    const completedQuizzes = (quizzes?.filter((q) =>
         q.status === "completed" &&
         q.title.toLowerCase().includes(searchTerm.toLowerCase())
-    ).sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime()) || [];
+    ) || []).sort((a, b) => {
+        let cmp = 0;
+        if (sortField === 'date') {
+            cmp = new Date(a.completedAt || 0).getTime() - new Date(b.completedAt || 0).getTime();
+        } else if (sortField === 'name') {
+            cmp = (a.title || '').localeCompare(b.title || '');
+        } else if (sortField === 'subject') {
+            cmp = ((a as any).categoryName || (a as any).categoryId?.toString() || '').localeCompare((b as any).categoryName || (b as any).categoryId?.toString() || '');
+        }
+        return sortDir === 'asc' ? cmp : -cmp;
+    });
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 relative overflow-hidden">
@@ -81,6 +111,25 @@ export default function HistoryPage() {
                             className="pl-10 bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-600 focus:border-blue-500/50 focus:ring-blue-500/20 rounded-xl"
                         />
                     </div>
+
+                    {/* Sort controls */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs text-slate-500">Ordenar:</span>
+                        {(['date', 'name', 'subject'] as SortField[]).map((field) => (
+                            <button
+                                key={field}
+                                onClick={() => handleSort(field)}
+                                className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                                    sortField === field
+                                        ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40'
+                                        : 'bg-white/5 text-slate-400 border border-white/5 hover:border-white/15 hover:text-slate-200'
+                                }`}
+                            >
+                                {field === 'date' ? 'Fecha' : field === 'name' ? 'Nombre' : 'Materia'}
+                                <SortIcon field={field} />
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 <div className="grid gap-4">
@@ -101,6 +150,8 @@ export default function HistoryPage() {
                                                 {hasFeedback ? <MessageSquare className="h-7 w-7" /> : <Trophy className="h-7 w-7" />}
                                             </div>
                                             <div className="flex-1 min-w-0">
+                                                {/* Subject / Unit / Topic breadcrumb */}
+                                                <QuizBreadcrumb categoryName={(quiz as any).categoryName} subcategoryId={(quiz as any).subcategoryId} />
                                                 <h3 className={`font-bold text-lg transition-colors line-clamp-2 ${hasFeedback ? "text-slate-200 group-hover:text-blue-400" : "text-slate-200 group-hover:text-green-400"
                                                     }`}>{quiz.title}</h3>
                                                 <div className="flex items-center gap-4 text-sm text-slate-500 mt-1 flex-wrap">
