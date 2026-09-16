@@ -44,6 +44,7 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
     const [searchTerm, setSearchTerm] = useState("");
     const [sortField, setSortField] = useState<SortField>('date');
     const [sortDir, setSortDir] = useState<SortDir>('desc');
+    const [mobileTab, setMobileTab] = useState<'completed' | 'pending'>('completed');
     const [editingScore, setEditingScore] = useState<{ progressId: number; title: string; currentScore: number } | null>(null);
     const [newScore, setNewScore] = useState<string>("");
     const { toast } = useToast();
@@ -246,15 +247,15 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
     });
 
     return (
-        <div className="min-h-screen bg-slate-950 p-8 text-slate-200">
+        <div className="min-h-screen bg-slate-950 p-4 sm:p-6 lg:p-8 text-slate-200">
             <div className="max-w-7xl mx-auto">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 sm:mb-8 gap-4">
                     <div>
                         <Button variant="ghost" onClick={onBack} className="mb-2 pl-0 hover:pl-2 transition-all text-slate-400 hover:text-white hover:bg-white/5">
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Volver a Usuarios
                         </Button>
-                        <h1 className="text-3xl font-bold text-slate-100">Progreso de {username}</h1>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-slate-100">Progreso de {username}</h1>
                     </div>
 
                     <div className="relative w-full md:w-72">
@@ -268,10 +269,36 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                     </div>
                 </div>
 
+                {/* Mobile Tab Toggle (Visible only on screens < lg) */}
+                <div className="flex lg:hidden items-center bg-slate-900/90 p-1.5 rounded-2xl border border-white/10 mb-6 shadow-xl backdrop-blur-sm">
+                    <button
+                        onClick={() => setMobileTab('completed')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                            mobileTab === 'completed'
+                                ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-900/30'
+                                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                        }`}
+                    >
+                        <div className={`h-2 w-2 rounded-full ${mobileTab === 'completed' ? 'bg-white animate-pulse' : 'bg-green-500'}`} />
+                        <span>Completados ({completedQuizzes.length})</span>
+                    </button>
+                    <button
+                        onClick={() => setMobileTab('pending')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                            mobileTab === 'pending'
+                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-900/30'
+                                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                        }`}
+                    >
+                        <div className={`h-2 w-2 rounded-full ${mobileTab === 'pending' ? 'bg-white animate-pulse' : 'bg-blue-500'}`} />
+                        <span>Pendientes ({pendingOrInProgressQuizzes.length})</span>
+                    </button>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Column 1: Completed Quizzes */}
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between">
+                    <div className={`space-y-6 ${mobileTab !== 'completed' ? 'hidden lg:block' : 'block'}`}>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <h2 className="text-xl font-semibold text-slate-200 flex items-center gap-2">
                                 <div className="h-2 w-2 rounded-full bg-green-500" />
                                 Completados ({completedQuizzes.length})
@@ -343,13 +370,13 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                         ) : (
                             <div className="space-y-4">
                                 {completedQuizzes.map((q: any) => (
-                                    <Card key={q.id} className="bg-slate-900 border border-white/10 hover:border-white/20 transition-all shadow-lg">
-                                        <CardContent className="p-4">
-                                            <div className="flex justify-between items-start gap-4">
-                                                <div className="flex-1">
+                                    <Card key={q.id} className="bg-slate-900 border border-white/10 hover:border-white/20 transition-all shadow-lg overflow-hidden">
+                                        <CardContent className="p-4 sm:p-5">
+                                            <div className="flex justify-between items-start gap-3">
+                                                <div className="flex-1 min-w-0">
                                                     <QuizBreadcrumb categoryName={q.categoryName} subcategoryId={q.subcategoryId} />
-                                                    <h3 className="font-medium text-slate-200 mb-1">{q.title}</h3>
-                                                    <div className="flex items-center gap-2 text-sm text-slate-400 mb-2">
+                                                    <h3 className="font-semibold text-slate-200 text-sm sm:text-base mb-1.5 break-words">{q.title}</h3>
+                                                    <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
                                                         <span>Completado: {q.completedAt ? new Date(q.completedAt).toLocaleDateString() : 'N/A'}</span>
                                                     </div>
                                                     {q.responseMode === 'direct_input' ? (
@@ -362,11 +389,12 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                                         </Badge>
                                                     )}
                                                 </div>
-                                                <div className="flex flex-col items-end gap-2">
-                                                    <Badge variant={q.score >= 7 ? "default" : "secondary"} className={`text-sm px-3 py-1 ${q.score >= 7 ? 'bg-green-500/30 text-green-400 hover:bg-green-500/40 border-green-500/30' : 'bg-slate-700 text-slate-300'}`}>
+                                                <div className="flex flex-col items-end gap-2 shrink-0">
+                                                    <Badge variant={q.score >= 7 ? "default" : "secondary"} className={`text-xs sm:text-sm px-2.5 sm:px-3 py-1 font-semibold shrink-0 ${q.score >= 7 ? 'bg-green-500/30 text-green-400 hover:bg-green-500/40 border-green-500/30' : 'bg-slate-700 text-slate-300'}`}>
                                                         Nota: {q.score}/10
                                                     </Badge>
-                                                    <div className="flex gap-2">
+                                                    {/* Desktop action buttons (sm and up) */}
+                                                    <div className="hidden sm:flex items-center gap-1.5 mt-1">
                                                         {q.progressId && (
                                                             <>
                                                                 <Button
@@ -393,7 +421,31 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                                 </div>
                                             </div>
 
-                                            <div className="mt-4 flex justify-end gap-2 pt-4 border-t border-white/5">
+                                            {/* Mobile action buttons (below sm: full-width 50% split, never overflow) */}
+                                            {q.progressId && (
+                                                <div className="flex sm:hidden items-center gap-2 mt-3 pt-2.5 border-t border-white/5">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-8 flex-1 text-xs bg-slate-800 text-blue-400 hover:text-blue-300 hover:bg-slate-700 border-slate-700 font-medium"
+                                                        onClick={() => {
+                                                            setEditingScore({ progressId: q.progressId, title: q.title, currentScore: q.score });
+                                                            setNewScore(q.score.toString());
+                                                        }}
+                                                    >
+                                                        <Pencil className="h-3 w-3 mr-1" />
+                                                        Editar
+                                                    </Button>
+                                                    <Link href={`/results/${q.progressId}?user_id=${userId}`} className="flex-1">
+                                                        <Button variant="secondary" size="sm" className="h-8 w-full text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700 font-medium">
+                                                            <Eye className="h-3 w-3 mr-1" />
+                                                            Ver Detalles
+                                                        </Button>
+                                                    </Link>
+                                                </div>
+                                            )}
+
+                                            <div className="mt-3 flex flex-wrap justify-end gap-2 pt-3 border-t border-white/5">
                                                 {q.progressId && (
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild>
@@ -463,8 +515,8 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                     </div>
 
                     {/* Column 2: Pending / In Progress */}
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between">
+                    <div className={`space-y-6 ${mobileTab !== 'pending' ? 'hidden lg:block' : 'block'}`}>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <h2 className="text-xl font-semibold text-slate-200 flex items-center gap-2">
                                 <div className="h-2 w-2 rounded-full bg-blue-500" />
                                 Pendientes / En Curso ({pendingOrInProgressQuizzes.length})
@@ -519,17 +571,17 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                 {pendingOrInProgressQuizzes.map((q: any) => {
                                     const isStarted = !!q.status;
                                     return (
-                                        <Card key={q.id} className="bg-slate-900 border border-white/10 hover:border-white/20 transition-all shadow-lg">
-                                            <CardContent className="p-4">
-                                                <div className="flex justify-between items-start gap-4">
-                                                    <div className="flex-1">
+                                        <Card key={q.id} className="bg-slate-900 border border-white/10 hover:border-white/20 transition-all shadow-lg overflow-hidden">
+                                            <CardContent className="p-4 sm:p-5">
+                                                <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4">
+                                                    <div className="flex-1 min-w-0">
                                                         <QuizBreadcrumb categoryName={q.categoryName} subcategoryId={q.subcategoryId} />
-                                                        <h3 className="font-medium text-slate-200 mb-1">{q.title}</h3>
+                                                        <h3 className="font-semibold text-slate-200 text-sm sm:text-base mb-1.5 break-words">{q.title}</h3>
                                                         {!isStarted && <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700">Pendiente</Badge>}
                                                     </div>
-                                                    <div className="flex flex-col items-end gap-3">
-                                                        <div className="flex items-center gap-3 bg-slate-800/80 px-4 py-2 rounded-xl border border-white/10 shadow-inner">
-                                                            <div className="flex items-center space-x-3">
+                                                    <div className="flex flex-wrap sm:flex-col items-start sm:items-end gap-2.5 sm:gap-3 shrink-0">
+                                                        <div className="flex items-center gap-3 bg-slate-800/80 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-white/10 shadow-inner">
+                                                            <div className="flex items-center space-x-2.5 sm:space-x-3">
                                                                 <Label
                                                                     htmlFor={`mode-${q.id}`}
                                                                     className={`text-[11px] font-bold transition-colors cursor-pointer ${q.responseMode === 'direct_input' ? 'text-slate-500' : 'text-blue-400'}`}
@@ -545,7 +597,7 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                                                             mode: checked ? 'direct_input' : 'multiple_choice'
                                                                         });
                                                                     }}
-                                                                    className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-slate-700 border-2 border-white/10 scale-110"
+                                                                    className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-slate-700 border-2 border-white/10 scale-100 sm:scale-110"
                                                                 />
                                                                 <Label
                                                                     htmlFor={`mode-${q.id}`}
@@ -565,7 +617,7 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                                     </div>
                                                 </div>
 
-                                                <div className="mt-4 flex justify-end gap-2 pt-4 border-t border-white/5">
+                                                <div className="mt-3 flex flex-wrap justify-end gap-2 pt-3 border-t border-white/5">
                                                     {isStarted && q.progressId && (
                                                         <AlertDialog>
                                                             <AlertDialogTrigger asChild>
