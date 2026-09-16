@@ -50,13 +50,18 @@ export function Header({ user, pendingCount }: HeaderProps) {
     }
   }, [user, location]);
 
+  // Close mobile menu whenever the route changes
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location]);
+
   return (
     <header className="relative z-50 w-full border-b border-white/10 bg-slate-950 text-white">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
 
         {/* Logo + AlanMath + botón menú móvil */}
         <div className="flex items-center gap-4">
-          <Link href={user ? "/dashboard" : "/"}>
+          <Link href={user ? "/dashboard" : "/"} onClick={() => setMenuOpen(false)}>
             <div className="flex items-center space-x-2 cursor-pointer group">
               <div className="relative">
                 <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-md group-hover:bg-blue-500/30 transition-all" />
@@ -73,17 +78,25 @@ export function Header({ user, pendingCount }: HeaderProps) {
           </button>
         </div>
 
+        {/* Backdrop para cerrar menú móvil al hacer clic fuera */}
+        {menuOpen && (
+          <div
+            className="fixed inset-0 top-[65px] bg-black/60 backdrop-blur-sm z-30 md:hidden"
+            onClick={() => setMenuOpen(false)}
+          />
+        )}
+
         {/* Navegación */}
-        <nav className={`fixed inset-x-0 top-[65px] bg-slate-950/95 backdrop-blur-xl border-b border-white/10 md:static md:top-0 md:bg-transparent md:border-none md:backdrop-blur-none transition-all duration-300 ${menuOpen ? 'block' : 'hidden'} md:block`}>
+        <nav className={`fixed inset-x-0 top-[65px] z-40 bg-slate-950/95 backdrop-blur-xl border-b border-white/10 md:static md:top-0 md:bg-transparent md:border-none md:backdrop-blur-none transition-all duration-300 ${menuOpen ? 'block' : 'hidden'} md:block`}>
           <ul className="flex flex-col md:flex-row gap-4 md:gap-6 p-6 md:p-0 items-start md:items-center text-sm md:text-sm font-medium">
             <li>
-              <Link href={user ? "/dashboard" : "/"}>
+              <Link href={user ? "/dashboard" : "/"} onClick={() => setMenuOpen(false)}>
                 <span className="text-slate-300 hover:text-white transition-colors cursor-pointer">Inicio</span>
               </Link>
             </li>
             {user && !isAdmin && (
               <li>
-                <Link href="/social">
+                <Link href="/social" onClick={() => setMenuOpen(false)}>
                   <span className={`text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 ${location === '/social' ? 'text-blue-400 font-bold' : ''}`}>
                     Amigos
                     {!!pendingCount && pendingCount > 0 && (
@@ -98,13 +111,32 @@ export function Header({ user, pendingCount }: HeaderProps) {
 
             {isAdmin && (
               <>
-                <li><Link href="/admin/quizzes"><span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Cuestionarios</span></Link></li>
-                <li><Link href="/admin/challenge-manager"><span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Retos</span></Link></li>
-                <li><Link href="/admin/users"><span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Usuarios</span></Link></li>
-                <li><Link href="/admin/calificar"><span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Calificar</span></Link></li>
+                <li>
+                  <Link href="/admin/quizzes" onClick={() => setMenuOpen(false)}>
+                    <span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Cuestionarios</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/admin/challenge-manager" onClick={() => setMenuOpen(false)}>
+                    <span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Retos</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/admin/users" onClick={() => setMenuOpen(false)}>
+                    <span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Usuarios</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/admin/calificar" onClick={() => setMenuOpen(false)}>
+                    <span className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer">Calificar</span>
+                  </Link>
+                </li>
                 <li>
                   <button 
-                    onClick={() => (window as any).openMagicQuiz && (window as any).openMagicQuiz()}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      (window as any).openMagicQuiz && (window as any).openMagicQuiz();
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-600/20 to-amber-500/20 border border-amber-500/30 text-amber-400 hover:from-amber-600/30 hover:to-amber-500/30 transition-all group"
                   >
                     <Wand2 className="w-4 h-4 group-hover:rotate-12 transition-transform" />
@@ -119,11 +151,11 @@ export function Header({ user, pendingCount }: HeaderProps) {
               <div className="flex flex-col gap-3">
                 <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Síguenos</p>
                 <div className="flex gap-6">
-                  <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-[#FF0000] transition-colors" aria-label="YouTube"><Youtube size={24} /></a>
-                  <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-[#E1306C] transition-colors" aria-label="Instagram"><Instagram size={24} /></a>
-                  <a href={socialLinks.tiktok} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors" aria-label="TikTok"><FaTiktok size={22} /></a>
-                  <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-500 transition-colors" aria-label="Facebook"><FaFacebook size={22} /></a>
-                  <a href={socialLinks.website} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-400 transition-colors" aria-label="Sitio Web"><Globe size={22} /></a>
+                  <a href={socialLinks.youtube} onClick={() => setMenuOpen(false)} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-[#FF0000] transition-colors" aria-label="YouTube"><Youtube size={24} /></a>
+                  <a href={socialLinks.instagram} onClick={() => setMenuOpen(false)} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-[#E1306C] transition-colors" aria-label="Instagram"><Instagram size={24} /></a>
+                  <a href={socialLinks.tiktok} onClick={() => setMenuOpen(false)} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors" aria-label="TikTok"><FaTiktok size={22} /></a>
+                  <a href={socialLinks.facebook} onClick={() => setMenuOpen(false)} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-500 transition-colors" aria-label="Facebook"><FaFacebook size={22} /></a>
+                  <a href={socialLinks.website} onClick={() => setMenuOpen(false)} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-400 transition-colors" aria-label="Sitio Web"><Globe size={22} /></a>
                 </div>
               </div>
             </li>
