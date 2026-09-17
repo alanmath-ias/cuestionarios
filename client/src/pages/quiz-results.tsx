@@ -236,6 +236,16 @@ function QuizResults() {
             console.log('[NodeComplete] nodeQuizzes:', nodeQuizzes.length, nodeQuizzes.map(q => ({ id: q.id, status: q.userStatus })));
             console.log('[NodeComplete] current quiz id:', results.quiz.id, 'score:', results.progress?.score);
 
+            const tourStatus = (session?.tourStatus as any) || {};
+            const completedMaps = tourStatus.completedMaps || {};
+            const isMapPreviouslyCompleted = !!(
+              completedMaps[results.quiz.categoryId] ||
+              completedMaps[String(results.quiz.categoryId)]
+            );
+            const awardedNodes = tourStatus.awardedNodes || {};
+            const awardedUnits = tourStatus.awardedUnits || {};
+            const isQuizAlreadySeen = !!tourStatus.seenMedals?.[results.quiz.id];
+
             if (nodeQuizzes.length > 0) {
               const completedCount = nodeQuizzes.filter(q => {
                 // Current quiz just completed - treat as completed regardless of cache
@@ -244,7 +254,10 @@ function QuizResults() {
                 return q.userStatus === 'completed';
               }).length;
               console.log('[NodeComplete] completedCount:', completedCount, '/', nodeQuizzes.length);
-              isNodeComplete = completedCount >= nodeQuizzes.length;
+              const allDone = completedCount >= nodeQuizzes.length;
+              const priorCompletedCount = nodeQuizzes.filter(q => q.userStatus === 'completed' && Number(q.id) !== Number(results.quiz.id)).length;
+              const isExistingNodeInCompletedMap = isMapPreviouslyCompleted && priorCompletedCount > 0;
+              isNodeComplete = allDone && !awardedNodes[currentNode.id] && !isExistingNodeInCompletedMap && !isQuizAlreadySeen;
             }
 
             // Calculate family completion
@@ -326,7 +339,8 @@ function QuizResults() {
                   if (Number(q.id) === Number(results.quiz.id)) return true;
                   return q.userStatus === 'completed';
                 }).length;
-                isFamilyComplete = completedCount >= uniqueFamilyQuizzes.length;
+                const allDone = completedCount >= uniqueFamilyQuizzes.length;
+                isFamilyComplete = allDone && !isMapPreviouslyCompleted && !awardedUnits[parentContainer.id] && !isQuizAlreadySeen;
                 console.log('[FamilyComplete] parent:', parentContainer.id, 'completed:', isFamilyComplete, completedCount, '/', uniqueFamilyQuizzes.length);
               }
             }

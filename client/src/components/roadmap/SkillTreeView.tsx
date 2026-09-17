@@ -441,15 +441,14 @@ export function SkillTreeView({
 
         // 2. Process Celebrations & Overlay Trigger Sequences
         if (focusId !== processedCelebrationId) {
-            const isNodeCompleted = source === 'quiz'
-                ? (searchParams.get('nodeCompleted') === 'true')
-                : (
-                    progressMap[focusId] === 'completed' || 
-                    (nodeProgress[focusId] !== undefined && nodeProgress[focusId] >= 99.9) || 
-                    (nodeTotalQuizzes[focusId] > 0 && (nodeCompletedCount[focusId] || 0) >= nodeTotalQuizzes[focusId])
-                );
-
-            const titleQuiz = quizTitleParam ? decodeURIComponent(quizTitleParam) : (targetNode.label || "cuestionario");
+            const tourStatus = (session?.tourStatus as any) || {};
+            const awardedNodes = tourStatus.awardedNodes || {};
+            const awardedUnits = tourStatus.awardedUnits || {};
+            const isUserAdmin = isAdmin || session?.role === 'admin';
+            const isMapPreviouslyCompleted = !isUserAdmin && !!(
+                tourStatus.completedMaps?.[categoryId] ||
+                tourStatus.completedMaps?.[String(categoryId)]
+            );
 
             // CHECK FAMILY COMPLETION
             const findParentContainer = (startNodeId: string): ArithmeticNode | null => {
@@ -472,8 +471,21 @@ export function SkillTreeView({
 
             const parentContainer = findParentContainer(focusId);
             const isFamilyMastery =
-                searchParams.get('familyCompleted') === 'true' ||
-                (parentContainer ? (progressMap[parentContainer.id] === 'completed') : false);
+                searchParams.get('familyCompleted') === 'true' &&
+                !isMapPreviouslyCompleted &&
+                (!parentContainer || !awardedUnits[parentContainer.id]);
+
+            const isNodeCompleted =
+                (searchParams.get('nodeCompleted') === 'true' ||
+                (source !== 'quiz' && (
+                    progressMap[focusId] === 'completed' || 
+                    (nodeProgress[focusId] !== undefined && nodeProgress[focusId] >= 99.9) || 
+                    (nodeTotalQuizzes[focusId] > 0 && (nodeCompletedCount[focusId] || 0) >= nodeTotalQuizzes[focusId])
+                ))) &&
+                !awardedNodes[focusId] &&
+                !(isMapPreviouslyCompleted && searchParams.get('nodeCompleted') !== 'true');
+
+            const titleQuiz = quizTitleParam ? decodeURIComponent(quizTitleParam) : (targetNode.label || "cuestionario");
 
             const quizScoreParam = searchParams.get('quizScore') || searchParams.get('score');
             const quizScoreNum = Number(quizScoreParam) || 0;
@@ -526,12 +538,23 @@ export function SkillTreeView({
                         bonusReason = 'node_completed';
                     }
                     setCelebrationCredits(bonusCredits);
-                    fetch('/api/user/award-bonus', {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ credits: bonusCredits, reason: bonusReason })
-                    }).catch(() => {});
+
+                    // Only call award-bonus on server if there is an actual node or family bonus to give!
+                    // (Individual quiz credits were already handled by /api/user/earn-medal in quiz-results.tsx)
+                    if (isFamilyMastery || isNodeCompleted) {
+                        fetch('/api/user/award-bonus', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                credits: isFamilyMastery ? (familyQuizCount * 5) : (nodeQuizCount * 5),
+                                reason: bonusReason,
+                                nodeId: focusId,
+                                familyId: parentContainer?.id,
+                                categoryId
+                            })
+                        }).catch(() => {});
+                    }
                     // Clear pendingMedalAlert from server so dashboard doesn't show it again
                     fetch('/api/user/clear-medal-alert', { method: 'POST', credentials: 'include' }).catch(() => {});
                     const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source|quizTitle|quizScore|score|nodeCompleted|familyCompleted)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
@@ -565,12 +588,20 @@ export function SkillTreeView({
                     const bonusCredits = isFamilyMastery ? (familyQuizCount * 5) : (nodeQuizCount * 5);
                     const bonusReason = isFamilyMastery ? 'family_completed' : 'node_completed';
                     setCelebrationCredits(bonusCredits);
-                    fetch('/api/user/award-bonus', {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ credits: bonusCredits, reason: bonusReason })
-                    }).catch(() => {});
+                    if (isFamilyMastery || isNodeCompleted) {
+                        fetch('/api/user/award-bonus', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                credits: bonusCredits,
+                                reason: bonusReason,
+                                nodeId: focusId,
+                                familyId: parentContainer?.id,
+                                categoryId
+                            })
+                        }).catch(() => {});
+                    }
                     // Clear pendingMedalAlert from server so dashboard doesn't show it again
                     fetch('/api/user/clear-medal-alert', { method: 'POST', credentials: 'include' }).catch(() => {});
                     const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');

@@ -656,7 +656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Award variable bonus credits for node or family completion
   apiRouter.post("/user/award-bonus", async (req: Request, res: Response) => {
     const userId = req.session.userId;
-    const { credits, reason } = req.body;
+    const { credits, reason, nodeId, familyId, categoryId } = req.body;
 
     if (!userId) {
       return res.status(401).json({ message: "Not authenticated" });
@@ -670,8 +670,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
+
+      // If this was quiz_completed, earn-medal already awarded the credits.
+      if (reason === 'quiz_completed') {
+        const { password: _, ...userWithoutPassword } = user;
+        return res.json({ ...userWithoutPassword, bonusAwarded: 0, reason });
+      }
+
+      const tourStatus = (user.tourStatus as any) || {};
+      const awardedNodes = { ...(tourStatus.awardedNodes || {}) };
+      const awardedUnits = { ...(tourStatus.awardedUnits || {}) };
+      const completedMaps = tourStatus.completedMaps || {};
+      const isMapAlreadyCompleted = categoryId && !!(completedMaps[categoryId] || completedMaps[String(categoryId)]);
+
+      if (reason === 'family_completed') {
+        if (familyId && awardedUnits[familyId]) {
+          const { password: _, ...userWithoutPassword } = user;
+          return res.json({ ...userWithoutPassword, bonusAwarded: 0, alreadyClaimed: true });
+        }
+        if (isMapAlreadyCompleted && familyId) {
+          // If map was previously completed, existing family units were already completed/celebrated
+          awardedUnits[familyId] = true;
+          await storage.updateUser(userId, { tourStatus: { ...tourStatus, awardedUnits } });
+          const { password: _, ...userWithoutPassword } = user;
+          return res.json({ ...userWithoutPassword, bonusAwarded: 0, alreadyClaimed: true });
+        }
+        if (familyId) {
+          awardedUnits[familyId] = true;
+        }
+      } else if (reason === 'node_completed') {
+        if (nodeId && awardedNodes[nodeId]) {
+          const { password: _, ...userWithoutPassword } = user;
+          return res.json({ ...userWithoutPassword, bonusAwarded: 0, alreadyClaimed: true });
+        }
+        if (isMapAlreadyCompleted && nodeId && !awardedNodes[nodeId]) {
+          // If map was previously completed, existing node was already completed
+          awardedNodes[nodeId] = true;
+          await storage.updateUser(userId, { tourStatus: { ...tourStatus, awardedNodes } });
+          const { password: _, ...userWithoutPassword } = user;
+          return res.json({ ...userWithoutPassword, bonusAwarded: 0, alreadyClaimed: true });
+        }
+        if (nodeId) {
+          awardedNodes[nodeId] = true;
+        }
+      }
+
       const newCredits = (user.hintCredits || 0) + credits;
-      const updatedUser = await storage.updateUser(userId, { hintCredits: newCredits });
+      const updatedUser = await storage.updateUser(userId, {
+        hintCredits: newCredits,
+        tourStatus: {
+          ...tourStatus,
+          awardedNodes,
+          awardedUnits
+        }
+      });
       const { password: _, ...userWithoutPassword } = updatedUser;
       res.json({ ...userWithoutPassword, bonusAwarded: credits, reason: reason || 'completion_bonus' });
     } catch (error) {
