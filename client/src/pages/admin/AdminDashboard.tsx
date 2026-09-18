@@ -26,6 +26,15 @@ import { Button } from "@/components/ui/button";
 import { DuelMonitor } from "@/components/admin/DuelMonitor";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+
+// Helper: parse a DB timestamp string as UTC (DB stores UTC without timezone suffix)
+// Without this, new Date("2026-09-18 00:48:59") is parsed as LOCAL time → 5h wrong in Colombia
+function parseUTCDate(dateStr: string | null | undefined): Date {
+  if (!dateStr) return new Date(0);
+  // If the string already has a timezone indicator (Z, +, -) leave it as is
+  const hasTimezone = /[Z+\-]\d{2}(:?\d{2})?$/.test(dateStr) || dateStr.endsWith('Z');
+  return hasTimezone ? new Date(dateStr) : new Date(dateStr.replace(' ', 'T') + '+00:00');
+}
 import {
   Dialog,
   DialogContent,
@@ -288,7 +297,7 @@ const AdminDashboard: React.FC = () => {
                             Envió <span className="font-medium text-orange-400">{sub.quizTitle}</span>
                           </p>
                           <p className="text-xs text-slate-500 mt-1">
-                            {formatDistanceToNow(new Date(sub.submittedAt), { addSuffix: true, locale: es })}
+                            {formatDistanceToNow(parseUTCDate(sub.submittedAt), { addSuffix: true, locale: es })}
                           </p>
                         </div>
                         <Button asChild size="sm" className="bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 border border-orange-500/20">
@@ -365,7 +374,7 @@ const AdminDashboard: React.FC = () => {
                                       <div>
                                         <p className="font-medium text-slate-200">{history.quizTitle}</p>
                                         <p className="text-xs text-slate-500">
-                                          {formatDistanceToNow(new Date(history.completedAt), { addSuffix: true, locale: es })}
+                                          {formatDistanceToNow(parseUTCDate(history.completedAt), { addSuffix: true, locale: es })}
                                         </p>
                                       </div>
                                       <div className="flex items-center gap-4">
@@ -463,7 +472,7 @@ const AdminDashboard: React.FC = () => {
                         <div className="flex justify-between items-start mb-1">
                           <span className="font-medium text-sm text-slate-200">{act.userName}</span>
                           <span className="text-xs text-slate-500 whitespace-nowrap ml-2">
-                            {formatDistanceToNow(new Date(act.completedAt), { locale: es })}
+                            {formatDistanceToNow(parseUTCDate(act.completedAt), { locale: es })}
                           </span>
                         </div>
                         <p className="text-sm text-slate-400 leading-snug">
