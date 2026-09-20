@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, Eye, BookOpen, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eye, BookOpen, AlertCircle, Loader2, Bot, Check } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { ContentRenderer } from '@/components/ContentRenderer';
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
 import { cn } from '@/lib/utils';
@@ -44,10 +45,39 @@ function getQuestionSizeClass(text: string) {
   return 'text-lg md:text-xl';
 }
 
+// Helper para copiar texto al portapapeles con fallback seguro
+const copyTextToClipboard = async (text: string): Promise<boolean> => {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {}
+  }
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "-9999px";
+    textArea.style.opacity = "0";
+    textArea.setAttribute("readonly", "");
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const success = document.execCommand("copy");
+    document.body.removeChild(textArea);
+    return success;
+  } catch {
+    return false;
+  }
+};
+
 export default function PreviewQuiz() {
   const { quizId } = useParams();
   const [currentIndex, setCurrentIndex] = useState(0);
   const mainRef = useRef<HTMLElement>(null);
+  const { toast } = useToast();
+  const [copiedAI, setCopiedAI] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: [`/api/preview/${quizId}`],
@@ -62,6 +92,57 @@ export default function PreviewQuiz() {
   });
 
   const total = data?.questions?.length ?? 0;
+
+  const handleCopyAllForAI = async () => {
+    if (!data?.quiz || !data?.questions || data.questions.length === 0) return;
+    const { quiz, questions } = data;
+
+    let md = `# CUESTIONARIO: ${quiz.title}\n`;
+    if (quiz.description) md += `**Descripción:** ${quiz.description}\n`;
+    md += `**Total de preguntas:** ${questions.length}\n`;
+    if (quiz.timeLimit) md += `**Tiempo sugerido:** ${Math.round(quiz.timeLimit / 60)} minutos\n`;
+    md += `\nInstrucciones para el asistente de IA:\n`;
+    md += `1. Evalúa la precisión matemática, la formulación pedagógica y la calidad de este cuestionario (claridad de enunciados, corrección de la respuesta marcada como correcta y pertinencia de los distractores).\n`;
+    md += `2. Al final, muestra en un resumen solo las preguntas que deben ser revisadas o corregidas dado algún problema con la pregunta o las respuestas (indicando el motivo o la corrección sugerida), para no tener que leer el diagnóstico de cada pregunta si no se desea.\n\n`;
+    md += `---\n\n`;
+
+    questions.forEach((q, idx) => {
+      md += `### Pregunta ${idx + 1}\n`;
+      md += `**Enunciado:**\n${q.content}\n\n`;
+      if (q.imageUrl) {
+        md += `*Imagen de referencia:* ${q.imageUrl}\n\n`;
+      }
+      if (q.answers && q.answers.length > 0) {
+        md += `**Opciones de respuesta:**\n`;
+        q.answers.forEach((ans: any, aIdx: number) => {
+          const letter = String.fromCharCode(65 + aIdx);
+          if (ans.isCorrect) {
+            md += `- [x] **Opción ${letter} (CORRECTA):** ${ans.content}\n`;
+          } else {
+            md += `- [ ] **Opción ${letter} (Distractor):** ${ans.content}\n`;
+          }
+        });
+        md += `\n`;
+      }
+      md += `---\n\n`;
+    });
+
+    const success = await copyTextToClipboard(md.trim());
+    if (success) {
+      setCopiedAI(true);
+      setTimeout(() => setCopiedAI(false), 2500);
+      toast({
+        title: "🤖 Copiado para IA",
+        description: `${questions.length} preguntas con respuestas y distractores listos para pegar.`,
+      });
+    } else {
+      toast({
+        title: "Error al copiar",
+        description: "No se pudo copiar el contenido al portapapeles.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const goNext = useCallback(() => {
     setCurrentIndex((i) => Math.min(i + 1, total - 1));
@@ -187,6 +268,17 @@ export default function PreviewQuiz() {
           <BookOpen className="h-5 w-5 text-blue-400 shrink-0" />
           <h1 className="font-bold text-white text-sm truncate">{quiz.title}</h1>
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleCopyAllForAI}
+          className="h-7 px-2.5 text-purple-300 hover:text-purple-100 hover:bg-purple-500/20 border border-purple-500/30 rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all shadow-sm"
+          title="Copiar todas las preguntas con respuestas correctas y distractores para IA (ChatGPT, Claude, etc.)"
+        >
+          {copiedAI ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Bot className="w-3.5 h-3.5 text-purple-400" />}
+          <span className="hidden sm:inline">Copiar para IA</span>
+          <span className="sm:hidden">Para IA</span>
+        </Button>
         <div className="text-xs text-slate-500 shrink-0 font-medium">
           {currentIndex + 1} / {total}
         </div>

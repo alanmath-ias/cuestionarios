@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff, Copy, Power, Link2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff, Copy, Power, Link2, Bot } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { startActiveQuizTour } from "@/lib/tour";
@@ -59,6 +59,7 @@ interface Question {
   imageUrl?: string;
   answers?: any[];
   variables?: any;
+  explanation?: string;
 }
 
 interface Progress {
@@ -353,6 +354,67 @@ const ActiveQuiz = () => {
   const isAdmin = session?.role === 'admin' && !session?.isImpersonating;
   const canCopyRawContent = isAdmin || session?.userId === 2;
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [copiedAI, setCopiedAI] = useState(false);
+
+  const handleCopyAllForAI = async () => {
+    if (!quiz || !questions || questions.length === 0) {
+      toast({
+        title: "Sin preguntas",
+        description: "No hay preguntas cargadas para copiar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    let md = `# CUESTIONARIO: ${quiz.title}\n`;
+    if (quiz.description) md += `**Descripción:** ${quiz.description}\n`;
+    md += `**Total de preguntas:** ${questions.length}\n`;
+    if (quiz.timeLimit) md += `**Tiempo sugerido:** ${Math.round(quiz.timeLimit / 60)} minutos\n`;
+    md += `\nInstrucciones para el asistente de IA:\n`;
+    md += `1. Evalúa la precisión matemática, la formulación pedagógica y la calidad de este cuestionario (claridad de enunciados, corrección de la respuesta marcada como correcta y pertinencia de los distractores).\n`;
+    md += `2. Al final, muestra en un resumen solo las preguntas que deben ser revisadas o corregidas dado algún problema con la pregunta o las respuestas (indicando el motivo o la corrección sugerida), para no tener que leer el diagnóstico de cada pregunta si no se desea.\n\n`;
+    md += `---\n\n`;
+
+    questions.forEach((q, idx) => {
+      md += `### Pregunta ${idx + 1}\n`;
+      md += `**Enunciado:**\n${q.content}\n\n`;
+      if (q.imageUrl) {
+        md += `*Imagen de referencia:* ${q.imageUrl}\n\n`;
+      }
+      if (q.answers && q.answers.length > 0) {
+        md += `**Opciones de respuesta:**\n`;
+        q.answers.forEach((ans: any, aIdx: number) => {
+          const letter = String.fromCharCode(65 + aIdx);
+          if (ans.isCorrect) {
+            md += `- [x] **Opción ${letter} (CORRECTA):** ${ans.content}\n`;
+          } else {
+            md += `- [ ] **Opción ${letter} (Distractor):** ${ans.content}\n`;
+          }
+        });
+        md += `\n`;
+      }
+      if (q.explanation) {
+        md += `*Explicación/Solución:* ${q.explanation}\n\n`;
+      }
+      md += `---\n\n`;
+    });
+
+    const success = await copyPreviewUrlToClipboard(md.trim());
+    if (success) {
+      setCopiedAI(true);
+      setTimeout(() => setCopiedAI(false), 2500);
+      toast({
+        title: "🤖 Copiado para IA",
+        description: `${questions.length} preguntas con respuestas y distractores listos para pegar.`,
+      });
+    } else {
+      toast({
+        title: "Error al copiar",
+        description: "No se pudo copiar el contenido al portapapeles.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleCopyRaw = (text: string, key: string, label: string = "Pregunta") => {
     if (!navigator?.clipboard?.writeText) {
@@ -1622,6 +1684,18 @@ const ActiveQuiz = () => {
                   )}
                   {isAdmin && !isChiqui && quiz && (
                     <ActiveQuizPreviewToggle quiz={quiz} />
+                  )}
+                  {isAdmin && !isChiqui && quiz && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCopyAllForAI}
+                      className="h-7 px-2.5 text-purple-300 hover:text-purple-200 hover:bg-purple-500/20 border border-purple-500/40 rounded-lg text-xs font-bold flex items-center gap-1.5 ml-1 transition-all shadow-sm"
+                      title="Copiar todas las preguntas, respuestas y distractores formateados para IA (ChatGPT, Claude, etc.)"
+                    >
+                      {copiedAI ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Bot className="w-3.5 h-3.5 text-purple-400" />}
+                      <span>Copiar para IA</span>
+                    </Button>
                   )}
                   {isReadOnly && (
                     <Badge variant="outline" className="text-blue-400 border-blue-500/50 bg-blue-500/10 flex items-center gap-1">

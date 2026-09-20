@@ -1,4 +1,10 @@
 import express, { type Express, Request as ExpressRequest, Response } from "express";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";  // Asegúrate de que si lo usas, la ruta tenga la extensión .js
 import { z } from "zod";
@@ -2454,6 +2460,208 @@ Genera SOLO el tip, sin saludos introductorios. Empieza directo con el concepto 
     } catch (error) {
       console.error("Toggle preview error:", error);
       res.status(500).json({ message: "Error al cambiar el modo vista previa" });
+    }
+  });
+  // Helper para escapar HTML de forma segura
+  function escapeHtml(str: string): string {
+    return (str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // Helper para formatear todo el quiz en Markdown optimizado para prompts de IA
+  function formatQuizForAI(quiz: any, questions: any[]): string {
+    let md = `# CUESTIONARIO: ${quiz.title}\n`;
+    if (quiz.description) {
+      md += `**Descripción:** ${quiz.description}\n`;
+    }
+    md += `**Total de preguntas:** ${questions.length}\n`;
+    if (quiz.timeLimit) {
+      md += `**Tiempo sugerido:** ${Math.round(quiz.timeLimit / 60)} minutos\n`;
+    }
+    md += `\nInstrucciones para el asistente de IA:\n`;
+    md += `1. Evalúa la precisión matemática, la formulación pedagógica y la calidad de este cuestionario (claridad de enunciados, corrección de la respuesta marcada como correcta y pertinencia de los distractores).\n`;
+    md += `2. Al final, muestra en un resumen solo las preguntas que deben ser revisadas o corregidas dado algún problema con la pregunta o las respuestas (indicando el motivo o la corrección sugerida), para no tener que leer el diagnóstico de cada pregunta si no se desea.\n\n`;
+    md += `---\n\n`;
+
+    questions.forEach((q, qIndex) => {
+      md += `### Pregunta ${qIndex + 1}\n`;
+      md += `**Enunciado:**\n${q.content}\n\n`;
+
+      if (q.imageUrl) {
+        md += `*Imagen de referencia:* ${q.imageUrl}\n\n`;
+      }
+
+      if (q.answers && q.answers.length > 0) {
+        md += `**Opciones de respuesta:**\n`;
+        q.answers.forEach((ans: any, aIndex: number) => {
+          const letter = String.fromCharCode(65 + aIndex);
+          if (ans.isCorrect) {
+            md += `- [x] **Opción ${letter} (CORRECTA):** ${ans.content}\n`;
+          } else {
+            md += `- [ ] **Opción ${letter} (Distractor):** ${ans.content}\n`;
+          }
+        });
+        md += `\n`;
+      }
+
+      if (q.explanation) {
+        md += `*Explicación/Solución:* ${q.explanation}\n\n`;
+      }
+
+      md += `---\n\n`;
+    });
+
+    return md.trim();
+  }
+
+  // Helper para renderizar HTML semántico pre-renderizado (visible para crawlers sin JS)
+  function renderQuizSemanticHtml(quiz: any, questions: any[]): string {
+    return `
+    <article class="ai-preview-content" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 820px; margin: 0 auto; padding: 24px; color: #1e293b; line-height: 1.6;">
+      <header style="border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 24px;">
+        <span style="display: inline-block; background: #fef3c7; color: #92400e; font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+          Vista Previa Pública de Cuestionario
+        </span>
+        <h1 style="font-size: 26px; font-weight: 800; color: #0f172a; margin: 8px 0;">${escapeHtml(quiz.title)}</h1>
+        ${quiz.description ? `<p style="font-size: 15px; color: #475569; margin: 4px 0 12px;">${escapeHtml(quiz.description)}</p>` : ''}
+        <div style="display: flex; gap: 16px; font-size: 13px; color: #64748b;">
+          <span><strong>Total de preguntas:</strong> ${questions.length}</span>
+          ${quiz.timeLimit ? `<span><strong>Tiempo:</strong> ${Math.round(quiz.timeLimit / 60)} min</span>` : ''}
+        </div>
+      </header>
+
+      <section>
+        ${questions.map((q, idx) => {
+          return `
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+            <div style="font-weight: 700; font-size: 14px; color: #2563eb; margin-bottom: 10px; text-transform: uppercase;">
+              Pregunta ${idx + 1}
+            </div>
+            <div style="font-size: 16px; color: #1e293b; margin-bottom: 16px; white-space: pre-wrap;">${escapeHtml(q.content)}</div>
+            ${q.imageUrl ? `<div style="margin-bottom: 16px;"><img src="${escapeHtml(q.imageUrl)}" alt="Imagen de pregunta ${idx + 1}" style="max-width: 100%; border-radius: 8px; border: 1px solid #cbd5e1;" /></div>` : ''}
+            ${q.answers && q.answers.length > 0 ? `
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                ${q.answers.map((a: any, aIdx: number) => {
+                  const letter = String.fromCharCode(65 + aIdx);
+                  const isCorrect = !!a.isCorrect;
+                  return `
+                  <div style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 8px; border: 1px solid ${isCorrect ? '#86efac' : '#e2e8f0'}; background: ${isCorrect ? '#f0fdf4' : '#ffffff'};">
+                    <span style="font-weight: 800; font-size: 13px; color: ${isCorrect ? '#166534' : '#64748b'}; width: 22px;">${letter})</span>
+                    <div style="flex: 1; font-size: 14px; color: ${isCorrect ? '#14532d' : '#334155'}; font-weight: ${isCorrect ? '600' : '400'};">
+                      ${escapeHtml(a.content)}
+                      ${isCorrect ? `<span style="margin-left: 8px; font-size: 11px; font-weight: 700; color: #15803d; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">RESPUESTA CORRECTA</span>` : `<span style="margin-left: 8px; font-size: 11px; color: #94a3b8;">(Distractor)</span>`}
+                    </div>
+                  </div>
+                  `;
+                }).join('')}
+              </div>
+            ` : ''}
+            ${q.explanation ? `
+              <div style="margin-top: 14px; padding: 10px 12px; background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 4px; font-size: 13px; color: #1e40af;">
+                <strong>Explicación:</strong> ${escapeHtml(q.explanation)}
+              </div>
+            ` : ''}
+          </div>
+          `;
+        }).join('')}
+      </section>
+    </article>
+    `;
+  }
+
+  // Endpoint de texto puro para IAs: /preview/:quizId/text o /preview/:quizId.txt o /api/preview/:quizId/text
+  app.get(["/preview/:quizId/text", "/preview/:quizId.txt", "/api/preview/:quizId/text"], async (req: Request, res: Response) => {
+    const quizId = parseInt(req.params.quizId);
+    if (isNaN(quizId)) return res.status(400).send("ID inválido");
+
+    try {
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz) return res.status(404).send("Cuestionario no encontrado");
+      if (!quiz.isPublic && req.session?.role !== 'admin') {
+        return res.status(403).send("Este cuestionario no está en modo público");
+      }
+
+      const questions = await storage.getQuestionsByQuiz(quizId);
+      const questionsWithAnswers = await Promise.all(
+        questions.map(async (q) => {
+          const answers = await storage.getAnswersByQuestion(q.id);
+          return { ...q, answers };
+        })
+      );
+
+      const text = formatQuizForAI(quiz, questionsWithAnswers);
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      return res.send(text);
+    } catch (error) {
+      console.error("Error generating preview text:", error);
+      return res.status(500).send("Error al generar texto de vista previa");
+    }
+  });
+
+  // GET /preview/:quizId — Pre-renderizado en HTML y detección de bots de IA
+  app.get("/preview/:quizId", async (req: Request, res: Response, next: any) => {
+    const quizId = parseInt(req.params.quizId);
+    if (isNaN(quizId)) return next();
+
+    const userAgent = req.headers['user-agent'] || '';
+    const accept = req.headers['accept'] || '';
+    const isAiBot = /chatgpt|gptbot|claude|anthropic|perplexity|bot|spider|crawler|python|curl|wget|urllib|headless/i.test(userAgent) || req.query.raw === '1' || accept.includes('text/plain');
+
+    try {
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz || (!quiz.isPublic && req.session?.role !== 'admin')) {
+        return next();
+      }
+
+      const questions = await storage.getQuestionsByQuiz(quizId);
+      const questionsWithAnswers = await Promise.all(
+        questions.map(async (q) => {
+          const answers = await storage.getAnswersByQuestion(q.id);
+          return { ...q, answers };
+        })
+      );
+
+      // Si es un bot o scraper de IA que pide texto o identificable
+      if (isAiBot) {
+        const text = formatQuizForAI(quiz, questionsWithAnswers);
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        return res.send(text);
+      }
+
+      // Para navegadores / scrapers que leen HTML:
+      const candidates = [
+        path.resolve(__dirname, "../client/index.html"),
+        path.resolve(__dirname, "../../client/index.html"),
+        path.resolve(process.cwd(), "dist/client/index.html"),
+        path.resolve(process.cwd(), "client/index.html"),
+      ];
+      let indexPath: string | null = null;
+      for (const p of candidates) {
+        if (fs.existsSync(p)) {
+          indexPath = p;
+          break;
+        }
+      }
+
+      if (indexPath) {
+        let html = fs.readFileSync(indexPath, "utf-8");
+        const semanticHtml = renderQuizSemanticHtml(quiz, questionsWithAnswers);
+        html = html.replace(
+          '<div id="root"></div>',
+          `<div id="root">${semanticHtml}</div><noscript>${semanticHtml}</noscript>`
+        );
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        return res.send(html);
+      }
+
+      return next();
+    } catch (err) {
+      console.error("Error serving preview route:", err);
+      return next();
     }
   });
   // ───────────────────────────────────────────────────────────────────────────
