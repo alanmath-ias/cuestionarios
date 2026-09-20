@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff, Copy } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff, Copy, Power, Link2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { startActiveQuizTour } from "@/lib/tour";
@@ -46,6 +46,7 @@ interface Quiz {
   timeLimit: number;
   description?: string;
   categoryId: number;
+  isPublic?: boolean;
 }
 
 interface Question {
@@ -126,6 +127,158 @@ const QuestionContent = ({
     </div>
   );
 };
+
+// Helper para copiar al portapapeles con fallback seguro
+const copyPreviewUrlToClipboard = async (text: string): Promise<boolean> => {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {}
+  }
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "-9999px";
+    textArea.style.opacity = "0";
+    textArea.setAttribute("readonly", "");
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const success = document.execCommand("copy");
+    document.body.removeChild(textArea);
+    return success;
+  } catch {
+    return false;
+  }
+};
+
+// Componente para alternar Vista Previa pública desde dentro del cuestionario (Admin)
+function ActiveQuizPreviewToggle({ quiz }: { quiz: Quiz }) {
+  const { toast } = useToast();
+  const [isPublic, setIsPublic] = useState(!!quiz.isPublic);
+  const [copied, setCopied] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+
+  useEffect(() => {
+    setIsPublic(!!quiz.isPublic);
+  }, [quiz.isPublic]);
+
+  const handleToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isPending) return;
+
+    const nextState = !isPublic;
+    const previewUrl = `${window.location.origin}/preview/${quiz.id}`;
+
+    // 1. Actualización optimista de estado local
+    setIsPublic(nextState);
+
+    // 2. Actualización optimista en caché de React Query
+    queryClient.setQueryData([`/api/quizzes/${quiz.id}`], (old: Quiz | undefined) => {
+      if (!old) return old;
+      return { ...old, isPublic: nextState };
+    });
+    queryClient.setQueryData(["/api/quizzes"], (old: Quiz[] | undefined) => {
+      if (!old) return old;
+      return old.map((q) => (q.id === quiz.id ? { ...q, isPublic: nextState } : q));
+    });
+
+    // 3. Copiado automático e instantáneo al portapapeles al encender
+    if (nextState) {
+      copyPreviewUrlToClipboard(previewUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast({
+        title: "👁 Vista previa activada",
+        description: `Enlace copiado al portapapeles: /preview/${quiz.id}`,
+      });
+    } else {
+      toast({
+        title: "Vista previa desactivada",
+        description: "El cuestionario ahora es privado.",
+      });
+    }
+
+    // 4. Llamada al backend en segundo plano
+    setIsPending(true);
+    try {
+      const res = await apiRequest("PATCH", `/api/admin/quizzes/${quiz.id}/toggle-preview`);
+      if (!res.ok) throw new Error("Error al cambiar modo vista previa");
+      const data = await res.json();
+      if (data.isPublic !== nextState) {
+        setIsPublic(data.isPublic);
+        queryClient.setQueryData([`/api/quizzes/${quiz.id}`], (old: Quiz | undefined) => {
+          if (!old) return old;
+          return { ...old, isPublic: data.isPublic };
+        });
+      }
+    } catch {
+      // Revertir optimismo si hay error
+      setIsPublic(!nextState);
+      queryClient.setQueryData([`/api/quizzes/${quiz.id}`], (old: Quiz | undefined) => {
+        if (!old) return old;
+        return { ...old, isPublic: !nextState };
+      });
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el modo vista previa.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const handleCopyLink = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const previewUrl = `${window.location.origin}/preview/${quiz.id}`;
+    await copyPreviewUrlToClipboard(previewUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast({
+      title: "Enlace copiado",
+      description: previewUrl,
+    });
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 ml-1" onClick={(e) => e.stopPropagation()}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={handleToggle}
+        disabled={isPending}
+        title={isPublic ? "Desactivar vista previa pública" : "Activar vista previa pública (copia enlace automáticamente)"}
+        className={cn(
+          "h-7 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border shadow-sm",
+          isPublic
+            ? "bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30 hover:text-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.25)]"
+            : "bg-slate-800/80 text-slate-400 border-white/10 hover:text-slate-200 hover:bg-slate-700"
+        )}
+      >
+        <Power className={cn("w-3.5 h-3.5", isPublic ? "text-amber-400" : "text-slate-400")} />
+        <span>{isPublic ? "Preview ON" : "Preview OFF"}</span>
+      </Button>
+
+      {isPublic && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleCopyLink}
+          title="Copiar enlace de vista previa"
+          className="h-7 w-7 p-0 rounded-lg text-amber-400 hover:text-amber-200 hover:bg-amber-500/10 border border-amber-500/30 transition-colors flex items-center justify-center"
+        >
+          {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Link2 className="w-3.5 h-3.5" />}
+        </Button>
+      )}
+    </div>
+  );
+}
 
 const ActiveQuiz = () => {
   const { quizId, categoryId } = useParams();
@@ -1466,6 +1619,9 @@ const ActiveQuiz = () => {
                       <Pencil className="w-3.5 h-3.5" />
                       <span>Editar</span>
                     </Button>
+                  )}
+                  {isAdmin && !isChiqui && quiz && (
+                    <ActiveQuizPreviewToggle quiz={quiz} />
                   )}
                   {isReadOnly && (
                     <Badge variant="outline" className="text-blue-400 border-blue-500/50 bg-blue-500/10 flex items-center gap-1">

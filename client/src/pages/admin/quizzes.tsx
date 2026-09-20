@@ -12,7 +12,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, ListChecks, Folder, UserPlus, Pencil, Save, X, Brain, Search, Map as MapIcon, CheckCircle2, AlertTriangle, Ban, GripVertical, ShieldCheck, Crown, Gamepad2 } from "lucide-react";
+import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, EyeOff, Link2, ListChecks, Folder, UserPlus, Pencil, Save, X, Brain, Search, Map as MapIcon, CheckCircle2, AlertTriangle, Ban, GripVertical, ShieldCheck, Crown, Gamepad2, Power, Check } from "lucide-react";
 import { DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -70,6 +70,153 @@ const getMapData = (catId: any, catName?: string) => {
   if (id === 19 || name.includes("estadística") || name.includes("estadistica")) return { nodes: statisticsMapNodes, title: "Mapa de Estadística" };
   return null;
 };
+
+// Helper para copiar al portapapeles de forma infalible (API moderna + fallback)
+const copyToClipboard = async (text: string): Promise<boolean> => {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fallback si la API de portapapeles falla por contexto o permisos
+    }
+  }
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "-9999px";
+    textArea.style.opacity = "0";
+    textArea.setAttribute("readonly", "");
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const success = document.execCommand("copy");
+    document.body.removeChild(textArea);
+    return success;
+  } catch {
+    return false;
+  }
+};
+
+// Componente de control optimista para alternar Vista Previa pública
+function PreviewToggleControl({ quiz }: { quiz: Quiz }) {
+  const { toast } = useToast();
+  const [isPublic, setIsPublic] = useState(!!quiz.isPublic);
+  const [copied, setCopied] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+
+  useEffect(() => {
+    setIsPublic(!!quiz.isPublic);
+  }, [quiz.isPublic]);
+
+  const handleToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isPending) return;
+
+    const nextState = !isPublic;
+    const url = `${window.location.origin}/preview/${quiz.id}`;
+
+    // 1. Actualización optimista de estado local inmediata
+    setIsPublic(nextState);
+
+    // 2. Actualización optimista de caché de React Query inmediata
+    queryClient.setQueryData(["/api/quizzes"], (old: Quiz[] | undefined) => {
+      if (!old) return old;
+      return old.map(q => (q.id === quiz.id ? { ...q, isPublic: nextState } : q));
+    });
+
+    // 3. Si se está encendiendo, copiar de inmediato al portapapeles
+    if (nextState) {
+      copyToClipboard(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast({
+        title: "👁 Vista previa activada",
+        description: `Enlace copiado al portapapeles: /preview/${quiz.id}`,
+      });
+    } else {
+      toast({
+        title: "Vista previa desactivada",
+        description: "El cuestionario ahora es privado.",
+      });
+    }
+
+    // 4. Llamada al backend en segundo plano sin recargar página ni cerrar diálogos
+    setIsPending(true);
+    try {
+      const res = await fetch(`/api/admin/quizzes/${quiz.id}/toggle-preview`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Error en servidor");
+      const data = await res.json();
+      if (data.isPublic !== nextState) {
+        setIsPublic(data.isPublic);
+        queryClient.setQueryData(["/api/quizzes"], (old: Quiz[] | undefined) => {
+          if (!old) return old;
+          return old.map(q => (q.id === quiz.id ? { ...q, isPublic: data.isPublic } : q));
+        });
+      }
+    } catch {
+      // Revertir estado optimista si hubo error
+      setIsPublic(!nextState);
+      queryClient.setQueryData(["/api/quizzes"], (old: Quiz[] | undefined) => {
+        if (!old) return old;
+        return old.map(q => (q.id === quiz.id ? { ...q, isPublic: !nextState } : q));
+      });
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar la vista previa.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const handleCopyLink = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/preview/${quiz.id}`;
+    await copyToClipboard(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast({
+      title: "Enlace copiado",
+      description: url,
+    });
+  };
+
+  return (
+    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={handleToggle}
+        title={isPublic ? "Desactivar vista previa pública" : "Activar vista previa pública (copia enlace automáticamente)"}
+        className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold transition-all border ${
+          isPublic
+            ? "bg-amber-500/15 border-amber-500/35 text-amber-300 hover:bg-amber-500/25 shadow-sm"
+            : "bg-slate-700/50 border-slate-600/40 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+        }`}
+      >
+        <Power className={`h-3 w-3 ${isPublic ? "text-amber-400" : "text-slate-400"}`} />
+        <span>{isPublic ? "Preview ON" : "Preview OFF"}</span>
+      </button>
+
+      {isPublic && (
+        <button
+          type="button"
+          onClick={handleCopyLink}
+          title="Copiar enlace de vista previa"
+          className="p-1 rounded text-amber-400 hover:text-amber-200 hover:bg-amber-500/10 transition-colors"
+        >
+          {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Link2 className="h-3 w-3" />}
+        </button>
+      )}
+    </div>
+  );
+}
 
 // Subcomponent for Quiz inside Dialog (Node Details) to allow Framer Motion components
 const DraggableDialogQuizItem = ({
@@ -326,7 +473,10 @@ const DraggableDialogQuizItem = ({
             </Dialog>
           </div>
         </div>
-        <span className="text-[10px] text-slate-500 font-mono sm:mt-0">ID: {quiz.id}</span>
+        <div className="flex items-center gap-2">
+          <PreviewToggleControl quiz={quiz} />
+          <span className="text-[10px] text-slate-500 font-mono sm:mt-0">ID: {quiz.id}</span>
+        </div>
       </div>
     </Reorder.Item>
   );
@@ -2305,7 +2455,8 @@ const DraggableQuizItem = React.memo(({
                 </Badge>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <PreviewToggleControl quiz={quiz} />
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button

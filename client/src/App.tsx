@@ -51,6 +51,7 @@ import EncuestaPage from '@/pages/EncuestaPage';
 // En tu router.tsx o App.tsx
 import PublicActiveQuiz from '@/pages/PublicActiveQuiz';
 import PublicQuizResults from '@/pages/PublicQuizResults';
+import PreviewQuiz from '@/pages/PreviewQuiz';
 import ForgotPasswordPage from '@/pages/forgot-password';
 import ResetPasswordPage from '@/pages/reset-password';
 
@@ -280,6 +281,11 @@ function Router() {
       </Route>
       <Route path="/public-quiz-results">
         {() => <PublicQuizResults />}
+      </Route>
+
+      {/* Vista previa pública — sin autenticación requerida */}
+      <Route path="/preview/:quizId">
+        {() => <PreviewQuiz />}
       </Route>
 
 

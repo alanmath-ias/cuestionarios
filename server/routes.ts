@@ -2412,6 +2412,52 @@ Genera SOLO el tip, sin saludos introductorios. Empieza directo con el concepto 
     }
   });
 
+  // ── Vista Previa Pública ────────────────────────────────────────────────────
+  // GET /api/preview/:quizId — sin autenticación, solo si isPublic = true
+  apiRouter.get("/preview/:quizId", async (req: Request, res: Response) => {
+    const quizId = parseInt(req.params.quizId);
+    if (isNaN(quizId)) return res.status(400).json({ message: "ID inválido" });
+
+    try {
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz) return res.status(404).json({ message: "Cuestionario no encontrado" });
+      if (!quiz.isPublic) return res.status(403).json({ message: "Este cuestionario no está disponible en modo vista previa" });
+
+      const questions = await storage.getQuestionsByQuiz(quizId);
+      // Incluir las respuestas para que sean visibles (solo lectura)
+      const questionsWithAnswers = await Promise.all(
+        questions.map(async (q) => {
+          const answers = await storage.getAnswersByQuestion(q.id);
+          return { ...q, answers };
+        })
+      );
+
+      res.json({ quiz, questions: questionsWithAnswers });
+    } catch (error) {
+      console.error("Preview fetch error:", error);
+      res.status(500).json({ message: "Error al cargar la vista previa" });
+    }
+  });
+
+  // PATCH /api/admin/quizzes/:id/toggle-preview — solo admin, activa/desactiva is_public
+  apiRouter.patch("/admin/quizzes/:id/toggle-preview", requireAdmin, async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "ID inválido" });
+
+    try {
+      const quiz = await storage.getQuiz(id);
+      if (!quiz) return res.status(404).json({ message: "Cuestionario no encontrado" });
+
+      const newValue = !quiz.isPublic;
+      const updated = await storage.updateQuiz(id, { isPublic: newValue });
+      res.json({ isPublic: newValue, quiz: updated });
+    } catch (error) {
+      console.error("Toggle preview error:", error);
+      res.status(500).json({ message: "Error al cambiar el modo vista previa" });
+    }
+  });
+  // ───────────────────────────────────────────────────────────────────────────
+
   apiRouter.get("/categories/:categoryId/quizzes", async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.categoryId);
 

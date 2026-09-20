@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import { QuizCard } from '@/components/dashboard/quiz-card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle, Map as MapIcon, LayoutGrid, Search, CheckCircle2, Ban, Crown, Sparkles, Trophy, Gamepad2 } from 'lucide-react';
+import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle, Map as MapIcon, LayoutGrid, Search, CheckCircle2, Ban, Crown, Sparkles, Trophy, Gamepad2, Eye, EyeOff, Link2, Power, Check } from 'lucide-react';
 import { useParams, useLocation } from 'wouter';
 import { calculatePercentage } from '@/lib/mathUtils';
 import { cn } from '@/lib/utils';
@@ -49,6 +50,7 @@ interface Quiz {
   timeLimit: number;
   difficulty: string;
   totalQuestions: number;
+  isPublic?: boolean;
 }
 
 interface QuizProgress {
@@ -61,6 +63,129 @@ interface QuizProgress {
   timeSpent?: number;
   completedAt?: Date | string;
 }
+
+// Helper para copiar al portapapeles con fallback seguro
+const copyToClipboard = async (text: string): Promise<boolean> => {
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {}
+  }
+  try {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    textArea.style.top = '-9999px';
+    textArea.style.opacity = '0';
+    textArea.setAttribute('readonly', '');
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const success = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    return success;
+  } catch {
+    return false;
+  }
+};
+
+// ── Componente: Botón toggle Vista Previa (solo admin) ──────────────────────
+function PreviewToggleButton({ quiz }: { quiz: Quiz }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [isPublic, setIsPublic] = useState(!!quiz.isPublic);
+  const [copied, setCopied] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+
+  useEffect(() => {
+    setIsPublic(!!quiz.isPublic);
+  }, [quiz.isPublic]);
+
+  const handleToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isPending) return;
+
+    const nextState = !isPublic;
+    const previewUrl = `${window.location.origin}/preview/${quiz.id}`;
+
+    // Actualización optimista inmediata
+    setIsPublic(nextState);
+
+    // Si se activa, copiar de inmediato al portapapeles
+    if (nextState) {
+      copyToClipboard(previewUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast({
+        title: '👁 Vista previa activada',
+        description: `Enlace copiado al portapapeles: /preview/${quiz.id}`,
+      });
+    } else {
+      toast({
+        title: 'Vista previa desactivada',
+        description: 'El cuestionario ya no es accesible públicamente.',
+      });
+    }
+
+    setIsPending(true);
+    try {
+      const res = await apiRequest('PATCH', `/api/admin/quizzes/${quiz.id}/toggle-preview`);
+      if (!res.ok) throw new Error('Error al cambiar modo vista previa');
+      const data = await res.json();
+      if (data.isPublic !== nextState) {
+        setIsPublic(data.isPublic);
+      }
+      queryClient.invalidateQueries({ queryKey: ['/api/quizzes'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/node-mappings`] });
+    } catch {
+      setIsPublic(!nextState);
+      toast({ title: 'Error', description: 'No se pudo cambiar el modo vista previa.', variant: 'destructive' });
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const handleCopyLink = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const previewUrl = `${window.location.origin}/preview/${quiz.id}`;
+    await copyToClipboard(previewUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast({ title: 'Enlace copiado', description: previewUrl });
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 mt-1" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={handleToggle}
+        title={isPublic ? 'Desactivar vista previa pública' : 'Activar vista previa pública (copia enlace automáticamente)'}
+        className={cn(
+          'flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold transition-all border',
+          isPublic
+            ? 'bg-amber-500/15 border-amber-500/35 text-amber-300 hover:bg-amber-500/25 shadow-sm'
+            : 'bg-slate-700/50 border-slate-600/40 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+        )}
+      >
+        <Power className={`h-3 w-3 ${isPublic ? 'text-amber-400' : 'text-slate-400'}`} />
+        <span>{isPublic ? 'Preview ON' : 'Preview OFF'}</span>
+      </button>
+      {isPublic && (
+        <button
+          type="button"
+          onClick={handleCopyLink}
+          title="Copiar enlace de vista previa"
+          className="p-1 rounded text-amber-400 hover:text-amber-200 hover:bg-amber-500/10 transition-colors"
+        >
+          {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Link2 className="h-3 w-3" />}
+        </button>
+      )}
+    </div>
+  );
+}
+// ────────────────────────────────────────────────────────────────────────────
 
 function QuizList() {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -945,6 +1070,10 @@ function QuizList() {
                                     {isCompleted ? 'Ver Resultados' : (quizProgress?.completedQuestions || 0) > 0 ? 'Continuar' : 'Comenzar'}
                                   </Button>
                                 </div>
+                                {/* ── Botón Vista Previa (solo admin) ── */}
+                                {isAdmin && (
+                                  <PreviewToggleButton quiz={quiz} />
+                                )}
                               </div>
                             </div>
                           </div>
