@@ -33,7 +33,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MathText } from "@/components/ui/math-display";
 import { AIMarkdown } from "@/components/ui/ai-markdown";
-import { Loader2, CheckCircle, Eye, Bot, Trash2, ChevronDown, ExternalLink, Pencil, Save, X, Plus, Trash } from "lucide-react";
+import { Loader2, CheckCircle, Eye, Bot, Trash2, ChevronDown, ExternalLink, Pencil, Save, X, Plus, Trash, Coins } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -75,6 +75,124 @@ interface ReportDetails extends QuestionReport {
         }[];
         imageUrl?: string | null;
     };
+}
+
+interface ResolveDropdownProps {
+    reportId: number;
+    isPending: boolean;
+    onResolve: (id: number, credits: number) => void;
+}
+
+function ResolveDropdown({ reportId, isPending, onResolve }: ResolveDropdownProps) {
+    const [open, setOpen] = useState(false);
+    const [customCredits, setCustomCredits] = useState("");
+
+    const handleCustomSubmit = () => {
+        const parsed = parseInt(customCredits.trim(), 10);
+        if (isNaN(parsed) || parsed < 0) {
+            return;
+        }
+        onResolve(reportId, parsed);
+        setCustomCredits("");
+        setOpen(false);
+    };
+
+    return (
+        <DropdownMenu open={open} onOpenChange={setOpen}>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isPending}
+                    className="bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border-purple-500/20 hover:text-purple-300"
+                >
+                    <CheckCircle className="h-4 w-4 mr-1" /> Resolver <ChevronDown className="h-3 w-3 ml-1" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-slate-900 border-white/10 text-slate-200 w-60 p-1.5 shadow-2xl">
+                <DropdownMenuItem
+                    className="cursor-pointer hover:bg-white/5 focus:bg-white/10 focus:text-white"
+                    onClick={() => {
+                        onResolve(reportId, 0);
+                        setOpen(false);
+                    }}
+                >
+                    Resolver (0 créditos)
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuItem
+                    className="cursor-pointer hover:bg-white/5 focus:bg-white/10 focus:text-white"
+                    onClick={() => {
+                        onResolve(reportId, 1);
+                        setOpen(false);
+                    }}
+                >
+                    Resolver y dar 1 crédito
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                    className="cursor-pointer hover:bg-white/5 focus:bg-white/10 focus:text-white"
+                    onClick={() => {
+                        onResolve(reportId, 2);
+                        setOpen(false);
+                    }}
+                >
+                    Resolver y dar 2 créditos
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                    className="cursor-pointer hover:bg-white/5 focus:bg-white/10 focus:text-white"
+                    onClick={() => {
+                        onResolve(reportId, 3);
+                        setOpen(false);
+                    }}
+                >
+                    Resolver y dar 3 créditos
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-white/10" />
+                <div
+                    className="p-2 pt-1.5 focus:outline-none"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                >
+                    <div className="text-[11px] text-slate-400 font-medium mb-1.5 flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-slate-300">
+                            <Coins className="h-3.5 w-3.5 text-amber-400" /> Cantidad personalizada:
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <Input
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="Ej: 5"
+                            value={customCredits}
+                            onChange={(e) => setCustomCredits(e.target.value)}
+                            onKeyDown={(e) => {
+                                e.stopPropagation();
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleCustomSubmit();
+                                }
+                            }}
+                            className="h-8 w-20 px-2 text-xs bg-slate-950 border-white/20 text-slate-100 placeholder:text-slate-500 focus-visible:ring-purple-500"
+                            disabled={isPending}
+                        />
+                        <Button
+                            size="sm"
+                            type="button"
+                            disabled={isPending || customCredits.trim() === "" || isNaN(parseInt(customCredits, 10)) || parseInt(customCredits, 10) < 0}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleCustomSubmit();
+                            }}
+                            className="h-8 px-2.5 text-xs bg-purple-600 hover:bg-purple-500 text-white font-medium flex-1 shadow-sm transition-colors"
+                        >
+                            Dar y resolver
+                        </Button>
+                    </div>
+                </div>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
 }
 
 export default function AdminReports() {
@@ -146,11 +264,16 @@ export default function AdminReports() {
             if (!res.ok) throw new Error("No se pudo resolver el reporte");
             return res.json();
         },
-        onSuccess: () => {
+        onSuccess: (_data, variables) => {
             queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
+            if (selectedReportId) {
+                queryClient.invalidateQueries({ queryKey: ["/api/admin/reports", selectedReportId, "details"] });
+            }
             toast({
                 title: "Reporte resuelto",
-                description: "El reporte ha sido cerrado y actualizado.",
+                description: variables.credits > 0
+                    ? `El reporte ha sido marcado como resuelto y se otorgaron ${variables.credits} crédito${variables.credits > 1 ? 's' : ''} al usuario.`
+                    : "El reporte ha sido marcado como resuelto (0 créditos).",
             });
             handleCloseDialog();
         },
@@ -352,33 +475,11 @@ export default function AdminReports() {
                                                             Ver Detalles
                                                         </Button>
                                                         {report.status === "pending" && (
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="outline"
-                                                                        disabled={resolveAndRewardMutation.isPending}
-                                                                        className="bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border-purple-500/20 hover:text-purple-300"
-                                                                    >
-                                                                        <CheckCircle className="h-4 w-4 mr-1" /> Resolver <ChevronDown className="h-3 w-3 ml-1" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent className="bg-slate-900 border-white/10 text-slate-200">
-                                                                    <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: report.id, credits: 0 })}>
-                                                                        Resolver (0 créditos)
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuSeparator className="bg-white/10" />
-                                                                    <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: report.id, credits: 1 })}>
-                                                                        Resolver y dar 1 crédito
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: report.id, credits: 2 })}>
-                                                                        Resolver y dar 2 créditos
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: report.id, credits: 3 })}>
-                                                                        Resolver y dar 3 créditos
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
+                                                            <ResolveDropdown
+                                                                reportId={report.id}
+                                                                isPending={resolveAndRewardMutation.isPending}
+                                                                onResolve={(id, credits) => resolveAndRewardMutation.mutate({ id, credits })}
+                                                            />
                                                         )}
                                                         <Button
                                                             size="sm"
@@ -420,33 +521,11 @@ export default function AdminReports() {
                                 </div>
                                 <div className="flex gap-2 mr-6">
                                     {reportDetails?.status === "pending" && (
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    disabled={resolveAndRewardMutation.isPending}
-                                                    className="bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border-purple-500/20 hover:text-purple-300"
-                                                >
-                                                    <CheckCircle className="h-4 w-4 mr-1" /> Resolver <ChevronDown className="h-3 w-3 ml-1" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent className="bg-slate-900 border-white/10 text-slate-200">
-                                                <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: selectedReportId!, credits: 0 })}>
-                                                    Resolver (0 créditos)
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator className="bg-white/10" />
-                                                <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: selectedReportId!, credits: 1 })}>
-                                                    Resolver y dar 1 crédito
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: selectedReportId!, credits: 2 })}>
-                                                    Resolver y dar 2 créditos
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => resolveAndRewardMutation.mutate({ id: selectedReportId!, credits: 3 })}>
-                                                    Resolver y dar 3 créditos
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        <ResolveDropdown
+                                            reportId={selectedReportId!}
+                                            isPending={resolveAndRewardMutation.isPending}
+                                            onResolve={(id, credits) => resolveAndRewardMutation.mutate({ id, credits })}
+                                        />
                                     )}
                                     <Button
                                         size="sm"

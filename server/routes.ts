@@ -5309,9 +5309,10 @@ Ejemplo de formato:
       if (req.user?.role !== "admin") return res.status(403).send("No autorizado");
 
       const reportId = parseInt(req.params.id);
-      const credits = parseInt(req.body.credits || "0", 10);
+      const credits = Math.max(0, parseInt(req.body.credits ?? 0, 10) || 0);
       await storage.rewardAndResolveReport(reportId, credits);
-      res.json({ success: true });
+      console.log(`[Reports] Admin #${req.user.id} resolved report #${reportId} awarding ${credits} credits`);
+      res.json({ success: true, credits });
     } catch (error) {
       console.error("Error resolving report:", error);
       res.status(500).send("Error al resolver el reporte");

@@ -1701,7 +1701,7 @@ export class DatabaseStorage implements IStorage {
       const reportList = await tx.select().from(questionReports).where(eq(questionReports.id, reportId));
       if (reportList.length > 0) {
         const report = reportList[0];
-        if (credits > 0) {
+        if (report.status !== 'resolved' && credits > 0) {
           await tx.update(users)
             .set({ hintCredits: sql`GREATEST(0, ${users.hintCredits} + ${credits})` })
             .where(eq(users.id, report.userId));
