@@ -103,6 +103,8 @@ export default function PreviewQuiz() {
   const { quizId } = useParams();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
+  const [confirmedAnswers, setConfirmedAnswers] = useState<Record<number, boolean>>({});
+  const [isNavigating, setIsNavigating] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
   const { toast } = useToast();
@@ -177,7 +179,7 @@ export default function PreviewQuiz() {
   };
 
   const handleSelectAnswer = (qIndex: number, answerId: number) => {
-    if (selectedAnswers[qIndex] !== undefined) return; // Ya respondida, no permitir cambiar
+    if (confirmedAnswers[qIndex] || isNavigating) return; // Ya respondida/confirmada, no permitir cambiar
     setSelectedAnswers((prev) => ({
       ...prev,
       [qIndex]: answerId,
@@ -191,6 +193,32 @@ export default function PreviewQuiz() {
       setShowResults(true);
     }
   }, [currentIndex, total]);
+
+  const handleNext = useCallback(() => {
+    if (isNavigating) return;
+
+    // Si ya está confirmada esta pregunta, avanzar inmediatamente
+    if (confirmedAnswers[currentIndex]) {
+      goNext();
+      return;
+    }
+
+    const currentSelectedId = selectedAnswers[currentIndex];
+    if (currentSelectedId === undefined) return;
+
+    // Confirmar la respuesta seleccionada
+    setConfirmedAnswers((prev) => ({
+      ...prev,
+      [currentIndex]: true,
+    }));
+
+    // Pequeña pausa de 900ms para visualizar la retroalimentación (verde/rojo) y avanzar
+    setIsNavigating(true);
+    setTimeout(() => {
+      setIsNavigating(false);
+      goNext();
+    }, 900);
+  }, [isNavigating, confirmedAnswers, currentIndex, selectedAnswers, goNext]);
 
   const goPrev = useCallback(() => {
     setCurrentIndex((i) => Math.max(i - 1, 0));
@@ -249,6 +277,9 @@ export default function PreviewQuiz() {
             behavior: 'smooth',
           });
         }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleNext();
       } else {
         // Responder con teclado: 1, 2, 3, 4 o A, B, C, D
         const key = e.key.toUpperCase();
@@ -270,7 +301,7 @@ export default function PreviewQuiz() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [data, total, currentIndex, goNext, goPrev, scrollByAmount]);
+  }, [data, total, currentIndex, goNext, goPrev, handleNext, scrollByAmount]);
 
   // Reset scroll position to top when question changes
   useEffect(() => {
@@ -320,7 +351,7 @@ export default function PreviewQuiz() {
   const current = questions[currentIndex];
 
   // Cálculo de estadísticas locales
-  const answeredCount = Object.keys(selectedAnswers).length;
+  const answeredCount = Object.keys(confirmedAnswers).length;
   let correctCount = 0;
   let totalPointsEarned = 0;
   let totalPossiblePoints = 0;
@@ -329,7 +360,7 @@ export default function PreviewQuiz() {
     const qPoints = q.points || 10;
     totalPossiblePoints += qPoints;
     const chosenAnswerId = selectedAnswers[idx];
-    if (chosenAnswerId !== undefined) {
+    if (confirmedAnswers[idx] && chosenAnswerId !== undefined) {
       const isCorrect = q.answers?.find((a) => a.id === chosenAnswerId)?.isCorrect;
       if (isCorrect) {
         correctCount++;
@@ -340,7 +371,7 @@ export default function PreviewQuiz() {
 
   const incorrectCount = answeredCount - correctCount;
   const scorePercentage = total > 0 ? Math.round((correctCount / total) * 100) : 0;
-  const isCurrentAnswered = selectedAnswers[currentIndex] !== undefined;
+  const isCurrentAnswered = !!confirmedAnswers[currentIndex];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col relative overflow-x-hidden">
@@ -663,7 +694,7 @@ export default function PreviewQuiz() {
               {current.answers && current.answers.length > 0 && (
                 <div className="space-y-3 pt-2">
                   {current.answers.map((answer, idx) => {
-                    const isAnswered = selectedAnswers[currentIndex] !== undefined;
+                    const isAnswered = !!confirmedAnswers[currentIndex];
                     const isSelected = selectedAnswers[currentIndex] === answer.id;
                     const isCorrect = answer.isCorrect;
 
@@ -688,6 +719,11 @@ export default function PreviewQuiz() {
                           'opacity-40 border-white/5 bg-slate-950/40 text-slate-500 cursor-default';
                         letterStyle = 'bg-slate-900 border-white/5 text-slate-600';
                       }
+                    } else if (isSelected) {
+                      containerStyle =
+                        'bg-blue-600/20 border-blue-500 text-blue-200 shadow-[0_0_15px_rgba(59,130,246,0.25)]';
+                      letterStyle =
+                        'bg-blue-600/40 border-blue-400 text-blue-100 font-bold';
                     }
 
                     return (
@@ -695,7 +731,7 @@ export default function PreviewQuiz() {
                         key={answer.id}
                         type="button"
                         onClick={() => handleSelectAnswer(currentIndex, answer.id)}
-                        disabled={isAnswered}
+                        disabled={isAnswered || isNavigating}
                         className={cn(
                           'w-full text-left py-3.5 sm:py-4 px-4 sm:px-5 rounded-2xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden',
                           containerStyle
@@ -798,19 +834,29 @@ export default function PreviewQuiz() {
                 <div className="flex items-center gap-2">
                   {currentIndex < total - 1 ? (
                     <Button
-                      onClick={goNext}
+                      onClick={handleNext}
+                      disabled={isNavigating || (!confirmedAnswers[currentIndex] && selectedAnswers[currentIndex] === undefined)}
                       className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white gap-2 h-11 px-6 rounded-2xl font-bold shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      Siguiente
-                      <ArrowRight className="h-4 w-4" />
+                      {isNavigating ? 'Procesando...' : (
+                        <>
+                          Siguiente
+                          <ArrowRight className="h-4 w-4" />
+                        </>
+                      )}
                     </Button>
                   ) : (
                     <Button
-                      onClick={() => setShowResults(true)}
+                      onClick={handleNext}
+                      disabled={isNavigating || (!confirmedAnswers[currentIndex] && selectedAnswers[currentIndex] === undefined)}
                       className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white gap-2 h-11 px-6 rounded-2xl font-bold shadow-lg shadow-emerald-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      <Trophy className="h-4 w-4 text-amber-300" />
-                      Ver Resultados
+                      {isNavigating ? 'Procesando...' : (
+                        <>
+                          <Trophy className="h-4 w-4 text-amber-300" />
+                          Ver Resultados
+                        </>
+                      )}
                     </Button>
                   )}
                 </div>
@@ -824,7 +870,7 @@ export default function PreviewQuiz() {
                     Preguntas del Cuestionario
                   </span>
                   <span>
-                    {Object.keys(selectedAnswers).length} de {total} respondidas ({total > 0 ? Math.round((Object.keys(selectedAnswers).length / total) * 100) : 0}%)
+                    {Object.keys(confirmedAnswers).length} de {total} respondidas ({total > 0 ? Math.round((Object.keys(confirmedAnswers).length / total) * 100) : 0}%)
                   </span>
                 </div>
 
@@ -833,7 +879,7 @@ export default function PreviewQuiz() {
                   <div
                     className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500 transition-all duration-500 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                     style={{
-                      width: `${total > 0 ? (Object.keys(selectedAnswers).length / total) * 100 : 0}%`,
+                      width: `${total > 0 ? (Object.keys(confirmedAnswers).length / total) * 100 : 0}%`,
                     }}
                   />
                 </div>
@@ -841,7 +887,7 @@ export default function PreviewQuiz() {
                 {/* Círculos de Preguntas Espaciosos, Perfectamente Redondos y con Animación */}
                 <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3.5 pt-2">
                   {questions.map((q, idx) => {
-                    const isAnswered = selectedAnswers[idx] !== undefined;
+                    const isAnswered = !!confirmedAnswers[idx];
                     const chosenId = selectedAnswers[idx];
                     const isCorrect =
                       isAnswered && q.answers?.find((a) => a.id === chosenId)?.isCorrect;

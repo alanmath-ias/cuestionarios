@@ -717,7 +717,15 @@ function PublicActiveQuiz() {
 
           <Button
             onClick={handleNextQuestion}
-            disabled={isNavigating || (currentQuestion.type === 'text' && !answeredQuestions[currentQuestionIndex])}
+            disabled={isNavigating || (
+              !answeredQuestions[currentQuestionIndex] &&
+              selectedAnswerId === null &&
+              currentQuestion.type !== 'text'
+            ) || (
+              currentQuestion.type === 'text' &&
+              !answeredQuestions[currentQuestionIndex] &&
+              !textAnswers[currentQuestion.id]?.trim()
+            )}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-none shadow-lg shadow-blue-500/20"
           >
             {isNavigating ? (

@@ -894,6 +894,8 @@ const ActiveQuiz = () => {
         const shuffled = [...currentQ.answers].sort(() => Math.random() - 0.5);
         setShuffledAnswers(shuffled);
       }
+      const existing = studentAnswers.find(sa => sa.questionId === currentQ.id);
+      setSelectedAnswerId(existing?.answerId ?? null);
     }
   }, [questions, currentQuestionIndex]);
 
@@ -1012,6 +1014,21 @@ const ActiveQuiz = () => {
         if (hasValue || answeredQuestions[currentQuestionIndex]) {
           handleNextQuestion();
         }
+      } else {
+        // Seleccionar opción con teclado: 1, 2, 3, 4 o A, B, C, D si no es modo entrada directa
+        if (progress?.responseMode !== 'direct_input' && !answeredQuestions[currentQuestionIndex] && !isReadOnly) {
+          const key = e.key.toUpperCase();
+          let optionIndex = -1;
+          if (['1', '2', '3', '4'].includes(e.key)) {
+            optionIndex = parseInt(e.key, 10) - 1;
+          } else if (['A', 'B', 'C', 'D'].includes(key)) {
+            optionIndex = key.charCodeAt(0) - 65;
+          }
+
+          if (optionIndex >= 0 && shuffledAnswers[optionIndex]) {
+            handleSelectAnswer(shuffledAnswers[optionIndex].id);
+          }
+        }
       }
     };
 
@@ -1020,7 +1037,8 @@ const ActiveQuiz = () => {
   }, [
     currentQuestionIndex, questions, selectedAnswerId, isDirectInput,
     directResponse, textAnswers, isReportDialogOpen, isHintDialogOpen,
-    isIncompleteDialogOpen, showExplanation, showChiquiResult
+    isIncompleteDialogOpen, showExplanation, showChiquiResult, shuffledAnswers,
+    answeredQuestions, isReadOnly, progress?.responseMode
   ]);
 
   // Gestos Táctiles (Swipe para Móvil)
@@ -1169,40 +1187,9 @@ const ActiveQuiz = () => {
     return studentAnswer;
   };
 
-  const handleSelectAnswer = async (answerId: number) => {
-    if (answeredQuestions[currentQuestionIndex] || isNavigating) return;
+  const handleSelectAnswer = (answerId: number) => {
+    if (answeredQuestions[currentQuestionIndex] || isNavigating || isReadOnly) return;
     setSelectedAnswerId(answerId);
-
-    // 1. Enviar y evaluar inmediatamente para colorear verde o rojo en tiempo real
-    const lastAnswer = await submitCurrentAnswer(answerId);
-
-    // 2. Esperar 800ms para mostrar la retroalimentación y avanzar automáticamente
-    setIsNavigating(true);
-    setTimeout(async () => {
-      const isFinishing = currentQuestionIndex >= (questions?.length || 0) - 1;
-
-      if (!isFinishing) {
-        if (!isChiqui && progress) {
-          createProgressMutation.mutate({
-            ...progress,
-            completedQuestions: Math.max(
-              progress.completedQuestions ?? 0,
-              currentQuestionIndex + 1
-            ),
-            timeSpent: getTotalTime(),
-          });
-        }
-        setCurrentQuestionIndex((prev) => prev + 1);
-        setSelectedAnswerId(null);
-        setIsNavigating(false);
-      } else {
-        const finalAnswersList = lastAnswer
-          ? [...studentAnswers.filter((a) => a.questionId !== lastAnswer.questionId), lastAnswer]
-          : studentAnswers;
-        await handleFinishQuiz(finalAnswersList);
-        setIsNavigating(false);
-      }
-    }, 800);
   };
 
   const handleNextQuestion = async () => {
@@ -1261,7 +1248,7 @@ const ActiveQuiz = () => {
 
         // IMPORTANT: Calculate final answers including the one we just processed
         const finalAnswersList = lastAnswer
-          ? [...studentAnswers, lastAnswer]
+          ? [...studentAnswers.filter((a) => a.questionId !== lastAnswer.questionId), lastAnswer]
           : studentAnswers;
 
         await handleFinishQuiz(finalAnswersList);
