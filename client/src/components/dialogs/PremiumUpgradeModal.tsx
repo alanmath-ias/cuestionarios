@@ -78,6 +78,12 @@ export function PremiumUpgradeModal({
                 <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0 mt-0.5">
                   <Check className="w-2.5 h-2.5 text-emerald-400" />
                 </div>
+                <span><strong>Fórmulas y conceptos en vivo:</strong> consulta guías teóricas mientras resuelves cada cuestionario.</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                  <Check className="w-2.5 h-2.5 text-emerald-400" />
+                </div>
                 <span><strong>Acceso ilimitado</strong> a cuestionarios, pistas y herramientas avanzadas.</span>
               </li>
             </ul>

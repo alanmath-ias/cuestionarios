@@ -78,6 +78,7 @@ export const quizzes = pgTable("quizzes", {
 	isVerified: boolean("is_verified").default(false),
 	isAiGenerated: boolean("is_ai_generated").default(false),
 	createdByUserId: integer("created_by_user_id"),
+	theoryNotes: text("theory_notes"),
 }, (table) => [
 	foreignKey({
 		columns: [table.subcategoryId],

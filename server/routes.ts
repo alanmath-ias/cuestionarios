@@ -3924,6 +3924,7 @@ Ejemplo de formato:
           isVerified: false,
           isAiGenerated: false,
           createdByUserId: null,
+          theoryNotes: null,
         };
       }
       const answers = await storage.getStudentAnswersByProgress(progressId);

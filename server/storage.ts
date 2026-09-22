@@ -658,7 +658,8 @@ export class MemStorage implements IStorage {
       url: null,
       sortOrder: quiz.sortOrder ?? 0,
       isAiGenerated: (quiz as any).isAiGenerated ?? false,
-      createdByUserId: (quiz as any).createdByUserId ?? null
+      createdByUserId: (quiz as any).createdByUserId ?? null,
+      theoryNotes: (quiz as any).theoryNotes ?? null
     };
 
     this.quizzes.set(id, newQuiz);

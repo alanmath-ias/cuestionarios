@@ -2,7 +2,15 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff, Copy, Power, Link2, Bot, Crown } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff, Copy, Power, Link2, Bot, Crown, Sparkles } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetClose,
+} from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { startActiveQuizTour } from "@/lib/tour";
@@ -48,6 +56,7 @@ interface Quiz {
   description?: string;
   categoryId: number;
   isPublic?: boolean;
+  theoryNotes?: string | null;
 }
 
 interface Question {
@@ -327,10 +336,22 @@ const ActiveQuiz = () => {
     correctAnswer: string;
   } | null>(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [premiumModalData, setPremiumModalData] = useState<{
+    title: string;
+    description: string;
+  }>({
+    title: "Desbloquea las Explicaciones Detalladas",
+    description: "Accede al paso a paso con explicaciones matemáticas formales y resolución guiada suscribiéndote a AlanMath Premium."
+  });
+  const [isTheoryOpen, setIsTheoryOpen] = useState(false);
 
   const handleOpenExplanation = () => {
     if (!questions || !questions[currentQuestionIndex]) return;
     if (!session?.isPremium) {
+      setPremiumModalData({
+        title: "Desbloquea las Explicaciones Detalladas",
+        description: "Accede al paso a paso con explicaciones matemáticas formales y resolución guiada suscribiéndote a AlanMath Premium."
+      });
       setShowPremiumModal(true);
       return;
     }
@@ -343,6 +364,18 @@ const ActiveQuiz = () => {
       correctAnswer: correctAns,
     });
     setShowExplanation(true);
+  };
+
+  const handleOpenTheory = () => {
+    if (!session?.isPremium) {
+      setPremiumModalData({
+        title: "Desbloquea Fórmulas y Conceptos Clave",
+        description: "Accede a las fórmulas, resúmenes teóricos y propiedades del tema en tiempo real mientras resuelves cada cuestionario con AlanMath Premium."
+      });
+      setShowPremiumModal(true);
+      return;
+    }
+    setIsTheoryOpen(true);
   };
 
   // New state for cumulative time
@@ -1849,6 +1882,28 @@ const ActiveQuiz = () => {
                 </>
               )}
             </Button>
+            <div className="h-4 w-px bg-white/10" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleOpenTheory}
+              className={cn(
+                "h-7 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 relative group",
+                isTheoryOpen
+                  ? "bg-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)] border border-indigo-400/50"
+                  : session?.isPremium
+                    ? "bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/25 hover:text-white hover:border-indigo-400/50 shadow-sm"
+                    : "bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-indigo-500/10 text-amber-300/90 border border-amber-500/30 hover:border-amber-400 hover:text-amber-200 hover:bg-amber-500/20"
+              )}
+              title={session?.isPremium ? "Consultar fórmulas y conceptos clave del tema" : "Fórmulas y conceptos clave (Función Premium)"}
+            >
+              <BookOpen className="w-3.5 h-3.5 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
+              <span className="hidden sm:inline">Fórmulas</span>
+              <span className="sm:hidden">Teoría</span>
+              {!session?.isPremium && (
+                <Crown className="w-3 h-3 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.5)] ml-0.5" />
+              )}
+            </Button>
           </div>
         </div>
 
@@ -2556,9 +2611,125 @@ const ActiveQuiz = () => {
         <PremiumUpgradeModal
           open={showPremiumModal}
           onOpenChange={setShowPremiumModal}
-          title="Desbloquea las Explicaciones Detalladas"
-          description="Accede al paso a paso con explicaciones matemáticas formales y resolución guiada suscribiéndote a AlanMath Premium."
+          title={premiumModalData.title}
+          description={premiumModalData.description}
         />
+
+        {/* Panel Lateral Deslizable: Fórmulas y Conceptos Clave */}
+        <Sheet open={isTheoryOpen} onOpenChange={setIsTheoryOpen}>
+          <SheetContent 
+            side="right" 
+            overlayClassName="bg-black/40 backdrop-blur-[2px]"
+            className="w-full sm:max-w-xl md:max-w-2xl bg-slate-950/95 border-l border-white/10 text-slate-100 p-0 flex flex-col shadow-2xl backdrop-blur-2xl z-[70]"
+          >
+            {/* Header del Sheet */}
+            <div className="p-6 border-b border-white/10 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shadow-lg shadow-indigo-500/10 shrink-0">
+                  <BookOpen className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-white tracking-tight truncate">
+                      Fórmulas y Conceptos Clave
+                    </h3>
+                    <Badge variant="outline" className="bg-indigo-500/10 border-indigo-500/30 text-indigo-300 text-[10px] px-1.5 py-0 font-medium">
+                      Guía Rápida
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-400 truncate mt-0.5">
+                    {quiz?.title || "Cuestionario de Matemáticas"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Contenido scrolleable */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {quiz?.theoryNotes && quiz.theoryNotes.trim().length > 0 ? (
+                <div className="space-y-4">
+                  <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-200 text-xs flex items-start gap-2.5">
+                    <Sparkles className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                    <span>
+                      Usa este resumen teórico para orientarte en cualquier duda mientras respondes las preguntas. No perderás tu progreso ni el tiempo acumulado.
+                    </span>
+                  </div>
+                  <div className="prose prose-invert max-w-none text-slate-200 text-sm leading-relaxed bg-slate-900/60 p-5 rounded-2xl border border-white/5 shadow-inner">
+                    <ContentRenderer content={quiz.theoryNotes} />
+                  </div>
+                </div>
+              ) : (
+                /* Estado Amigable cuando aún no hay fórmulas cargadas */
+                <div className="flex flex-col items-center justify-center text-center py-10 px-4 space-y-6">
+                  {/* Glowing Icon */}
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/30 via-purple-500/20 to-amber-500/20 blur-2xl rounded-full" />
+                    <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-tr from-slate-900 to-indigo-950 border border-indigo-500/30 flex items-center justify-center shadow-xl">
+                      <Sparkles className="w-10 h-10 text-indigo-400 animate-pulse" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 max-w-md">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
+                      <Clock className="w-3.5 h-3.5" />
+                      Próximamente disponible
+                    </div>
+                    <h4 className="text-xl font-bold text-white">
+                      Fórmulas y Conceptos en Preparación
+                    </h4>
+                    <p className="text-sm text-slate-300 leading-relaxed">
+                      Estamos redactando el formulario condensado, las definiciones teóricas y los trucos de resolución para este cuestionario (<span className="text-indigo-300 font-medium">{quiz?.title}</span>).
+                    </p>
+                  </div>
+
+                  {/* Tarjeta de lo que incluirá */}
+                  <div className="w-full max-w-md bg-slate-900/70 border border-white/10 rounded-2xl p-5 text-left space-y-3.5 shadow-lg">
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Brain className="w-3.5 h-3.5 text-indigo-400" />
+                      Lo que encontrarás en esta sección:
+                    </div>
+                    <ul className="space-y-2.5 text-xs text-slate-300">
+                      <li className="flex items-start gap-2.5">
+                        <div className="w-4 h-4 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                          <Check className="w-2.5 h-2.5 text-indigo-400" />
+                        </div>
+                        <span><strong>Formularios y Teoremas:</strong> Todas las ecuaciones clave y fórmulas directas que necesitas tener a mano.</span>
+                      </li>
+                      <li className="flex items-start gap-2.5">
+                        <div className="w-4 h-4 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                          <Check className="w-2.5 h-2.5 text-indigo-400" />
+                        </div>
+                        <span><strong>Conceptos y Propiedades:</strong> Explicaciones concisas del tema para refrescar tu memoria al instante.</span>
+                      </li>
+                      <li className="flex items-start gap-2.5">
+                        <div className="w-4 h-4 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                          <Check className="w-2.5 h-2.5 text-indigo-400" />
+                        </div>
+                        <span><strong>Estrategias de Resolución:</strong> Consejos para identificar patrones y evitar trampas algebraicas.</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-900/40 border border-white/5 text-xs text-slate-400 max-w-md">
+                    💡 <span className="text-slate-300 font-medium">Tip de estudio:</span> Mientras tanto, recuerda que puedes usar las pistas individuales de cada pregunta para recibir orientación paso a paso.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer del Sheet */}
+            <div className="p-4 border-t border-white/10 bg-slate-900/80 flex justify-end shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsTheoryOpen(false)}
+                className="bg-slate-800 text-slate-200 border-white/10 hover:bg-slate-700 hover:text-white text-xs"
+              >
+                Cerrar panel
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   );

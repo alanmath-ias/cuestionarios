@@ -242,6 +242,7 @@ export class DatabaseStorage implements IStorage {
       sortOrder: quizzes.sortOrder,
       isAiGenerated: quizzes.isAiGenerated,
       createdByUserId: quizzes.createdByUserId,
+      theoryNotes: quizzes.theoryNotes,
     })
       .from(quizzes)
       .leftJoin(categories, eq(quizzes.categoryId, categories.id))
