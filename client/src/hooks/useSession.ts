@@ -9,6 +9,10 @@ interface SessionData {
   tourStatus?: Record<string, boolean>;
   canReport?: boolean;
   isImpersonating?: boolean;
+  subscriptionStatus?: string;
+  subscriptionPlan?: string;
+  subscriptionEndDate?: string | null;
+  isPremium?: boolean;
 }
 
 export function useSession() {
@@ -23,6 +27,11 @@ export function useSession() {
 
         if (response.ok) {
           const userData = await response.json();
+          const isUserPremium =
+            userData.role === 'admin' ||
+            userData.role === 'teacher' ||
+            userData.subscriptionStatus === 'active';
+
           setSession({
             userId: userData.id,
             role: userData.role,
@@ -30,7 +39,11 @@ export function useSession() {
             hintCredits: userData.hintCredits,
             tourStatus: userData.tourStatus,
             canReport: userData.canReport,
-            isImpersonating: userData.isImpersonating
+            isImpersonating: userData.isImpersonating,
+            subscriptionStatus: userData.subscriptionStatus,
+            subscriptionPlan: userData.subscriptionPlan,
+            subscriptionEndDate: userData.subscriptionEndDate,
+            isPremium: isUserPremium,
           });
         } else {
           setSession(null);

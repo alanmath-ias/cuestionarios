@@ -3521,15 +3521,33 @@ Genera SOLO el tip, sin saludos introductorios. Empieza directo con el concepto 
 
   // fin deep seek mejora active-quiz
 
-  // DeepSeek API proxy endpoint
+  // DeepSeek API proxy endpoint (Exclusivo Premium / Admin / Docente)
   apiRouter.post("/explain-answer", async (req: Request, res: Response) => {
-    const { questionId, question, correctAnswer, quizTitle } = req.body;
-
-    if (!question || !correctAnswer || !quizTitle) {
-      return res.status(400).json({ message: "Missing required fields" });
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Inicia sesión para acceder a las explicaciones", isPremiumRequired: true });
     }
 
     try {
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Usuario no encontrado" });
+      }
+
+      const isPremium = user.role === 'admin' || user.role === 'teacher' || user.subscriptionStatus === 'active';
+      if (!isPremium) {
+        return res.status(403).json({
+          message: "Las explicaciones detalladas son exclusivas para usuarios con suscripción Premium activa",
+          isPremiumRequired: true
+        });
+      }
+
+      const { questionId, question, correctAnswer, quizTitle } = req.body;
+
+      if (!question || !correctAnswer || !quizTitle) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
       // 1. Check if explanation already exists in DB (if questionId provided)
       if (questionId) {
         const existingQuestion = await storage.getQuestion(questionId);

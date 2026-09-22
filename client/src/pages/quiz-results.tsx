@@ -4,11 +4,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MathDisplay } from '@/components/ui/math-display';
-import { ArrowLeft, Download, Clock, CheckCircle, XCircle, BookOpen, Trophy, Timer, Target, ShieldCheck, ShieldOff } from 'lucide-react';
+import { ArrowLeft, Download, Clock, CheckCircle, XCircle, BookOpen, Trophy, Timer, Target, ShieldCheck, ShieldOff, Crown } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { startQuizResultsTour } from "@/lib/tour";
 import type { QuizResult } from '@shared/quiz-types.js';
 import { ExplanationModal } from './explicacion';
+import { PremiumUpgradeModal } from '@/components/dialogs/PremiumUpgradeModal';
 import { useSession } from "@/hooks/useSession";
 import { FloatingWhatsApp } from "@/components/ui/FloatingWhatsApp";
 import { Brain, Loader2 } from 'lucide-react';
@@ -521,8 +522,13 @@ function QuizResults() {
     question: string;
     correctAnswer: string;
   } | null>(null);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   const handleRequestExplanation = (questionId: number, question: string, correctAnswer: string) => {
+    if (!session?.isPremium) {
+      setShowPremiumModal(true);
+      return;
+    }
     setCurrentExplanation({ questionId, question, correctAnswer });
     setShowExplanation(true);
   };
@@ -738,11 +744,51 @@ function QuizResults() {
                           )}
                         </div>
 
-                        {!answer.isCorrect && (
+                        {answer.isCorrect ? (
+                          <div className="border rounded-xl p-4 bg-emerald-500/10 border-emerald-500/30 flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="text-sm font-medium text-emerald-400 flex items-center gap-1.5">
+                                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                                  ¡Acierto confirmado!
+                                </div>
+                                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                                  <Crown className="w-3 h-3 text-amber-400" />
+                                  Premium
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-400 leading-relaxed">
+                                Revisa el procedimiento matemático formal y compara los pasos de resolución.
+                              </p>
+                            </div>
+                            <div className="pt-3 flex justify-end">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  handleRequestExplanation(
+                                    answer.question?.id || 0,
+                                    answer.question?.content || '',
+                                    correctContent || answer.answerDetails?.content || ''
+                                  )
+                                }
+                                className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:text-white transition-all text-xs font-semibold gap-1.5"
+                              >
+                                <BookOpen className="h-3.5 w-3.5" />
+                                Ver procedimiento
+                                {!session?.isPremium && (
+                                  <Crown className="w-3 h-3 text-amber-300 ml-0.5" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
                           <div className="border rounded-xl p-4 bg-green-500/10 border-green-500/30">
                             <div className="flex justify-between items-start">
                               <div>
-                                <div className="text-sm font-medium mb-2 text-green-400">Respuesta correcta:</div>
+                                <div className="text-sm font-medium mb-2 text-green-400">
+                                  Respuesta correcta:
+                                </div>
                                 {correctContent ? (
                                   <div className="text-slate-200">
                                     {renderContent(correctContent)}
@@ -757,15 +803,20 @@ function QuizResults() {
                                 id="tour-explanation-button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleRequestExplanation(
-                                  answer.question?.id || 0,
-                                  answer.question?.content || '',
-                                  correctContent || ''
-                                )}
-                                className="ml-2 border-white/10 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
+                                onClick={() =>
+                                  handleRequestExplanation(
+                                    answer.question?.id || 0,
+                                    answer.question?.content || '',
+                                    correctContent || ''
+                                  )
+                                }
+                                className="ml-2 border-white/10 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors text-xs font-semibold gap-1.5 shrink-0"
                               >
-                                <BookOpen className="h-4 w-4 mr-2" />
+                                <BookOpen className="h-4 w-4" />
                                 Explicación
+                                {!session?.isPremium && (
+                                  <Crown className="w-3 h-3 text-amber-300 ml-0.5" />
+                                )}
                               </Button>
                             </div>
                           </div>
@@ -831,6 +882,13 @@ function QuizResults() {
             onClose={() => setShowExplanation(false)}
           />
         )}
+
+        <PremiumUpgradeModal
+          open={showPremiumModal}
+          onOpenChange={setShowPremiumModal}
+          title="Desbloquea las Explicaciones Detalladas"
+          description="Accede al paso a paso con explicaciones matemáticas formales y resolución guiada suscribiéndote a AlanMath Premium."
+        />
       </div>
     </div>
   );

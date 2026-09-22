@@ -63,7 +63,11 @@ export default function SubscriptionPage() {
                     </div>
                     <h1 className="text-3xl font-bold text-white mb-2">¡Eres Premium!</h1>
                     <p className="text-slate-400 mb-6">
-                        Tu suscripción <strong>{user.subscriptionPlan}</strong> está activa hasta el {new Date(user.subscriptionEndDate).toLocaleDateString()}.
+                        Tu suscripción <strong>{user.subscriptionPlan || 'Premium'}</strong> está activa
+                        {user.subscriptionEndDate && !isNaN(new Date(user.subscriptionEndDate).getTime()) && new Date(user.subscriptionEndDate).getFullYear() > 2000
+                            ? ` hasta el ${new Date(user.subscriptionEndDate).toLocaleDateString()}`
+                            : ' con acceso continuo'}
+                        .
                     </p>
                     <div className="space-y-4">
                         <div className="bg-slate-800/50 p-4 rounded-lg text-left">

@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff, Copy, Power, Link2, Bot } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff, Copy, Power, Link2, Bot, Crown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { startActiveQuizTour } from "@/lib/tour";
@@ -25,6 +25,7 @@ import { ContentRenderer } from "@/components/ContentRenderer";
 import { AIMarkdown } from "@/components/ui/ai-markdown";
 import { ZoomableImage } from "@/components/ui/ZoomableImage";
 import { ExplanationModal } from "./explicacion";
+import { PremiumUpgradeModal } from "@/components/dialogs/PremiumUpgradeModal";
 import { MathDisplay } from "@/components/ui/math-display";
 import MathKeyboard from "@/components/MathKeyboard";
 import { Input } from "@/components/ui/input";
@@ -325,6 +326,24 @@ const ActiveQuiz = () => {
     question: string;
     correctAnswer: string;
   } | null>(null);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+
+  const handleOpenExplanation = () => {
+    if (!questions || !questions[currentQuestionIndex]) return;
+    if (!session?.isPremium) {
+      setShowPremiumModal(true);
+      return;
+    }
+
+    const currentQ = questions[currentQuestionIndex];
+    const correctAns = currentQ.answers?.find((a: any) => a.isCorrect)?.content || '';
+    setCurrentExplanation({
+      questionId: currentQ.id,
+      question: currentQ.content,
+      correctAnswer: correctAns,
+    });
+    setShowExplanation(true);
+  };
 
   // New state for cumulative time
   const [previousTimeSpent, setPreviousTimeSpent] = useState<number>(0);
@@ -1072,25 +1091,21 @@ const ActiveQuiz = () => {
     }, 0);
   };
 
-  const handleSelectAnswer = (answerId: number) => {
-    if (answeredQuestions[currentQuestionIndex]) return;
-    setSelectedAnswerId(answerId);
-  };
-
-  const submitCurrentAnswer = async () => {
+  const submitCurrentAnswer = async (overrideAnswerId?: number) => {
     if (!questions || (!isChiqui && !progress?.id)) return;
 
     const isDirectInput = progress?.responseMode === 'direct_input';
-    if (!isDirectInput && selectedAnswerId === null) return;
+    const effectiveAnswerId = overrideAnswerId ?? selectedAnswerId;
+    if (!isDirectInput && effectiveAnswerId === null) return;
     if (isDirectInput && !directResponse.trim()) return;
 
     const currentQuestion = questions[currentQuestionIndex];
-    const selectedAnswer = currentQuestion.answers?.find((a: any) => a.id === selectedAnswerId);
+    const selectedAnswer = currentQuestion.answers?.find((a: any) => a.id === effectiveAnswerId);
 
     const studentAnswer: any = {
       progressId: progress?.id || 0,
       questionId: currentQuestion.id,
-      answerId: selectedAnswerId,
+      answerId: effectiveAnswerId,
       isCorrect: selectedAnswer?.isCorrect || false,
       variables: currentQuestion.variables,
       timeSpent: elapsedTime, // This tracks time for this specific answer in this session
@@ -1102,12 +1117,12 @@ const ActiveQuiz = () => {
       studentAnswer.isCorrect = null; // Important: null means pending evaluation
     }
 
-    // Actualización optimista del estado local para navegación instantánea
-    setStudentAnswers(prev => {
-      const filtered = prev.filter(ans => ans.questionId !== studentAnswer.questionId);
+    // Actualización optimista inmediata del estado local para iluminar de inmediato verde/rojo
+    setStudentAnswers((prev) => {
+      const filtered = prev.filter((ans) => ans.questionId !== studentAnswer.questionId);
       return [...filtered, studentAnswer];
     });
-    setAnsweredQuestions(prev => ({ ...prev, [currentQuestionIndex]: true }));
+    setAnsweredQuestions((prev) => ({ ...prev, [currentQuestionIndex]: true }));
 
     try {
       if (!isChiqui) {
@@ -1119,6 +1134,42 @@ const ActiveQuiz = () => {
     }
 
     return studentAnswer;
+  };
+
+  const handleSelectAnswer = async (answerId: number) => {
+    if (answeredQuestions[currentQuestionIndex] || isNavigating) return;
+    setSelectedAnswerId(answerId);
+
+    // 1. Enviar y evaluar inmediatamente para colorear verde o rojo en tiempo real
+    const lastAnswer = await submitCurrentAnswer(answerId);
+
+    // 2. Esperar 800ms para mostrar la retroalimentación y avanzar automáticamente
+    setIsNavigating(true);
+    setTimeout(async () => {
+      const isFinishing = currentQuestionIndex >= (questions?.length || 0) - 1;
+
+      if (!isFinishing) {
+        if (!isChiqui && progress) {
+          createProgressMutation.mutate({
+            ...progress,
+            completedQuestions: Math.max(
+              progress.completedQuestions ?? 0,
+              currentQuestionIndex + 1
+            ),
+            timeSpent: getTotalTime(),
+          });
+        }
+        setCurrentQuestionIndex((prev) => prev + 1);
+        setSelectedAnswerId(null);
+        setIsNavigating(false);
+      } else {
+        const finalAnswersList = lastAnswer
+          ? [...studentAnswers.filter((a) => a.questionId !== lastAnswer.questionId), lastAnswer]
+          : studentAnswers;
+        await handleFinishQuiz(finalAnswersList);
+        setIsNavigating(false);
+      }
+    }, 800);
   };
 
   const handleNextQuestion = async () => {
@@ -2195,17 +2246,27 @@ const ActiveQuiz = () => {
             <span className="hidden sm:inline">Anterior</span>
           </Button>
 
-          {/* Hint Button: Disabled for parents (mode=readonly) with tooltip */}
-          <div className={session?.canReport ? "z-0 px-2" : "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0"}>
+          {/* Centro: Botones de Pista y Explicación (Sutil, elegante y discreto) */}
+          <div
+            className={`flex items-center gap-2.5 z-10 ${
+              session?.canReport
+                ? 'px-2'
+                : 'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'
+            }`}
+          >
             <Button
               variant="outline"
-              className={`flex items-center border-yellow-500/50 text-yellow-400 bg-yellow-500/5 hover:bg-yellow-500 hover:text-slate-900 hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] transition-all duration-300 scale-100 hover:scale-110 h-10 px-3 sm:px-4 ${isReadOnly ? 'opacity-50 cursor-not-allowed hover:bg-yellow-500/5 hover:text-yellow-400 hover:scale-100 hover:shadow-none' : ''}`}
+              className={`flex items-center border-yellow-500/50 text-yellow-400 bg-yellow-500/5 hover:bg-yellow-500 hover:text-slate-900 hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] transition-all duration-300 scale-100 hover:scale-105 h-10 px-3 sm:px-4 ${
+                isReadOnly
+                  ? 'opacity-50 cursor-not-allowed hover:bg-yellow-500/5 hover:text-yellow-400 hover:scale-100 hover:shadow-none'
+                  : ''
+              }`}
               onClick={() => {
                 if (isReadOnly) {
                   toast({
-                    title: "Función de Estudiante",
-                    description: "Solo tu hij@ puede ver las pistas.",
-                    variant: "default",
+                    title: 'Función de Estudiante',
+                    description: 'Solo tu hij@ puede ver las pistas.',
+                    variant: 'default',
                   });
                 } else {
                   setIsHintDialogOpen(true);
@@ -2215,6 +2276,45 @@ const ActiveQuiz = () => {
               <Lightbulb className="sm:mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Pista</span>
             </Button>
+
+            {/* Botón de Explicación/Procedimiento: Sutil y discreto al lado de Pista, visible solo tras responder */}
+            {answeredQuestions[currentQuestionIndex] && (() => {
+              const currentQ = questions?.[currentQuestionIndex];
+              const existingAns = currentQ
+                ? studentAnswers.find((sa) => sa.questionId === currentQ.id)
+                : null;
+              const chosen = currentQ?.answers?.find(
+                (a: any) => a.id === (existingAns?.answerId || selectedAnswerId)
+              );
+              const isCorrect =
+                existingAns?.isCorrect === true || (chosen && chosen.isCorrect);
+
+              return (
+                <Button
+                  variant="outline"
+                  onClick={handleOpenExplanation}
+                  title={
+                    isCorrect
+                      ? 'Ver procedimiento matemático paso a paso (Premium)'
+                      : 'Ver explicación detallada de la solución (Premium)'
+                  }
+                  className={cn(
+                    'flex items-center h-10 px-3 sm:px-4 transition-all duration-300 font-semibold shadow-sm animate-in fade-in zoom-in-95',
+                    isCorrect
+                      ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/25 hover:text-emerald-200'
+                      : 'border-blue-500/50 text-blue-400 bg-blue-500/10 hover:bg-blue-500/25 hover:text-blue-200'
+                  )}
+                >
+                  <BookOpen className="sm:mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    {isCorrect ? 'Procedimiento' : 'Explicación'}
+                  </span>
+                  {!session?.isPremium && (
+                    <Crown className="w-3.5 h-3.5 text-amber-400 sm:ml-1.5" />
+                  )}
+                </Button>
+              );
+            })()}
           </div>
 
           <div className="flex items-center gap-2 z-10 ml-auto flex-wrap sm:flex-nowrap">
@@ -2440,6 +2540,25 @@ const ActiveQuiz = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Modal de Explicación Detallada */}
+        {showExplanation && currentExplanation && (
+          <ExplanationModal
+            questionId={currentExplanation.questionId}
+            question={currentExplanation.question}
+            correctAnswer={currentExplanation.correctAnswer}
+            quizTitle={quiz?.title || 'Matemáticas'}
+            onClose={() => setShowExplanation(false)}
+          />
+        )}
+
+        {/* Modal de Invitación a Premium */}
+        <PremiumUpgradeModal
+          open={showPremiumModal}
+          onOpenChange={setShowPremiumModal}
+          title="Desbloquea las Explicaciones Detalladas"
+          description="Accede al paso a paso con explicaciones matemáticas formales y resolución guiada suscribiéndote a AlanMath Premium."
+        />
       </div>
     </div>
   );
