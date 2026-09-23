@@ -39,7 +39,7 @@ interface SkillTreeViewProps {
     allQuizzesForAdmin?: any[]; // For inviting quizzes from other categories
 }
 
-export function SkillTreeView({ 
+export const SkillTreeView = React.memo(function SkillTreeView({ 
     nodes, progressMap, onNodeClick, title, description, 
     allQuizzes = [], isAdmin = false, subcategories = [], 
     categoryId, nodeMappings = [], allQuizzesForAdmin = [] 
@@ -75,7 +75,7 @@ export function SkillTreeView({
     const reloadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const transformRef = useRef<ReactZoomPanPinchRef>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [containerWidth, setContainerWidth] = useState(1000);
+    const [containerWidth, setContainerWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
     const [triggeredFamilies, setTriggeredFamilies] = useState<Set<string>>(new Set());
     const [celebratingNodeId, setCelebratingNodeId] = useState<string | null>(null);
     const [celebratingQuizTitle, setCelebratingQuizTitle] = useState<string>('');
@@ -333,15 +333,37 @@ export function SkillTreeView({
         const observer = new ResizeObserver((entries) => {
             const entry = entries[0];
             if (entry) {
-                const newWidth = entry.contentRect.width;
+                const newWidth = Math.round(entry.contentRect.width);
+                const nextLayout = calculateLayout(newWidth);
                 setContainerWidth(newWidth);
-                setLayout(calculateLayout(newWidth));
+                setLayout(prev => {
+                    if (prev.width !== nextLayout.width || prev.rowHeight !== nextLayout.rowHeight || prev.initialScale !== nextLayout.initialScale) {
+                        return nextLayout;
+                    }
+                    return prev;
+                });
+
+                // Keep map horizontally centered smoothly when not in interactive pan mode
+                if (!isInteractive) {
+                    const updateCenter = () => {
+                        if (transformRef.current) {
+                            const currentY = transformRef.current.instance?.transformState?.positionY ?? 50;
+                            const targetX = (newWidth - (nextLayout.width * nextLayout.initialScale)) / 2;
+                            transformRef.current.setTransform(targetX, currentY, nextLayout.initialScale, 0);
+                        }
+                    };
+                    if (transformRef.current) {
+                        updateCenter();
+                    } else {
+                        requestAnimationFrame(updateCenter);
+                    }
+                }
             }
         });
 
         observer.observe(containerRef.current);
         return () => observer.disconnect();
-    }, []);
+    }, [isInteractive]);
 
     const { width: MAP_WIDTH, rowHeight: ROW_HEIGHT, spread: SPREAD, viewportWidth: VIEWPORT_WIDTH, initialScale: INITIAL_SCALE } = layout;
     const CENTER_X = MAP_WIDTH / 2;
@@ -996,7 +1018,7 @@ export function SkillTreeView({
 
 
                 {/* Search Bar - Top Right above Legend */}
-                <div className="md:absolute md:top-[110px] md:right-4 relative mt-4 md:mt-0 mb-4 md:mb-0 z-[90] flex flex-col items-center md:items-end gap-2 pointer-events-auto px-2 sm:px-4 w-full md:w-auto">
+                <div className="md:absolute md:top-[110px] md:right-4 relative mt-4 md:mt-0 mb-4 md:mb-0 z-30 flex flex-col items-center md:items-end gap-2 pointer-events-auto px-2 sm:px-4 w-full md:w-auto">
                     <div
                         ref={searchRef}
                         className="relative w-full max-w-[280px] sm:max-w-sm md:max-w-xs"
@@ -1033,7 +1055,7 @@ export function SkillTreeView({
                                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                    className="absolute top-full right-0 mt-3 w-full max-w-[280px] sm:max-w-[320px] bg-slate-900/95 border border-slate-700 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar z-[100]"
+                                    className="absolute top-full right-0 mt-3 w-full max-w-[280px] sm:max-w-[320px] bg-slate-900/95 border border-slate-700 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar z-40"
                                 >
                                     <div className="px-3 py-2 border-b border-slate-800 text-[9px] text-slate-500 uppercase tracking-wider font-bold">
                                         Resultados en el Mapa ({filteredQuizzes.length})
@@ -1091,7 +1113,7 @@ export function SkillTreeView({
                 </div>
 
                 {/* Legend - Responsive Position */}
-                <div className="md:absolute md:top-[180px] md:right-4 relative mt-4 mx-auto w-fit inset-auto z-50 bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-xl min-w-[200px] pointer-events-auto">
+                <div className="md:absolute md:top-[180px] md:right-4 relative mt-4 mx-auto w-fit inset-auto z-20 bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-xl min-w-[200px] pointer-events-auto">
                     <h4 className="text-slate-300 font-bold mb-3 text-xs uppercase tracking-wider border-b border-slate-700 pb-2">Leyenda</h4>
                     <div className="flex flex-col gap-3 text-[11px] text-slate-400 font-medium">
                         {/* Parent Nodes */}
@@ -1173,7 +1195,7 @@ export function SkillTreeView({
                                 initial={{ opacity: 0, x: -20, y: 0 }}
                                 animate={{ opacity: 1, x: 0, y: 0 }}
                                 exit={{ opacity: 0, x: -20, y: 0 }}
-                                className="fixed left-6 bottom-8 z-[110] pointer-events-auto"
+                                className="fixed left-6 bottom-8 z-30 pointer-events-auto"
                             >
                                 <Button
                                     onClick={() => window.location.reload()}
@@ -1188,7 +1210,7 @@ export function SkillTreeView({
                     </AnimatePresence>
 
                     <TransformWrapper
-                        key={`${INITIAL_SCALE}-${containerWidth}`} // Force re-init on layout change
+                        key={`${categoryId}-${INITIAL_SCALE}`} // Stable key: only re-init when category or responsive scale breakpoint changes
                         ref={transformRef}
                         initialScale={INITIAL_SCALE}
                         initialPositionX={initialX}
@@ -1206,7 +1228,7 @@ export function SkillTreeView({
                         {({ zoomIn, zoomOut, resetTransform }) => (
                             <>
                                 {/* Floating Controls */}
-                                <div className="absolute bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-auto">
+                                <div className="absolute bottom-4 right-4 z-30 flex flex-col gap-2 pointer-events-auto">
                                     <div className="flex items-center gap-3 justify-end group/hint">
                                         {!isInteractive && (
                                             <div className="hidden md:block bg-slate-900/90 text-blue-300 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-blue-500/30 shadow-xl backdrop-blur-sm animate-in fade-in slide-in-from-right-2 duration-500 pointer-events-none whitespace-nowrap">
@@ -1835,7 +1857,7 @@ export function SkillTreeView({
             )}
         </TooltipProvider>
     );
-}
+});
 
 function NodeConfigDialog({
     node,

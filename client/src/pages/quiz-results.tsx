@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MathDisplay } from '@/components/ui/math-display';
-import { ArrowLeft, Download, Clock, CheckCircle, XCircle, BookOpen, Trophy, Timer, Target, ShieldCheck, ShieldOff, Crown } from 'lucide-react';
+import { ArrowLeft, Download, Clock, CheckCircle, XCircle, BookOpen, Trophy, Timer, Target, ShieldCheck, ShieldOff, Crown, Sparkles } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { startQuizResultsTour } from "@/lib/tour";
 import type { QuizResult } from '@shared/quiz-types.js';
@@ -14,6 +14,10 @@ import { useSession } from "@/hooks/useSession";
 import { FloatingWhatsApp } from "@/components/ui/FloatingWhatsApp";
 import { Brain, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import { AIMarkdown } from "@/components/ui/ai-markdown";
+import { cn } from "@/lib/utils";
 import { arithmeticMapNodes } from "@/data/arithmetic-map-data";
 import { algebraMapNodes } from "@/data/algebra-map-data";
 import { calculusMapNodes } from "@/data/calculus-map-data";
@@ -523,9 +527,31 @@ function QuizResults() {
     correctAnswer: string;
   } | null>(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [premiumModalData, setPremiumModalData] = useState({
+    title: "Desbloquea las Explicaciones Detalladas",
+    description: "Accede al paso a paso con explicaciones matemáticas formales y resolución guiada suscribiéndote a AlanMath Premium."
+  });
+
+  const [isTheoryOpen, setIsTheoryOpen] = useState(false);
+
+  const handleOpenTheory = () => {
+    if (!session?.isPremium) {
+      setPremiumModalData({
+        title: "Desbloquea Fórmulas y Conceptos Clave",
+        description: "Accede a las fórmulas, resúmenes teóricos y propiedades del tema para repasar en cualquier momento con AlanMath Premium."
+      });
+      setShowPremiumModal(true);
+      return;
+    }
+    setIsTheoryOpen(true);
+  };
 
   const handleRequestExplanation = (questionId: number, question: string, correctAnswer: string) => {
     if (!session?.isPremium) {
+      setPremiumModalData({
+        title: "Desbloquea las Explicaciones Detalladas",
+        description: "Accede al paso a paso con explicaciones matemáticas formales y resolución guiada suscribiéndote a AlanMath Premium."
+      });
       setShowPremiumModal(true);
       return;
     }
@@ -555,50 +581,75 @@ function QuizResults() {
             <h2 className="text-3xl font-bold text-white">Resultados</h2>
           </div>
 
-          {/* Botón Verificar — visible solo para Alan (id=2) */}
-          {session?.userId === 2 && results?.quiz.id && (
-            <button
-              onClick={() => verifyMutation.mutate(results.quiz.id)}
-              disabled={verifyMutation.isPending}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${isVerified
-                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
-                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                }`}
-            >
-              {isVerified ? (
-                <><ShieldCheck className="h-4 w-4" /> Verificado</>
-              ) : (
-                <><ShieldOff className="h-4 w-4" /> Verificar cuestionario</>
-              )}
-            </button>
-          )}
-          {[68, 69, 72, 73].includes(results?.quiz.id || 0) && (
-            <Button
-              onClick={() => {
-                if (!results) return;
+          <div className="flex items-center gap-3">
+            {/* Botón Fórmulas y Conceptos Clave */}
+            {results?.quiz && (
+              <Button
+                variant="outline"
+                onClick={handleOpenTheory}
+                className={cn(
+                  "flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all border",
+                  isTheoryOpen
+                    ? "bg-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)] border-indigo-400/50"
+                    : session?.isPremium
+                      ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/25 hover:text-white hover:border-indigo-400/50 shadow-sm"
+                      : "bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-indigo-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20 hover:border-amber-400/50"
+                )}
+                title={session?.isPremium ? "Repasar fórmulas y conceptos clave del cuestionario" : "Fórmulas y conceptos clave (Función Premium)"}
+              >
+                <BookOpen className="h-4 w-4 text-indigo-400 shrink-0" />
+                <span>Fórmulas</span>
+                {!session?.isPremium && (
+                  <Crown className="w-3.5 h-3.5 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.5)] ml-0.5" />
+                )}
+              </Button>
+            )}
 
-                // Calcular puntaje en escala 0-20 (el quiz es sobre 10)
-                const score = (results.answers.filter(a => a.isCorrect).length / results.answers.length) * 20;
+            {/* Botón Verificar — visible solo para Alan (id=2) */}
+            {session?.userId === 2 && results?.quiz.id && (
+              <button
+                onClick={() => verifyMutation.mutate(results.quiz.id)}
+                disabled={verifyMutation.isPending}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${isVerified
+                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
+                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                  }`}
+              >
+                {isVerified ? (
+                  <><ShieldCheck className="h-4 w-4" /> Verificado</>
+                ) : (
+                  <><ShieldOff className="h-4 w-4" /> Verificar cuestionario</>
+                )}
+              </button>
+            )}
+            {[68, 69, 72, 73].includes(results?.quiz.id || 0) && (
+              <Button
+                onClick={() => {
+                  if (!results) return;
 
-                // Determinar si es G1 (Lenguaje) o G2 (Matemáticas)
-                const field = [68, 69].includes(results.quiz.id) ? 'G1' : 'G2';
+                  // Calcular puntaje en escala 0-20 (el quiz es sobre 10)
+                  const score = (results.answers.filter(a => a.isCorrect).length / results.answers.length) * 20;
 
-                // Guardar resultado para que la encuesta lo procese
-                sessionStorage.setItem('quizResult', JSON.stringify({
-                  field,
-                  value: Math.round(score), // Redondear a entero
-                  quizId: results.quiz.id
-                }));
+                  // Determinar si es G1 (Lenguaje) o G2 (Matemáticas)
+                  const field = [68, 69].includes(results.quiz.id) ? 'G1' : 'G2';
 
-                // Volver a la encuesta
-                setLocation('/encuestapage');
-              }}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-blue-500/20"
-            >
-              <BookOpen className="mr-2 h-4 w-4" />
-              Volver a la Encuesta
-            </Button>
-          )}
+                  // Guardar resultado para que la encuesta lo procese
+                  sessionStorage.setItem('quizResult', JSON.stringify({
+                    field,
+                    value: Math.round(score), // Redondear a entero
+                    quizId: results.quiz.id
+                  }));
+
+                  // Volver a la encuesta
+                  setLocation('/encuestapage');
+                }}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-blue-500/20"
+              >
+                <BookOpen className="mr-2 h-4 w-4" />
+                Volver a la Encuesta
+              </Button>
+            )}
+          </div>
         </div>
 
         {isLoading ? (
@@ -886,9 +937,95 @@ function QuizResults() {
         <PremiumUpgradeModal
           open={showPremiumModal}
           onOpenChange={setShowPremiumModal}
-          title="Desbloquea las Explicaciones Detalladas"
-          description="Accede al paso a paso con explicaciones matemáticas formales y resolución guiada suscribiéndote a AlanMath Premium."
+          title={premiumModalData.title}
+          description={premiumModalData.description}
         />
+
+        {/* Panel Lateral Deslizable: Fórmulas y Conceptos Clave */}
+        <Sheet open={isTheoryOpen} onOpenChange={setIsTheoryOpen}>
+          <SheetContent 
+            side="right" 
+            overlayClassName="z-[190] bg-black/60 backdrop-blur-sm"
+            className="w-full sm:max-w-xl md:max-w-2xl bg-slate-950/95 border-l border-white/10 text-slate-100 p-0 flex flex-col shadow-2xl backdrop-blur-2xl z-[200]"
+          >
+            {/* Header del Sheet */}
+            <div className="p-6 border-b border-white/10 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shadow-lg shadow-indigo-500/10 shrink-0">
+                  <BookOpen className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-white tracking-tight truncate">
+                      Fórmulas y Conceptos Clave
+                    </h3>
+                    <Badge variant="outline" className="bg-indigo-500/10 border-indigo-500/30 text-indigo-300 text-[10px] px-1.5 py-0 font-medium">
+                      Repaso Teórico
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-400 truncate mt-0.5">
+                    {results?.quiz?.title || "Cuestionario de Matemáticas"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Contenido scrolleable */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {results?.quiz?.theoryNotes && results.quiz.theoryNotes.trim().length > 0 ? (
+                <div className="space-y-4">
+                  <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-200 text-xs flex items-start gap-2.5">
+                    <Sparkles className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                    <span>
+                      Guía condensada y fórmulas de apoyo para afianzar tus conocimientos y repasar los conceptos fundamentales evaluados.
+                    </span>
+                  </div>
+                  <div className="bg-slate-900/60 p-6 rounded-2xl border border-white/5 shadow-inner">
+                    <AIMarkdown 
+                      content={results.quiz.theoryNotes} 
+                      className="prose-invert text-slate-200 text-sm leading-relaxed max-w-none [&_h1]:text-white [&_h2]:text-white [&_h3]:text-indigo-200 [&_h3]:font-bold [&_h3]:text-base [&_h3]:mt-6 [&_h3]:mb-2 [&_hr]:border-white/10 [&_hr]:my-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1.5 [&_strong]:text-indigo-300 [&_blockquote]:border-l-2 [&_blockquote]:border-indigo-400 [&_blockquote]:bg-indigo-500/10 [&_blockquote]:py-2 [&_blockquote]:px-4 [&_blockquote]:rounded-r-xl [&_p]:my-2.5 [&_.katex]:text-indigo-200 [&_.katex-display]:my-3 [&_.katex-display]:overflow-x-auto [&_.katex-display]:py-1" 
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Estado amigable cuando aún no hay fórmulas cargadas */
+                <div className="flex flex-col items-center justify-center text-center py-10 px-4 space-y-6">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/30 via-purple-500/20 to-amber-500/20 blur-2xl rounded-full" />
+                    <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-tr from-slate-900 to-indigo-950 border border-indigo-500/30 flex items-center justify-center shadow-xl">
+                      <Sparkles className="w-10 h-10 text-indigo-400 animate-pulse" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 max-w-md">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
+                      <Clock className="w-3.5 h-3.5" />
+                      Próximamente disponible
+                    </div>
+                    <h4 className="text-xl font-bold text-white">
+                      Fórmulas y Conceptos en Preparación
+                    </h4>
+                    <p className="text-sm text-slate-300 leading-relaxed">
+                      Estamos redactando el formulario condensado y las definiciones teóricas para este cuestionario (<span className="text-indigo-300 font-medium">{results?.quiz?.title}</span>).
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer con botón de cerrar */}
+            <div className="p-4 border-t border-white/10 bg-slate-900/50 flex justify-end shrink-0">
+              <Button 
+                variant="ghost"
+                size="sm"
+                className="h-9 px-4 text-xs font-semibold rounded-xl border border-white/15 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white hover:border-white/30 transition-all shadow-md active:scale-95"
+                onClick={() => setIsTheoryOpen(false)}
+              >
+                Cerrar Guía
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   );

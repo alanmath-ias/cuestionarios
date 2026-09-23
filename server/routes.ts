@@ -847,6 +847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/node-mappings/:mapId", async (req, res) => {
     try {
       const mapId = parseInt(req.params.mapId);
+      if (isNaN(mapId)) return res.json([]);
       const mappings = await storage.getNodeContentMappings(mapId);
       res.json(mappings);
     } catch (error) {
@@ -2192,6 +2193,7 @@ Genera SOLO el tip, sin saludos introductorios. Empieza directo con el concepto 
   // Obtener subcategorías por categoría
   app.get('/api/admin/subcategories/by-category/:categoryId', async (req, res) => {
     const categoryId = Number(req.params.categoryId);
+    if (isNaN(categoryId)) return res.json([]);
     //console.log("🔍 Buscando subcategorías de la categoría:", categoryId);
 
     try {

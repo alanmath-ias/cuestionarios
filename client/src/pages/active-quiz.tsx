@@ -2606,8 +2606,8 @@ const ActiveQuiz = () => {
         <Sheet open={isTheoryOpen} onOpenChange={setIsTheoryOpen}>
           <SheetContent 
             side="right" 
-            overlayClassName="bg-black/40 backdrop-blur-[2px]"
-            className="w-full sm:max-w-xl md:max-w-2xl bg-slate-950/95 border-l border-white/10 text-slate-100 p-0 flex flex-col shadow-2xl backdrop-blur-2xl z-[70]"
+            overlayClassName="z-[190] bg-black/60 backdrop-blur-sm"
+            className="w-full sm:max-w-xl md:max-w-2xl bg-slate-950/95 border-l border-white/10 text-slate-100 p-0 flex flex-col shadow-2xl backdrop-blur-2xl z-[200]"
           >
             {/* Header del Sheet */}
             <div className="p-6 border-b border-white/10 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 shrink-0">
@@ -2641,8 +2641,11 @@ const ActiveQuiz = () => {
                       Usa este resumen teórico para orientarte en cualquier duda mientras respondes las preguntas. No perderás tu progreso ni el tiempo acumulado.
                     </span>
                   </div>
-                  <div className="prose prose-invert max-w-none text-slate-200 text-sm leading-relaxed bg-slate-900/60 p-5 rounded-2xl border border-white/5 shadow-inner">
-                    <ContentRenderer content={quiz.theoryNotes} />
+                  <div className="bg-slate-900/60 p-6 rounded-2xl border border-white/5 shadow-inner">
+                    <AIMarkdown 
+                      content={quiz.theoryNotes} 
+                      className="prose-invert text-slate-200 text-sm leading-relaxed max-w-none [&_h1]:text-white [&_h2]:text-white [&_h3]:text-indigo-200 [&_h3]:font-bold [&_h3]:text-base [&_h3]:mt-6 [&_h3]:mb-2 [&_hr]:border-white/10 [&_hr]:my-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1.5 [&_strong]:text-indigo-300 [&_blockquote]:border-l-2 [&_blockquote]:border-indigo-400 [&_blockquote]:bg-indigo-500/10 [&_blockquote]:py-2 [&_blockquote]:px-4 [&_blockquote]:rounded-r-xl [&_p]:my-2.5 [&_.katex]:text-indigo-200 [&_.katex-display]:my-3 [&_.katex-display]:overflow-x-auto [&_.katex-display]:py-1" 
+                    />
                   </div>
                 </div>
               ) : (
@@ -2707,12 +2710,12 @@ const ActiveQuiz = () => {
             {/* Footer del Sheet */}
             <div className="p-4 border-t border-white/10 bg-slate-900/80 flex justify-end shrink-0">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => setIsTheoryOpen(false)}
-                className="bg-slate-800 text-slate-200 border-white/10 hover:bg-slate-700 hover:text-white text-xs"
+                className="h-9 px-4 text-xs font-semibold rounded-xl border border-white/15 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white hover:border-white/30 transition-all shadow-md active:scale-95"
               >
-                Cerrar panel
+                Cerrar Guía
               </Button>
             </div>
           </SheetContent>

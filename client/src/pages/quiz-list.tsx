@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { QuizCard } from '@/components/dashboard/quiz-card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle, Map as MapIcon, LayoutGrid, Search, CheckCircle2, Ban, Crown, Sparkles, Trophy, Gamepad2, Eye, EyeOff, Link2, Power, Check } from 'lucide-react';
+import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle, Map as MapIcon, LayoutGrid, Search, CheckCircle2, Ban, Crown, Sparkles, Trophy, Gamepad2, Eye, EyeOff, Link2, Power, Check, Clock, Loader2 } from 'lucide-react';
 import { useParams, useLocation } from 'wouter';
 import { calculatePercentage } from '@/lib/mathUtils';
 import { cn } from '@/lib/utils';
@@ -13,8 +13,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import VideoEmbed from './VideoEmbed';
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { AIMarkdown } from "@/components/ui/ai-markdown";
+import { PremiumUpgradeModal } from "@/components/dialogs/PremiumUpgradeModal";
 import { RoadmapView } from '@/components/roadmap/RoadmapView';
 import { SkillTreeView } from '@/components/roadmap/SkillTreeView';
 import { arithmeticMapNodes, ArithmeticNode } from '@/data/arithmetic-map-data';
@@ -51,6 +54,7 @@ interface Quiz {
   difficulty: string;
   totalQuestions: number;
   isPublic?: boolean;
+  theoryNotes?: string | null;
 }
 
 interface QuizProgress {
@@ -209,7 +213,8 @@ function QuizList() {
       const res = await fetch(`/api/node-mappings/${categoryId}`);
       if (!res.ok) return [];
       return res.json();
-    }
+    },
+    enabled: !!categoryId && !isNaN(Number(categoryId)),
   });
 
   // Fetch ALL quizzes (all categories) so guest quizzes from other categories can be shown
@@ -230,9 +235,56 @@ function QuizList() {
   const [viewMode, setViewMode] = useState<'roadmap' | 'grid'>(initialViewMode || 'roadmap');
   const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
   const [selectedNode, setSelectedNode] = useState<ArithmeticNode | null>(null);
+  const cachedSubcategoryRef = useRef<any>(null);
+  const cachedNodeRef = useRef<ArithmeticNode | null>(null);
+
+  if (selectedSubcategory) {
+    cachedSubcategoryRef.current = selectedSubcategory;
+  }
+  if (selectedNode) {
+    cachedNodeRef.current = selectedNode;
+  }
+
+  const activeDialogSubcategory = selectedSubcategory || cachedSubcategoryRef.current;
+  const activeDialogNode = selectedNode || cachedNodeRef.current;
   const [highlightedQuizId, setHighlightedQuizId] = useState<number | null>(null);
   const [quizSearchQuery, setQuizSearchQuery] = useState("");
   const [showMasteryDialog, setShowMasteryDialog] = useState(false);
+  const [selectedTheoryQuiz, setSelectedTheoryQuiz] = useState<Quiz | null>(null);
+  const [isTheoryOpen, setIsTheoryOpen] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [premiumModalData, setPremiumModalData] = useState({
+    title: "Desbloquea Fórmulas y Conceptos Clave",
+    description: "Accede a las fórmulas, resúmenes teóricos y propiedades del tema para estudiar y prepararte antes de cada cuestionario con AlanMath Premium."
+  });
+
+  const { data: fullTheoryQuiz, isLoading: loadingTheoryQuiz } = useQuery<Quiz>({
+    queryKey: [`/api/quizzes/${selectedTheoryQuiz?.id}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/quizzes/${selectedTheoryQuiz?.id}`);
+      if (!res.ok) throw new Error('Error fetching quiz');
+      return res.json();
+    },
+    enabled: !!selectedTheoryQuiz?.id && isTheoryOpen,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const activeTheoryQuiz = fullTheoryQuiz || selectedTheoryQuiz;
+  const theoryContent = activeTheoryQuiz?.theoryNotes;
+
+  const handleOpenTheory = (quiz: Quiz) => {
+    if (!session?.isPremium) {
+      setPremiumModalData({
+        title: "Desbloquea Fórmulas y Conceptos Clave",
+        description: "Accede a las fórmulas, resúmenes teóricos y propiedades del tema para estudiar y prepararte antes de cada cuestionario con AlanMath Premium."
+      });
+      setShowPremiumModal(true);
+      return;
+    }
+    setSelectedTheoryQuiz(quiz);
+    setIsTheoryOpen(true);
+  };
+
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const isFirstMount = useRef(true);
   const prevViewModeRef = useRef<'roadmap' | 'grid'>(viewMode);
@@ -314,6 +366,7 @@ function QuizList() {
           : sub.youtube_sublink?.trim() || null
       }));
     },
+    enabled: !!categoryId && !isNaN(Number(categoryId)),
   });
 
   const { data: quizzes, isLoading: loadingQuizzes } = useQuery<Quiz[]>({
@@ -332,13 +385,128 @@ function QuizList() {
     }
   });
 
-  const quizzesBySubcategory = Array.isArray(subcategories)
-    ? subcategories.map(subcategory => ({
-      ...subcategory,
-      quizzes: (quizzes?.filter(quiz => quiz.subcategoryId === subcategory.id) || [])
-        .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0)),
-    }))
-    : [];
+  const quizzesBySubcategory = useMemo(() => {
+    return Array.isArray(subcategories)
+      ? subcategories.map(subcategory => ({
+        ...subcategory,
+        quizzes: (quizzes?.filter(quiz => quiz.subcategoryId === subcategory.id) || [])
+          .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0)),
+      }))
+      : [];
+  }, [subcategories, quizzes]);
+
+  const skillTreeAllQuizzes = useMemo(() => {
+    const rawQuizzes = allQuizzesForAdmin || quizzes || [];
+    if (!rawQuizzes.length) return [];
+    return rawQuizzes.map(q => {
+      const p = progress?.find(prog => prog.quizId === q.id);
+      return {
+        ...q,
+        status: p?.status || (q as any).userStatus || 'not_started',
+        score: p?.score || (q as any).score || 0,
+        completedAt: p?.completedAt || null,
+        progressId: p?.id || 0
+      };
+    });
+  }, [allQuizzesForAdmin, quizzes, progress]);
+
+  const skillTreeProgressMap = useMemo(() => {
+    const map: Record<string, 'locked' | 'available' | 'completed' | 'in_progress'> = {};
+    const quizSource = allQuizzesForAdmin || quizzes || [];
+
+    const getDynamicQuizzesForNode = (node: ArithmeticNode) => {
+      const mapping = nodeMappingsData?.find(m => m.nodeId === node.id);
+      const subId = mapping?.subcategoryId || node.subcategoryId;
+      const additionalSubs = mapping?.additionalSubcategories || node.additionalSubcategories || [];
+      const guestQuizzes = mapping?.additionalQuizzes || [];
+
+      return quizSource.filter(q =>
+        Number(q.subcategoryId) === Number(subId) ||
+        (additionalSubs && additionalSubs.map(Number).includes(Number(q.subcategoryId))) ||
+        (guestQuizzes && guestQuizzes.map(Number).includes(Number(q.id)))
+      );
+    };
+
+    // Pass 1: Intrinsic Status
+    currentMapNodes.forEach(node => {
+      const nodeQuizzes = getDynamicQuizzesForNode(node);
+      if (nodeQuizzes.length > 0) {
+        const completedCount = nodeQuizzes.filter(q =>
+          progress?.some(p => p.quizId === q.id && p.status === 'completed')
+        ).length;
+        const pct = (completedCount / nodeQuizzes.length) * 100;
+        
+        if (pct === 100) map[node.id] = 'completed';
+        else if (pct > 0) map[node.id] = 'in_progress';
+        else map[node.id] = 'available';
+      } else if (node.behavior !== 'container') {
+        map[node.id] = 'locked';
+      }
+    });
+
+    // Pass 2: Unlock Logic (Explorative Mode)
+    currentMapNodes.forEach(node => {
+      if (map[node.id] === 'completed' || map[node.id] === 'in_progress') return;
+      const hasContent = getDynamicQuizzesForNode(node).length > 0;
+      if (node.behavior === 'container') {
+        map[node.id] = 'available';
+      } else {
+        map[node.id] = (hasContent || node.id.endsWith('mastery')) ? 'available' : 'locked';
+      }
+    });
+
+    // Pass 3: Container Aggregation
+    currentMapNodes.filter(n => n.behavior === 'container').forEach(container => {
+      const getFamilyDescendants = (rootId: string) => {
+        const descendants: string[] = [];
+        const queue = [rootId];
+        const visited = new Set<string>();
+        while (queue.length > 0) {
+          const currentId = queue.shift()!;
+          if (visited.has(currentId)) continue;
+          visited.add(currentId);
+          const children = currentMapNodes.filter(n => n.requires.includes(currentId));
+          for (const child of children) {
+            if (child.behavior === 'container') continue;
+            descendants.push(child.id);
+            queue.push(child.id);
+          }
+        }
+        return descendants;
+      };
+
+      const familyNetwork = getFamilyDescendants(container.id);
+      const hasContent = getDynamicQuizzesForNode(container).length > 0;
+      const intrinsicDone = hasContent ? map[container.id] === 'completed' : true;
+
+      if (familyNetwork.length === 0) {
+        if (!hasContent) map[container.id] = 'locked';
+        return;
+      }
+
+      const allFamilyCompleted = familyNetwork.every(nodeId => map[nodeId] === 'completed');
+      const anyFamilyActive = familyNetwork.some(nodeId => map[nodeId] !== 'locked');
+
+      if (allFamilyCompleted && intrinsicDone) {
+        map[container.id] = 'completed';
+      } else if (anyFamilyActive || (hasContent && map[container.id] !== 'locked')) {
+        map[container.id] = 'available';
+      } else {
+        map[container.id] = 'locked';
+      }
+    });
+
+    return map;
+  }, [currentMapNodes, nodeMappingsData, allQuizzesForAdmin, quizzes, progress]);
+
+  const mapDescription = useMemo(() => {
+    if (categoryId === '1') return "Un árbol de conocimiento diseñado para dominar la aritmética paso a paso.";
+    if (categoryId === '2') return "Explora el álgebra desde sus fundamentos hasta el dominio de funciones.";
+    if (categoryId === '4') return "Domina el cálculo diferencial: límites, derivadas y sus aplicaciones.";
+    if (categoryId === '5') return "Explora la integración: desde el área bajo la curva hasta las integrales impropias.";
+    if (categoryId === '19') return "Domina la estadística descriptiva, probabilidad y análisis de datos.";
+    return "";
+  }, [categoryId]);
 
   const totalCategoryProgress = useMemo(() => {
     if (!quizzes) return 0;
@@ -483,6 +651,52 @@ function QuizList() {
     window.history.replaceState({ ...window.history.state }, '', newPath);
   };
 
+  const handleNodeClick = useCallback((node: ArithmeticNode, highlightedQuizId?: number) => {
+    if (node.id.endsWith('mastery')) {
+      setShowMasteryDialog(true);
+      return;
+    }
+    
+    const mapping = nodeMappingsData?.find(m => m.nodeId === node.id);
+    const subId = mapping?.subcategoryId || node.subcategoryId;
+    
+    if (subId || (mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0)) {
+      // Find the actual subcategory object
+      let sub = quizzesBySubcategory.find(s => s.id === subId);
+      
+      // If no sub found but we have guest quizzes, we might need a "virtual" subcategory or just use a dummy
+      if (!sub && mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0) {
+          sub = {
+              id: Number(subId) || 0,
+              name: node.label,
+              description: "Contenido personalizado",
+              categoryId: parseInt(categoryId),
+              quizzes: []
+          };
+      }
+
+      if (sub) {
+        setSelectedSubcategory(sub);
+        setSelectedNode(node);
+        updateUrlState(sub, node);
+        if (highlightedQuizId) {
+          setHighlightedQuizId(highlightedQuizId);
+        }
+      } else {
+        toast({
+          title: "Sección no disponible",
+          description: "Esta sección aún no tiene contenido vinculado.",
+          variant: "destructive"
+        });
+      }
+    } else {
+      toast({
+        title: "Próximamente",
+        description: "Estamos trabajando en el contenido para este módulo.",
+      });
+    }
+  }, [nodeMappingsData, quizzesBySubcategory, categoryId, toast]);
+
   // Prepare Roadmap Data
   const roadmapNodes = quizzesBySubcategory.map((sub, index) => {
     const progressPercent = calculateSubcategoryProgress(sub.id);
@@ -576,169 +790,16 @@ function QuizList() {
             ['1', '2', '4', '5', '19'].includes(categoryId) ? (
               <SkillTreeView
                 nodes={currentMapNodes}
-                allQuizzes={(allQuizzesForAdmin || quizzes || []).map(q => {
-                  const p = progress?.find(prog => prog.quizId === q.id);
-                  return {
-                    ...q,
-                    status: p?.status || (q as any).userStatus || 'not_started',
-                    score: p?.score || (q as any).score || 0,
-                    completedAt: p?.completedAt || null,
-                    progressId: p?.id || 0
-                  };
-                })}
+                allQuizzes={skillTreeAllQuizzes}
                 title={`Mapa de Habilidades: ${category?.name}`}
-                description={(() => {
-                  if (categoryId === '1') return "Un árbol de conocimiento diseñado para dominar la aritmética paso a paso.";
-                  if (categoryId === '2') return "Explora el álgebra desde sus fundamentos hasta el dominio de funciones.";
-                  if (categoryId === '4') return "Domina el cálculo diferencial: límites, derivadas y sus aplicaciones.";
-                  if (categoryId === '5') return "Explora la integración: desde el área bajo la curva hasta las integrales impropias.";
-                  if (categoryId === '19') return "Domina la estadística descriptiva, probabilidad y análisis de datos.";
-                  return "";
-                })()}
-                progressMap={(() => {
-                  const map: Record<string, 'locked' | 'available' | 'completed' | 'in_progress'> = {};
-                  
-                  // Helper to get filtered quizzes for a node (including guests)
-                  const getDynamicQuizzesForNode = (node: ArithmeticNode) => {
-                    const mapping = nodeMappingsData?.find(m => m.nodeId === node.id);
-                    const subId = mapping?.subcategoryId || node.subcategoryId;
-                    const additionalSubs = mapping?.additionalSubcategories || node.additionalSubcategories || [];
-                    const guestQuizzes = mapping?.additionalQuizzes || [];
-
-                    const quizSource = allQuizzesForAdmin || quizzes || [];
-                    let nodeQuizzes = quizSource.filter(q =>
-                      Number(q.subcategoryId) === Number(subId) ||
-                      (additionalSubs && additionalSubs.map(Number).includes(Number(q.subcategoryId))) ||
-                      (guestQuizzes && guestQuizzes.map(Number).includes(Number(q.id)))
-                    );
-
-                    return nodeQuizzes;
-
-                  };
-
-                  // Pass 1: Intrinsic Status
-                  currentMapNodes.forEach(node => {
-                    const nodeQuizzes = getDynamicQuizzesForNode(node);
-                    if (nodeQuizzes.length > 0) {
-                      const completedCount = nodeQuizzes.filter(q =>
-                        progress?.some(p => p.quizId === q.id && p.status === 'completed')
-                      ).length;
-                      const pct = (completedCount / nodeQuizzes.length) * 100;
-                      
-                      if (pct === 100) map[node.id] = 'completed';
-                      else if (pct > 0) map[node.id] = 'in_progress';
-                      else map[node.id] = 'available';
-                    } else if (node.behavior !== 'container') {
-                      map[node.id] = 'locked';
-                    }
-                  });
-
-                  // Pass 2: Unlock Logic (Explorative Mode)
-                  currentMapNodes.forEach(node => {
-                    if (map[node.id] === 'completed' || map[node.id] === 'in_progress') return;
-                    const hasContent = getDynamicQuizzesForNode(node).length > 0;
-                    if (node.behavior === 'container') {
-                      map[node.id] = 'available';
-                    } else {
-                      map[node.id] = (hasContent || node.id.endsWith('mastery')) ? 'available' : 'locked';
-                    }
-                  });
-
-                  // Pass 3: Container Aggregation
-                  currentMapNodes.filter(n => n.behavior === 'container').forEach(container => {
-                    const getFamilyDescendants = (rootId: string) => {
-                      const descendants: string[] = [];
-                      const queue = [rootId];
-                      const visited = new Set<string>();
-                      while (queue.length > 0) {
-                        const currentId = queue.shift()!;
-                        if (visited.has(currentId)) continue;
-                        visited.add(currentId);
-                        const children = currentMapNodes.filter(n => n.requires.includes(currentId));
-                        for (const child of children) {
-                          // Stop at the next container boundary — each container only
-                          // aggregates its own direct quiz_list family
-                          if (child.behavior === 'container') continue;
-                          descendants.push(child.id);
-                          queue.push(child.id);
-                        }
-                      }
-                      return descendants;
-                    };
-
-                    const familyNetwork = getFamilyDescendants(container.id);
-                    const hasContent = getDynamicQuizzesForNode(container).length > 0;
-                    const intrinsicDone = hasContent ? map[container.id] === 'completed' : true;
-
-                    if (familyNetwork.length === 0) {
-                      if (!hasContent) map[container.id] = 'locked';
-                      return;
-                    }
-
-                    const allFamilyCompleted = familyNetwork.every(nodeId => map[nodeId] === 'completed');
-                    const anyFamilyActive = familyNetwork.some(nodeId => map[nodeId] !== 'locked');
-
-                    if (allFamilyCompleted && intrinsicDone) {
-                      map[container.id] = 'completed';
-                    } else if (anyFamilyActive || (hasContent && map[container.id] !== 'locked')) {
-                      map[container.id] = 'available';
-                    } else {
-                      map[container.id] = 'locked';
-                    }
-                  });
-
-                  return map;
-                })()}
+                description={mapDescription}
+                progressMap={skillTreeProgressMap}
                 isAdmin={isAdmin}
                 subcategories={subcategories}
                 categoryId={parseInt(categoryId || "0")}
                 nodeMappings={nodeMappingsData || []}
                 allQuizzesForAdmin={allQuizzesForAdmin || []}
-                onNodeClick={(node, highlightedQuizId) => {
-                  if (node.id.endsWith('mastery')) {
-                    setShowMasteryDialog(true);
-                    return;
-                  }
-                  
-                  const mapping = nodeMappingsData?.find(m => m.nodeId === node.id);
-                  const subId = mapping?.subcategoryId || node.subcategoryId;
-                  
-                  if (subId || mapping?.additionalQuizzes?.length > 0) {
-                    // Find the actual subcategory object
-                    let sub = quizzesBySubcategory.find(s => s.id === subId);
-                    
-                    // If no sub found but we have guest quizzes, we might need a "virtual" subcategory or just use a dummy
-                    if (!sub && mapping?.additionalQuizzes?.length > 0) {
-                        sub = {
-                            id: Number(subId) || 0,
-                            name: node.label,
-                            description: "Contenido personalizado",
-                            categoryId: parseInt(categoryId),
-                            quizzes: []
-                        };
-                    }
-
-                    if (sub) {
-                      setSelectedSubcategory(sub);
-                      setSelectedNode(node);
-                      updateUrlState(sub, node);
-                      if (highlightedQuizId) {
-                        setHighlightedQuizId(highlightedQuizId);
-                      }
-                    } else {
-                      toast({
-                        title: "Sección no disponible",
-                        description: "Esta sección aún no tiene contenido vinculado.",
-                        variant: "destructive"
-                      });
-                    }
-                  } else {
-                    toast({
-                      title: "Próximamente",
-                      description: "Estamos trabajando en el contenido para este módulo.",
-                    });
-                  }
-                }}
+                onNodeClick={handleNodeClick}
               />
             ) : (
               <RoadmapView
@@ -882,6 +943,8 @@ function QuizList() {
                               onContinue={() => handleQuizAction(quiz.id)}
                               onRetry={() => handleQuizAction(quiz.id)}
                               onMiniStart={() => handleMiniStart(quiz.id)}
+                              onOpenTheory={() => handleOpenTheory(quiz)}
+                              isPremium={session?.isPremium}
                               className="bg-slate-800/40 border-white/5 hover:bg-slate-800/60 hover:border-blue-500/20 transition-all"
                             />
                           );
@@ -910,67 +973,68 @@ function QuizList() {
         }
       }}>
         <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()} tabIndex={-1}>
-          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <ListChecks className="h-6 w-6 text-blue-400" />
-              </div>
-              <DialogTitle className="text-xl font-bold text-white">
-                {selectedNode ? (nodeMappingsData?.find(m => m.nodeId === selectedNode.id)?.overrideLabel || selectedNode.label) : selectedSubcategory?.name}
-              </DialogTitle>
-            </div>
-            <DialogDescription className="text-slate-400">
-              {selectedNode ? selectedNode.description : selectedSubcategory?.description}
-              {isAdmin && selectedNode && (
-                <div className="mt-1 text-[10px] text-blue-500 font-mono bg-blue-500/5 p-1 rounded inline-block">
-                  DEBUG: Node:{selectedNode.id} | Sub:{selectedNode.subcategoryId} | Guests:{(nodeMappingsData?.find(m => m.nodeId === selectedNode.id)?.additionalQuizzes || []).join(',')}
+          {activeDialogSubcategory && (
+            <>
+              <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <ListChecks className="h-6 w-6 text-blue-400" />
+                  </div>
+                  <DialogTitle className="text-xl font-bold text-white">
+                    {activeDialogNode ? (nodeMappingsData?.find(m => m.nodeId === activeDialogNode.id)?.overrideLabel || activeDialogNode.label) : activeDialogSubcategory?.name}
+                  </DialogTitle>
                 </div>
-              )}
-            </DialogDescription>
-          </DialogHeader>
+                <DialogDescription className="text-slate-400">
+                  {activeDialogNode ? activeDialogNode.description : activeDialogSubcategory?.description}
+                  {isAdmin && activeDialogNode && (
+                    <div className="mt-1 text-[10px] text-blue-500 font-mono bg-blue-500/5 p-1 rounded inline-block">
+                      DEBUG: Node:{activeDialogNode.id} | Sub:{activeDialogNode.subcategoryId} | Guests:{(nodeMappingsData?.find(m => m.nodeId === activeDialogNode.id)?.additionalQuizzes || []).join(',')}
+                    </div>
+                  )}
+                </DialogDescription>
+              </DialogHeader>
 
-          {selectedSubcategory && (
-            <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6">
-              <div className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <Input
-                    placeholder={`Buscar en ${selectedSubcategory.name}...`}
-                    value={quizSearchQuery}
-                    onChange={(e) => setQuizSearchQuery(e.target.value)}
-                    className="pl-9 bg-slate-950/50 border-slate-800 text-slate-200 placeholder:text-slate-600 focus:ring-blue-500/50 h-9 text-sm"
-                  />
-                </div>
+              <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6">
+                <div className="space-y-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                    <Input
+                      placeholder={`Buscar en ${activeDialogSubcategory.name}...`}
+                      value={quizSearchQuery}
+                      onChange={(e) => setQuizSearchQuery(e.target.value)}
+                      className="pl-9 bg-slate-950/50 border-slate-800 text-slate-200 placeholder:text-slate-600 focus:ring-blue-500/50 h-9 text-sm"
+                    />
+                  </div>
 
-                {(() => {
-                  let quizzesForSub = [];
-                  // Declare mapping at outer scope so keyword filter below can reference guest IDs
-                  const mapping = selectedNode ? nodeMappingsData?.find(m => m.nodeId === selectedNode.id) : null;
+                  {(() => {
+                    let quizzesForSub = [];
+                    // Declare mapping at outer scope so keyword filter below can reference guest IDs
+                    const mapping = activeDialogNode ? nodeMappingsData?.find(m => m.nodeId === activeDialogNode.id) : null;
 
-                  if (selectedNode) {
-                    const subId = mapping?.subcategoryId || selectedNode.subcategoryId;
-                    const additionalSubs = mapping?.additionalSubcategories || selectedNode.additionalSubcategories || [];
-                    const guestQuizIds = mapping?.additionalQuizzes || [];
+                    if (activeDialogNode) {
+                      const subId = mapping?.subcategoryId || activeDialogNode.subcategoryId;
+                      const additionalSubs = mapping?.additionalSubcategories || activeDialogNode.additionalSubcategories || [];
+                      const guestQuizIds = mapping?.additionalQuizzes || [];
 
-                    // Use global source for Dialog to ensure guests from other categories are visible
-                    const quizSource = allQuizzesForAdmin || quizzes || [];
-                    
-                    console.log(`[DEBUG] Node: ${selectedNode.id}, Source: ${quizSource.length}, Guests: ${guestQuizIds.length}`);
-
-                    quizzesForSub = quizSource.filter((q: Quiz) => {
-                      const qId = Number(q.id);
-                      const qSubId = q.subcategoryId ? Number(q.subcategoryId) : null;
-                      const targetSubId = subId ? Number(subId) : null;
-
-                      const isGuest = guestQuizIds && guestQuizIds.map(Number).includes(qId);
-                      const isMain = targetSubId !== null && qSubId === targetSubId;
-                      const isExtra = additionalSubs && additionalSubs.map(Number).includes(qSubId as number);
+                      // Use global source for Dialog to ensure guests from other categories are visible
+                      const quizSource = allQuizzesForAdmin || quizzes || [];
                       
-                      return isGuest || isMain || isExtra;
-                    }).sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
-                  } else {
-                    quizzesForSub = selectedSubcategory.quizzes || [];
-                  }
+                      console.log(`[DEBUG] Node: ${activeDialogNode.id}, Source: ${quizSource.length}, Guests: ${guestQuizIds.length}`);
+
+                      quizzesForSub = quizSource.filter((q: Quiz) => {
+                        const qId = Number(q.id);
+                        const qSubId = q.subcategoryId ? Number(q.subcategoryId) : null;
+                        const targetSubId = subId ? Number(subId) : null;
+
+                        const isGuest = guestQuizIds && guestQuizIds.map(Number).includes(qId);
+                        const isMain = targetSubId !== null && qSubId === targetSubId;
+                        const isExtra = additionalSubs && additionalSubs.map(Number).includes(qSubId as number);
+                        
+                        return isGuest || isMain || isExtra;
+                      }).sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
+                    } else {
+                      quizzesForSub = activeDialogSubcategory.quizzes || [];
+                    }
 
                   // Apply standard search filter
                   quizzesForSub = quizzesForSub.filter((q: Quiz) =>
@@ -1043,7 +1107,25 @@ function QuizList() {
                                     Progreso: {quizProgress?.completedQuestions}
                                   </span>
                                 )}
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
+                                  {/* Botón Fórmulas y Conceptos Clave */}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2.5 text-xs font-semibold bg-indigo-500/10 border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 hover:text-white hover:border-indigo-400/50 transition-all flex items-center gap-1.5"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenTheory(quiz);
+                                    }}
+                                    title={session?.isPremium ? "Consultar fórmulas y conceptos clave del tema" : "Fórmulas y conceptos clave (Función Premium)"}
+                                  >
+                                    <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+                                    <span>Fórmulas</span>
+                                    {!session?.isPremium && (
+                                      <Crown className="w-3 h-3 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.5)] ml-0.5" />
+                                    )}
+                                  </Button>
+
                                   {!isCompleted && !searchParams.get('user_id') && (
                                     <Button
                                       size="sm"
@@ -1084,8 +1166,9 @@ function QuizList() {
                 })()}
               </div>
             </div>
-          )}
-        </DialogContent>
+          </>
+        )}
+      </DialogContent>
       </Dialog>
 
       <Dialog open={!!miniQuizId} onOpenChange={(open) => !open && setMiniQuizId(null)}>
@@ -1241,6 +1324,118 @@ function QuizList() {
           initialCredits={(session.hintCredits || 0) - 1000} // Subtracting 1000 since DB already added it, so count-up looks correct!
         />
       )}
+
+      {/* Modal de Invitación a Premium */}
+      <PremiumUpgradeModal
+        open={showPremiumModal}
+        onOpenChange={setShowPremiumModal}
+        title={premiumModalData.title}
+        description={premiumModalData.description}
+      />
+
+      {/* Panel Lateral Deslizable: Fórmulas y Conceptos Clave */}
+      <Sheet open={isTheoryOpen} onOpenChange={setIsTheoryOpen}>
+        <SheetContent 
+          side="right" 
+          overlayClassName="z-[190] bg-black/60 backdrop-blur-sm"
+          className="w-full sm:max-w-xl md:max-w-2xl bg-slate-950/95 border-l border-white/10 text-slate-100 p-0 flex flex-col shadow-2xl backdrop-blur-2xl z-[200]"
+        >
+          {/* Header del Sheet */}
+          <div className="p-6 border-b border-white/10 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shadow-lg shadow-indigo-500/10 shrink-0">
+                <BookOpen className="w-5 h-5 text-indigo-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-white tracking-tight truncate">
+                    Fórmulas y Conceptos Clave
+                  </h3>
+                  <Badge variant="outline" className="bg-indigo-500/10 border-indigo-500/30 text-indigo-300 text-[10px] px-1.5 py-0 font-medium">
+                    Guía Previa
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-400 truncate mt-0.5">
+                  {activeTheoryQuiz?.title || "Cuestionario de Matemáticas"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Contenido scrolleable */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {loadingTheoryQuiz ? (
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400 space-y-3">
+                <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+                <p className="text-sm">Cargando guía de estudio...</p>
+              </div>
+            ) : theoryContent && theoryContent.trim().length > 0 ? (
+              <div className="space-y-4">
+                <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-200 text-xs flex items-start gap-2.5">
+                  <Sparkles className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                  <span>
+                    Revisa este resumen teórico antes de comenzar para repasar las fórmulas esenciales y abordar cada pregunta con mayor confianza.
+                  </span>
+                </div>
+                <div className="bg-slate-900/60 p-6 rounded-2xl border border-white/5 shadow-inner">
+                  <AIMarkdown 
+                    content={theoryContent} 
+                    className="prose-invert text-slate-200 text-sm leading-relaxed max-w-none [&_h1]:text-white [&_h2]:text-white [&_h3]:text-indigo-200 [&_h3]:font-bold [&_h3]:text-base [&_h3]:mt-6 [&_h3]:mb-2 [&_hr]:border-white/10 [&_hr]:my-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1.5 [&_strong]:text-indigo-300 [&_blockquote]:border-l-2 [&_blockquote]:border-indigo-400 [&_blockquote]:bg-indigo-500/10 [&_blockquote]:py-2 [&_blockquote]:px-4 [&_blockquote]:rounded-r-xl [&_p]:my-2.5 [&_.katex]:text-indigo-200 [&_.katex-display]:my-3 [&_.katex-display]:overflow-x-auto [&_.katex-display]:py-1" 
+                  />
+                </div>
+              </div>
+            ) : (
+              /* Estado amigable cuando aún no hay fórmulas cargadas */
+              <div className="flex flex-col items-center justify-center text-center py-10 px-4 space-y-6">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/30 via-purple-500/20 to-amber-500/20 blur-2xl rounded-full" />
+                  <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-tr from-slate-900 to-indigo-950 border border-indigo-500/30 flex items-center justify-center shadow-xl">
+                    <Sparkles className="w-10 h-10 text-indigo-400 animate-pulse" />
+                  </div>
+                </div>
+
+                <div className="space-y-2 max-w-md">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
+                    <Clock className="w-3.5 h-3.5" />
+                    Próximamente disponible
+                  </div>
+                  <h4 className="text-xl font-bold text-white">
+                    Fórmulas y Conceptos en Preparación
+                  </h4>
+                  <p className="text-sm text-slate-300 leading-relaxed">
+                    Estamos redactando el formulario condensado y las definiciones teóricas para este cuestionario (<span className="text-indigo-300 font-medium">{activeTheoryQuiz?.title}</span>).
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer con botón de cerrar y comenzar */}
+          <div className="p-4 border-t border-white/10 bg-slate-900/50 flex justify-between items-center shrink-0">
+            <Button 
+              variant="ghost"
+              size="sm"
+              className="h-9 px-4 text-xs font-semibold rounded-xl border border-white/15 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white hover:border-white/30 transition-all shadow-md active:scale-95"
+              onClick={() => setIsTheoryOpen(false)}
+            >
+              Cerrar Guía
+            </Button>
+            {activeTheoryQuiz && (
+              <Button
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-lg shadow-indigo-500/20"
+                onClick={() => {
+                  setIsTheoryOpen(false);
+                  handleQuizAction(activeTheoryQuiz.id);
+                }}
+              >
+                <PlayCircle className="w-4 h-4 mr-1.5" />
+                Comenzar Cuestionario
+              </Button>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

@@ -9,6 +9,8 @@ interface AIMarkdownProps {
 }
 
 export function AIMarkdown({ content, className }: AIMarkdownProps) {
+    if (!content) return null;
+
     const processedContent = content
         // Step 0: Normalize legacy delimiters
         // Fix legacy block: ¡¡...!! -> ¡¡...¡¡
@@ -51,7 +53,7 @@ export function AIMarkdown({ content, className }: AIMarkdownProps) {
         <div className={`prose prose-sm max-w-none w-full overflow-x-auto custom-scrollbar ${className || ''}`}>
             <ReactMarkdown
                 remarkPlugins={[remarkMath]}
-                rehypePlugins={[ [rehypeKatex, { macros: { "\\sen": "\\sin", "\\tg": "\\tan", "\\arcsen": "\\arcsin", "\\arctg": "\\arctan" } }] ]}
+                rehypePlugins={[ [rehypeKatex, { throwOnError: false, macros: { "\\sen": "\\sin", "\\tg": "\\tan", "\\arcsen": "\\arcsin", "\\arctg": "\\arctan" } }] ]}
             >
                 {processedContent}
             </ReactMarkdown>

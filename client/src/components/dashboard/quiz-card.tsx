@@ -1,6 +1,6 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, HelpCircle, Star } from "lucide-react";
+import { Clock, HelpCircle, Star, BookOpen, Crown } from "lucide-react";
 
 interface QuizCardProps {
   id: number;
@@ -17,6 +17,8 @@ interface QuizCardProps {
   onContinue: () => void;
   onRetry: () => void;
   onMiniStart?: () => void;
+  onOpenTheory?: () => void;
+  isPremium?: boolean;
   className?: string; // Agregar esta propiedad opcional
 }
 
@@ -34,7 +36,9 @@ export function QuizCard({
   onStart,
   onContinue,
   onRetry,
-  onMiniStart
+  onMiniStart,
+  onOpenTheory,
+  isPremium = false,
 }: QuizCardProps) {
 
   const getDifficultyLabel = () => {
@@ -106,26 +110,48 @@ export function QuizCard({
             </span>
           )}
         </div>
-        {status === 'not_started' && (
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={onMiniStart} className="text-xs px-2 h-8 border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50">
-              Versión Mini
+        <div className="flex gap-2 items-center">
+          {onOpenTheory && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenTheory();
+              }}
+              className="text-xs px-2.5 h-8 border-indigo-400/40 text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 hover:text-indigo-300 flex items-center gap-1.5 transition-all"
+              title={isPremium ? "Consultar fórmulas y conceptos clave" : "Fórmulas y conceptos clave (Función Premium)"}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Fórmulas</span>
+              {!isPremium && (
+                <Crown className="w-3 h-3 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.5)]" />
+              )}
             </Button>
-            <Button size="sm" onClick={onStart}>
-              Comenzar
+          )}
+          {status === 'not_started' && (
+            <>
+              {onMiniStart && (
+                <Button size="sm" variant="outline" onClick={onMiniStart} className="text-xs px-2 h-8 border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50">
+                  Versión Mini
+                </Button>
+              )}
+              <Button size="sm" onClick={onStart}>
+                Comenzar
+              </Button>
+            </>
+          )}
+          {status === 'in_progress' && (
+            <Button size="sm" onClick={onContinue}>
+              Continuar
             </Button>
-          </div>
-        )}
-        {status === 'in_progress' && (
-          <Button size="sm" onClick={onContinue}>
-            Continuar
-          </Button>
-        )}
-        {status === 'completed' && (
-          <Button size="sm" onClick={onRetry}>
-            Ver Resultados
-          </Button>
-        )}
+          )}
+          {status === 'completed' && (
+            <Button size="sm" onClick={onRetry}>
+              Ver Resultados
+            </Button>
+          )}
+        </div>
       </CardFooter>
     </Card>
   );
