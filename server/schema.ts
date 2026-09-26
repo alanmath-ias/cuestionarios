@@ -209,6 +209,7 @@ export const questionReports = pgTable("question_reports", {
 	userId: integer("user_id").notNull().references(() => users.id),
 	description: text("description").notNull(),
 	status: text("status").default("pending").notNull(), // pending, resolved
+	isSaved: boolean("is_saved").default(false).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 

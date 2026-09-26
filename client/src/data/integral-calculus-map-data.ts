@@ -168,11 +168,11 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
     },
     {
         id: 'i2-polinomios',
-        label: 'Polinomios',
+        label: 'Polinomios y Exponentes Fraccionarios',
         level: 7,
         type: 'basic',
         requires: ['i2-integral-indefinida'],
-        description: 'Regla de la potencia inversa.',
+        description: 'Regla de la potencia, coeficientes fraccionarios, radicales y expansión de productos.',
         xOffset: -75,
         subcategoryId: 460,
         behavior: 'quiz_list'

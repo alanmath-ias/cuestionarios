@@ -33,7 +33,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MathText } from "@/components/ui/math-display";
 import { AIMarkdown } from "@/components/ui/ai-markdown";
-import { Loader2, CheckCircle, Eye, Bot, Trash2, ChevronDown, ExternalLink, Pencil, Save, X, Plus, Trash, Coins } from "lucide-react";
+import { Loader2, CheckCircle, Eye, Bot, Trash2, ChevronDown, ExternalLink, Pencil, Save, X, Plus, Trash, Coins, Bookmark, BookmarkCheck, BookmarkX, Archive } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -46,6 +46,7 @@ interface QuestionReport {
     userId: number;
     description: string;
     status: "pending" | "resolved";
+    isSaved: boolean;
     createdAt: string;
 }
 
@@ -199,15 +200,37 @@ export default function AdminReports() {
     const { toast } = useToast();
     const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
     const [aiResponse, setAiResponse] = useState<string | null>(null);
+    const [showSavedView, setShowSavedView] = useState(false);
+    const [openedFromSaved, setOpenedFromSaved] = useState(false);
     
     // Estados para edición del reporte
     const [isEditing, setIsEditing] = useState(false);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [editedQuestion, setEditedQuestion] = useState<string>("");
     const [editedImageUrl, setEditedImageUrl] = useState<string>("");
     const [editedAnswers, setEditedAnswers] = useState<any[]>([]);
 
+    // Muestra confirmación si hay cambios sin guardar, luego ejecuta el callback
+    const confirmIfUnsaved = (callback: () => void) => {
+        if (isEditing && hasUnsavedChanges) {
+            if (!window.confirm("⚠️ Tienes cambios sin guardar en la pregunta.\n\n¿Deseas salir de todas formas? Los cambios se perderán.")) {
+                return;
+            }
+        }
+        callback();
+    };
+
     const { data: reports, isLoading, error, isError } = useQuery<QuestionReport[]>({
         queryKey: ["/api/admin/reports"],
+    });
+
+    const { data: savedReports, isLoading: isLoadingSaved } = useQuery<QuestionReport[]>({
+        queryKey: ["/api/admin/reports/saved"],
+        queryFn: async () => {
+            const res = await fetch("/api/admin/reports/saved");
+            if (!res.ok) throw new Error("Failed to fetch saved reports");
+            return res.json();
+        },
     });
 
     const { data: reportDetails, isLoading: isLoadingDetails } = useQuery<ReportDetails>({
@@ -225,19 +248,42 @@ export default function AdminReports() {
             const res = await apiRequest("PATCH", `/api/admin/reports/${id}`, { status });
             return res.json();
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
-            toast({
-                title: "Estado actualizado",
-                description: "El reporte ha sido actualizado correctamente.",
-            });
+        onMutate: async ({ id, status }) => {
+            await queryClient.cancelQueries({ queryKey: ["/api/admin/reports"] });
+            await queryClient.cancelQueries({ queryKey: ["/api/admin/reports/saved"] });
+
+            const prevReports = queryClient.getQueryData<QuestionReport[]>(["/api/admin/reports"]) || [];
+            const prevSavedReports = queryClient.getQueryData<QuestionReport[]>(["/api/admin/reports/saved"]) || [];
+
+            queryClient.setQueryData<QuestionReport[]>(["/api/admin/reports"], (old = []) =>
+                old.map(r => r.id === id ? { ...r, status: status as "pending" | "resolved" } : r)
+            );
+            queryClient.setQueryData<QuestionReport[]>(["/api/admin/reports/saved"], (old = []) =>
+                old.map(r => r.id === id ? { ...r, status: status as "pending" | "resolved" } : r)
+            );
+
+            return { prevReports, prevSavedReports };
         },
-        onError: () => {
+        onError: (_err, _vars, context) => {
+            if (context) {
+                queryClient.setQueryData(["/api/admin/reports"], context.prevReports);
+                queryClient.setQueryData(["/api/admin/reports/saved"], context.prevSavedReports);
+            }
             toast({
                 title: "Error",
                 description: "No se pudo actualizar el estado.",
                 variant: "destructive",
             });
+        },
+        onSuccess: () => {
+            toast({
+                title: "Estado actualizado",
+                description: "El reporte ha sido actualizado correctamente.",
+            });
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports/saved"] });
         },
     });
 
@@ -264,25 +310,58 @@ export default function AdminReports() {
             if (!res.ok) throw new Error("No se pudo resolver el reporte");
             return res.json();
         },
-        onSuccess: (_data, variables) => {
-            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
-            if (selectedReportId) {
-                queryClient.invalidateQueries({ queryKey: ["/api/admin/reports", selectedReportId, "details"] });
+        onMutate: async ({ id }) => {
+            await queryClient.cancelQueries({ queryKey: ["/api/admin/reports"] });
+            await queryClient.cancelQueries({ queryKey: ["/api/admin/reports/saved"] });
+
+            const prevReports = queryClient.getQueryData<QuestionReport[]>(["/api/admin/reports"]) || [];
+            const prevSavedReports = queryClient.getQueryData<QuestionReport[]>(["/api/admin/reports/saved"]) || [];
+            const prevDetails = queryClient.getQueryData<ReportDetails>(["/api/admin/reports", id, "details"]);
+
+            queryClient.setQueryData<QuestionReport[]>(["/api/admin/reports"], (old = []) =>
+                old.map(r => r.id === id ? { ...r, status: "resolved" as const } : r)
+            );
+            queryClient.setQueryData<QuestionReport[]>(["/api/admin/reports/saved"], (old = []) =>
+                old.map(r => r.id === id ? { ...r, status: "resolved" as const } : r)
+            );
+            if (prevDetails && prevDetails.id === id) {
+                queryClient.setQueryData<ReportDetails>(["/api/admin/reports", id, "details"], {
+                    ...prevDetails,
+                    status: "resolved",
+                });
             }
+
+            return { prevReports, prevSavedReports, prevDetails };
+        },
+        onError: (error: Error, { id }, context) => {
+            if (context) {
+                queryClient.setQueryData(["/api/admin/reports"], context.prevReports);
+                queryClient.setQueryData(["/api/admin/reports/saved"], context.prevSavedReports);
+                if (context.prevDetails) {
+                    queryClient.setQueryData(["/api/admin/reports", id, "details"], context.prevDetails);
+                }
+            }
+            toast({
+                title: "Error",
+                description: error.message,
+                variant: "destructive",
+            });
+        },
+        onSuccess: (_data, variables) => {
             toast({
                 title: "Reporte resuelto",
                 description: variables.credits > 0
                     ? `El reporte ha sido marcado como resuelto y se otorgaron ${variables.credits} crédito${variables.credits > 1 ? 's' : ''} al usuario.`
                     : "El reporte ha sido marcado como resuelto (0 créditos).",
             });
-            handleCloseDialog();
+            if (selectedReportId === variables.id) {
+                handleCloseDialog();
+            }
         },
-        onError: (error: Error) => {
-            toast({
-                title: "Error",
-                description: error.message,
-                variant: "destructive",
-            });
+        onSettled: (_data, _err, { id }) => {
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports/saved"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports", id, "details"] });
         },
     });
 
@@ -298,6 +377,7 @@ export default function AdminReports() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["/api/admin/reports", selectedReportId, "details"] });
             setIsEditing(false);
+            setHasUnsavedChanges(false);
             toast({
                 title: "Pregunta actualizada",
                 description: "Los cambios se han guardado correctamente.",
@@ -316,20 +396,146 @@ export default function AdminReports() {
         mutationFn: async (id: number) => {
             await apiRequest("DELETE", `/api/admin/reports/${id}`);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
-            toast({
-                title: "Reporte eliminado",
-                description: "El reporte ha sido eliminado permanentemente.",
-            });
-            handleCloseDialog();
+        onMutate: async (id: number) => {
+            await queryClient.cancelQueries({ queryKey: ["/api/admin/reports"] });
+            await queryClient.cancelQueries({ queryKey: ["/api/admin/reports/saved"] });
+
+            const prevReports = queryClient.getQueryData<QuestionReport[]>(["/api/admin/reports"]) || [];
+            const prevSavedReports = queryClient.getQueryData<QuestionReport[]>(["/api/admin/reports/saved"]) || [];
+
+            // Remove optimistically from both caches
+            queryClient.setQueryData<QuestionReport[]>(["/api/admin/reports"], (old = []) =>
+                old.filter(r => r.id !== id)
+            );
+            queryClient.setQueryData<QuestionReport[]>(["/api/admin/reports/saved"], (old = []) =>
+                old.filter(r => r.id !== id)
+            );
+
+            if (selectedReportId === id) {
+                handleCloseDialog();
+            }
+
+            return { prevReports, prevSavedReports };
         },
-        onError: () => {
+        onError: (_err, _id, context) => {
+            if (context) {
+                queryClient.setQueryData(["/api/admin/reports"], context.prevReports);
+                queryClient.setQueryData(["/api/admin/reports/saved"], context.prevSavedReports);
+            }
             toast({
                 title: "Error",
                 description: "No se pudo eliminar el reporte.",
                 variant: "destructive",
             });
+        },
+        onSuccess: () => {
+            toast({
+                title: "Reporte eliminado",
+                description: "El reporte ha sido eliminado definitivamente.",
+            });
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports/saved"] });
+        },
+    });
+
+    const saveReportMutation = useMutation({
+        mutationFn: async ({ id, isSaved }: { id: number; isSaved: boolean }) => {
+            const res = await apiRequest("PATCH", `/api/admin/reports/${id}/save`, { isSaved });
+            return res.json();
+        },
+        onMutate: async ({ id, isSaved }) => {
+            await queryClient.cancelQueries({ queryKey: ["/api/admin/reports"] });
+            await queryClient.cancelQueries({ queryKey: ["/api/admin/reports/saved"] });
+
+            const prevReports = queryClient.getQueryData<QuestionReport[]>(["/api/admin/reports"]) || [];
+            const prevSavedReports = queryClient.getQueryData<QuestionReport[]>(["/api/admin/reports/saved"]) || [];
+            const prevDetails = queryClient.getQueryData<ReportDetails>(["/api/admin/reports", id, "details"]);
+
+            // Find target report from caches
+            const targetReport =
+                prevReports.find(r => r.id === id) ||
+                prevSavedReports.find(r => r.id === id) ||
+                (prevDetails ? {
+                    id: prevDetails.id,
+                    quizId: prevDetails.quizId,
+                    questionId: prevDetails.questionId,
+                    userId: prevDetails.userId,
+                    description: prevDetails.description,
+                    status: prevDetails.status,
+                    isSaved: prevDetails.isSaved,
+                    createdAt: prevDetails.createdAt,
+                } as QuestionReport : null);
+
+            if (isSaved) {
+                // Moving from main list -> saved list
+                queryClient.setQueryData<QuestionReport[]>(["/api/admin/reports"], (old = []) =>
+                    old.filter(r => r.id !== id)
+                );
+                if (targetReport) {
+                    const savedItem = { ...targetReport, isSaved: true };
+                    queryClient.setQueryData<QuestionReport[]>(["/api/admin/reports/saved"], (old = []) => [
+                        savedItem,
+                        ...old.filter(r => r.id !== id)
+                    ]);
+                }
+            } else {
+                // Moving from saved list -> main list
+                queryClient.setQueryData<QuestionReport[]>(["/api/admin/reports/saved"], (old = []) =>
+                    old.filter(r => r.id !== id)
+                );
+                if (targetReport) {
+                    const restoredItem = { ...targetReport, isSaved: false };
+                    queryClient.setQueryData<QuestionReport[]>(["/api/admin/reports"], (old = []) => {
+                        const withoutCurrent = old.filter(r => r.id !== id);
+                        const newTime = new Date(restoredItem.createdAt).getTime();
+                        const insertIndex = withoutCurrent.findIndex(r => new Date(r.createdAt).getTime() < newTime);
+                        if (insertIndex === -1) {
+                            return [...withoutCurrent, restoredItem];
+                        }
+                        const copy = [...withoutCurrent];
+                        copy.splice(insertIndex, 0, restoredItem);
+                        return copy;
+                    });
+                }
+            }
+
+            if (prevDetails && prevDetails.id === id) {
+                queryClient.setQueryData<ReportDetails>(["/api/admin/reports", id, "details"], {
+                    ...prevDetails,
+                    isSaved,
+                });
+            }
+
+            return { prevReports, prevSavedReports, prevDetails };
+        },
+        onError: (_err, { id }, context) => {
+            if (context) {
+                queryClient.setQueryData(["/api/admin/reports"], context.prevReports);
+                queryClient.setQueryData(["/api/admin/reports/saved"], context.prevSavedReports);
+                if (context.prevDetails) {
+                    queryClient.setQueryData(["/api/admin/reports", id, "details"], context.prevDetails);
+                }
+            }
+            toast({
+                title: "Error",
+                description: "No se pudo actualizar el estado de guardado.",
+                variant: "destructive"
+            });
+        },
+        onSuccess: (_data, { isSaved }) => {
+            toast({
+                title: isSaved ? "📌 Reporte guardado" : "Reporte regresado",
+                description: isSaved
+                    ? "El reporte se movió a Reportes Guardados."
+                    : "El reporte regresó a la lista general.",
+            });
+        },
+        onSettled: (_data, _err, { id }) => {
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports/saved"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/reports", id, "details"] });
         },
     });
 
@@ -337,6 +543,15 @@ export default function AdminReports() {
         setSelectedReportId(null);
         setAiResponse(null);
         setIsEditing(false);
+        setHasUnsavedChanges(false);
+        if (openedFromSaved) {
+            setOpenedFromSaved(false);
+            setShowSavedView(true);
+        }
+    };
+
+    const handleCloseDialogWithConfirm = () => {
+        confirmIfUnsaved(handleCloseDialog);
     };
 
     const startEditing = () => {
@@ -344,6 +559,7 @@ export default function AdminReports() {
         setEditedQuestion(reportDetails.question.content);
         setEditedImageUrl(reportDetails.question.imageUrl || "");
         setEditedAnswers(reportDetails.question.answers.map(a => ({ ...a })));
+        setHasUnsavedChanges(false);
         setIsEditing(true);
     };
 
@@ -383,14 +599,17 @@ export default function AdminReports() {
 
     const addAnswer = () => {
         setEditedAnswers([...editedAnswers, { id: Date.now() * -1, content: "", isCorrect: false }]);
+        setHasUnsavedChanges(true);
     };
 
     const removeAnswer = (id: number) => {
         setEditedAnswers(editedAnswers.filter(a => a.id !== id));
+        setHasUnsavedChanges(true);
     };
 
     const updateAnswer = (id: number, field: string, value: any) => {
         setEditedAnswers(editedAnswers.map(a => a.id === id ? { ...a, [field]: value } : a));
+        setHasUnsavedChanges(true);
     };
 
     if (isLoading) {
@@ -401,17 +620,36 @@ export default function AdminReports() {
         );
     }
 
+    const activeReports = (reports || []).filter(r => !r.isSaved);
+    const pendingCount = activeReports.filter((r) => r.status === "pending").length;
+    const savedCount = savedReports?.length || 0;
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 p-8">
             <div className="max-w-7xl mx-auto">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-slate-100 flex items-center gap-2">
-                        Reportes de Errores
-                        <Badge variant="secondary" className="ml-2 bg-slate-800 text-slate-300 hover:bg-slate-700">
-                            {reports?.filter((r) => r.status === "pending").length} Pendientes
-                        </Badge>
-                    </h1>
-                    <p className="text-slate-400">Gestiona los reportes de errores enviados por los usuarios.</p>
+                <div className="mb-8 flex items-start justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-100 flex items-center gap-2">
+                            Reportes de Errores
+                            <Badge variant="secondary" className="ml-2 bg-slate-800 text-slate-300 hover:bg-slate-700">
+                                {pendingCount} Pendiente{pendingCount !== 1 ? "s" : ""}
+                            </Badge>
+                        </h1>
+                        <p className="text-slate-400">Gestiona los reportes de errores enviados por los usuarios.</p>
+                    </div>
+                    <Button
+                        variant="outline"
+                        onClick={() => setShowSavedView(true)}
+                        className="shrink-0 bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20 hover:text-amber-300 flex items-center gap-2"
+                    >
+                        <Bookmark className="h-4 w-4" />
+                        Reportes Guardados
+                        {savedCount > 0 && (
+                            <Badge className="ml-1 bg-amber-500/30 text-amber-300 border-amber-500/30 text-xs px-1.5">
+                                {savedCount}
+                            </Badge>
+                        )}
+                    </Button>
                 </div>
 
                 <Card className="bg-slate-900 border border-white/10 shadow-xl">
@@ -438,14 +676,31 @@ export default function AdminReports() {
                                                 Error al cargar reportes: {(error as Error).message}
                                             </TableCell>
                                         </TableRow>
-                                    ) : reports?.length === 0 ? (
+                                    ) : activeReports.length === 0 ? (
                                         <TableRow className="border-white/5 hover:bg-transparent">
-                                            <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                                                No hay reportes de errores.
+                                            <TableCell colSpan={6} className="text-center py-12">
+                                                <div className="flex flex-col items-center justify-center text-slate-500 gap-2">
+                                                    <CheckCircle className="h-8 w-8 text-green-500/50" />
+                                                    <p className="font-medium text-slate-400">No hay reportes en la lista general</p>
+                                                    {savedCount > 0 ? (
+                                                        <p className="text-xs text-slate-500">
+                                                            Tienes {savedCount} reporte{savedCount > 1 ? "s" : ""} en{" "}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setShowSavedView(true)}
+                                                                className="text-amber-400 hover:underline inline-flex items-center gap-1 font-medium"
+                                                            >
+                                                                Reportes Guardados <Bookmark className="h-3 w-3 inline" />
+                                                            </button>
+                                                        </p>
+                                                    ) : (
+                                                        <p className="text-xs text-slate-600">¡Todo está al día!</p>
+                                                    )}
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        reports?.map((report) => (
+                                        activeReports.map((report) => (
                                             <TableRow key={report.id} className="border-white/5 hover:bg-white/5 transition-colors">
                                                 <TableCell className="text-slate-400">
                                                     {format(new Date(report.createdAt), "dd MMM yyyy HH:mm", { locale: es })}
@@ -468,7 +723,10 @@ export default function AdminReports() {
                                                         <Button
                                                             size="sm"
                                                             variant="secondary"
-                                                            onClick={() => setSelectedReportId(report.id)}
+                                                            onClick={() => {
+                                                                setOpenedFromSaved(false);
+                                                                setSelectedReportId(report.id);
+                                                            }}
                                                             className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700"
                                                         >
                                                             <Eye className="h-4 w-4 mr-1" />
@@ -484,19 +742,24 @@ export default function AdminReports() {
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
+                                                            title="Eliminar permanentemente"
                                                             onClick={() => {
                                                                 if (window.confirm("¿Deseas eliminar permanentemente este reporte?")) {
                                                                     deleteReportMutation.mutate(report.id);
                                                                 }
                                                             }}
-                                                            disabled={deleteReportMutation.isPending}
                                                             className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20 hover:text-red-300"
                                                         >
-                                                            {deleteReportMutation.isPending ? (
-                                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                            ) : (
-                                                                <Trash2 className="h-4 w-4" />
-                                                            )}
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            title="Guardar reporte (mover a guardados)"
+                                                            onClick={() => saveReportMutation.mutate({ id: report.id, isSaved: true })}
+                                                            className="bg-slate-800/50 text-slate-400 hover:bg-amber-500/15 border-slate-700 hover:text-amber-400 hover:border-amber-500/30 transition-colors"
+                                                        >
+                                                            <Bookmark className="h-4 w-4" />
                                                         </Button>
                                                     </div>
                                                 </TableCell>
@@ -509,7 +772,7 @@ export default function AdminReports() {
                     </CardContent>
                 </Card>
 
-                <Dialog open={!!selectedReportId} onOpenChange={(open) => !open && handleCloseDialog()}>
+                <Dialog open={!!selectedReportId} onOpenChange={(open) => !open && handleCloseDialogWithConfirm()}>
                     <DialogContent className="max-w-3xl max-h-[90vh] bg-slate-900 border border-white/10 text-slate-200">
                         <DialogHeader>
                             <div className="flex justify-between items-start">
@@ -524,26 +787,40 @@ export default function AdminReports() {
                                         <ResolveDropdown
                                             reportId={selectedReportId!}
                                             isPending={resolveAndRewardMutation.isPending}
-                                            onResolve={(id, credits) => resolveAndRewardMutation.mutate({ id, credits })}
+                                            onResolve={(id, credits) => confirmIfUnsaved(() => resolveAndRewardMutation.mutate({ id, credits }))}
                                         />
                                     )}
                                     <Button
                                         size="sm"
                                         variant="outline"
+                                        title="Eliminar permanentemente"
                                         onClick={() => {
                                             if (window.confirm("¿Deseas eliminar permanentemente este reporte?")) {
                                                 deleteReportMutation.mutate(selectedReportId!);
                                             }
                                         }}
-                                        disabled={deleteReportMutation.isPending}
                                         className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20 hover:text-red-300"
                                     >
-                                        {deleteReportMutation.isPending ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Trash2 className="h-4 w-4" />
-                                        )}
+                                        <Trash2 className="h-4 w-4" />
                                     </Button>
+                                    {reportDetails && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            title={reportDetails.isSaved ? "Quitar de guardados (regresar a lista general)" : "Guardar reporte (mover a guardados)"}
+                                            onClick={() => saveReportMutation.mutate({ id: selectedReportId!, isSaved: !reportDetails.isSaved })}
+                                            className={reportDetails.isSaved
+                                                ? "bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border-amber-500/30 hover:text-amber-300"
+                                                : "bg-slate-800/50 text-slate-400 hover:bg-amber-500/10 border-slate-700 hover:text-amber-400 hover:border-amber-500/30"
+                                            }
+                                        >
+                                            {reportDetails.isSaved ? (
+                                                <BookmarkCheck className="h-4 w-4" />
+                                            ) : (
+                                                <Bookmark className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </DialogHeader>
@@ -597,7 +874,7 @@ export default function AdminReports() {
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
-                                                    className="h-8 bg-slate-800 text-blue-400 border-blue-500/20 hover:bg-blue-500/10"
+                                                    className="h-8 bg-slate-800 text-blue-400 border-blue-500/20 hover:bg-blue-500/20 hover:text-blue-200 hover:border-blue-400/40"
                                                     onClick={startEditing}
                                                 >
                                                     <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
@@ -606,9 +883,9 @@ export default function AdminReports() {
                                                 <div className="flex gap-2">
                                                     <Button
                                                         size="sm"
-                                                        variant="ghost"
-                                                        className="h-8 text-slate-400 hover:text-white"
-                                                        onClick={() => setIsEditing(false)}
+                                                        variant="outline"
+                                                        className="h-8 bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white"
+                                                        onClick={() => confirmIfUnsaved(() => { setIsEditing(false); setHasUnsavedChanges(false); })}
                                                     >
                                                         <X className="h-3.5 w-3.5 mr-1" /> Cancelar
                                                     </Button>
@@ -635,7 +912,7 @@ export default function AdminReports() {
                                                     <Label className="text-slate-400 text-xs">Contenido de la pregunta</Label>
                                                     <Textarea
                                                         value={editedQuestion}
-                                                        onChange={(e) => setEditedQuestion(e.target.value)}
+                                                        onChange={(e) => { setEditedQuestion(e.target.value); setHasUnsavedChanges(true); }}
                                                         className="bg-slate-950 border-slate-700 text-slate-200 min-h-[100px]"
                                                         placeholder="Escribe el enunciado de la pregunta..."
                                                     />
@@ -645,7 +922,7 @@ export default function AdminReports() {
                                                     <Label className="text-slate-400 text-xs">URL de la imagen (opcional)</Label>
                                                     <Input
                                                         value={editedImageUrl}
-                                                        onChange={(e) => setEditedImageUrl(e.target.value)}
+                                                        onChange={(e) => { setEditedImageUrl(e.target.value); setHasUnsavedChanges(true); }}
                                                         className="bg-slate-950 border-slate-700 text-slate-200"
                                                         placeholder="https://ejemplo.com/imagen.png"
                                                     />
@@ -763,6 +1040,107 @@ export default function AdminReports() {
                                 No se encontraron detalles para este reporte.
                             </div>
                         )}
+                    </DialogContent>
+                </Dialog>
+
+                {/* Saved Reports Dialog */}
+                <Dialog open={showSavedView} onOpenChange={setShowSavedView}>
+                    <DialogContent className="max-w-4xl max-h-[85vh] bg-slate-900 border border-white/10 text-slate-200">
+                        <DialogHeader>
+                            <DialogTitle className="text-slate-100 flex items-center gap-2">
+                                <Bookmark className="h-5 w-5 text-amber-400" />
+                                Reportes Guardados
+                                {savedCount > 0 && (
+                                    <Badge className="ml-1 bg-amber-500/20 text-amber-300 border-amber-500/30">
+                                        {savedCount}
+                                    </Badge>
+                                )}
+                            </DialogTitle>
+                            <DialogDescription className="text-slate-400">
+                                Reportes que guardaste para socializar o revisar más adelante. Elimínalos cuando ya no los necesites.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <ScrollArea className="h-[60vh] pr-2">
+                            {isLoadingSaved ? (
+                                <div className="flex justify-center p-12">
+                                    <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
+                                </div>
+                            ) : !savedReports || savedReports.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center p-12 text-slate-500 gap-3">
+                                    <Archive className="h-12 w-12 opacity-30" />
+                                    <p className="text-sm">No tienes reportes guardados todavía.</p>
+                                    <p className="text-xs text-slate-600">Usa el botón <Bookmark className="inline h-3 w-3" /> en la lista general para guardar reportes.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3 py-2">
+                                    {savedReports.map((report) => (
+                                        <div
+                                            key={report.id}
+                                            className="p-4 bg-slate-950/60 rounded-lg border border-amber-500/10 hover:border-amber-500/20 transition-colors"
+                                        >
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                        <span className="text-xs text-slate-500">
+                                                            {format(new Date(report.createdAt), "dd MMM yyyy HH:mm", { locale: es })}
+                                                        </span>
+                                                        <Badge className="text-xs px-1.5 bg-slate-800 text-slate-400 border-slate-700">
+                                                            Quiz {report.quizId} · Preg. {report.questionId}
+                                                        </Badge>
+                                                        <Badge
+                                                            className={report.status === "resolved"
+                                                                ? "text-xs px-1.5 bg-green-500/15 text-green-400 border-green-500/20"
+                                                                : "text-xs px-1.5 bg-red-500/15 text-red-400 border-red-500/20"
+                                                            }
+                                                        >
+                                                            {report.status === "resolved" ? "Resuelto" : "Pendiente"}
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-slate-300 text-sm line-clamp-2">{report.description}</p>
+                                                </div>
+                                                <div className="flex gap-2 shrink-0">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setOpenedFromSaved(true);
+                                                            setShowSavedView(false);
+                                                            setSelectedReportId(report.id);
+                                                        }}
+                                                        className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700"
+                                                    >
+                                                        <Eye className="h-4 w-4 mr-1" /> Ver Detalles
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        title="Quitar de guardados (regresar a lista general)"
+                                                        onClick={() => saveReportMutation.mutate({ id: report.id, isSaved: false })}
+                                                        className="bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border-amber-500/20 hover:text-amber-300 transition-colors"
+                                                    >
+                                                        <BookmarkX className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        title="Eliminar definitivamente"
+                                                        onClick={() => {
+                                                            if (window.confirm("¿Deseas eliminar este reporte definitivamente? Esta acción no se puede deshacer.")) {
+                                                                deleteReportMutation.mutate(report.id);
+                                                            }
+                                                        }}
+                                                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20 hover:text-red-300"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </ScrollArea>
                     </DialogContent>
                 </Dialog>
             </div>

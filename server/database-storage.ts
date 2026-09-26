@@ -20,7 +20,7 @@ import {
 } from "../shared/schema.js";
 
 import { db, DbClient } from "./db.js";
-import { eq, and, desc, asc, inArray, sql, ilike, or, isNotNull, gte, lt, gt } from "drizzle-orm";
+import { eq, and, desc, asc, inArray, sql, ilike, or, isNotNull, isNull, gte, lt, gt } from "drizzle-orm";
 import { IStorage } from "./storage.js";
 import { userQuizzes } from "../shared/schema.js";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -1103,7 +1103,7 @@ export class DatabaseStorage implements IStorage {
   async countPendingReports() {
     const result = await this.db.select({ count: sql`count(*)` })
       .from(questionReports)
-      .where(eq(questionReports.status, 'pending'));
+      .where(and(eq(questionReports.status, 'pending'), or(eq(questionReports.isSaved, false), isNull(questionReports.isSaved))));
     return Number(result[0].count);
   }
 
@@ -1656,7 +1656,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getQuestionReports(): Promise<QuestionReport[]> {
-    return await this.db.select().from(questionReports).orderBy(desc(questionReports.createdAt));
+    return await this.db
+      .select()
+      .from(questionReports)
+      .where(or(eq(questionReports.isSaved, false), isNull(questionReports.isSaved)))
+      .orderBy(desc(questionReports.createdAt));
   }
 
   async getUserReports(userId: number): Promise<any[]> {
@@ -1739,6 +1743,23 @@ export class DatabaseStorage implements IStorage {
     });
 
     return report;
+  }
+
+  async toggleSaveReport(id: number, isSaved: boolean): Promise<QuestionReport> {
+    const result = await this.db
+      .update(questionReports)
+      .set({ isSaved })
+      .where(eq(questionReports.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getSavedReports(): Promise<QuestionReport[]> {
+    return await this.db
+      .select()
+      .from(questionReports)
+      .where(eq(questionReports.isSaved, true))
+      .orderBy(desc(questionReports.createdAt));
   }
 
 

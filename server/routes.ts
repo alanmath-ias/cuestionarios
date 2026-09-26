@@ -5325,6 +5325,32 @@ Ejemplo de formato:
     }
   });
 
+  // Toggle report saved status
+  apiRouter.patch("/admin/reports/:id/save", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (req.user?.role !== "admin") return res.status(403).send("No autorizado");
+      const reportId = parseInt(req.params.id);
+      const { isSaved } = req.body;
+      const updated = await storage.toggleSaveReport(reportId, isSaved);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error saving report:", error);
+      res.status(500).send("Error al guardar el reporte");
+    }
+  });
+
+  // Get all saved reports
+  apiRouter.get("/admin/reports/saved", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (req.user?.role !== "admin") return res.status(403).send("No autorizado");
+      const reports = await storage.getSavedReports();
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching saved reports:", error);
+      res.status(500).send("Error al obtener reportes guardados");
+    }
+  });
+
   apiRouter.post("/admin/reports/:id/resolve", requireAuth, async (req: Request, res: Response) => {
     try {
       if (req.user?.role !== "admin") return res.status(403).send("No autorizado");

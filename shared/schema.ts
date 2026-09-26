@@ -336,6 +336,7 @@ export const questionReports = pgTable("question_reports", {
 	userId: integer("user_id").notNull(),
 	description: text().notNull(),
 	status: text().default("pending").notNull(),
+	isSaved: boolean("is_saved").default(false).notNull(),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

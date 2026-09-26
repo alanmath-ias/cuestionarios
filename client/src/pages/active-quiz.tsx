@@ -310,14 +310,32 @@ const ActiveQuiz = () => {
   const [hideAnswersMode, setHideAnswersMode] = useState<boolean>(() => {
     return localStorage.getItem("quiz_hide_answers_mode") === "true";
   });
+  const [isRevealedForCurrentQuestion, setIsRevealedForCurrentQuestion] = useState(false);
+
+  // Al avanzar o retroceder de pregunta, si está en Modo Clase, vuelve a ocultar automáticamente
+  useEffect(() => {
+    setIsRevealedForCurrentQuestion(false);
+  }, [currentQuestionIndex]);
 
   const toggleHideAnswersMode = () => {
     setHideAnswersMode(prev => {
       const next = !prev;
       localStorage.setItem("quiz_hide_answers_mode", String(next));
+      setIsRevealedForCurrentQuestion(false);
+      toast({
+        title: next ? "Modo Clase Activado" : "Modo Clase Desactivado",
+        description: next
+          ? "Las respuestas se ocultarán automáticamente al cambiar de pregunta. Presiona 'C' para revelar."
+          : "Las respuestas volverán a mostrarse normalmente.",
+      });
       return next;
     });
   };
+
+  const toggleRevealCurrentQuestion = () => {
+    setIsRevealedForCurrentQuestion(prev => !prev);
+  };
+
   const { session, loading: sessionLoading } = useSession();
   const [isHintDialogOpen, setIsHintDialogOpen] = useState(false);
   const [hintsRevealed, setHintsRevealed] = useState<Record<number, string[]>>({});
@@ -407,6 +425,74 @@ const ActiveQuiz = () => {
   const canCopyRawContent = isAdmin || session?.userId === 2;
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [copiedAI, setCopiedAI] = useState(false);
+
+  // Atajo de teclado para alternar Modo Clase / Revelar respuestas
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target && (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable ||
+          target.getAttribute('role') === 'textbox'
+        )
+      ) {
+        return;
+      }
+
+      if (
+        isHintDialogOpen ||
+        isIncompleteDialogOpen ||
+        isTheoryOpen ||
+        showExplanation ||
+        showPremiumModal ||
+        isReportDialogOpen ||
+        isEditing ||
+        isEditingQuizMeta
+      ) {
+        return;
+      }
+
+      if (e.key === 'c' || e.key === 'C') {
+        if (e.shiftKey) {
+          // Shift + C: Activar/desactivar Modo Clase de forma global
+          e.preventDefault();
+          toggleHideAnswersMode();
+        } else {
+          // Tecla C sola:
+          e.preventDefault();
+          if (!hideAnswersMode) {
+            // Si estaba apagado, encender el Modo Clase
+            setHideAnswersMode(true);
+            localStorage.setItem("quiz_hide_answers_mode", "true");
+            setIsRevealedForCurrentQuestion(false);
+            toast({
+              title: "Modo Clase Activado",
+              description: "Las respuestas se ocultarán automáticamente. Presiona 'C' para mostrar/ocultar en esta pregunta.",
+            });
+          } else {
+            // Si ya estaba encendido, alternar entre mostrar u ocultar en la pregunta actual
+            toggleRevealCurrentQuestion();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    hideAnswersMode,
+    isHintDialogOpen,
+    isIncompleteDialogOpen,
+    isTheoryOpen,
+    showExplanation,
+    showPremiumModal,
+    isReportDialogOpen,
+    isEditing,
+    isEditingQuizMeta,
+    toast
+  ]);
 
   const handleCopyAllForAI = async () => {
     if (!quiz || !questions || questions.length === 0) {
@@ -1853,19 +1939,21 @@ const ActiveQuiz = () => {
                   ? "bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.25)]"
                   : "bg-slate-800/80 text-slate-400 border border-white/10 hover:text-white hover:bg-slate-700"
               )}
-              title={hideAnswersMode ? "Modo Clase Activo: Las respuestas están ocultas" : "Activar Modo Clase para ocultar las opciones de respuesta"}
+              title={hideAnswersMode ? "Modo Clase Activo (Respuestas ocultas al cambiar de pregunta). Clic o Shift+C para apagar" : "Activar Modo Clase para ocultar opciones (Presiona C)"}
             >
               {hideAnswersMode ? (
                 <>
                   <EyeOff className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                  <span className="hidden sm:inline">Modo Clase (Oculto)</span>
-                  <span className="sm:hidden">Oculto</span>
+                  <span className="hidden sm:inline">Modo Clase</span>
+                  <span className="sm:hidden">Clase</span>
+                  <kbd className="hidden md:inline-block px-1 py-0.5 bg-black/40 text-[10px] rounded text-amber-300 border border-amber-500/30 leading-none font-mono">C</kbd>
                 </>
               ) : (
                 <>
                   <Eye className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Modo Clase</span>
                   <span className="sm:hidden">Clase</span>
+                  <kbd className="hidden md:inline-block px-1 py-0.5 bg-black/30 text-[10px] rounded text-slate-400 border border-white/10 leading-none font-mono">C</kbd>
                 </>
               )}
             </Button>
@@ -2032,15 +2120,15 @@ const ActiveQuiz = () => {
                 {isAdmin && (
                   <div className={cn(
                     "mb-6 p-4 bg-green-900/20 border border-green-500/30 rounded-xl text-green-300 text-sm flex items-start gap-3 transition-all duration-300",
-                    hideAnswersMode && !answeredQuestions[currentQuestionIndex] && "filter blur-md select-none opacity-30 hover:filter-none hover:opacity-100 cursor-pointer"
+                    hideAnswersMode && !answeredQuestions[currentQuestionIndex] && !isRevealedForCurrentQuestion && "filter blur-md select-none opacity-30 hover:filter-none hover:opacity-100 cursor-pointer"
                   )}>
                     <CheckCircle2 className="h-5 w-5 shrink-0 text-green-400" />
                     <div className="w-full">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-bold block text-green-400">Respuesta Correcta (Solo Admin):</span>
-                        {hideAnswersMode && !answeredQuestions[currentQuestionIndex] && (
+                        {hideAnswersMode && !answeredQuestions[currentQuestionIndex] && !isRevealedForCurrentQuestion && (
                           <span className="text-[10px] text-amber-400/90 font-medium italic bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 select-none">
-                            🙈 Oculta por Modo Clase (Pasa el cursor)
+                            🙈 Oculta por Modo Clase (Pasa el cursor o presiona C)
                           </span>
                         )}
                       </div>
@@ -2162,21 +2250,53 @@ const ActiveQuiz = () => {
                 <div className="space-y-3">
                   {hideAnswersMode && !answeredQuestions[currentQuestionIndex] && (
                     <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-amber-300 text-xs sm:text-sm animate-in fade-in duration-300 shadow-lg">
-                      <div className="flex items-center gap-2">
-                        <EyeOff className="h-4 w-4 shrink-0 text-amber-400 animate-pulse" />
-                        <span>
-                          <strong>Modo Clase Activo:</strong> Respuestas difuminadas para obligar al trabajo independiente. Pasa el cursor sobre una opción o haz clic en <strong>Mostrar</strong>.
+                      <div className="flex items-center gap-2 min-w-0">
+                        {isRevealedForCurrentQuestion ? (
+                          <Eye className="h-4 w-4 shrink-0 text-amber-400" />
+                        ) : (
+                          <EyeOff className="h-4 w-4 shrink-0 text-amber-400 animate-pulse" />
+                        )}
+                        <span className="truncate sm:overflow-visible sm:whitespace-normal">
+                          {isRevealedForCurrentQuestion ? (
+                            <>
+                              <strong>Modo Clase:</strong> Respuestas reveladas para responder.{" "}
+                              <span className="opacity-80 text-xs hidden sm:inline">
+                                (Se ocultarán en la sig. pregunta o con tecla <kbd className="px-1.5 py-0.5 bg-black/40 rounded border border-amber-500/30 font-mono text-[10px] text-amber-200">C</kbd>)
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <strong>Modo Clase Activo:</strong> Respuestas difuminadas para trabajo independiente.{" "}
+                              <span className="opacity-80 text-xs hidden sm:inline">
+                                (Presiona <kbd className="px-1.5 py-0.5 bg-black/40 rounded border border-amber-500/30 font-mono text-[10px] text-amber-200">C</kbd> para revelar)
+                              </span>
+                            </>
+                          )}
                         </span>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={toggleHideAnswersMode}
-                        className="h-7 px-3 text-xs text-amber-300 hover:bg-amber-500/20 hover:text-amber-100 border border-amber-500/30 shrink-0 font-bold rounded-lg transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5 mr-1" />
-                        Mostrar
-                      </Button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={toggleRevealCurrentQuestion}
+                          className="h-7 px-3 text-xs text-amber-300 hover:bg-amber-500/20 hover:text-amber-100 border border-amber-500/30 shrink-0 font-bold rounded-lg transition-colors flex items-center gap-1.5"
+                          title={isRevealedForCurrentQuestion ? "Ocultar opciones (Tecla C)" : "Mostrar opciones para responder (Tecla C)"}
+                        >
+                          {isRevealedForCurrentQuestion ? (
+                            <>
+                              <EyeOff className="w-3.5 h-3.5" />
+                              <span>Ocultar</span>
+                              <kbd className="hidden sm:inline-block px-1 bg-black/30 rounded text-[10px] text-amber-300 font-mono">C</kbd>
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Mostrar</span>
+                              <kbd className="hidden sm:inline-block px-1 bg-black/30 rounded text-[10px] text-amber-300 font-mono">C</kbd>
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   )}
 
@@ -2185,7 +2305,7 @@ const ActiveQuiz = () => {
                       const hasMathContent = shuffledAnswers.some(a =>
                         a.content && (a.content.includes('¡') || a.content.includes('\\'))
                       );
-                      const isBlurActive = hideAnswersMode && !answeredQuestions[currentQuestionIndex];
+                      const isBlurActive = hideAnswersMode && !answeredQuestions[currentQuestionIndex] && !isRevealedForCurrentQuestion;
 
                       return shuffledAnswers.map((answer, index) => {
                         const existingAnswer = studentAnswers.find(sa =>

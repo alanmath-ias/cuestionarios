@@ -145,6 +145,8 @@ export interface IStorage {
   getQuestionReportDetails(id: number): Promise<any>;
   updateQuestionReportStatus(id: number, status: string): Promise<QuestionReport>;
   rewardAndResolveReport(reportId: number, credits: number): Promise<void>;
+  toggleSaveReport(id: number, isSaved: boolean): Promise<QuestionReport>;
+  getSavedReports(): Promise<QuestionReport[]>;
 
   // Question methods
   updateQuestion(id: number, question: Partial<Question>): Promise<Question>;
@@ -853,6 +855,8 @@ export class MemStorage implements IStorage {
   async getQuestionReportDetails(id: number): Promise<any> { return null; }
   async updateQuestionReportStatus(id: number, status: string): Promise<QuestionReport> { throw new Error("Method not implemented."); }
   async rewardAndResolveReport(reportId: number, credits: number): Promise<void> { throw new Error("Method not implemented."); }
+  async toggleSaveReport(id: number, isSaved: boolean): Promise<QuestionReport> { throw new Error("Method not implemented."); }
+  async getSavedReports(): Promise<QuestionReport[]> { return []; }
 
   // Password Reset
   async createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken> { throw new Error("Method not implemented."); }
