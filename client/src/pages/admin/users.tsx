@@ -16,7 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Trash2, Eye, Search, BookOpen, Coins, LogIn, Gift, Trophy, ChevronRight, MessageCircle, Sparkles } from "lucide-react";
+import { Loader2, ArrowLeft, Trash2, Eye, Search, BookOpen, Coins, LogIn, Gift, Trophy, ChevronRight, MessageCircle, Sparkles, MoreVertical, Crown, Calendar, Zap } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { AwardsDialog } from "@/components/dashboard/AwardsDialog";
 import { motion } from "framer-motion";
@@ -49,6 +49,20 @@ import {
 import { Label } from "@/components/ui/label";
 import { UserProgressDetails } from "@/components/admin/UserProgressDetails";
 import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const TreasureChestIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -56,6 +70,121 @@ const TreasureChestIcon = ({ className = "h-4 w-4" }: { className?: string }) =>
     <path d="M3 11h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9zm9 2a1.5 1.5 0 0 0-1.5 1.5c0 .54.29 1.01.72 1.27v1.46a.78.78 0 0 0 1.56 0v-1.46a1.49 1.49 0 0 0 .72-1.27A1.5 1.5 0 0 0 12 13z"/>
   </svg>
 );
+
+function UserActionsDropdown({
+  user,
+  onManageCategories,
+  onViewChest,
+  onGiveBonus,
+  onSendMessage,
+  onDeleteUser,
+  canDelete,
+}: {
+  user: any;
+  onManageCategories: () => void;
+  onViewChest: () => void;
+  onGiveBonus: () => void;
+  onSendMessage: () => void;
+  onDeleteUser: () => void;
+  canDelete: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setOpen(false);
+    }, 200);
+  };
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          className="text-slate-400 hover:text-white hover:bg-white/10 h-8 w-8"
+          title="Más opciones"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="bg-slate-900 border-white/10 text-slate-200 w-52 shadow-2xl z-50 p-1.5"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <DropdownMenuItem
+          onClick={() => {
+            setOpen(false);
+            onManageCategories();
+          }}
+          className="cursor-pointer flex items-center gap-2.5 px-3 py-2 rounded text-slate-300 hover:text-green-300 hover:bg-green-500/10 focus:bg-green-500/10 focus:text-green-300"
+        >
+          <BookOpen className="h-4 w-4 text-green-400" />
+          <span>Gestionar materias</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => {
+            setOpen(false);
+            onViewChest();
+          }}
+          className="cursor-pointer flex items-center gap-2.5 px-3 py-2 rounded text-slate-300 hover:text-amber-300 hover:bg-amber-500/10 focus:bg-amber-500/10 focus:text-amber-300"
+        >
+          <TreasureChestIcon className="h-4 w-4 text-amber-400" />
+          <span>Ver cofre</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => {
+            setOpen(false);
+            onGiveBonus();
+          }}
+          className="cursor-pointer flex items-center gap-2.5 px-3 py-2 rounded text-slate-300 hover:text-yellow-300 hover:bg-yellow-500/10 focus:bg-yellow-500/10 focus:text-yellow-300"
+        >
+          <Sparkles className="h-4 w-4 text-yellow-400" />
+          <span>Otorgar Bonus</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => {
+            setOpen(false);
+            onSendMessage();
+          }}
+          className="cursor-pointer flex items-center gap-2.5 px-3 py-2 rounded text-slate-300 hover:text-blue-300 hover:bg-blue-500/10 focus:bg-blue-500/10 focus:text-blue-300"
+        >
+          <MessageCircle className="h-4 w-4 text-blue-400" />
+          <span>Mensaje</span>
+        </DropdownMenuItem>
+
+        {canDelete && (
+          <>
+            <DropdownMenuSeparator className="bg-white/10 my-1" />
+            <DropdownMenuItem
+              onClick={() => {
+                setOpen(false);
+                onDeleteUser();
+              }}
+              className="cursor-pointer flex items-center gap-2.5 px-3 py-2 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10 focus:bg-red-500/10 focus:text-red-300"
+            >
+              <Trash2 className="h-4 w-4 text-red-400" />
+              <span>Papelera</span>
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export default function UsersAdmin() {
   const { data: users, isLoading } = useQuery<any[]>({
@@ -152,6 +281,105 @@ export default function UsersAdmin() {
   const [bonusReason, setBonusReason] = useState<string>("");
   const [selectedAwardsCategory, setSelectedAwardsCategory] = useState<any>(null);
   const [creditsAmount, setCreditsAmount] = useState<string>("");
+  const [subscriptionUser, setSubscriptionUser] = useState<any>(null);
+  const [subStatus, setSubStatus] = useState<string>("free");
+  const [subPlan, setSubPlan] = useState<string>("Gratis");
+  const [subEndDate, setSubEndDate] = useState<string>("");
+  const [isUnlimited, setIsUnlimited] = useState<boolean>(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
+
+  const updateSubscriptionMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      subscriptionStatus,
+      subscriptionPlan,
+      subscriptionEndDate,
+    }: {
+      userId: number;
+      subscriptionStatus: string;
+      subscriptionPlan: string;
+      subscriptionEndDate: string | null;
+    }) => {
+      const res = await apiRequest("PATCH", `/api/users/${userId}/subscription`, {
+        subscriptionStatus,
+        subscriptionPlan,
+        subscriptionEndDate,
+      });
+      return res.json();
+    },
+    onSuccess: (updatedUser) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+      toast({
+        title: "Suscripción actualizada 🎉",
+        description: `Se actualizó la suscripción de ${subscriptionUser?.username} a ${updatedUser.subscriptionPlan || (updatedUser.subscriptionStatus === "active" ? "Premium" : "Gratis")}.`,
+      });
+      setSubscriptionUser(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error al actualizar suscripción",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const applyPreset = (preset: 'free' | '1m' | '3m' | '1y' | 'unlimited') => {
+    const now = new Date();
+    if (preset === 'free') {
+      setSubStatus('free');
+      setSubPlan('Gratis');
+      setSubEndDate('');
+      setIsUnlimited(false);
+    } else if (preset === '1m') {
+      setSubStatus('active');
+      setSubPlan('Premium Mensual');
+      const d = new Date(now);
+      d.setMonth(d.getMonth() + 1);
+      setSubEndDate(d.toISOString().split('T')[0]);
+      setIsUnlimited(false);
+    } else if (preset === '3m') {
+      setSubStatus('active');
+      setSubPlan('Premium Trimestral');
+      const d = new Date(now);
+      d.setMonth(d.getMonth() + 3);
+      setSubEndDate(d.toISOString().split('T')[0]);
+      setIsUnlimited(false);
+    } else if (preset === '1y') {
+      setSubStatus('active');
+      setSubPlan('Premium Anual');
+      const d = new Date(now);
+      d.setFullYear(d.getFullYear() + 1);
+      setSubEndDate(d.toISOString().split('T')[0]);
+      setIsUnlimited(false);
+    } else if (preset === 'unlimited') {
+      setSubStatus('active');
+      setSubPlan('Premium Vitalicio');
+      setSubEndDate('');
+      setIsUnlimited(true);
+    }
+  };
+
+  const handleOpenSubscription = (u: any) => {
+    setSubscriptionUser(u);
+    const status = u.subscriptionStatus === 'active' ? 'active' : 'free';
+    setSubStatus(status);
+    setSubPlan(u.subscriptionPlan || (status === 'active' ? 'Premium Mensual' : 'Gratis'));
+    if (u.subscriptionEndDate) {
+      const d = new Date(u.subscriptionEndDate);
+      if (!isNaN(d.getTime())) {
+        setSubEndDate(d.toISOString().split('T')[0]);
+        setIsUnlimited(false);
+      } else {
+        setSubEndDate('');
+        setIsUnlimited(true);
+      }
+    } else {
+      setSubEndDate('');
+      setIsUnlimited(status === 'active');
+    }
+  };
 
   const sendBonusMutation = useMutation({
     mutationFn: async ({ userId, credits, message }: { userId: number; credits: number; message: string }) => {
@@ -277,7 +505,10 @@ export default function UsersAdmin() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-center gap-4">
           <Link href="/admin">
-            <Button variant="ghost" className="text-slate-400 hover:text-white">
+            <Button
+              variant="ghost"
+              className="text-slate-400 hover:text-white hover:bg-slate-800/80 border border-transparent hover:border-white/10 transition-all"
+            >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Volver al Panel
             </Button>
@@ -315,7 +546,7 @@ export default function UsersAdmin() {
                     <TableHead className="w-24 text-center text-slate-400 px-2">Total Reportes</TableHead>
                     <TableHead className="w-28 text-center text-slate-400 px-2">Permiso Reportar</TableHead>
                     <TableHead className="w-24 text-center text-slate-400 px-2">Permiso IA</TableHead>
-                    <TableHead className="w-56 text-right text-slate-400 pr-3">Acciones</TableHead>
+                    <TableHead className="w-44 text-right text-slate-400 pr-3">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -331,6 +562,12 @@ export default function UsersAdmin() {
                       <div>
                         <div className="font-medium text-slate-200 flex items-center gap-2 flex-wrap">
                           <span>{user.username}</span>
+                          {user.subscriptionStatus === "active" && (
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                              <Crown className="w-2.5 h-2.5 text-amber-400" />
+                              {user.subscriptionPlan || "Premium"}
+                            </span>
+                          )}
                           {(user.tourStatus?.completedMaps?.[1] || user.tourStatus?.completedMaps?.['1']) && (
                             <span className="inline-flex items-center gap-1 text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded-full font-black animate-pulse shadow-[0_0_10px_rgba(234,179,8,0.2)]">
                               🏆 Aritmética 100%
@@ -417,13 +654,13 @@ export default function UsersAdmin() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right pr-3 whitespace-nowrap px-2">
-                      <div className="flex items-center justify-end gap-0.5">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => impersonateMutation.mutate(user.id)}
                           title="Iniciar sesión como este usuario"
-                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 h-8 w-8"
                         >
                           <LogIn className="h-4 w-4" />
                         </Button>
@@ -437,45 +674,33 @@ export default function UsersAdmin() {
                             window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
                           }}
                           title="Ver progreso detallado"
-                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 h-8 w-8"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setManagingCategoriesUser(user)}
-                          title="Gestionar materias"
-                          className="text-green-400 hover:text-green-300 hover:bg-green-900/20"
+                          onClick={() => handleOpenSubscription(user)}
+                          title={`Suscripción: ${user.subscriptionStatus === 'active' ? (user.subscriptionPlan || 'Premium') : 'Gratis'} - Clic para ver y cambiar`}
+                          className={`h-8 w-8 transition-colors ${
+                            user.subscriptionStatus === 'active'
+                              ? "text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 hover:text-amber-300 border border-amber-500/30 shadow-[0_0_8px_rgba(245,158,11,0.2)]"
+                              : "text-slate-400 hover:text-amber-400 hover:bg-slate-800"
+                          }`}
                         >
-                          <BookOpen className="h-4 w-4" />
+                          <Crown className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setChestUser(user)}
-                          title="Ver cofre de tesoros"
-                          className="text-amber-400 hover:text-amber-300 hover:bg-amber-900/20"
-                        >
-                          <TreasureChestIcon className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
+                        <UserActionsDropdown
+                          user={user}
+                          onManageCategories={() => setManagingCategoriesUser(user)}
+                          onViewChest={() => setChestUser(user)}
+                          onGiveBonus={() => {
                             setBonusUser(user);
                             setBonusCredits(50);
                             setBonusReason("");
                           }}
-                          title="Otorgar bonus de premio"
-                          className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-900/20"
-                        >
-                          <Sparkles className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
+                          onSendMessage={() => {
                             window.dispatchEvent(new CustomEvent('open-chat', { 
                               detail: { 
                                 friend: {
@@ -487,45 +712,9 @@ export default function UsersAdmin() {
                               } 
                             }));
                           }}
-                          title="Chatear con usuario"
-                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                        </Button>
-                        {user.id !== 1 && user.id !== 2 && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                                disabled={user.role === "admin"}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="bg-slate-900 border-slate-800">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle className="text-white">¿Estás seguro?</AlertDialogTitle>
-                                <AlertDialogDescription className="text-slate-400">
-                                  Esta acción no se puede deshacer. Esto eliminará permanentemente al usuario
-                                  y todos sus datos asociados.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel className="bg-slate-800 text-white hover:bg-slate-700 border-slate-700">
-                                  Cancelar
-                                </AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteUserMutation.mutate(user.id)}
-                                  className="bg-red-600 hover:bg-red-700 text-white"
-                                >
-                                  Eliminar
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
+                          onDeleteUser={() => setUserToDelete(user)}
+                          canDelete={user.id !== 1 && user.id !== 2 && user.role !== "admin"}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -739,6 +928,276 @@ export default function UsersAdmin() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Subscription Management Dialog */}
+        <Dialog open={!!subscriptionUser} onOpenChange={(open) => !open && setSubscriptionUser(null)}>
+          <DialogContent className="bg-slate-950 border border-amber-500/30 text-slate-200 rounded-[2rem] max-w-lg shadow-2xl p-6">
+            <DialogHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                  <Crown className="h-6 w-6" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-bold text-white">
+                    Suscripción de {subscriptionUser?.username}
+                  </DialogTitle>
+                  <DialogDescription className="text-slate-400 text-xs">
+                    {subscriptionUser?.email || "Sin email"} • Rol: {subscriptionUser?.role}
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            {/* Current Status Banner */}
+            <div className="mt-2 p-3.5 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-between">
+              <div>
+                <div className="text-xs text-slate-400 font-medium">Estado Actual:</div>
+                <div className="text-sm font-bold flex items-center gap-2 mt-0.5">
+                  {subscriptionUser?.subscriptionStatus === "active" ? (
+                    <>
+                      <span className="text-amber-400">👑 Premium Activo</span>
+                      <span className="text-xs text-slate-400">({subscriptionUser?.subscriptionPlan || "Estándar"})</span>
+                    </>
+                  ) : (
+                    <span className="text-slate-400">Gratuito (Sin plan activo)</span>
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-slate-400 font-medium">Vencimiento:</div>
+                <div className="text-xs font-semibold text-slate-300 mt-0.5">
+                  {subscriptionUser?.subscriptionStatus === "active"
+                    ? (subscriptionUser?.subscriptionEndDate
+                        ? new Date(subscriptionUser.subscriptionEndDate).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })
+                        : "Permanente (Vitalicio)")
+                    : "—"}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="space-y-2 pt-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Asignar Plan Rápido
+              </Label>
+              <div className="grid grid-cols-5 gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => applyPreset("free")}
+                  className={`text-xs h-9 px-1 border-white/10 ${
+                    subStatus === "free"
+                      ? "bg-slate-700 text-white border-slate-500"
+                      : "bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                >
+                  Gratis
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => applyPreset("1m")}
+                  className={`text-xs h-9 px-1 border-white/10 ${
+                    subStatus === "active" && subPlan === "Premium Mensual"
+                      ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                      : "bg-slate-900/60 text-slate-300 hover:text-white hover:bg-slate-800"
+                  }`}
+                >
+                  1 Mes
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => applyPreset("3m")}
+                  className={`text-xs h-9 px-1 border-white/10 ${
+                    subStatus === "active" && subPlan === "Premium Trimestral"
+                      ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                      : "bg-slate-900/60 text-slate-300 hover:text-white hover:bg-slate-800"
+                  }`}
+                >
+                  3 Meses
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => applyPreset("1y")}
+                  className={`text-xs h-9 px-1 border-white/10 ${
+                    subStatus === "active" && subPlan === "Premium Anual"
+                      ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                      : "bg-slate-900/60 text-slate-300 hover:text-white hover:bg-slate-800"
+                  }`}
+                >
+                  1 Año
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => applyPreset("unlimited")}
+                  className={`text-xs h-9 px-1 border-white/10 ${
+                    subStatus === "active" && subPlan === "Premium Vitalicio"
+                      ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                      : "bg-slate-900/60 text-amber-400 hover:text-amber-300 hover:bg-slate-800"
+                  }`}
+                >
+                  👑 Vitalicio
+                </Button>
+              </div>
+            </div>
+
+            {/* Detailed Controls */}
+            <div className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="sub-status" className="text-xs text-slate-400">Estado</Label>
+                  <Select
+                    value={subStatus}
+                    onValueChange={(val) => {
+                      setSubStatus(val);
+                      if (val === "free") {
+                        setSubPlan("Gratis");
+                        setSubEndDate("");
+                        setIsUnlimited(false);
+                      } else if (val === "active" && subPlan === "Gratis") {
+                        setSubPlan("Premium Mensual");
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="sub-status" className="bg-slate-900 border-slate-800 text-slate-200">
+                      <SelectValue placeholder="Estado" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
+                      <SelectItem value="active">Activo (Premium)</SelectItem>
+                      <SelectItem value="free">Gratuito (Free)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="sub-plan" className="text-xs text-slate-400">Nombre del Plan</Label>
+                  <Input
+                    id="sub-plan"
+                    value={subPlan}
+                    disabled={subStatus === "free"}
+                    onChange={(e) => setSubPlan(e.target.value)}
+                    placeholder="Ej. Premium Mensual"
+                    className="bg-slate-900 border-slate-800 text-slate-200 disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
+              {subStatus === "active" && (
+                <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-xs font-medium text-slate-300">Acceso Permanente / Vitalicio</Label>
+                      <p className="text-[11px] text-slate-500">Sin fecha de caducidad</p>
+                    </div>
+                    <Switch
+                      checked={isUnlimited}
+                      onCheckedChange={(checked) => {
+                        setIsUnlimited(checked);
+                        if (checked) {
+                          setSubEndDate("");
+                        } else if (!subEndDate) {
+                          const d = new Date();
+                          d.setMonth(d.getMonth() + 1);
+                          setSubEndDate(d.toISOString().split("T")[0]);
+                        }
+                      }}
+                      className="data-[state=checked]:bg-amber-500"
+                    />
+                  </div>
+
+                  {!isUnlimited && (
+                    <div className="space-y-1.5 pt-1 border-t border-white/5">
+                      <Label htmlFor="sub-end-date" className="text-xs text-slate-400 flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5 text-amber-400" />
+                        Fecha de Vencimiento
+                      </Label>
+                      <Input
+                        id="sub-end-date"
+                        type="date"
+                        value={subEndDate}
+                        onChange={(e) => setSubEndDate(e.target.value)}
+                        className="bg-slate-950 border-slate-800 text-slate-200"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="mt-4 gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => setSubscriptionUser(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  if (subscriptionUser) {
+                    updateSubscriptionMutation.mutate({
+                      userId: subscriptionUser.id,
+                      subscriptionStatus: subStatus,
+                      subscriptionPlan: subStatus === "free" ? "Gratis" : subPlan,
+                      subscriptionEndDate: isUnlimited || subStatus === "free" || !subEndDate ? null : subEndDate,
+                    });
+                  }
+                }}
+                disabled={updateSubscriptionMutation.isPending}
+                className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold shadow-lg shadow-amber-500/20"
+              >
+                {updateSubscriptionMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Crown className="h-4 w-4 mr-2" />
+                )}
+                Guardar Cambios
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete User Confirmation Dialog */}
+        <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+          <AlertDialogContent className="bg-slate-900 border-slate-800">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-white">
+                ¿Estás seguro de eliminar a {userToDelete?.username}?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-slate-400">
+                Esta acción no se puede deshacer. Esto eliminará permanentemente al usuario
+                y todos sus datos asociados.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                onClick={() => setUserToDelete(null)}
+                className="bg-slate-800 text-white hover:bg-slate-700 border-slate-700"
+              >
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (userToDelete) {
+                    deleteUserMutation.mutate(userToDelete.id);
+                    setUserToDelete(null);
+                  }
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

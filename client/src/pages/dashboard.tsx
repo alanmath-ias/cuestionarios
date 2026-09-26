@@ -1893,19 +1893,29 @@ export default function UserDashboard() {
                                 </div>
                               </div>
 
-                              <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${quiz.difficulty === 'Fácil' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                                  quiz.difficulty === 'Medio' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
-                                    'bg-red-500/10 text-red-400 border border-red-500/20'
-                                  }`}>
-                                  {quiz.difficulty}
+                              <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-1.5 mt-auto pt-2 border-t border-white/5">
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider shrink-0 max-w-[100px] sm:max-w-none truncate ${
+                                  quiz.difficulty === 'Fácil' || quiz.difficulty?.toUpperCase() === 'BEGINNER' || quiz.difficulty?.toUpperCase() === 'EASY'
+                                    ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                                    : quiz.difficulty === 'Medio' || quiz.difficulty?.toUpperCase() === 'INTERMEDIATE' || quiz.difficulty?.toUpperCase() === 'MEDIUM' || quiz.difficulty?.toUpperCase() === 'INTERMEDIATE_LOW'
+                                      ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                                      : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                }`}
+                                title={quiz.difficulty}
+                                >
+                                  {quiz.difficulty === 'INTERMEDIATE_HIGH' ? 'Int. Alto' :
+                                   quiz.difficulty === 'INTERMEDIATE_LOW' ? 'Int. Bajo' :
+                                   quiz.difficulty === 'INTERMEDIATE' ? 'Medio' :
+                                   quiz.difficulty === 'BEGINNER' ? 'Fácil' :
+                                   quiz.difficulty === 'ADVANCED' ? 'Avanzado' :
+                                   quiz.difficulty}
                                 </span>
 
-                                <div className="flex gap-2">
+                                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
                                   {!isCompleted && (
                                     <Button
                                       size="sm"
-                                      className="h-7 px-2 text-xs bg-slate-700 hover:bg-slate-600 text-white border border-slate-600"
+                                      className="h-7 px-2 text-xs bg-slate-700 hover:bg-slate-600 text-white border border-slate-600 shrink-0"
                                       onClick={(e) => handleMiniStart(e, quiz.id)}
                                     >
                                       Mini
@@ -1913,7 +1923,7 @@ export default function UserDashboard() {
                                   )}
                                   <Button
                                     size="sm"
-                                    className={`h-7 px-3 text-xs font-medium ${isCompleted ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                                    className={`h-7 px-2.5 sm:px-3 text-xs font-medium shrink-0 ${isCompleted ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (isCompleted) {

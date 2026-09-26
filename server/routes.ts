@@ -4485,6 +4485,30 @@ Ejemplo de formato:
     }
   });
 
+  apiRouter.patch("/users/:id/subscription", requireAdmin, async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.id);
+    const { subscriptionStatus, subscriptionPlan, subscriptionEndDate } = req.body;
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    try {
+      const isFree = subscriptionStatus !== 'active';
+      const updatedUser = await storage.updateUser(userId, {
+        subscriptionStatus: isFree ? 'free' : 'active',
+        subscriptionPlan: isFree ? 'Gratis' : (subscriptionPlan || 'Premium'),
+        subscriptionEndDate: isFree ? null : (subscriptionEndDate ? new Date(subscriptionEndDate).toISOString() : null),
+      });
+
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user subscription:", error);
+      res.status(500).json({ message: "Error updating user subscription" });
+    }
+  });
+
   // Nuevos endpoints para el Dashboard Refactorizado
   apiRouter.get("/admin/students-at-risk", requireAdmin, async (req, res) => {
     try {

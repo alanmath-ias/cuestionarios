@@ -96,8 +96,8 @@ export function QuizCard({
           </div>
         </div>
       </CardContent>
-      <CardFooter className="bg-gray-50 px-5 py-3 flex justify-between items-center">
-        <div>
+      <CardFooter className="bg-gray-50 px-4 sm:px-5 py-3 flex flex-wrap justify-between items-center gap-2">
+        <div className="shrink-0">
           <span className={`text-sm font-medium ${getStatusColor()}`}>
             {getStatusLabel()}
           </span>
@@ -110,7 +110,7 @@ export function QuizCard({
             </span>
           )}
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-1.5 sm:gap-2 items-center shrink-0">
           {onOpenTheory && (
             <Button
               size="sm"
@@ -119,35 +119,35 @@ export function QuizCard({
                 e.stopPropagation();
                 onOpenTheory();
               }}
-              className="text-xs px-2.5 h-8 border-indigo-400/40 text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 hover:text-indigo-300 flex items-center gap-1.5 transition-all"
+              className="text-xs px-2 sm:px-2.5 h-8 border-indigo-400/40 text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 hover:text-indigo-300 flex items-center gap-1.5 transition-all shrink-0"
               title={isPremium ? "Consultar fórmulas y conceptos clave" : "Fórmulas y conceptos clave (Función Premium)"}
             >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Fórmulas</span>
+              <BookOpen className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Fórmulas</span>
               {!isPremium && (
-                <Crown className="w-3 h-3 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.5)]" />
+                <Crown className="w-3 h-3 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.5)] shrink-0" />
               )}
             </Button>
           )}
           {status === 'not_started' && (
             <>
               {onMiniStart && (
-                <Button size="sm" variant="outline" onClick={onMiniStart} className="text-xs px-2 h-8 border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50">
-                  Versión Mini
+                <Button size="sm" variant="outline" onClick={onMiniStart} className="text-xs px-2 h-8 border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50 shrink-0">
+                  <span className="hidden sm:inline">Versión </span>Mini
                 </Button>
               )}
-              <Button size="sm" onClick={onStart}>
+              <Button size="sm" onClick={onStart} className="shrink-0">
                 Comenzar
               </Button>
             </>
           )}
           {status === 'in_progress' && (
-            <Button size="sm" onClick={onContinue}>
+            <Button size="sm" onClick={onContinue} className="shrink-0">
               Continuar
             </Button>
           )}
           {status === 'completed' && (
-            <Button size="sm" onClick={onRetry}>
+            <Button size="sm" onClick={onRetry} className="shrink-0">
               Ver Resultados
             </Button>
           )}
