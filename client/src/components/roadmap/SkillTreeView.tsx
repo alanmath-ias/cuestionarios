@@ -1017,11 +1017,12 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                 </AnimatePresence>
 
 
-                {/* Search Bar - Top Right above Legend */}
-                <div className="md:absolute md:top-[110px] md:right-4 relative mt-4 md:mt-0 mb-4 md:mb-0 z-30 flex flex-col items-center md:items-end gap-2 pointer-events-auto px-2 sm:px-4 w-full md:w-auto">
+                {/* Search Bar and Legend - Top Right on Desktop */}
+                <div className="md:absolute md:top-4 md:right-4 relative z-30 flex flex-col items-center md:items-stretch gap-3 w-full md:w-[270px] pointer-events-none mt-4 md:mt-0 px-2 sm:px-4 md:px-0">
+                    {/* Search Bar */}
                     <div
                         ref={searchRef}
-                        className="relative w-full max-w-[280px] sm:max-w-sm md:max-w-xs"
+                        className="pointer-events-auto relative z-30 w-full max-w-[280px] sm:max-w-sm md:max-w-none md:w-full"
                     >
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1055,7 +1056,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                    className="absolute top-full right-0 mt-3 w-full max-w-[280px] sm:max-w-[320px] bg-slate-900/95 border border-slate-700 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar z-40"
+                                    className="absolute top-full right-0 mt-3 w-full max-w-[280px] sm:max-w-[320px] md:max-w-none bg-slate-900/95 border border-slate-700 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar z-40"
                                 >
                                     <div className="px-3 py-2 border-b border-slate-800 text-[9px] text-slate-500 uppercase tracking-wider font-bold">
                                         Resultados en el Mapa ({filteredQuizzes.length})
@@ -1110,78 +1111,78 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                             )}
                         </AnimatePresence>
                     </div>
-                </div>
 
-                {/* Legend - Responsive Position */}
-                <div className="md:absolute md:top-[180px] md:right-4 relative mt-4 mx-auto w-fit inset-auto z-20 bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-xl min-w-[200px] pointer-events-auto">
-                    <h4 className="text-slate-300 font-bold mb-3 text-xs uppercase tracking-wider border-b border-slate-700 pb-2">Leyenda</h4>
-                    <div className="flex flex-col gap-3 text-[11px] text-slate-400 font-medium">
-                        {/* Parent Nodes */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-2xl rotate-45 border-2 border-orange-500 bg-gradient-to-br from-orange-800 to-orange-500 flex items-center justify-center shadow-[0_0_10px_rgba(251,146,60,0.4)]">
-                                <BookOpen className="w-3.5 h-3.5 -rotate-45 text-white" />
-                            </div>
-                            <span className="text-orange-300 font-bold">Unidades / Temas Principales</span>
-                        </div>
-
-                        {/* Blue Play - Not Started */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)] flex items-center justify-center">
-                                <Play className="w-3.5 h-3.5 text-white fill-white ml-0.5" />
-                            </div>
-                            <span>Disponible sin iniciar</span>
-                        </div>
-
-                        {/* Soft Green Play - In Progress */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-[#5eead4] shadow-[0_0_10px_rgba(45,212,191,0.3)] flex items-center justify-center">
-                                <Play className="w-3.5 h-3.5 text-[#2dd4bf] fill-[#2dd4bf] ml-0.5" />
-                            </div>
-                            <span>Disponible iniciado</span>
-                        </div>
-
-                        {/* Green Check - Completed */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)] flex items-center justify-center">
-                                <CheckCircle className="w-4 h-4 text-green-500" />
-                            </div>
-                            <span>Completado</span>
-                        </div>
-
-                        {/* Critical - Hexagon */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 hexagon-mask border-2 border-red-400 bg-red-900/20 flex items-center justify-center">
-                                <Hexagon className="w-3.5 h-3.5 text-red-400" />
-                            </div>
-                            <span>Crítico</span>
-                        </div>
-
-                        {/* Featured - Star */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-full bg-slate-800 border-2 border-yellow-400 flex items-center justify-center">
-                                <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400/20" />
-                            </div>
-                            <span>Destacado</span>
-                        </div>
-
-                        {/* Locked - Under Construction */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)] flex items-center justify-center">
-                                <Construction className="w-3.5 h-3.5 text-amber-500" />
-                            </div>
-                            <span>Próximamente</span>
-                        </div>
-
-                        {/* Total Counter */}
-                        {totalVisibleQuizzes > 0 && (
-                            <>
-                                <div className="h-px bg-slate-700 my-1" />
-                                <div className="flex items-center gap-2 text-indigo-300 font-medium justify-center pt-1">
-                                    <BookOpen className="w-4 h-4" />
-                                    <span>Total: {totalVisibleQuizzes} Cuestionarios</span>
+                    {/* Legend */}
+                    <div className="pointer-events-auto relative z-20 mx-auto md:mx-0 w-fit md:w-full bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-xl min-w-[200px]">
+                        <h4 className="text-slate-300 font-bold mb-3 text-xs uppercase tracking-wider border-b border-slate-700 pb-2">Leyenda</h4>
+                        <div className="flex flex-col gap-3 text-[11px] text-slate-400 font-medium">
+                            {/* Parent Nodes */}
+                            <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-2xl rotate-45 border-2 border-orange-500 bg-gradient-to-br from-orange-800 to-orange-500 flex items-center justify-center shadow-[0_0_10px_rgba(251,146,60,0.4)]">
+                                    <BookOpen className="w-3.5 h-3.5 -rotate-45 text-white" />
                                 </div>
-                            </>
-                        )}
+                                <span className="text-orange-300 font-bold">Unidades / Temas Principales</span>
+                            </div>
+
+                            {/* Blue Play - Not Started */}
+                            <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)] flex items-center justify-center">
+                                    <Play className="w-3.5 h-3.5 text-white fill-white ml-0.5" />
+                                </div>
+                                <span>Disponible sin iniciar</span>
+                            </div>
+
+                            {/* Soft Green Play - In Progress */}
+                            <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-[#5eead4] shadow-[0_0_10px_rgba(45,212,191,0.3)] flex items-center justify-center">
+                                    <Play className="w-3.5 h-3.5 text-[#2dd4bf] fill-[#2dd4bf] ml-0.5" />
+                                </div>
+                                <span>Disponible iniciado</span>
+                            </div>
+
+                            {/* Green Check - Completed */}
+                            <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)] flex items-center justify-center">
+                                    <CheckCircle className="w-4 h-4 text-green-500" />
+                                </div>
+                                <span>Completado</span>
+                            </div>
+
+                            {/* Critical - Hexagon */}
+                            <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 hexagon-mask border-2 border-red-400 bg-red-900/20 flex items-center justify-center">
+                                    <Hexagon className="w-3.5 h-3.5 text-red-400" />
+                                </div>
+                                <span>Crítico</span>
+                            </div>
+
+                            {/* Featured - Star */}
+                            <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-full bg-slate-800 border-2 border-yellow-400 flex items-center justify-center">
+                                    <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400/20" />
+                                </div>
+                                <span>Destacado</span>
+                            </div>
+
+                            {/* Locked - Under Construction */}
+                            <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)] flex items-center justify-center">
+                                    <Construction className="w-3.5 h-3.5 text-amber-500" />
+                                </div>
+                                <span>Próximamente</span>
+                            </div>
+
+                            {/* Total Counter */}
+                            {totalVisibleQuizzes > 0 && (
+                                <>
+                                    <div className="h-px bg-slate-700 my-1" />
+                                    <div className="flex items-center gap-2 text-indigo-300 font-medium justify-center pt-1">
+                                        <BookOpen className="w-4 h-4" />
+                                        <span>Total: {totalVisibleQuizzes} Cuestionarios</span>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
 
