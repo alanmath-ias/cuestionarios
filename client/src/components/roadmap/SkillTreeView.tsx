@@ -24,6 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { useSession } from "@/hooks/useSession";
+import { getCreditConfig } from '@shared/credit-config';
 
 interface SkillTreeViewProps {
     nodes: ArithmeticNode[];
@@ -178,7 +179,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                 const children = nodes.filter(n => n.requires.includes(currentId));
                 for (const child of children) {
                     // Stop at the next container boundary so counts stay within one family
-                    if (child.behavior !== 'container' && !visited.has(child.id)) {
+                    if (child.behavior !== 'container' && !child.id.endsWith('mastery') && !visited.has(child.id)) {
                         descendants.push(child.id);
                         queue.push(child.id);
                     }
@@ -462,7 +463,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
         }
 
         // 2. Process Celebrations & Overlay Trigger Sequences
-        if (focusId !== processedCelebrationId) {
+        if (focusId !== processedCelebrationId && !focusId.endsWith('mastery')) {
             const tourStatus = (session?.tourStatus as any) || {};
             const awardedNodes = tourStatus.awardedNodes || {};
             const awardedUnits = tourStatus.awardedUnits || {};
@@ -474,6 +475,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
 
             // CHECK FAMILY COMPLETION
             const findParentContainer = (startNodeId: string): ArithmeticNode | null => {
+                if (startNodeId.endsWith('mastery')) return null;
                 const queue = [startNodeId];
                 const visited = new Set<string>();
                 while (queue.length > 0) {
@@ -495,9 +497,12 @@ export const SkillTreeView = React.memo(function SkillTreeView({
             const isFamilyMastery =
                 searchParams.get('familyCompleted') === 'true' &&
                 !isMapPreviouslyCompleted &&
-                (!parentContainer || !awardedUnits[parentContainer.id]);
+                !focusId.endsWith('mastery') &&
+                !!parentContainer &&
+                !awardedUnits[parentContainer.id];
 
             const isNodeCompleted =
+                !focusId.endsWith('mastery') &&
                 (searchParams.get('nodeCompleted') === 'true' ||
                 (source !== 'quiz' && (
                     progressMap[focusId] === 'completed' || 
@@ -547,16 +552,17 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                         });
                     }
                     // Compute and award bonus credits
+                    const creditConfig = getCreditConfig(categoryId);
                     const nodeQuizCount = nodeTotalQuizzes[focusId] || 1;
                     const familyQuizCount = parentContainer ? (nodeTotalQuizzes[parentContainer.id] || nodeQuizCount) : nodeQuizCount;
-                    const extraScoreBonus = hasScoreBonus ? 3 : 0;
-                    let bonusCredits = 5 + extraScoreBonus; // base: quiz completed = 5 credits (+3 if score >= 8)
+                    const extraScoreBonus = hasScoreBonus ? creditConfig.scoreBonus : 0;
+                    let bonusCredits = creditConfig.baseRate + extraScoreBonus; // base: quiz completed
                     let bonusReason = 'quiz_completed';
                     if (isFamilyMastery) {
-                        bonusCredits = (familyQuizCount * 5) + extraScoreBonus; // 5 per quiz in family + 3 if score >= 8
+                        bonusCredits = (familyQuizCount * creditConfig.baseRate) + extraScoreBonus;
                         bonusReason = 'family_completed';
                     } else if (isNodeCompleted) {
-                        bonusCredits = (nodeQuizCount * 5) + extraScoreBonus; // 5 per quiz in node + 3 if score >= 8
+                        bonusCredits = (nodeQuizCount * creditConfig.baseRate) + extraScoreBonus;
                         bonusReason = 'node_completed';
                     }
                     setCelebrationCredits(bonusCredits);
@@ -569,7 +575,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                             credentials: 'include',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                credits: isFamilyMastery ? (familyQuizCount * 5) : (nodeQuizCount * 5),
+                                credits: isFamilyMastery ? (familyQuizCount * creditConfig.baseRate) : (nodeQuizCount * creditConfig.baseRate),
                                 reason: bonusReason,
                                 nodeId: focusId,
                                 familyId: parentContainer?.id,
@@ -605,9 +611,10 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                         });
                     }
                     // Compute and award bonus credits
+                    const creditConfig = getCreditConfig(categoryId);
                     const nodeQuizCount = nodeTotalQuizzes[focusId] || 1;
                     const familyQuizCount = parentContainer ? (nodeTotalQuizzes[parentContainer.id] || nodeQuizCount) : nodeQuizCount;
-                    const bonusCredits = isFamilyMastery ? (familyQuizCount * 5) : (nodeQuizCount * 5);
+                    const bonusCredits = isFamilyMastery ? (familyQuizCount * creditConfig.baseRate) : (nodeQuizCount * creditConfig.baseRate);
                     const bonusReason = isFamilyMastery ? 'family_completed' : 'node_completed';
                     setCelebrationCredits(bonusCredits);
                     if (isFamilyMastery || isNodeCompleted) {
@@ -999,7 +1006,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                         className="mb-4 py-2.5 px-3 rounded-2xl bg-gradient-to-r from-amber-500/25 via-yellow-500/20 to-amber-500/25 border-2 border-yellow-400/60 text-yellow-300 font-extrabold text-xs flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(234,179,8,0.35)]"
                                     >
                                         <Sparkles className="w-4 h-4 text-yellow-400 shrink-0 animate-pulse" />
-                                        <span>⭐ ¡Excelente Nota (≥ 8.0)! +3 Créditos Extra</span>
+                                        <span>⭐ ¡Excelente Nota (≥ 8.0)! +{getCreditConfig(categoryId).scoreBonus} Créditos Extra</span>
                                     </motion.div>
                                 )}
 
@@ -1532,9 +1539,9 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                             (node.id.endsWith('mastery') || !isLocked) && "cursor-pointer",
 
                                                                             isHighlighted ? "ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_40px_rgba(251,191,36,0.6)] scale-110" : "",
-                                                                            !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
-                                                                                !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf]" :
-                                                                                    node.id.endsWith('mastery') ? "shadow-[0_0_50px_rgba(192,38,211,0.8)] animate-pulse" :
+                                                                            node.id.endsWith('mastery') ? "shadow-[0_0_50px_rgba(192,38,211,0.8)] animate-pulse" :
+                                                                                !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
+                                                                                    !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf]" :
                                                                                         !isHighlighted && isAvailable ? (
                                                                                             node.behavior === 'container' ? "shadow-[0_0_30px_rgba(251,146,60,0.7)] animate-pulse-slow" :
                                                                                                 isSpecial ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" :

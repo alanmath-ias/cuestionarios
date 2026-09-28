@@ -35,7 +35,12 @@ export function ZoomableImage({ src, alt, className }: ZoomableImageProps) {
                 </div>
             </DialogTrigger>
 
-            <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 overflow-hidden bg-slate-950/90 border-white/10 backdrop-blur-xl group/dialog [&>button:last-child]:hidden">
+            <DialogContent 
+                className="max-w-[95vw] max-h-[95vh] p-0 overflow-hidden bg-slate-950/90 border-white/10 backdrop-blur-xl group/dialog [&>button:last-child]:hidden"
+                onTouchStart={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+                onTouchEnd={(e) => e.stopPropagation()}
+            >
                 <div className="relative w-full h-full min-h-[60vh] flex flex-col items-center justify-center p-4">
                     <TransformWrapper
                         initialScale={1}

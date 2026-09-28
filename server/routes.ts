@@ -22,6 +22,7 @@ import { db } from "./db.js";
 import { userCategories, categories, quizzes, trainingHistory } from "../shared/schema.js";
 import { users } from "../shared/schema.js";
 import { getUsersAssignedToQuiz } from './storage.js'; // Ruta ajustada para usar .js
+import { getCreditConfig } from "../shared/credit-config.js";
 //chat gpt entrenamiento
 import { questions as questionsTable } from "../shared/schema.js";
 import { inArray } from "drizzle-orm";
@@ -533,7 +534,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       completedMaps[categoryId] = 'pending_celebration';
       tourStatus.completedMaps = completedMaps;
 
-      const newCredits = (user.hintCredits || 0) + 1000;
+      const creditConfig = getCreditConfig(categoryId);
+      const newCredits = (user.hintCredits || 0) + creditConfig.mapCompletion;
       const updatedUser = await storage.updateUser(userId, {
         tourStatus,
         hintCredits: newCredits
@@ -565,9 +567,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
+      let catId = req.body.categoryId;
+      if (!catId) {
+        const quiz = await storage.getQuiz(Number(quizId));
+        if (quiz) {
+          catId = quiz.categoryId;
+        }
+      }
+
+      const creditConfig = getCreditConfig(catId);
       const parsedScore = parseFloat(score);
       const hasScoreBonus = parsedScore >= 8.0;
-      const creditReward = hasScoreBonus ? 8 : 5; // 5 base + 3 bonus for score >= 8
+      const creditReward = hasScoreBonus ? (creditConfig.baseRate + creditConfig.scoreBonus) : creditConfig.baseRate;
       const medalType = 'silver';
 
       const tourStatus = (user.tourStatus as any) || {};
@@ -757,13 +768,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const catId = parseInt(categoryId.toString());
+      const creditConfig = getCreditConfig(catId);
       const tourStatus = (user.tourStatus as any) || {};
       const completedMaps = tourStatus.completedMaps || {};
 
       completedMaps[catId] = 'pending_celebration';
       tourStatus.completedMaps = completedMaps;
 
-      const newCredits = (user.hintCredits || 0) + 1000;
+      const newCredits = (user.hintCredits || 0) + creditConfig.mapCompletion;
 
       const updatedUser = await storage.updateUser(userId, {
         tourStatus,

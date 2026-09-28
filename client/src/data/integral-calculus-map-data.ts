@@ -572,7 +572,6 @@ export const integralCalculusMapNodes: ArithmeticNode[] = [
         requires: [],
         description: 'El desafío definitivo de todo el módulo.',
         xOffset: 0,
-        subcategoryId: 477,
         behavior: 'quiz_list'
     }
 ];

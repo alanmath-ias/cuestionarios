@@ -1137,29 +1137,37 @@ const ActiveQuiz = () => {
     const handleTouchStart = (e: TouchEvent) => {
       const target = e.target as HTMLElement | null;
 
-      // Deshabilitar gestos de deslizado si hay una imagen ampliada (modal) o un diálogo abierto
+      // Deshabilitar gestos de deslizado si hay una imagen ampliada (modal), un diálogo abierto,
+      // o si el usuario está interactuando directamente con una imagen o el visor de zoom
       const isModalOpen =
         isReportDialogOpen ||
         isHintDialogOpen ||
         isIncompleteDialogOpen ||
         showExplanation ||
         showChiquiResult ||
-        !!document.querySelector('[role="dialog"]');
+        !!document.querySelector('[role="dialog"]') ||
+        !!document.querySelector('.react-transform-wrapper');
 
-      if (isModalOpen || target?.closest('[role="dialog"]')) {
+      const isImageTouch = 
+        !!target?.closest('img') || 
+        !!target?.closest('.react-transform-wrapper') || 
+        !!target?.closest('.react-transform-component') || 
+        !!target?.closest('[role="dialog"]');
+
+      if (isModalOpen || isImageTouch) {
         touchStartX = 0;
         touchStartY = 0;
         return;
       }
 
-      touchStartX = e.changedTouches[0].screenX;
-      touchStartY = e.changedTouches[0].screenY;
+      touchStartX = e.changedTouches[0].clientX;
+      touchStartY = e.changedTouches[0].clientY;
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
-      if (touchStartX === 0) return; // Si inició con modal abierto o ampliado, ignorar
-      touchEndX = e.changedTouches[0].screenX;
-      touchEndY = e.changedTouches[0].screenY;
+      if (touchStartX === 0) return; // Si inició con modal abierto, sobre imagen o ampliado, ignorar
+      touchEndX = e.changedTouches[0].clientX;
+      touchEndY = e.changedTouches[0].clientY;
       handleSwipe();
     };
 
@@ -1170,21 +1178,37 @@ const ActiveQuiz = () => {
         isIncompleteDialogOpen ||
         showExplanation ||
         showChiquiResult ||
-        !!document.querySelector('[role="dialog"]');
+        !!document.querySelector('[role="dialog"]') ||
+        !!document.querySelector('.react-transform-wrapper');
 
       if (isModalOpen) return;
 
-      const swipeThreshold = 50; // Umbral táctil para deslizar en móvil
+      const swipeThreshold = 40; // Umbral táctil para deslizar en móvil
       const diffX = touchStartX - touchEndX;
       const diffY = touchStartY - touchEndY;
 
       // Verificar desplazamiento horizontal predominante frente al desplazamiento vertical
       if (Math.abs(diffX) > swipeThreshold && Math.abs(diffX) > Math.abs(diffY) * 1.2) {
         if (diffX > 0) {
-          // Swipe Izquierda -> Siguiente pregunta
-          handleNextQuestion();
+          // Swipe Izquierda (hacia la izquierda) -> Siguiente pregunta / Adelantar
+          const currentQuestion = questions?.[currentQuestionIndex];
+          const isTextType = currentQuestion?.type === 'text';
+          const hasUnconfirmed = !answeredQuestions[currentQuestionIndex] && (
+            selectedAnswerId !== null ||
+            (isDirectInput && directResponse.trim() !== "") ||
+            (isTextType && currentQuestion && textAnswers[currentQuestion.id]?.trim() !== "")
+          );
+
+          if (hasUnconfirmed) {
+            handleNextQuestion();
+          } else if (currentQuestionIndex < (questions?.length || 0) - 1) {
+            setCurrentQuestionIndex(prev => prev + 1);
+            setSelectedAnswerId(null);
+          } else {
+            handleNextQuestion();
+          }
         } else {
-          // Swipe Derecha -> Pregunta anterior
+          // Swipe Derecha (hacia la derecha) -> Pregunta anterior / Devolver
           handlePreviousQuestion();
         }
       }
@@ -1199,7 +1223,8 @@ const ActiveQuiz = () => {
   }, [
     currentQuestionIndex, questions, selectedAnswerId, isDirectInput,
     directResponse, textAnswers, isReportDialogOpen, isHintDialogOpen,
-    isIncompleteDialogOpen, showExplanation, showChiquiResult, answeredQuestions
+    isIncompleteDialogOpen, showExplanation, showChiquiResult, answeredQuestions,
+    progress, isReadOnly, isChiqui
   ]);
 
   const handleMathInput = (value: string, offset = 0) => {
@@ -1279,7 +1304,14 @@ const ActiveQuiz = () => {
   };
 
   const handleNextQuestion = async () => {
-    if (!questions || (!isChiqui && !progress)) return;
+    if (!questions) return;
+    if (!isChiqui && !progress) {
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1);
+        setSelectedAnswerId(null);
+      }
+      return;
+    }
 
     setIsNavigating(true);
     try {

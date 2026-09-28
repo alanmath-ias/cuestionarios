@@ -771,7 +771,6 @@ export const arithmeticMapNodes: ArithmeticNode[] = [
         requires: [],
         description: 'El desafío definitivo de todo el módulo.',
         xOffset: 0,
-        subcategoryId: 347,
         behavior: 'quiz_list'
     }
 ];

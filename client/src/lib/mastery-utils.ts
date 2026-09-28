@@ -145,9 +145,23 @@ export function calculateMasteryStats(
     // 2. Identify "Parents" (Silver Trophies) and calculate Unit Performance
     const parentNodes = nodes.filter(n => n.behavior === 'container');
     const unitStats = parentNodes.map(parent => {
-        // A parent's performance is the average of its immediate child nodes
-        const dependentNodes = nodes.filter(n => n.requires && n.requires.includes(parent.id));
-        const dependentStats = dependentNodes.map(dn => nodeStats.find(ns => ns.id === dn.id)).filter(Boolean);
+        // Collect all descendant nodes of this unit (stopping at another container boundary or mastery)
+        const familyNodeIds: string[] = [];
+        const queue = [parent.id];
+        const visited = new Set<string>();
+        while (queue.length > 0) {
+            const currentId = queue.shift()!;
+            if (visited.has(currentId)) continue;
+            visited.add(currentId);
+            const children = nodes.filter(n => n.requires && n.requires.includes(currentId));
+            for (const child of children) {
+                if (child.behavior === 'container' || child.id.endsWith('mastery')) continue;
+                familyNodeIds.push(child.id);
+                queue.push(child.id);
+            }
+        }
+
+        const dependentStats = familyNodeIds.map(nid => nodeStats.find(ns => ns.id === nid)).filter(Boolean);
         
         let average = 0;
         const performedNodes = dependentStats.filter(ns => ns!.completedCount > 0);

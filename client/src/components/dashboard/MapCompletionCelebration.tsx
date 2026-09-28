@@ -4,6 +4,7 @@ import { Trophy, Coins, ArrowRight, Sparkles, AlertCircle, Medal, Award } from '
 import { useLocation } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { cn } from '@/lib/utils';
+import { getCreditConfig } from '@shared/credit-config';
 
 interface MapCompletionCelebrationProps {
   categoryId: number;
@@ -20,7 +21,8 @@ export const MapCompletionCelebration: React.FC<MapCompletionCelebrationProps> =
   const [step, setStep] = useState(0);
   const [displayedCredits, setDisplayedCredits] = useState(initialCredits);
   const [isCounting, setIsCounting] = useState(false);
-  const targetCredits = initialCredits + 1000;
+  const creditConfig = getCreditConfig(categoryId);
+  const targetCredits = initialCredits + creditConfig.mapCompletion;
 
   let subjectName = "Aritmética";
   let nextSubjectName = "Álgebra";
@@ -34,12 +36,36 @@ export const MapCompletionCelebration: React.FC<MapCompletionCelebrationProps> =
     trophyImage = "/aritmetica_imagenes/copa_de_oro_trofeo_algebra.png";
     avatarImage = "/aritmetica_imagenes/entrega_copa_algebra.png";
     silverCupTrophyImage = "/aritmetica_imagenes/copa_de_plata_trofeo_algebra.png";
+  } else if (categoryId === 3) {
+    subjectName = "Trigonometría";
+    nextSubjectName = "Cálculo Diferencial";
   } else if (categoryId === 4) {
     subjectName = "Cálculo Diferencial";
     nextSubjectName = "Cálculo Integral";
     trophyImage = "/aritmetica_imagenes/copa_de_oro_trofeo_calculo_diferencial.png";
     avatarImage = "/aritmetica_imagenes/entrega_copa_calculo_diferencial.png";
     silverCupTrophyImage = "/aritmetica_imagenes/copa_de_plata_trofeo_calculo_diferencial.png";
+  } else if (categoryId === 5) {
+    subjectName = "Cálculo Integral";
+    nextSubjectName = "Ecuaciones Diferenciales";
+  } else if (categoryId === 6) {
+    subjectName = "Ecuaciones Diferenciales";
+    nextSubjectName = "Física Mecánica";
+  } else if (categoryId === 10) {
+    subjectName = "Física Mecánica";
+    nextSubjectName = "Álgebra Lineal";
+  } else if (categoryId === 16) {
+    subjectName = "Geometría Analítica";
+    nextSubjectName = "Cálculo Diferencial";
+  } else if (categoryId === 17) {
+    subjectName = "Álgebra Lineal";
+    nextSubjectName = "Series de Fourier y EDPs";
+  } else if (categoryId === 18) {
+    subjectName = "Series de Fourier y EDPs";
+    nextSubjectName = "el siguiente nivel";
+  } else if (categoryId === 19) {
+    subjectName = "Estadística";
+    nextSubjectName = "el siguiente nivel";
   }
 
   // Confetti particles
@@ -77,9 +103,10 @@ export const MapCompletionCelebration: React.FC<MapCompletionCelebrationProps> =
       
       const totalDuration = p1Duration + pause1 + p2Duration + pause2 + p3Duration;
       
-      const p1Target = initialCredits + 327; // random-like end values
-      const p2Target = initialCredits + 784;
-      const p3Target = initialCredits + 1000;
+      const mapBonus = creditConfig.mapCompletion;
+      const p1Target = Math.round(initialCredits + mapBonus * 0.327);
+      const p2Target = Math.round(initialCredits + mapBonus * 0.784);
+      const p3Target = initialCredits + mapBonus;
       
       const tick = (now: number) => {
         const elapsed = now - startTime;
@@ -189,7 +216,7 @@ export const MapCompletionCelebration: React.FC<MapCompletionCelebrationProps> =
     },
     {
       title: "Premios Especiales",
-      text: "Para celebrar tu dedicación, ¡has ganado un superbono de 1,000 créditos para pistas! Mira cómo se multiplican:",
+      text: `Para celebrar tu dedicación, ¡has ganado un superbono de ${creditConfig.mapCompletion.toLocaleString()} créditos para pistas! Mira cómo se multiplican:`,
       buttonText: "Siguiente"
     },
     {

@@ -380,7 +380,6 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         requires: [],
         description: 'El desafío final del módulo de estadística.',
         xOffset: 0,
-        subcategoryId: 372,
         behavior: 'quiz_list'
     }
 ];

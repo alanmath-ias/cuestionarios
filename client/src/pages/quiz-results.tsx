@@ -142,7 +142,11 @@ function QuizResults() {
 
       if (eligibleForMedal) {
         try {
-          const res = await apiRequest('POST', '/api/user/earn-medal', { quizId, score });
+          const res = await apiRequest('POST', '/api/user/earn-medal', {
+            quizId,
+            score,
+            categoryId: results?.quiz?.categoryId
+          });
           const updatedUser = await res.json();
           // Update session cache locally
           queryClient.setQueryData(['/api/user'], updatedUser);
@@ -189,6 +193,7 @@ function QuizResults() {
     if (nodes.length === 0) return null;
 
     return nodes.find(n => {
+      if (n.id.endsWith('mastery')) return false;
       const mapping = nodeMappings?.find(m => m.nodeId === n.id);
       const subId = mapping?.subcategoryId != null ? mapping.subcategoryId : n.subcategoryId;
       const addSubIds = mapping?.additionalSubcategories || n.additionalSubcategories || [];
@@ -276,6 +281,7 @@ function QuizResults() {
             else if (Number(categoryIdVal) === 19 || categoryName.includes("estadística")) mapNodes = statisticsMapNodes;
 
             const findParentContainer = (startNodeId: string) => {
+              if (startNodeId.endsWith('mastery')) return null;
               const queue = [startNodeId];
               const visited = new Set<string>();
               while (queue.length > 0) {
@@ -305,7 +311,7 @@ function QuizResults() {
                   visited.add(currentId);
                   const children = mapNodes.filter(n => n.requires.includes(currentId));
                   for (const child of children) {
-                    if (child.behavior !== 'container') {
+                    if (child.behavior !== 'container' && !child.id.endsWith('mastery')) {
                       descendants.push(child.id);
                       queue.push(child.id);
                     }

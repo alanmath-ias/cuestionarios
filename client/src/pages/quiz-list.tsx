@@ -28,6 +28,7 @@ import { statisticsMapNodes } from '@/data/statistics-map-data';
 import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@/hooks/useSession";
 import { MapCompletionCelebration } from '@/components/dashboard/MapCompletionCelebration';
+import { getCreditConfig } from '@shared/credit-config';
 
 interface Category {
   id: number;
@@ -429,6 +430,10 @@ function QuizList() {
 
     // Pass 1: Intrinsic Status
     currentMapNodes.forEach(node => {
+      if (node.id.endsWith('mastery')) {
+        map[node.id] = 'available';
+        return;
+      }
       const nodeQuizzes = getDynamicQuizzesForNode(node);
       if (nodeQuizzes.length > 0) {
         const completedCount = nodeQuizzes.filter(q =>
@@ -446,12 +451,16 @@ function QuizList() {
 
     // Pass 2: Unlock Logic (Explorative Mode)
     currentMapNodes.forEach(node => {
+      if (node.id.endsWith('mastery')) {
+        map[node.id] = 'available';
+        return;
+      }
       if (map[node.id] === 'completed' || map[node.id] === 'in_progress') return;
       const hasContent = getDynamicQuizzesForNode(node).length > 0;
       if (node.behavior === 'container') {
         map[node.id] = 'available';
       } else {
-        map[node.id] = (hasContent || node.id.endsWith('mastery')) ? 'available' : 'locked';
+        map[node.id] = hasContent ? 'available' : 'locked';
       }
     });
 
@@ -467,7 +476,7 @@ function QuizList() {
           visited.add(currentId);
           const children = currentMapNodes.filter(n => n.requires.includes(currentId));
           for (const child of children) {
-            if (child.behavior === 'container') continue;
+            if (child.behavior === 'container' || child.id.endsWith('mastery')) continue;
             descendants.push(child.id);
             queue.push(child.id);
           }
@@ -1333,7 +1342,7 @@ function QuizList() {
       {session?.tourStatus && (session.tourStatus as any).completedMaps?.[categoryId || ""] === 'pending_celebration' && (
         <MapCompletionCelebration
           categoryId={parseInt(categoryId || "0")}
-          initialCredits={(session.hintCredits || 0) - 1000} // Subtracting 1000 since DB already added it, so count-up looks correct!
+          initialCredits={(session.hintCredits || 0) - getCreditConfig(categoryId).mapCompletion} // Subtracting mapCompletion since DB already added it, so count-up looks correct!
         />
       )}
 
