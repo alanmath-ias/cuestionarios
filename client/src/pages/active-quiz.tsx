@@ -518,60 +518,8 @@ const ActiveQuiz = () => {
     isEditing,
     isEditingQuizMeta,
     currentQuestionIndex,
-    answeredQuestions,
-    questions,
     toast
   ]);
-
-  // ── Handler: Confirmar reset de respuesta ────────────────────────────────────
-  const handleConfirmReset = async () => {
-    if (!questions || !progress?.id) return;
-    const currentQ = questions[currentQuestionIndex];
-    setIsResetting(true);
-    setResetError(null);
-    try {
-      const res = await fetch("/api/quiz/reset-answer", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          progressId: progress.id,
-          questionId: currentQ.id,
-          code: resetCode,
-        }),
-      });
-      if (res.status === 403) {
-        setResetError("Clave incorrecta. Intenta de nuevo.");
-        return;
-      }
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setResetError(data.message || "Error al eliminar la respuesta.");
-        return;
-      }
-      // Éxito: limpiar estado local
-      setStudentAnswers(prev => prev.filter(a => a.questionId !== currentQ.id));
-      setAnsweredQuestions(prev => {
-        const next = { ...prev };
-        delete next[currentQuestionIndex];
-        return next;
-      });
-      setSelectedAnswerId(null);
-      setDirectResponse("");
-      lastSyncQuestionId.current = null;
-      queryClient.invalidateQueries({ queryKey: [`/api/progress/${currentQ.quizId}`] });
-      setIsResetDialogOpen(false);
-      setResetCode("");
-      toast({
-        title: "✅ Respuesta eliminada",
-        description: "Puedes volver a responder esta pregunta como si fuera la primera vez.",
-      });
-    } catch (err) {
-      setResetError("Error de conexión. Intenta de nuevo.");
-    } finally {
-      setIsResetting(false);
-    }
-  };
 
   const handleCopyAllForAI = async () => {
     if (!quiz || !questions || questions.length === 0) {
@@ -920,6 +868,57 @@ const ActiveQuiz = () => {
         imageUrl: editImageUrl || null,
       }
     });
+  };
+
+  // ── Handler: Confirmar reset de respuesta ────────────────────────────────────
+  // (Ubicado aquí para que questions y progress ya estén declarados por useQuery)
+  const handleConfirmReset = async () => {
+    if (!questions || !progress?.id) return;
+    const currentQ = questions[currentQuestionIndex];
+    setIsResetting(true);
+    setResetError(null);
+    try {
+      const res = await fetch("/api/quiz/reset-answer", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          progressId: progress.id,
+          questionId: currentQ.id,
+          code: resetCode,
+        }),
+      });
+      if (res.status === 403) {
+        setResetError("Clave incorrecta. Intenta de nuevo.");
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setResetError(data.message || "Error al eliminar la respuesta.");
+        return;
+      }
+      // Éxito: limpiar estado local
+      setStudentAnswers(prev => prev.filter(a => a.questionId !== currentQ.id));
+      setAnsweredQuestions(prev => {
+        const next = { ...prev };
+        delete next[currentQuestionIndex];
+        return next;
+      });
+      setSelectedAnswerId(null);
+      setDirectResponse("");
+      lastSyncQuestionId.current = null;
+      queryClient.invalidateQueries({ queryKey: [`/api/progress/${currentQ.quizId}`] });
+      setIsResetDialogOpen(false);
+      setResetCode("");
+      toast({
+        title: "✅ Respuesta eliminada",
+        description: "Puedes volver a responder esta pregunta como si fuera la primera vez.",
+      });
+    } catch (err) {
+      setResetError("Error de conexión. Intenta de nuevo.");
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   // Timer
