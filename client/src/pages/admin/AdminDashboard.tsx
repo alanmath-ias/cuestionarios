@@ -647,7 +647,7 @@ const AdminDashboard: React.FC = () => {
               Clave de Anulación de Respuestas
             </CardTitle>
             <p className="text-xs text-slate-500 mt-1">
-              Atajo: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-white/15 text-slate-300 text-[10px] font-mono">Ctrl+Shift+R</kbd> en el cuestionario activo.
+              Atajo: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-white/15 text-slate-300 text-[10px] font-mono">Ctrl+Shift+R</kbd> en PC o mantener presionado el número de la pregunta en móvil.
               La clave es requerida para confirmar la anulación.
             </p>
           </CardHeader>
@@ -709,7 +709,7 @@ const AdminDashboard: React.FC = () => {
             </div>
             <p className="text-[11px] text-slate-600 leading-relaxed">
               ⚠️ La clave se reinicia al valor por defecto si el servidor se reinicia.
-              Comparte solo el atajo y la clave con los estudiantes que lo necesiten.
+              Comparte el atajo (o mantener presionado el número en móvil) y la clave solo con los estudiantes que lo necesiten.
             </p>
           </CardContent>
         </Card>

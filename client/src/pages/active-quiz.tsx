@@ -406,6 +406,7 @@ const ActiveQuiz = () => {
   // ── Quiz Answer Reset Dialog ───────────────────────────────────────────────
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [resetCode, setResetCode] = useState("");
+  const [showResetCode, setShowResetCode] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
 
@@ -919,6 +920,52 @@ const ActiveQuiz = () => {
     } finally {
       setIsResetting(false);
     }
+  };
+
+  // ── Abrir diálogo de anulación de respuesta (Atajo Ctrl+Shift+R y Long-Press en móvil) ──
+  const handleOpenResetDialog = (questionIdx: number = currentQuestionIndex) => {
+    if (!questions || !questions[questionIdx]) return;
+    const isAnswered = answeredQuestions[questionIdx];
+    if (!isAnswered) {
+      toast({
+        title: "Sin respuesta registrada",
+        description: "Esta pregunta aún no tiene una respuesta guardada.",
+      });
+      return;
+    }
+    if (questionIdx !== currentQuestionIndex) {
+      setCurrentQuestionIndex(questionIdx);
+    }
+    setResetCode("");
+    setResetError(null);
+    setIsResetDialogOpen(true);
+  };
+
+  // ── Long-Press para anulación de respuestas en móvil (Badge superior) ──────
+  const badgeLongPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const badgeTouchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  const startBadgeLongPress = (questionIdx: number = currentQuestionIndex) => {
+    cancelBadgeLongPress();
+    badgeLongPressTimerRef.current = setTimeout(() => {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try {
+          navigator.vibrate([40, 30, 40]);
+        } catch {
+          // ignore
+        }
+      }
+      handleOpenResetDialog(questionIdx);
+      cancelBadgeLongPress();
+    }, 1300);
+  };
+
+  const cancelBadgeLongPress = () => {
+    if (badgeLongPressTimerRef.current) {
+      clearTimeout(badgeLongPressTimerRef.current);
+      badgeLongPressTimerRef.current = null;
+    }
+    badgeTouchStartPosRef.current = null;
   };
 
   // Timer
@@ -2018,7 +2065,34 @@ const ActiveQuiz = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 bg-slate-900/50 p-2 rounded-xl border border-white/10 backdrop-blur-sm shadow-xl">
-            <Badge variant="secondary" className="bg-slate-800 text-slate-300 hover:bg-slate-700 border-none">
+            <Badge 
+              variant="secondary" 
+              className="bg-slate-800 text-slate-300 hover:bg-slate-700 border-none select-none cursor-pointer active:scale-95 transition-all"
+              style={{ WebkitTouchCallout: 'none', userSelect: 'none' }}
+              title="Mantén presionado para anular respuesta (requiere clave)"
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                const touch = e.touches[0];
+                badgeTouchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+                startBadgeLongPress(currentQuestionIndex);
+              }}
+              onTouchMove={(e) => {
+                if (badgeTouchStartPosRef.current) {
+                  const touch = e.touches[0];
+                  const dx = Math.abs(touch.clientX - badgeTouchStartPosRef.current.x);
+                  const dy = Math.abs(touch.clientY - badgeTouchStartPosRef.current.y);
+                  if (dx > 10 || dy > 10) {
+                    cancelBadgeLongPress();
+                  }
+                }
+              }}
+              onTouchEnd={cancelBadgeLongPress}
+              onTouchCancel={cancelBadgeLongPress}
+              onMouseDown={() => startBadgeLongPress(currentQuestionIndex)}
+              onMouseUp={cancelBadgeLongPress}
+              onMouseLeave={cancelBadgeLongPress}
+              onContextMenu={(e) => e.preventDefault()}
+            >
               Pregunta {currentQuestionIndex + 1} / {questions.length}
             </Badge>
             <div className="h-4 w-px bg-white/10" />
@@ -2676,6 +2750,7 @@ const ActiveQuiz = () => {
               console.log(`[PROGRESS] Clicked on question ${index}`);
               setCurrentQuestionIndex(index);
             }}
+            onQuestionLongPress={handleOpenResetDialog}
             disabled={false}
             correctAnswers={correctAnswers}
             responseMode={progress?.responseMode}
@@ -2991,21 +3066,31 @@ const ActiveQuiz = () => {
                 <KeyRound className="w-3.5 h-3.5" />
                 Clave de acceso
               </Label>
-              <Input
-                type="password"
-                value={resetCode}
-                onChange={(e) => {
-                  setResetCode(e.target.value);
-                  setResetError(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && resetCode.trim()) handleConfirmReset();
-                }}
-                placeholder="Ingresa la clave..."
-                className="bg-slate-800 border-white/15 text-slate-100 placeholder:text-slate-500 focus:border-red-500/50 focus:ring-red-500/20"
-                autoFocus
-                disabled={isResetting}
-              />
+              <div className="relative">
+                <Input
+                  type={showResetCode ? "text" : "password"}
+                  value={resetCode}
+                  onChange={(e) => {
+                    setResetCode(e.target.value);
+                    setResetError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && resetCode.trim()) handleConfirmReset();
+                  }}
+                  placeholder="Ingresa la clave..."
+                  className="bg-slate-800 border-white/15 text-slate-100 placeholder:text-slate-500 focus:border-red-500/50 focus:ring-red-500/20 pr-9"
+                  autoFocus
+                  disabled={isResetting}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowResetCode(p => !p)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showResetCode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
               {resetError && (
                 <div className="flex items-center gap-1.5 text-xs text-red-400 mt-1">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0" />
