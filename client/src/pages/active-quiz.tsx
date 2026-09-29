@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff, Copy, Power, Link2, Bot, Crown, Sparkles } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff, Copy, Power, Link2, Bot, Crown, Sparkles, RotateCcw, KeyRound } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -403,6 +403,12 @@ const ActiveQuiz = () => {
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [reportDescription, setReportDescription] = useState("");
 
+  // ── Quiz Answer Reset Dialog ───────────────────────────────────────────────
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [resetCode, setResetCode] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+
   // Track used hint types per question
   const [usedHintTypes, setUsedHintTypes] = useState<Record<number, ('regular' | 'super')[]>>({});
 
@@ -448,9 +454,28 @@ const ActiveQuiz = () => {
         showExplanation ||
         showPremiumModal ||
         isReportDialogOpen ||
+        isResetDialogOpen ||
         isEditing ||
         isEditingQuizMeta
       ) {
+        return;
+      }
+
+      // Ctrl + Shift + R → Abrir diálogo de reset de respuesta
+      if ((e.key === 'r' || e.key === 'R') && e.ctrlKey && e.shiftKey) {
+        e.preventDefault();
+        if (!questions || !questions[currentQuestionIndex]) return;
+        const isAnswered = answeredQuestions[currentQuestionIndex];
+        if (!isAnswered) {
+          toast({
+            title: "Sin respuesta registrada",
+            description: "Esta pregunta aún no tiene una respuesta guardada.",
+          });
+          return;
+        }
+        setResetCode("");
+        setResetError(null);
+        setIsResetDialogOpen(true);
         return;
       }
 
@@ -489,10 +514,64 @@ const ActiveQuiz = () => {
     showExplanation,
     showPremiumModal,
     isReportDialogOpen,
+    isResetDialogOpen,
     isEditing,
     isEditingQuizMeta,
+    currentQuestionIndex,
+    answeredQuestions,
+    questions,
     toast
   ]);
+
+  // ── Handler: Confirmar reset de respuesta ────────────────────────────────────
+  const handleConfirmReset = async () => {
+    if (!questions || !progress?.id) return;
+    const currentQ = questions[currentQuestionIndex];
+    setIsResetting(true);
+    setResetError(null);
+    try {
+      const res = await fetch("/api/quiz/reset-answer", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          progressId: progress.id,
+          questionId: currentQ.id,
+          code: resetCode,
+        }),
+      });
+      if (res.status === 403) {
+        setResetError("Clave incorrecta. Intenta de nuevo.");
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setResetError(data.message || "Error al eliminar la respuesta.");
+        return;
+      }
+      // Éxito: limpiar estado local
+      setStudentAnswers(prev => prev.filter(a => a.questionId !== currentQ.id));
+      setAnsweredQuestions(prev => {
+        const next = { ...prev };
+        delete next[currentQuestionIndex];
+        return next;
+      });
+      setSelectedAnswerId(null);
+      setDirectResponse("");
+      lastSyncQuestionId.current = null;
+      queryClient.invalidateQueries({ queryKey: [`/api/progress/${currentQ.quizId}`] });
+      setIsResetDialogOpen(false);
+      setResetCode("");
+      toast({
+        title: "✅ Respuesta eliminada",
+        description: "Puedes volver a responder esta pregunta como si fuera la primera vez.",
+      });
+    } catch (err) {
+      setResetError("Error de conexión. Intenta de nuevo.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const handleCopyAllForAI = async () => {
     if (!quiz || !questions || questions.length === 0) {
@@ -2872,6 +2951,100 @@ const ActiveQuiz = () => {
             </div>
           </SheetContent>
         </Sheet>
+
+        {/* ── Diálogo de Reset de Respuesta ────────────────────────────────── */}
+        <Dialog open={isResetDialogOpen} onOpenChange={(open) => {
+          if (!open && !isResetting) {
+            setIsResetDialogOpen(false);
+            setResetCode("");
+            setResetError(null);
+          }
+        }}>
+          <DialogContent className="max-w-sm bg-slate-900 border border-red-500/30 text-slate-100 shadow-2xl shadow-red-500/10">
+            <DialogHeader>
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
+                  <RotateCcw className="w-5 h-5 text-red-400" />
+                </div>
+                <div>
+                  <DialogTitle className="text-white text-base font-bold">Anular respuesta</DialogTitle>
+                  <DialogDescription className="text-slate-400 text-xs mt-0.5">
+                    Ingresa la clave del administrador para borrar esta respuesta.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            {/* Info de la pregunta actual */}
+            {questions && questions[currentQuestionIndex] && (
+              <div className="px-3 py-2.5 rounded-lg bg-slate-800/60 border border-white/8 text-xs text-slate-400">
+                <span className="text-slate-500 font-medium">Pregunta {currentQuestionIndex + 1}:</span>{" "}
+                <span className="text-slate-300 line-clamp-2">
+                  {questions[currentQuestionIndex].content.replace(/\$[^$]*\$/g, "[expr]").slice(0, 80)}
+                  {questions[currentQuestionIndex].content.length > 80 ? "…" : ""}
+                </span>
+              </div>
+            )}
+
+            {/* Campo de clave */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-400 flex items-center gap-1.5">
+                <KeyRound className="w-3.5 h-3.5" />
+                Clave de acceso
+              </Label>
+              <Input
+                type="password"
+                value={resetCode}
+                onChange={(e) => {
+                  setResetCode(e.target.value);
+                  setResetError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && resetCode.trim()) handleConfirmReset();
+                }}
+                placeholder="Ingresa la clave..."
+                className="bg-slate-800 border-white/15 text-slate-100 placeholder:text-slate-500 focus:border-red-500/50 focus:ring-red-500/20"
+                autoFocus
+                disabled={isResetting}
+              />
+              {resetError && (
+                <div className="flex items-center gap-1.5 text-xs text-red-400 mt-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  {resetError}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="gap-2 mt-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsResetDialogOpen(false);
+                  setResetCode("");
+                  setResetError(null);
+                }}
+                disabled={isResetting}
+                className="text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+              >
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleConfirmReset}
+                disabled={!resetCode.trim() || isResetting}
+                className="bg-red-600/80 hover:bg-red-600 text-white border border-red-500/50 min-w-[110px]"
+              >
+                {isResetting ? (
+                  <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Anulando…</>
+                ) : (
+                  <><RotateCcw className="mr-2 h-3.5 w-3.5" />Anular respuesta</>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </div>
   );

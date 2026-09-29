@@ -18,11 +18,19 @@ import {
   Sword,
   PlayCircle,
   ChevronDown,
-  Trophy
+  Trophy,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Check,
+  Loader2,
+  RotateCcw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { DuelMonitor } from "@/components/admin/DuelMonitor";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -121,6 +129,51 @@ const AdminDashboard: React.FC = () => {
   const [atRiskStudents, setAtRiskStudents] = useState<AtRiskStudent[]>([]);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [isSubjectsExpanded, setIsSubjectsExpanded] = useState(false);
+
+  // ── Quiz Answer Reset Code ─────────────────────────────────────────────────────────
+  const [currentResetCode, setCurrentResetCode] = useState<string | null>(null);
+  const [newResetCode, setNewResetCode] = useState("");
+  const [showCurrentCode, setShowCurrentCode] = useState(false);
+  const [isSavingCode, setIsSavingCode] = useState(false);
+  const [codeSaved, setCodeSaved] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
+
+  const fetchCurrentCode = async () => {
+    try {
+      const res = await fetch("/api/admin/quiz-reset-code");
+      const data = await res.json();
+      setCurrentResetCode(data.code);
+      setNewResetCode(data.code);
+    } catch {
+      setCodeError("Error al cargar la clave.");
+    }
+  };
+
+  const handleSaveCode = async () => {
+    if (!newResetCode.trim()) return;
+    setIsSavingCode(true);
+    setCodeError(null);
+    try {
+      const res = await fetch("/api/admin/quiz-reset-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: newResetCode.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setCodeError(data.message || "Error al guardar.");
+        return;
+      }
+      const data = await res.json();
+      setCurrentResetCode(data.code);
+      setCodeSaved(true);
+      setTimeout(() => setCodeSaved(false), 2500);
+    } catch {
+      setCodeError("Error de conexión.");
+    } finally {
+      setIsSavingCode(false);
+    }
+  };
 
   // State for history dialog
   const [selectedStudentHistory, setSelectedStudentHistory] = useState<StudentHistory[]>([]);
@@ -585,6 +638,82 @@ const AdminDashboard: React.FC = () => {
 
           </div>
         </div>
+
+        {/* ── Panel: Clave de Anulación de Respuesta ──────────────────────── */}
+        <Card className="border border-red-500/20 bg-slate-900/60 shadow-xl">
+          <CardHeader className="pb-3 border-b border-white/5">
+            <CardTitle className="text-sm font-bold flex items-center gap-2 text-red-400">
+              <KeyRound className="w-4 h-4" />
+              Clave de Anulación de Respuestas
+            </CardTitle>
+            <p className="text-xs text-slate-500 mt-1">
+              Atajo: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-white/15 text-slate-300 text-[10px] font-mono">Ctrl+Shift+R</kbd> en el cuestionario activo.
+              La clave es requerida para confirmar la anulación.
+            </p>
+          </CardHeader>
+          <CardContent className="p-4 space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-400 flex items-center gap-1.5">
+                <KeyRound className="w-3 h-3" />
+                Clave actual / nueva clave
+              </Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type={showCurrentCode ? "text" : "password"}
+                    value={newResetCode}
+                    onChange={(e) => {
+                      setNewResetCode(e.target.value);
+                      setCodeError(null);
+                      setCodeSaved(false);
+                    }}
+                    onFocus={() => { if (currentResetCode === null) fetchCurrentCode(); }}
+                    onKeyDown={(e) => { if (e.key === "Enter" && newResetCode.trim()) handleSaveCode(); }}
+                    placeholder="Escribe la nueva clave..."
+                    className="bg-slate-800 border-white/15 text-slate-100 placeholder:text-slate-500 pr-9 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentCode(p => !p)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showCurrentCode
+                      ? <EyeOff className="w-3.5 h-3.5" />
+                      : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleSaveCode}
+                  disabled={!newResetCode.trim() || isSavingCode || newResetCode.trim() === currentResetCode}
+                  className="bg-red-600/80 hover:bg-red-600 text-white border border-red-500/50 shrink-0 px-3"
+                >
+                  {isSavingCode ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : codeSaved ? (
+                    <Check className="w-3.5 h-3.5 text-green-400" />
+                  ) : (
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  )}
+                </Button>
+              </div>
+              {codeError && (
+                <p className="text-xs text-red-400">{codeError}</p>
+              )}
+              {codeSaved && (
+                <p className="text-xs text-green-400 flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Clave actualizada correctamente.
+                </p>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              ⚠️ La clave se reinicia al valor por defecto si el servidor se reinicia.
+              Comparte solo el atajo y la clave con los estudiantes que lo necesiten.
+            </p>
+          </CardContent>
+        </Card>
+
       </div>
     </div>
   );

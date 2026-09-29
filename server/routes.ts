@@ -92,6 +92,11 @@ type ProgressWithQuiz = typeof studentProgress.$inferSelect & {
 const publicQuizIds = [278, 279, 280, 281, 282, 283, 285, 286];
 const COST_AI_QUIZ = 10;
 
+// ── Quiz Answer Reset Code ─────────────────────────────────────────────────────
+// Se almacena en memoria. Si el servidor reinicia vuelve al valor por defecto.
+// El admin puede cambiarlo en tiempo real sin reiniciar el servidor.
+let QUIZ_RESET_CODE = "1234";
+
 
 // Deprecated: cleanAiJson moved to ai-utils.ts
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -6073,6 +6078,72 @@ Ejemplo de formato:
       res.json(updatedQuiz);
     } catch (error: any) {
       res.status(500).send(error.message);
+    }
+  });
+
+  // ── QUIZ ANSWER RESET CODE (Admin) ────────────────────────────────────────────
+  // GET: El admin obtiene la clave actual
+  apiRouter.get("/admin/quiz-reset-code", requireAdmin, async (req: Request, res: Response) => {
+    res.json({ code: QUIZ_RESET_CODE });
+  });
+
+  // POST: El admin cambia la clave
+  apiRouter.post("/admin/quiz-reset-code", requireAdmin, async (req: Request, res: Response) => {
+    const { code } = req.body;
+    if (!code || typeof code !== "string" || code.trim().length < 1) {
+      return res.status(400).json({ message: "Clave inválida" });
+    }
+    QUIZ_RESET_CODE = code.trim();
+    console.log(`[QuizReset] Admin cambió la clave de reset a: "${QUIZ_RESET_CODE}"`);
+    res.json({ message: "Clave actualizada", code: QUIZ_RESET_CODE });
+  });
+
+  // DELETE: El usuario borra su respuesta a una pregunta (reset) — requiere clave correcta
+  apiRouter.delete("/quiz/reset-answer", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const { progressId, questionId, code } = req.body;
+
+    if (!progressId || !questionId || !code) {
+      return res.status(400).json({ message: "Faltan campos requeridos" });
+    }
+
+    if (code.trim() !== QUIZ_RESET_CODE) {
+      return res.status(403).json({ message: "Clave incorrecta" });
+    }
+
+    try {
+      // Verificar que el progress pertenece al usuario
+      const userProgress = await storage.getStudentProgress(userId);
+      const progress = userProgress.find(p => p.id === progressId);
+
+      if (!progress) {
+        return res.status(403).json({ message: "No tienes acceso a este progreso" });
+      }
+
+      if (progress.status === "completed") {
+        return res.status(400).json({ message: "El cuestionario ya fue completado" });
+      }
+
+      // Eliminar la respuesta del estudiante para esa pregunta en ese progreso
+      await db
+        .delete(studentAnswersTable)
+        .where(
+          and(
+            eq(studentAnswersTable.progressId, progressId),
+            eq(studentAnswersTable.questionId, questionId)
+          )
+        );
+
+      console.log(`[QuizReset] Usuario ${userId} reseteó respuesta de pregunta ${questionId} en progreso ${progressId}`);
+
+      res.json({ message: "Respuesta eliminada correctamente" });
+    } catch (error) {
+      console.error("[QuizReset] Error al resetear respuesta:", error);
+      res.status(500).json({ message: "Error al eliminar la respuesta" });
     }
   });
 
