@@ -93,9 +93,28 @@ const publicQuizIds = [278, 279, 280, 281, 282, 283, 285, 286];
 const COST_AI_QUIZ = 10;
 
 // ── Quiz Answer Reset Code ─────────────────────────────────────────────────────
-// Se almacena en memoria. Si el servidor reinicia vuelve al valor por defecto.
-// El admin puede cambiarlo en tiempo real sin reiniciar el servidor.
-let QUIZ_RESET_CODE = "1234";
+// Se persiste en la BD (campo tourStatus del usuario admin id=1) para sobrevivir
+// reinicios del servidor y nuevos deploys. Valor por defecto: "1234".
+const QUIZ_RESET_CODE_KEY = "quizResetCode";
+const QUIZ_RESET_CODE_DEFAULT = "1234";
+
+async function getQuizResetCode(): Promise<string> {
+  try {
+    const [admin] = await db.select({ tourStatus: users.tourStatus }).from(users).where(eq(users.id, 1)).limit(1);
+    const code = (admin?.tourStatus as any)?.[QUIZ_RESET_CODE_KEY];
+    return typeof code === "string" && code.trim().length > 0 ? code : QUIZ_RESET_CODE_DEFAULT;
+  } catch {
+    return QUIZ_RESET_CODE_DEFAULT;
+  }
+}
+
+async function setQuizResetCode(newCode: string): Promise<void> {
+  const [admin] = await db.select({ tourStatus: users.tourStatus }).from(users).where(eq(users.id, 1)).limit(1);
+  const currentTourStatus = (admin?.tourStatus as any) || {};
+  await db.update(users)
+    .set({ tourStatus: { ...currentTourStatus, [QUIZ_RESET_CODE_KEY]: newCode.trim() } })
+    .where(eq(users.id, 1));
+}
 
 
 // Deprecated: cleanAiJson moved to ai-utils.ts
@@ -6082,20 +6101,26 @@ Ejemplo de formato:
   });
 
   // ── QUIZ ANSWER RESET CODE (Admin) ────────────────────────────────────────────
-  // GET: El admin obtiene la clave actual
+  // GET: El admin obtiene la clave actual (desde BD)
   apiRouter.get("/admin/quiz-reset-code", requireAdmin, async (req: Request, res: Response) => {
-    res.json({ code: QUIZ_RESET_CODE });
+    const code = await getQuizResetCode();
+    res.json({ code });
   });
 
-  // POST: El admin cambia la clave
+  // POST: El admin cambia la clave (persiste en BD)
   apiRouter.post("/admin/quiz-reset-code", requireAdmin, async (req: Request, res: Response) => {
     const { code } = req.body;
     if (!code || typeof code !== "string" || code.trim().length < 1) {
       return res.status(400).json({ message: "Clave inválida" });
     }
-    QUIZ_RESET_CODE = code.trim();
-    console.log(`[QuizReset] Admin cambió la clave de reset a: "${QUIZ_RESET_CODE}"`);
-    res.json({ message: "Clave actualizada", code: QUIZ_RESET_CODE });
+    try {
+      await setQuizResetCode(code);
+      console.log(`[QuizReset] Admin cambió la clave de reset a: "${code.trim()}" (persistida en BD)`);
+      res.json({ message: "Clave actualizada", code: code.trim() });
+    } catch (error) {
+      console.error("[QuizReset] Error al guardar clave:", error);
+      res.status(500).json({ message: "Error al guardar la clave" });
+    }
   });
 
   // DELETE: El usuario borra su respuesta a una pregunta (reset) — requiere clave correcta
@@ -6111,7 +6136,8 @@ Ejemplo de formato:
       return res.status(400).json({ message: "Faltan campos requeridos" });
     }
 
-    if (code.trim() !== QUIZ_RESET_CODE) {
+    const currentCode = await getQuizResetCode();
+    if (code.trim() !== currentCode) {
       return res.status(403).json({ message: "Clave incorrecta" });
     }
 
