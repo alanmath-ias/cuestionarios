@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -97,11 +97,17 @@ function QuizResults() {
   const { data: allCategoryQuizzes } = useQuery<any[]>({
     queryKey: ["category-quizzes-all", categoryIdForMastery],
     queryFn: async () => {
-      const res = await fetch(`/api/categories/${categoryIdForMastery}/quizzes`, { credentials: "include" });
+      const res = await fetch(`/api/categories/${categoryIdForMastery}/quizzes?_t=${Date.now()}`, { 
+        credentials: "include",
+        headers: { "Cache-Control": "no-cache" }
+      });
       if (!res.ok) return [];
       return res.json();
     },
     enabled: !!categoryIdForMastery && session?.role === 'student',
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
   });
 
   const { data: nodeMappings } = useQuery<any[]>({
@@ -212,6 +218,8 @@ function QuizResults() {
     queryClient.invalidateQueries({ queryKey: ["/api/quizzes"] });
     queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
     queryClient.invalidateQueries({ queryKey: ["user-quizzes"] });
+    queryClient.invalidateQueries({ queryKey: ["category-quizzes-all"] });
+    queryClient.invalidateQueries({ queryKey: [`/api/categories/${results?.quiz?.categoryId}`] });
 
     if (userId) {
       setLocation(`/admin/users?viewProgress=${userId}`);
@@ -254,20 +262,21 @@ function QuizResults() {
             );
             const awardedNodes = tourStatus.awardedNodes || {};
             const awardedUnits = tourStatus.awardedUnits || {};
-            const isQuizAlreadySeen = !!tourStatus.seenMedals?.[results.quiz.id];
+
+            const isQuizDone = (q: any) => {
+              if (Number(q.id) === Number(results.quiz.id)) return true;
+              if (q.userStatus === 'completed') return true;
+              if (allUserQuizzes?.some(uq => Number(uq.id) === Number(q.id) && (uq.status === 'completed' || uq.userStatus === 'completed'))) return true;
+              return false;
+            };
 
             if (nodeQuizzes.length > 0) {
-              const completedCount = nodeQuizzes.filter(q => {
-                // Current quiz just completed - treat as completed regardless of cache
-                if (Number(q.id) === Number(results.quiz.id)) return true;
-                // Other quizzes: use userStatus from allCategoryQuizzes (has user-specific status)
-                return q.userStatus === 'completed';
-              }).length;
+              const completedCount = nodeQuizzes.filter(q => isQuizDone(q)).length;
               console.log('[NodeComplete] completedCount:', completedCount, '/', nodeQuizzes.length);
               const allDone = completedCount >= nodeQuizzes.length;
-              const priorCompletedCount = nodeQuizzes.filter(q => q.userStatus === 'completed' && Number(q.id) !== Number(results.quiz.id)).length;
+              const priorCompletedCount = nodeQuizzes.filter(q => isQuizDone(q) && Number(q.id) !== Number(results.quiz.id)).length;
               const isExistingNodeInCompletedMap = isMapPreviouslyCompleted && priorCompletedCount > 0;
-              isNodeComplete = allDone && !awardedNodes[currentNode.id] && !isExistingNodeInCompletedMap && !isQuizAlreadySeen;
+              isNodeComplete = allDone && !awardedNodes[currentNode.id] && !isExistingNodeInCompletedMap;
             }
 
             // Calculate family completion
@@ -346,12 +355,9 @@ function QuizResults() {
               });
 
               if (uniqueFamilyQuizzes.length > 0) {
-                const completedCount = uniqueFamilyQuizzes.filter(q => {
-                  if (Number(q.id) === Number(results.quiz.id)) return true;
-                  return q.userStatus === 'completed';
-                }).length;
+                const completedCount = uniqueFamilyQuizzes.filter(q => isQuizDone(q)).length;
                 const allDone = completedCount >= uniqueFamilyQuizzes.length;
-                isFamilyComplete = allDone && !isMapPreviouslyCompleted && !awardedUnits[parentContainer.id] && !isQuizAlreadySeen;
+                isFamilyComplete = allDone && !isMapPreviouslyCompleted && !awardedUnits[parentContainer.id];
                 console.log('[FamilyComplete] parent:', parentContainer.id, 'completed:', isFamilyComplete, completedCount, '/', uniqueFamilyQuizzes.length);
               }
             }
@@ -590,25 +596,25 @@ function QuizResults() {
           <div className="flex items-center gap-3">
             {/* Botón Fórmulas y Conceptos Clave */}
             {results?.quiz && (
-              <Button
-                variant="outline"
+              <button
+                type="button"
                 onClick={handleOpenTheory}
                 className={cn(
-                  "flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all border",
+                  "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border shadow-md cursor-pointer select-none",
                   isTheoryOpen
-                    ? "bg-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)] border-indigo-400/50"
+                    ? "bg-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)] border-indigo-400"
                     : session?.isPremium
-                      ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/25 hover:text-white hover:border-indigo-400/50 shadow-sm"
-                      : "bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-indigo-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20 hover:border-amber-400/50"
+                      ? "bg-slate-900/90 text-indigo-300 border-indigo-500/40 hover:bg-indigo-950/90 hover:text-white hover:border-indigo-400 hover:shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                      : "bg-slate-900/90 text-amber-300 border-amber-500/40 hover:bg-amber-500/20 hover:text-amber-100 hover:border-amber-400 hover:shadow-[0_0_15px_rgba(245,158,11,0.35)]"
                 )}
                 title={session?.isPremium ? "Repasar fórmulas y conceptos clave del cuestionario" : "Fórmulas y conceptos clave (Función Premium)"}
               >
-                <BookOpen className="h-4 w-4 text-indigo-400 shrink-0" />
+                <BookOpen className={cn("h-4 w-4 shrink-0 transition-colors", session?.isPremium ? "text-indigo-400" : "text-amber-400")} />
                 <span>Fórmulas</span>
                 {!session?.isPremium && (
-                  <Crown className="w-3.5 h-3.5 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.5)] ml-0.5" />
+                  <Crown className="w-3.5 h-3.5 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.7)] ml-0.5" />
                 )}
-              </Button>
+              </button>
             )}
 
             {/* Botón Verificar — visible solo para Alan (id=2) */}

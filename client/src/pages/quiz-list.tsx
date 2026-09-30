@@ -1130,10 +1130,9 @@ function QuizList() {
                                 )}
                                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                                   {/* Botón Fórmulas y Conceptos Clave */}
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 px-2 sm:px-2.5 text-xs font-semibold bg-indigo-500/10 border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 hover:text-white hover:border-indigo-400/50 transition-all flex items-center gap-1 shrink-0"
+                                  <button
+                                    type="button"
+                                    className="h-7 px-2.5 text-xs font-semibold rounded-lg bg-slate-900/90 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/25 hover:text-white hover:border-indigo-400/50 transition-all flex items-center gap-1 shrink-0 cursor-pointer select-none"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleOpenTheory(quiz);
@@ -1145,7 +1144,7 @@ function QuizList() {
                                     {!session?.isPremium && (
                                       <Crown className="w-3 h-3 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.5)] ml-0.5 shrink-0" />
                                     )}
-                                  </Button>
+                                  </button>
 
                                   {!isCompleted && !searchParams.get('user_id') && (
                                     <Button

@@ -754,6 +754,8 @@ const ActiveQuiz = () => {
       queryClient.invalidateQueries({ queryKey: ["user-quizzes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["category-quizzes-all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
     },
   });
 

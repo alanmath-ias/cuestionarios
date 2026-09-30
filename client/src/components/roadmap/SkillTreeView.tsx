@@ -430,7 +430,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
     // Handle Focus and Celebration Trigger from URL
     useEffect(() => {
         const searchParams = new URLSearchParams(window.location.search);
-        const focusId = searchParams.get('focusNode');
+        const focusId = searchParams.get('focusNode') || searchParams.get('nodeId');
         const source = searchParams.get('source');
         const quizTitleParam = searchParams.get('quizTitle');
 
@@ -495,22 +495,25 @@ export const SkillTreeView = React.memo(function SkillTreeView({
 
             const parentContainer = findParentContainer(focusId);
             const isFamilyMastery =
-                searchParams.get('familyCompleted') === 'true' &&
                 !isMapPreviouslyCompleted &&
                 !focusId.endsWith('mastery') &&
                 !!parentContainer &&
-                !awardedUnits[parentContainer.id];
+                !awardedUnits[parentContainer.id] &&
+                (
+                    searchParams.get('familyCompleted') === 'true' ||
+                    progressMap[parentContainer.id] === 'completed'
+                );
 
             const isNodeCompleted =
                 !focusId.endsWith('mastery') &&
-                (searchParams.get('nodeCompleted') === 'true' ||
-                (source !== 'quiz' && (
+                !awardedNodes[focusId] &&
+                !(isMapPreviouslyCompleted && searchParams.get('nodeCompleted') !== 'true') &&
+                (
+                    searchParams.get('nodeCompleted') === 'true' ||
                     progressMap[focusId] === 'completed' || 
                     (nodeProgress[focusId] !== undefined && nodeProgress[focusId] >= 99.9) || 
                     (nodeTotalQuizzes[focusId] > 0 && (nodeCompletedCount[focusId] || 0) >= nodeTotalQuizzes[focusId])
-                ))) &&
-                !awardedNodes[focusId] &&
-                !(isMapPreviouslyCompleted && searchParams.get('nodeCompleted') !== 'true');
+                );
 
             const titleQuiz = quizTitleParam ? decodeURIComponent(quizTitleParam) : (targetNode.label || "cuestionario");
 
