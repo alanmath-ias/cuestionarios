@@ -89,7 +89,15 @@ export class DuelServer {
 
   constructor(server: Server) {
     DuelServer.instance = this;
-    this.wss = new WebSocketServer({ server, path: '/ws/duels' });
+    this.wss = new WebSocketServer({ noServer: true });
+    server.on('upgrade', (req, socket, head) => {
+      const pathname = req.url ? req.url.split('?')[0] : '';
+      if (pathname === '/ws/duels') {
+        this.wss.handleUpgrade(req, socket, head, (ws) => {
+          this.wss.emit('connection', ws, req);
+        });
+      }
+    });
     this.wss.on('connection', this.handleConnection.bind(this));
     this.startHeartbeat();
     

@@ -52,6 +52,8 @@ import { User as DrizzleUser } from "../shared/schema.js";
 import { sendWelcomeEmail } from "./email-utils.js";
 import { generateAiQuizData, cleanAiJson } from "./ai-utils.js";
 import { DuelServer } from "./duel-server.js";
+import { setupLiveQuizRoutes } from "./live-quiz-server.js";
+
 
 declare global {
   namespace Express {
@@ -123,6 +125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const apiRouter = express.Router();
 
   app.use("/api", apiRouter);
+  setupLiveQuizRoutes(apiRouter);
 
   // Background Tasks
   setInterval(() => {

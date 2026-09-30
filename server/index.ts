@@ -152,6 +152,11 @@ import { storage } from "./storage.js";
     new DuelServer(server);
   });
 
+  // Initialize Live Quiz WebSocket Server
+  import('./live-quiz-server.js').then(({ LiveQuizServer }) => {
+    new LiveQuizServer(server);
+  });
+
   // Middleware para servir archivos estáticos en producción
   if (app.get("env") === "development") {
     await setupVite(app, server);

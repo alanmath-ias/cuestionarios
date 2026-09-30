@@ -52,6 +52,7 @@ import EncuestaPage from '@/pages/EncuestaPage';
 import PublicActiveQuiz from '@/pages/PublicActiveQuiz';
 import PublicQuizResults from '@/pages/PublicQuizResults';
 import PreviewQuiz from '@/pages/PreviewQuiz';
+import LiveQuizSpectator from '@/pages/LiveQuizSpectator';
 import ForgotPasswordPage from '@/pages/forgot-password';
 import ResetPasswordPage from '@/pages/reset-password';
 
@@ -286,6 +287,11 @@ function Router() {
       {/* Vista previa pública — sin autenticación requerida */}
       <Route path="/preview/:quizId">
         {() => <PreviewQuiz />}
+      </Route>
+
+      {/* Transmisión en vivo — Modo Espectador (sin autenticación obligatoria) */}
+      <Route path="/quiz/live/:shareCode">
+        {() => <LiveQuizSpectator />}
       </Route>
 
 

@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff, Copy, Power, Link2, Bot, Crown, Sparkles, RotateCcw, KeyRound } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Timer, Lightbulb, Flag, Clock, Trophy, Home, BookOpen, ShieldCheck, ShieldOff, Brain, Zap, Pencil, Save, Trash2, Check, X as CloseIcon, Eye, EyeOff, Copy, Power, Link2, Bot, Crown, Sparkles, RotateCcw, KeyRound, Radio } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -17,6 +17,8 @@ import { startActiveQuizTour } from "@/lib/tour";
 import { useState, useEffect, useRef } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useTimer } from "@/hooks/use-timer";
+import { useLiveQuiz } from "@/hooks/use-live-quiz";
+import { LiveShareDialog } from "@/components/LiveShareDialog";
 import { QuestionProgress } from "@/components/QuestionProgress";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -1009,6 +1011,63 @@ const ActiveQuiz = () => {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  // ── Live Quiz Broadcaster (Transmisión en Tiempo Real) ──────────────────────
+  const [isLiveDialogOpen, setIsLiveDialogOpen] = useState(false);
+  const effectiveQuizId = isChiqui ? parseInt(categoryId!) : parseInt(quizId || '0');
+
+  const handleOpenLiveShare = () => {
+    if (!session?.isPremium) {
+      setPremiumModalData({
+        title: "Transmisión en Vivo con Modo Espectador",
+        description: "Comparte tu cuestionario en tiempo real para que tus profesores, compañeros o amigos sigan tu avance, respuestas y temporizador en directo suscribiéndote a AlanMath Premium."
+      });
+      setShowPremiumModal(true);
+      return;
+    }
+    setIsLiveDialogOpen(true);
+  };
+
+  const {
+    shareCode: liveShareCode,
+    isSharing: isLiveSharing,
+    spectatorCount: liveSpectatorCount,
+    isConnecting: isLiveConnecting,
+    startSharing: startLiveSharing,
+    stopSharing: stopLiveSharing,
+    broadcastQuestionChange,
+    broadcastAnswerSelected,
+    broadcastResponseTyped,
+    broadcastAnswerSubmitted,
+    broadcastHintRevealed,
+    broadcastTimerSync,
+    broadcastFinished: broadcastLiveFinished,
+  } = useLiveQuiz({
+    quizId: effectiveQuizId,
+    quizTitle: quiz?.title || (isChiqui ? 'Repasito Diario' : 'Cuestionario'),
+    timeLimit: isChiqui ? 1200 : (quiz?.timeLimit || 0),
+    questions,
+    currentQuestionIndex,
+    selectedAnswerId,
+    directResponse,
+    studentAnswers,
+    elapsedTime,
+    hintsRevealed,
+  });
+
+  // Sincronizar cambio de pregunta con espectadores en vivo
+  useEffect(() => {
+    if (isLiveSharing && isInitialized) {
+      broadcastQuestionChange(currentQuestionIndex, selectedAnswerId, directResponse, studentAnswers);
+    }
+  }, [currentQuestionIndex, isLiveSharing, isInitialized, broadcastQuestionChange, selectedAnswerId, directResponse, studentAnswers]);
+
+  // Sincronizar temporizador periódicamente con espectadores (cada 4 segundos)
+  useEffect(() => {
+    if (isLiveSharing && elapsedTime > 0 && elapsedTime % 4 === 0) {
+      broadcastTimerSync(elapsedTime);
+    }
+  }, [elapsedTime, isLiveSharing, broadcastTimerSync]);
+
   // Effects
   useEffect(() => {
     if (!isInitialized && questions) {
@@ -1359,7 +1418,11 @@ const ActiveQuiz = () => {
 
     const input = inputRef.current;
     if (!input) {
-      setDirectResponse(prev => prev + value);
+      setDirectResponse(prev => {
+        const next = prev + value;
+        if (isLiveSharing) broadcastResponseTyped(next);
+        return next;
+      });
       return;
     }
 
@@ -1371,6 +1434,7 @@ const ActiveQuiz = () => {
 
     const newText = before + value + after;
     setDirectResponse(newText);
+    if (isLiveSharing) broadcastResponseTyped(newText);
 
     // Reposicionar cursor tras el render
     setTimeout(() => {
@@ -1407,11 +1471,18 @@ const ActiveQuiz = () => {
     }
 
     // Actualización optimista inmediata del estado local para iluminar de inmediato verde/rojo
-    setStudentAnswers((prev) => {
-      const filtered = prev.filter((ans) => ans.questionId !== studentAnswer.questionId);
-      return [...filtered, studentAnswer];
-    });
+    const currentList = studentAnswers || [];
+    const updatedAnswersList = [
+      ...currentList.filter((ans: any) => Number(ans.questionId) !== Number(studentAnswer.questionId)),
+      studentAnswer,
+    ];
+    setStudentAnswers(updatedAnswersList);
     setAnsweredQuestions((prev) => ({ ...prev, [currentQuestionIndex]: true }));
+
+    // Transmitir en vivo a los espectadores
+    if (isLiveSharing) {
+      broadcastAnswerSubmitted(studentAnswer, updatedAnswersList, currentQuestionIndex);
+    }
 
     try {
       if (!isChiqui) {
@@ -1428,6 +1499,9 @@ const ActiveQuiz = () => {
   const handleSelectAnswer = (answerId: number) => {
     if (answeredQuestions[currentQuestionIndex] || isNavigating || isReadOnly) return;
     setSelectedAnswerId(answerId);
+    if (isLiveSharing) {
+      broadcastAnswerSelected(answerId);
+    }
   };
 
   const handleNextQuestion = async () => {
@@ -1542,11 +1616,17 @@ const ActiveQuiz = () => {
     };
 
     // Actualización optimista del estado local
-    setStudentAnswers(prev => {
-      const filtered = prev.filter(ans => ans.questionId !== studentAnswer.questionId);
-      return [...filtered, studentAnswer];
-    });
+    const currentList = studentAnswers || [];
+    const updatedAnswersList = [
+      ...currentList.filter((ans: any) => Number(ans.questionId) !== Number(studentAnswer.questionId)),
+      studentAnswer,
+    ];
+    setStudentAnswers(updatedAnswersList);
     setAnsweredQuestions(prev => ({ ...prev, [currentQuestionIndex]: true }));
+
+    if (isLiveSharing) {
+      broadcastAnswerSubmitted(studentAnswer, updatedAnswersList, currentQuestionIndex);
+    }
 
     try {
       if (!isChiqui) {
@@ -1595,6 +1675,10 @@ const ActiveQuiz = () => {
 
       const data = await res.json();
 
+      if (isLiveSharing) {
+        broadcastHintRevealed(currentQuestion.id, data.content);
+      }
+
       setHintsRevealed(prev => ({
         ...prev,
         [currentQuestion.id]: [...(prev[currentQuestion.id] || []), data.content]
@@ -1627,6 +1711,10 @@ const ActiveQuiz = () => {
     if (isChiqui) {
       try {
         const score = answersToUse.filter(a => a.isCorrect).length;
+
+        if (isLiveSharing) {
+          broadcastLiveFinished(score, getTotalTime(), answersToUse);
+        }
 
         await apiRequest("POST", "/api/chiquitest/result", {
           categoryId: parseInt(categoryId!),
@@ -1672,6 +1760,10 @@ const ActiveQuiz = () => {
       const rawScore = totalQ > 0 ? (correctQ / totalQ) * 10 : 0;
       const score = Number(Math.min(rawScore, 10).toFixed(1));
       const totalTime = getTotalTime();
+
+      if (isLiveSharing) {
+        broadcastLiveFinished(score, totalTime, uniqueAnswers);
+      }
 
       const progressUpdate = {
         ...progress,
@@ -2021,7 +2113,48 @@ const ActiveQuiz = () => {
                 </h1>
 
                 {!isReadOnly && (
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {/* Live Broadcast Button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleOpenLiveShare}
+                      className={`h-7 px-2.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
+                        isLiveSharing
+                          ? 'border border-rose-500 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 ring-1 ring-rose-500/50 shadow-rose-950/40'
+                          : session?.isPremium
+                            ? 'border border-rose-500/40 bg-slate-900/80 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300'
+                            : 'bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-indigo-500/10 text-amber-300/90 border border-amber-500/30 hover:border-amber-400 hover:text-amber-200 hover:bg-amber-500/20'
+                      }`}
+                      title={
+                        isLiveSharing
+                          ? "Transmisión en vivo activa. Clic para ver enlace y opciones."
+                          : session?.isPremium
+                            ? "Compartir enlace para ver en tiempo real este cuestionario"
+                            : "Compartir enlace en tiempo real (Función AlanMath Premium)"
+                      }
+                    >
+                      {isLiveSharing ? (
+                        <>
+                          <span className="relative flex h-2 w-2 mr-0.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                          </span>
+                          <span>En Vivo</span>
+                          <span className="px-1.5 py-0.2 rounded-full bg-rose-500/40 text-[10px] text-white font-mono">
+                            {liveSpectatorCount}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Radio className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
+                          <span>Compartir en vivo</span>
+                          {!session?.isPremium && (
+                            <Crown className="w-3 h-3 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.5)] ml-0.5" />
+                          )}
+                        </>
+                      )}
+                    </Button>
                     {isAdmin ? (
                       <div
                         id="tour-timer"
@@ -2359,10 +2492,16 @@ const ActiveQuiz = () => {
                 <div className="space-y-4">
                   <Textarea
                     value={textAnswers[currentQuestion.id] || ''}
-                    onChange={(e) => !answeredQuestions[currentQuestionIndex] && setTextAnswers({
-                      ...textAnswers,
-                      [currentQuestion.id]: e.target.value
-                    })}
+                    onChange={(e) => {
+                      if (!answeredQuestions[currentQuestionIndex]) {
+                        const val = e.target.value;
+                        setTextAnswers({
+                          ...textAnswers,
+                          [currentQuestion.id]: val
+                        });
+                        if (isLiveSharing) broadcastResponseTyped(val);
+                      }
+                    }}
                     placeholder="Escribe tu respuesta aquí..."
                     rows={4}
                     disabled={answeredQuestions[currentQuestionIndex]}
@@ -2383,7 +2522,13 @@ const ActiveQuiz = () => {
                       <Input
                         ref={inputRef}
                         value={directResponse}
-                        onChange={(e) => !answeredQuestions[currentQuestionIndex] && setDirectResponse(e.target.value)}
+                        onChange={(e) => {
+                          if (!answeredQuestions[currentQuestionIndex]) {
+                            const val = e.target.value;
+                            setDirectResponse(val);
+                            if (isLiveSharing) broadcastResponseTyped(val);
+                          }
+                        }}
                         placeholder="Escribe tu respuesta aquí..."
                         className="bg-slate-900 border-white/10 text-xl py-6 h-auto text-slate-100 placeholder:text-slate-600 focus:ring-blue-500/50 rounded-2xl transition-all"
                         disabled={answeredQuestions[currentQuestionIndex]}
@@ -3130,6 +3275,19 @@ const ActiveQuiz = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* ── Live Share Dialog ─────────────────────────────────────── */}
+        <LiveShareDialog
+          isOpen={isLiveDialogOpen}
+          onClose={() => setIsLiveDialogOpen(false)}
+          isSharing={isLiveSharing}
+          shareCode={liveShareCode}
+          spectatorCount={liveSpectatorCount}
+          isConnecting={isLiveConnecting}
+          onStartSharing={startLiveSharing}
+          onStopSharing={stopLiveSharing}
+          quizTitle={quiz?.title || (isChiqui ? 'Repasito' : 'Cuestionario')}
+        />
 
       </div>
     </div>
