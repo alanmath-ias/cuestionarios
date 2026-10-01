@@ -28,6 +28,8 @@ import {
   ExternalLink,
   RotateCcw,
   Zap,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface Answer {
@@ -359,15 +361,80 @@ export default function LiveQuizSpectator() {
     setAutoFollow(true);
   };
 
+  const bubbleRefs = useRef<{ [key: number]: HTMLButtonElement | null }>({});
+
   // Switch viewed question manually
-  const handleSelectQuestionIndex = (index: number) => {
-    setViewedIndex(index);
-    if (index !== liveState?.currentQuestionIndex) {
+  const handleSelectQuestionIndex = useCallback((index: number) => {
+    if (!liveState?.questions?.length) return;
+    const clampedIndex = Math.max(0, Math.min(index, liveState.questions.length - 1));
+    setViewedIndex(clampedIndex);
+    if (clampedIndex !== liveState.currentQuestionIndex) {
       setAutoFollow(false);
     } else {
       setAutoFollow(true);
     }
-  };
+  }, [liveState?.questions?.length, liveState?.currentQuestionIndex]);
+
+  // Navigate to previous question
+  const handlePreviousQuestion = useCallback(() => {
+    setViewedIndex((prev) => {
+      const next = Math.max(prev - 1, 0);
+      if (liveState && next !== liveState.currentQuestionIndex) {
+        setAutoFollow(false);
+      } else {
+        setAutoFollow(true);
+      }
+      return next;
+    });
+  }, [liveState]);
+
+  // Navigate to next question
+  const handleNextQuestion = useCallback(() => {
+    setViewedIndex((prev) => {
+      const total = liveState?.questions?.length || 0;
+      if (total === 0) return prev;
+      const next = Math.min(prev + 1, total - 1);
+      if (liveState && next !== liveState.currentQuestionIndex) {
+        setAutoFollow(false);
+      } else {
+        setAutoFollow(true);
+      }
+      return next;
+    });
+  }, [liveState]);
+
+  // Keyboard navigation with ArrowLeft and ArrowRight
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignorar si el usuario está enfocado en un campo de texto o editable
+      const activeElement = document.activeElement;
+      const isInputFocused =
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement?.getAttribute('contenteditable') === 'true';
+
+      if (isInputFocused) return;
+
+      if (e.key === 'ArrowRight' || e.key === 'Right') {
+        e.preventDefault();
+        handleNextQuestion();
+      } else if (e.key === 'ArrowLeft' || e.key === 'Left') {
+        e.preventDefault();
+        handlePreviousQuestion();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleNextQuestion, handlePreviousQuestion]);
+
+  // Auto-scroll bubble into view when viewedIndex changes
+  useEffect(() => {
+    const activeBubble = bubbleRefs.current[viewedIndex];
+    if (activeBubble) {
+      activeBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [viewedIndex]);
 
   // Loading State
   if (loading) {
@@ -578,14 +645,19 @@ export default function LiveQuizSpectator() {
         {/* ── Question Progress Bubbles Bar ─────────────────────────────── */}
         <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 shadow-lg space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-slate-400">
-            <span className="flex items-center gap-2 font-bold text-slate-200">
-              Pregunta {viewedIndex + 1} de {questions.length}
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-200">
+                Pregunta {viewedIndex + 1} de {questions.length}
+              </span>
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-800/90 px-2 py-0.5 rounded-md border border-slate-700/80 font-mono">
+                Teclas <kbd className="px-1 py-0.2 bg-slate-950 rounded text-slate-200 border border-slate-700">←</kbd> <kbd className="px-1 py-0.2 bg-slate-950 rounded text-slate-200 border border-slate-700">→</kbd>
+              </span>
               {!isViewingStudentActiveQuestion && (
                 <span className="text-amber-400/90 font-medium italic">
                   (Explorando pregunta {viewedIndex + 1})
                 </span>
               )}
-            </span>
+            </div>
 
             {/* Quick jump to student's active question if exploring another */}
             {!isViewingStudentActiveQuestion && (
@@ -601,54 +673,79 @@ export default function LiveQuizSpectator() {
             )}
           </div>
 
-          {/* Bubbles scroll container */}
-          <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto py-2 px-1 scrollbar-thin scrollbar-thumb-slate-700">
-            {questions.map((q, idx) => {
-              const ans = studentAnswers?.find(
-                (a: any) => Number(a.questionId) === Number(q.id) || a.questionIndex === idx
-              );
-              const isAnswered = !!ans;
-              const isCorrect = ans?.isCorrect === true;
-              const isIncorrect = ans?.isCorrect === false;
-              const isStudentHere = studentActiveIndex === idx;
-              const isCurrentlyViewed = viewedIndex === idx;
+          {/* Bubbles scroll container flanqueado con flechas adelante y atrás */}
+          <div className="flex items-center gap-2">
+            <Button
+              size="icon"
+              variant="ghost"
+              disabled={viewedIndex <= 0}
+              onClick={handlePreviousQuestion}
+              className="h-9 w-9 sm:h-10 sm:w-10 shrink-0 rounded-full bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-600 disabled:opacity-30 disabled:pointer-events-none transition-all shadow-sm flex items-center justify-center"
+              title="Pregunta anterior (Flecha Izquierda ←)"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
 
-              let circleClass = "bg-slate-800/50 text-slate-400 border-slate-700/60 hover:bg-slate-700 hover:text-slate-200";
-              if (isAnswered) {
-                if (isCorrect) {
-                  circleClass = "bg-green-500/20 text-green-400 border-green-500/60 shadow-[0_0_10px_rgba(34,197,94,0.25)] font-bold";
-                } else if (isIncorrect) {
-                  circleClass = "bg-red-500/20 text-red-400 border-red-500/60 shadow-[0_0_10px_rgba(239,68,68,0.25)] font-bold";
-                } else {
-                  circleClass = "bg-blue-500/20 text-blue-400 border-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.25)] font-bold";
+            <div className="flex-1 flex items-center gap-2 sm:gap-2.5 overflow-x-auto py-2 px-1 scrollbar-thin scrollbar-thumb-slate-700">
+              {questions.map((q, idx) => {
+                const ans = studentAnswers?.find(
+                  (a: any) => Number(a.questionId) === Number(q.id) || a.questionIndex === idx
+                );
+                const isAnswered = !!ans;
+                const isCorrect = ans?.isCorrect === true;
+                const isIncorrect = ans?.isCorrect === false;
+                const isStudentHere = studentActiveIndex === idx;
+                const isCurrentlyViewed = viewedIndex === idx;
+
+                let circleClass = "bg-slate-800/50 text-slate-400 border-slate-700/60 hover:bg-slate-700 hover:text-slate-200";
+                if (isAnswered) {
+                  if (isCorrect) {
+                    circleClass = "bg-green-500/20 text-green-400 border-green-500/60 shadow-[0_0_10px_rgba(34,197,94,0.25)] font-bold";
+                  } else if (isIncorrect) {
+                    circleClass = "bg-red-500/20 text-red-400 border-red-500/60 shadow-[0_0_10px_rgba(239,68,68,0.25)] font-bold";
+                  } else {
+                    circleClass = "bg-blue-500/20 text-blue-400 border-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.25)] font-bold";
+                  }
                 }
-              }
 
-              return (
-                <button
-                  key={q.id || idx}
-                  onClick={() => handleSelectQuestionIndex(idx)}
-                  className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full text-xs sm:text-sm font-bold transition-all border shrink-0 ${circleClass} ${
-                    isCurrentlyViewed
-                      ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-950 scale-110 z-10'
-                      : ''
-                  }`}
-                  title={`Pregunta ${idx + 1}${
-                    isAnswered ? (isCorrect ? ' (Correcta)' : isIncorrect ? ' (Incorrecta)' : ' (Respondida)') : ' (Sin responder)'
-                  }${isStudentHere ? ' • El estudiante está aquí' : ''}`}
-                >
-                  <span>{idx + 1}</span>
+                return (
+                  <button
+                    key={q.id || idx}
+                    ref={(el) => (bubbleRefs.current[idx] = el)}
+                    onClick={() => handleSelectQuestionIndex(idx)}
+                    className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full text-xs sm:text-sm font-bold transition-all border shrink-0 ${circleClass} ${
+                      isCurrentlyViewed
+                        ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-950 scale-110 z-10'
+                        : ''
+                    }`}
+                    title={`Pregunta ${idx + 1}${
+                      isAnswered ? (isCorrect ? ' (Correcta)' : isIncorrect ? ' (Incorrecta)' : ' (Respondida)') : ' (Sin responder)'
+                    }${isStudentHere ? ' • El estudiante está aquí' : ''}`}
+                  >
+                    <span>{idx + 1}</span>
 
-                  {/* Pulsing indicator when student is currently on this question */}
-                  {isStudentHere && (
-                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 ring-2 ring-slate-950"></span>
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+                    {/* Pulsing indicator when student is currently on this question */}
+                    {isStudentHere && (
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 ring-2 ring-slate-950"></span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <Button
+              size="icon"
+              variant="ghost"
+              disabled={viewedIndex >= questions.length - 1}
+              onClick={handleNextQuestion}
+              className="h-9 w-9 sm:h-10 sm:w-10 shrink-0 rounded-full bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-600 disabled:opacity-30 disabled:pointer-events-none transition-all shadow-sm flex items-center justify-center"
+              title="Pregunta siguiente (Flecha Derecha →)"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
           </div>
         </div>
 
@@ -842,7 +939,7 @@ export default function LiveQuizSpectator() {
                 variant="ghost"
                 size="sm"
                 disabled={viewedIndex <= 0}
-                onClick={() => handleSelectQuestionIndex(viewedIndex - 1)}
+                onClick={handlePreviousQuestion}
                 className="bg-slate-900/90 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-slate-200 hover:text-white text-xs h-9 px-3.5 rounded-lg transition-all shadow-sm flex items-center"
               >
                 <ArrowLeft className="w-4 h-4 mr-1.5 text-slate-400" />
@@ -857,7 +954,7 @@ export default function LiveQuizSpectator() {
                 variant="ghost"
                 size="sm"
                 disabled={viewedIndex >= questions.length - 1}
-                onClick={() => handleSelectQuestionIndex(viewedIndex + 1)}
+                onClick={handleNextQuestion}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:from-slate-900/90 disabled:to-slate-900/90 disabled:border-slate-800 text-white text-xs h-9 px-4 rounded-lg font-medium transition-all shadow-sm border border-transparent flex items-center"
               >
                 Siguiente
