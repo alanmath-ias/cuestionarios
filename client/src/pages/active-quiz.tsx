@@ -1340,7 +1340,24 @@ const ActiveQuiz = () => {
         !!target?.closest('.react-transform-component') || 
         !!target?.closest('[role="dialog"]');
 
-      if (isModalOpen || isImageTouch) {
+      // Deshabilitar swipe de navegación si el touch inicia dentro de un cajón de respuesta
+      // que tiene desbordamiento horizontal (respuesta larga que requiere scroll lateral)
+      const isScrollableAnswer = (() => {
+        let el = target;
+        while (el && el !== document.body) {
+          if (el.scrollWidth > el.clientWidth + 2) {
+            // Comprobar que realmente tiene overflow-x habilitado (no hidden/visible)
+            const overflowX = window.getComputedStyle(el).overflowX;
+            if (overflowX === 'auto' || overflowX === 'scroll') {
+              return true;
+            }
+          }
+          el = el.parentElement;
+        }
+        return false;
+      })();
+
+      if (isModalOpen || isImageTouch || isScrollableAnswer) {
         touchStartX = 0;
         touchStartY = 0;
         return;
@@ -2258,21 +2275,21 @@ const ActiveQuiz = () => {
                   ? "bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.25)]"
                   : "bg-slate-800/80 text-slate-400 border border-white/10 hover:text-white hover:bg-slate-700"
               )}
-              title={hideAnswersMode ? "Modo Clase Activo (Respuestas ocultas al cambiar de pregunta). Clic o Shift+C para apagar" : "Activar Modo Clase para ocultar opciones (Presiona C)"}
+              title={hideAnswersMode ? "Modo Clase Activo (Respuestas ocultas al cambiar de pregunta). Clic o Shift+M para apagar" : "Activar Modo Clase para ocultar opciones (Presiona M)"}
             >
               {hideAnswersMode ? (
                 <>
                   <EyeOff className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
                   <span className="hidden sm:inline">Modo Clase</span>
                   <span className="sm:hidden">Clase</span>
-                  <kbd className="hidden md:inline-block px-1 py-0.5 bg-black/40 text-[10px] rounded text-amber-300 border border-amber-500/30 leading-none font-mono">C</kbd>
+                  <kbd className="hidden md:inline-block px-1 py-0.5 bg-black/40 text-[10px] rounded text-amber-300 border border-amber-500/30 leading-none font-mono">M</kbd>
                 </>
               ) : (
                 <>
                   <Eye className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Modo Clase</span>
                   <span className="sm:hidden">Clase</span>
-                  <kbd className="hidden md:inline-block px-1 py-0.5 bg-black/30 text-[10px] rounded text-slate-400 border border-white/10 leading-none font-mono">C</kbd>
+                  <kbd className="hidden md:inline-block px-1 py-0.5 bg-black/30 text-[10px] rounded text-slate-400 border border-white/10 leading-none font-mono">M</kbd>
                 </>
               )}
             </Button>
@@ -2447,7 +2464,7 @@ const ActiveQuiz = () => {
                         <span className="font-bold block text-green-400">Respuesta Correcta (Solo Admin):</span>
                         {hideAnswersMode && !answeredQuestions[currentQuestionIndex] && !isRevealedForCurrentQuestion && (
                           <span className="text-[10px] text-amber-400/90 font-medium italic bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 select-none">
-                            🙈 Oculta por Modo Clase (Pasa el cursor o presiona C)
+                            🙈 Oculta por Modo Clase (Pasa el cursor o presiona M)
                           </span>
                         )}
                       </div>
@@ -2592,14 +2609,14 @@ const ActiveQuiz = () => {
                             <>
                               <strong>Modo Clase:</strong> Respuestas reveladas para responder.{" "}
                               <span className="opacity-80 text-xs hidden sm:inline">
-                                (Se ocultarán en la sig. pregunta o con tecla <kbd className="px-1.5 py-0.5 bg-black/40 rounded border border-amber-500/30 font-mono text-[10px] text-amber-200">C</kbd>)
+                                (Se ocultarán en la sig. pregunta o con tecla <kbd className="px-1.5 py-0.5 bg-black/40 rounded border border-amber-500/30 font-mono text-[10px] text-amber-200">M</kbd>)
                               </span>
                             </>
                           ) : (
                             <>
                               <strong>Modo Clase Activo:</strong> Respuestas difuminadas para trabajo independiente.{" "}
                               <span className="opacity-80 text-xs hidden sm:inline">
-                                (Presiona <kbd className="px-1.5 py-0.5 bg-black/40 rounded border border-amber-500/30 font-mono text-[10px] text-amber-200">C</kbd> para revelar)
+                                (Presiona <kbd className="px-1.5 py-0.5 bg-black/40 rounded border border-amber-500/30 font-mono text-[10px] text-amber-200">M</kbd> para revelar)
                               </span>
                             </>
                           )}
@@ -2611,19 +2628,19 @@ const ActiveQuiz = () => {
                           variant="ghost"
                           onClick={toggleRevealCurrentQuestion}
                           className="h-7 px-3 text-xs text-amber-300 hover:bg-amber-500/20 hover:text-amber-100 border border-amber-500/30 shrink-0 font-bold rounded-lg transition-colors flex items-center gap-1.5"
-                          title={isRevealedForCurrentQuestion ? "Ocultar opciones (Tecla C)" : "Mostrar opciones para responder (Tecla C)"}
+                          title={isRevealedForCurrentQuestion ? "Ocultar opciones (Tecla M)" : "Mostrar opciones para responder (Tecla M)"}
                         >
                           {isRevealedForCurrentQuestion ? (
                             <>
                               <EyeOff className="w-3.5 h-3.5" />
                               <span>Ocultar</span>
-                              <kbd className="hidden sm:inline-block px-1 bg-black/30 rounded text-[10px] text-amber-300 font-mono">C</kbd>
+                              <kbd className="hidden sm:inline-block px-1 bg-black/30 rounded text-[10px] text-amber-300 font-mono">M</kbd>
                             </>
                           ) : (
                             <>
                               <Eye className="w-3.5 h-3.5" />
                               <span>Mostrar</span>
-                              <kbd className="hidden sm:inline-block px-1 bg-black/30 rounded text-[10px] text-amber-300 font-mono">C</kbd>
+                              <kbd className="hidden sm:inline-block px-1 bg-black/30 rounded text-[10px] text-amber-300 font-mono">M</kbd>
                             </>
                           )}
                         </Button>
