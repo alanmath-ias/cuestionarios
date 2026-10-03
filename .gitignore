@@ -35,5 +35,10 @@ project-*.json
 /formato cuestionarios/
 /*.ts.local
 
+# Reglas locales de agentes
+/.agents/rules/cuestionarios.md
+/.agents/rules/imagenes.md
+/.agents/
+
 # Ignorar archivo autogenerado de versión
 client/public/version.json
