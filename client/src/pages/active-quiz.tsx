@@ -482,13 +482,13 @@ const ActiveQuiz = () => {
         return;
       }
 
-      if (e.key === 'c' || e.key === 'C') {
+      if (e.key === 'm' || e.key === 'M') {
         if (e.shiftKey) {
-          // Shift + C: Activar/desactivar Modo Clase de forma global
+          // Shift + M: Activar/desactivar Modo Clase de forma global
           e.preventDefault();
           toggleHideAnswersMode();
         } else {
-          // Tecla C sola:
+          // Tecla M sola:
           e.preventDefault();
           if (!hideAnswersMode) {
             // Si estaba apagado, encender el Modo Clase
@@ -497,7 +497,7 @@ const ActiveQuiz = () => {
             setIsRevealedForCurrentQuestion(false);
             toast({
               title: "Modo Clase Activado",
-              description: "Las respuestas se ocultarán automáticamente. Presiona 'C' para mostrar/ocultar en esta pregunta.",
+              description: "Las respuestas se ocultarán automáticamente. Presiona 'M' para mostrar/ocultar en esta pregunta.",
             });
           } else {
             // Si ya estaba encendido, alternar entre mostrar u ocultar en la pregunta actual
