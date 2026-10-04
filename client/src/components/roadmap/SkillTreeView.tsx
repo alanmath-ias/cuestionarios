@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { cn } from '@/lib/utils';
 import { ArithmeticNode } from '../../data/arithmetic-map-data';
-import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw, LayoutDashboard, Search, X, CheckCircle2, AlertTriangle, PlayCircle, Medal, Award, Sparkles } from 'lucide-react';
+import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw, LayoutDashboard, Search, X, CheckCircle2, AlertTriangle, PlayCircle, Medal, Award, Sparkles, Rocket, Target, Compass, Landmark, Zap, Terminal, Flame, Layers } from 'lucide-react';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { TransformWrapper, TransformComponent, ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { Button } from '@/components/ui/button';
@@ -38,16 +38,56 @@ interface SkillTreeViewProps {
     categoryId: number; // For mapping identification
     nodeMappings?: any[]; // Dynamic content overrides
     allQuizzesForAdmin?: any[]; // For inviting quizzes from other categories
+    gradeLevel?: string | null;
 }
 
 export const SkillTreeView = React.memo(function SkillTreeView({ 
     nodes, progressMap, onNodeClick, title, description, 
     allQuizzes = [], isAdmin = false, subcategories = [], 
-    categoryId, nodeMappings = [], allQuizzesForAdmin = [] 
+    categoryId, nodeMappings = [], allQuizzesForAdmin = [],
+    gradeLevel = null
 }: SkillTreeViewProps) {
     const { session } = useSession();
     const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
     const [isInteractive, setIsInteractive] = useState(false);
+
+    const isGrade1 = useMemo(() => {
+        return gradeLevel === '1' || nodes.some(n => n.id.startsWith('g1-')) || (title && title.toLowerCase().includes('1°'));
+    }, [gradeLevel, nodes, title]);
+
+    const isGrade2 = useMemo(() => {
+        return gradeLevel === '2' || nodes.some(n => n.id.startsWith('g2-')) || (title && title.toLowerCase().includes('2°'));
+    }, [gradeLevel, nodes, title]);
+
+    const isGrade3 = useMemo(() => {
+        return gradeLevel === '3' || nodes.some(n => n.id.startsWith('g3-')) || (title && title.toLowerCase().includes('3°'));
+    }, [gradeLevel, nodes, title]);
+
+    const isGrade4 = useMemo(() => {
+        return gradeLevel === '4' || nodes.some(n => n.id.startsWith('g4-')) || (title && title.toLowerCase().includes('4°'));
+    }, [gradeLevel, nodes, title]);
+
+    const isGrade5 = useMemo(() => {
+        return gradeLevel === '5' || nodes.some(n => n.id.startsWith('g5-')) || (title && title.toLowerCase().includes('5°'));
+    }, [gradeLevel, nodes, title]);
+
+    const isGrade6 = useMemo(() => {
+        return gradeLevel === '6' || nodes.some(n => n.id.startsWith('g6-')) || (title && (title.toLowerCase().includes('6°') || title.toLowerCase().includes('sexto')));
+    }, [gradeLevel, nodes, title]);
+
+    const isGrade7 = useMemo(() => {
+        return gradeLevel === '7' || nodes.some(n => n.id.startsWith('g7-')) || (title && (title.toLowerCase().includes('7°') || title.toLowerCase().includes('séptimo') || title.toLowerCase().includes('septimo')));
+    }, [gradeLevel, nodes, title]);
+
+    const isGrade8 = useMemo(() => {
+        return gradeLevel === '8' || nodes.some(n => n.id.startsWith('g8-')) || (title && (title.toLowerCase().includes('8°') || title.toLowerCase().includes('octavo')));
+    }, [gradeLevel, nodes, title]);
+
+    const isGrade9 = useMemo(() => {
+        return gradeLevel === '9' || nodes.some(n => n.id.startsWith('g9-')) || (title && (title.toLowerCase().includes('9°') || title.toLowerCase().includes('noveno')));
+    }, [gradeLevel, nodes, title]);
+
+    const isKidsGrade = isGrade1 || isGrade2 || isGrade3 || isGrade4 || isGrade5 || isGrade6 || isGrade7 || isGrade8 || isGrade9;
     
     // Node configuration state
     const [configNode, setConfigNode] = useState<ArithmeticNode | null>(null);
@@ -196,7 +236,9 @@ export const SkillTreeView = React.memo(function SkillTreeView({
             // Get dynamic mappings for this node
             const mapping = nodeMappings?.find(m => m.nodeId === node.id);
             const dynamicSubIds = mapping?.additionalSubcategories || [];
-            const dynamicQuizIds = mapping?.additionalQuizzes || [];
+            const dynamicQuizIds = (mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0)
+                ? mapping.additionalQuizzes
+                : (node.additionalQuizzes || []);
             const overrideSubId = mapping?.subcategoryId;
 
             if (node.behavior === 'container') {
@@ -208,7 +250,9 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                     const fnMapping = nodeMappings?.find(m => m.nodeId === fn.id);
                     const fnSubIds = fnMapping?.additionalSubcategories || fn.additionalSubcategories || [];
                     const fnSubId = fnMapping?.subcategoryId || fn.subcategoryId;
-                    const fnGuestQuizzes = fnMapping?.additionalQuizzes || [];
+                    const fnGuestQuizzes = (fnMapping?.additionalQuizzes && fnMapping.additionalQuizzes.length > 0)
+                        ? fnMapping.additionalQuizzes
+                        : (fn.additionalQuizzes || []);
 
                     let nodeMatches = allQuizzes.filter(q =>
                         Number(q.subcategoryId) === Number(fnSubId) ||
@@ -372,13 +416,16 @@ export const SkillTreeView = React.memo(function SkillTreeView({
     // Account for initialScale when calculating center offset
     const initialX = (containerWidth - (MAP_WIDTH * INITIAL_SCALE)) / 2;
 
+    const minLevel = nodes.length > 0 ? Math.min(...nodes.map(n => n.level)) : 0;
+    const maxLevel = nodes.length > 0 ? Math.max(...nodes.map(n => n.level)) : 0;
+
     // Helper to get coordinates
     const getNodePos = (node: ArithmeticNode) => ({
         x: CENTER_X + (node.xOffset || 0) * SPREAD,
-        y: node.level * ROW_HEIGHT + 95
+        y: (node.level - minLevel) * ROW_HEIGHT + 95
     });
 
-    const totalHeight = (Math.max(...nodes.map(n => n.level)) + 1) * ROW_HEIGHT + 200;
+    const totalHeight = (maxLevel - minLevel + 1) * ROW_HEIGHT + 200;
 
     // Handle interaction
     const handleNodeInteraction = (e: React.MouseEvent, node: ArithmeticNode, isLocked: boolean) => {
@@ -393,7 +440,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
         }
 
         // If locked content -> Do nothing (Visual feedback handled by UI)
-        if (isLocked && node.level !== 33) return;
+        if (isLocked && !node.id.endsWith('mastery')) return;
 
         // Otherwise open functionality
         onNodeClick(node);
@@ -654,7 +701,9 @@ export const SkillTreeView = React.memo(function SkillTreeView({
             const mapping = nodeMappings?.find(m => m.nodeId === node.id);
             const subId = mapping ? mapping.subcategoryId : node.subcategoryId;
             const additionalSubs = mapping?.additionalSubcategories || node.additionalSubcategories || [];
-            const guestQuizzes = mapping?.additionalQuizzes || [];
+            const guestQuizzes = (mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0)
+                ? mapping.additionalQuizzes
+                : (node.additionalQuizzes || []);
             
             return {
                 subId: subId ? Number(subId) : null,
@@ -758,7 +807,9 @@ export const SkillTreeView = React.memo(function SkillTreeView({
             const mapping = nodeMappings?.find(m => m.nodeId === n.id);
             const subId = mapping ? mapping.subcategoryId : n.subcategoryId;
             const additionalSubs = mapping?.additionalSubcategories || n.additionalSubcategories || [];
-            const guestQuizzes = mapping?.additionalQuizzes || [];
+            const guestQuizzes = (mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0)
+                ? mapping.additionalQuizzes
+                : (n.additionalQuizzes || []);
             const qSubId = recentQuiz.subcategoryId;
             const qId = recentQuiz.id;
 
@@ -827,7 +878,9 @@ export const SkillTreeView = React.memo(function SkillTreeView({
             const mapping = nodeMappings?.find(m => m.nodeId === n.id);
             const subId = mapping ? mapping.subcategoryId : n.subcategoryId;
             const additionalSubs = mapping?.additionalSubcategories || n.additionalSubcategories || [];
-            const guestQuizzes = mapping?.additionalQuizzes || [];
+            const guestQuizzes = (mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0)
+                ? mapping.additionalQuizzes
+                : (n.additionalQuizzes || []);
             
             return Number(subId) === Number(quiz.subcategoryId) ||
                    (additionalSubs && additionalSubs.map(Number).includes(Number(quiz.subcategoryId))) ||
@@ -852,16 +905,71 @@ export const SkillTreeView = React.memo(function SkillTreeView({
             {styles}
 
             {/* Header */}
-            <div className="text-center mb-2 z-10 relative px-4 pointer-events-none">
-                <h2 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 pb-4 mb-1 filter drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
-                    {title}
-                </h2>
-                {description && (
-                    <p className="text-slate-300 max-w-2xl mx-auto text-lg font-medium leading-relaxed">
-                        {description}
+            {isKidsGrade ? (
+                <div className="text-center mb-4 z-10 relative px-4 pointer-events-none">
+                    <div className={cn(
+                        "inline-flex items-center gap-2 px-3.5 py-1 rounded-full border text-xs font-black uppercase tracking-wider mb-2 backdrop-blur-md",
+                        isGrade9
+                            ? "bg-gradient-to-r from-violet-500/25 via-purple-500/20 to-indigo-500/25 border-violet-400/50 text-violet-300 shadow-[0_0_22px_rgba(139,92,246,0.45)]"
+                            : isGrade8
+                            ? "bg-gradient-to-r from-cyan-500/25 via-teal-500/20 to-sky-500/25 border-cyan-400/50 text-cyan-300 shadow-[0_0_22px_rgba(6,182,212,0.45)]"
+                            : isGrade7
+                            ? "bg-gradient-to-r from-amber-500/25 via-orange-500/20 to-red-500/25 border-amber-400/50 text-amber-300 shadow-[0_0_22px_rgba(245,158,11,0.45)]"
+                            : isGrade6
+                            ? "bg-gradient-to-r from-violet-500/25 via-fuchsia-500/20 to-cyan-500/25 border-violet-400/50 text-violet-300 shadow-[0_0_22px_rgba(139,92,246,0.45)]"
+                            : isGrade4
+                            ? "bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-amber-500/20 border-emerald-400/40 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.35)]"
+                            : isGrade3
+                            ? "bg-gradient-to-r from-cyan-500/20 via-teal-500/20 to-blue-500/20 border-cyan-400/40 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.35)]"
+                            : isGrade2
+                            ? "bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-cyan-500/20 border-indigo-400/40 text-indigo-300 shadow-[0_0_20px_rgba(99,102,241,0.35)]"
+                            : "bg-gradient-to-r from-amber-500/20 via-pink-500/20 to-cyan-500/20 border-amber-400/40 text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.35)]"
+                    )}>
+                        <Sparkles className={cn("w-3.5 h-3.5", isGrade9 ? "text-violet-300" : isGrade8 ? "text-cyan-300" : isGrade7 ? "text-amber-300" : isGrade6 ? "text-violet-300" : isGrade4 ? "text-emerald-300" : isGrade3 ? "text-cyan-300" : isGrade2 ? "text-indigo-400" : "text-yellow-300")} />
+                        <span>{isGrade1 ? "Mundo de Exploradores • 1° de Primaria" : isGrade2 ? "Misión Cósmica • 2° de Primaria" : isGrade3 ? "Expedición Submarina • 3° de Primaria" : isGrade4 ? "Templo de Exploradores • 4° de Primaria" : isGrade6 ? "Ciber-Nexo Matemático • 6° Grado" : isGrade7 ? "La Forja Titánica • 7° Grado" : isGrade8 ? "La Odisea del Álgebra • 8° Grado" : isGrade9 ? "El Vórtice del Álgebra Superior • 9° Grado" : "Mundo de Aventuras • 5° de Primaria"}</span>
+                        <Sparkles className={cn("w-3.5 h-3.5", isGrade9 ? "text-violet-300" : isGrade8 ? "text-cyan-300" : isGrade7 ? "text-amber-300" : isGrade6 ? "text-violet-300" : isGrade4 ? "text-emerald-300" : "text-cyan-300")} />
+                    </div>
+                    <h2 className="text-3xl md:text-5xl font-black pb-2 mb-3 md:mb-4 flex items-center justify-center gap-2.5 flex-wrap">
+                        <span className="text-2xl md:text-4xl filter drop-shadow-[0_0_12px_rgba(255,255,255,0.4)] select-none">
+                            {isGrade9 ? "✨" : isGrade8 ? "🌀" : isGrade7 ? "🛡️" : isGrade6 ? "⚡" : isGrade4 ? "🏛️" : isGrade3 ? "🌊" : isGrade2 ? "🚀" : "🗺️"}
+                        </span>
+                        <span className={cn(
+                            "text-transparent bg-clip-text pb-2 inline-block",
+                            isGrade9
+                                ? "bg-gradient-to-r from-violet-300 via-fuchsia-300 to-indigo-200 filter drop-shadow-[0_0_18px_rgba(139,92,246,0.55)]"
+                                : isGrade8
+                                ? "bg-gradient-to-r from-cyan-300 via-teal-300 to-sky-200 filter drop-shadow-[0_0_18px_rgba(6,182,212,0.55)]"
+                                : isGrade7
+                                ? "bg-gradient-to-r from-amber-300 via-orange-300 to-yellow-200 filter drop-shadow-[0_0_18px_rgba(245,158,11,0.55)]"
+                                : isGrade6
+                                ? "bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 filter drop-shadow-[0_0_18px_rgba(168,85,247,0.55)]"
+                                : isGrade4
+                                ? "bg-gradient-to-r from-emerald-300 via-teal-300 to-amber-300 filter drop-shadow-[0_0_16px_rgba(16,185,129,0.5)]"
+                                : isGrade3
+                                ? "bg-gradient-to-r from-cyan-300 via-teal-300 to-sky-300 filter drop-shadow-[0_0_16px_rgba(6,182,212,0.5)]"
+                                : isGrade2
+                                ? "bg-gradient-to-r from-indigo-300 via-purple-300 to-cyan-300 filter drop-shadow-[0_0_16px_rgba(99,102,241,0.5)]"
+                                : "bg-gradient-to-r from-yellow-300 via-pink-400 to-cyan-300 filter drop-shadow-[0_0_16px_rgba(234,179,8,0.5)]"
+                        )}>
+                            {title || (isGrade1 ? "Aventura de 1° de Primaria" : isGrade2 ? "Odisea Espacial de 2° de Primaria" : isGrade3 ? "Reino Submarino de 3° de Primaria" : isGrade4 ? "Templo de los Exploradores de 4° de Primaria" : isGrade6 ? "La Ciudadela Cuántica • 6° Grado" : isGrade7 ? "La Forja de los Titanes • 7° Grado" : isGrade8 ? "La Odisea del Álgebra • 8° Grado" : isGrade9 ? "El Vórtice del Álgebra Superior • 9° Grado" : "Mapa de 5° de Primaria")}
+                        </span>
+                    </h2>
+                    <p className="text-cyan-100/90 max-w-2xl mx-auto text-sm md:text-base font-semibold leading-relaxed drop-shadow-sm">
+                        {description || (isGrade1 ? "¡Aprende jugando con conjuntos, números del 0 al 999, sumas, restas y el mundo de las medidas!" : isGrade2 ? "¡Viaja por la galaxia matemática, domina las tablas del 1 al 10, números hasta 99.999 y conquista las estrellas!" : isGrade3 ? "¡Sumérgete en los misterios del océano matemático, domina la división, números romanos, fracciones y tesoros numéricos!" : isGrade4 ? "¡Descubre los misterios de los templos antiguos, domina la división formal, MCM/MCD, fracciones, decimales y conquista el Gran Cetro!" : isGrade6 ? "¡Bienvenido a la secundaria cuántica! Domina proposiciones lógicas, polinomios, ecuaciones, divisibilidad, fracciones, decimales, enteros y educación financiera." : isGrade7 ? "¡Desafío titánico de 7° grado! Domina los números enteros (ℤ), racionales (ℚ), proporcionalidad, regla de tres, magnitudes y el despertar del álgebra." : isGrade8 ? "¡Inmersión en el álgebra formal! Domina números reales (ℝ), notación científica, operaciones de polinomios, productos notables, factorización sistemática, fracciones algebraicas y funciones." : isGrade9 ? "¡Desafío culminante de secundaria! Domina radicales, sistemas 2x2, la recta analítica, ecuaciones cuadráticas, exponenciales, logaritmos, sucesiones y finanzas." : "¡Explora los temas, supera cada misión matemática y conquista la Gran Corona de Maestría!")}
                     </p>
-                )}
-            </div>
+                </div>
+            ) : (
+                <div className="text-center mb-2 z-10 relative px-4 pointer-events-none">
+                    <h2 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 pb-4 mb-1 filter drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                        {title}
+                    </h2>
+                    {description && (
+                        <p className="text-slate-300 max-w-2xl mx-auto text-lg font-medium leading-relaxed">
+                            {description}
+                        </p>
+                    )}
+                </div>
+            )}
 
             <div
                 className="w-full relative"
@@ -1123,77 +1231,182 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                     </div>
 
                     {/* Legend */}
-                    <div className="pointer-events-auto relative z-20 mx-auto md:mx-0 w-fit md:w-full bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-xl min-w-[200px]">
-                        <h4 className="text-slate-300 font-bold mb-3 text-xs uppercase tracking-wider border-b border-slate-700 pb-2">Leyenda</h4>
-                        <div className="flex flex-col gap-3 text-[11px] text-slate-400 font-medium">
-                            {/* Parent Nodes */}
-                            <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-2xl rotate-45 border-2 border-orange-500 bg-gradient-to-br from-orange-800 to-orange-500 flex items-center justify-center shadow-[0_0_10px_rgba(251,146,60,0.4)]">
-                                    <BookOpen className="w-3.5 h-3.5 -rotate-45 text-white" />
-                                </div>
-                                <span className="text-orange-300 font-bold">Unidades / Temas Principales</span>
+                    {isKidsGrade ? (
+                        <div className={cn(
+                            "pointer-events-auto relative z-20 mx-auto md:mx-0 w-fit md:w-full bg-slate-900/95 backdrop-blur-xl border-2 p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] min-w-[210px]",
+                            isGrade9 ? "border-indigo-500/40" : isGrade8 ? "border-cyan-500/40" : isGrade7 ? "border-amber-500/40" : isGrade6 ? "border-violet-500/40" : isGrade4 ? "border-emerald-500/40" : isGrade3 ? "border-cyan-500/40" : isGrade2 ? "border-indigo-500/30" : "border-amber-500/30"
+                        )}>
+                            <div className="flex items-center gap-2 text-yellow-400 font-black mb-3 text-xs uppercase tracking-wider border-b border-white/10 pb-2">
+                                <Sparkles className="w-3.5 h-3.5" />
+                                <span>{isGrade9 ? "🗺️ Códice del Álgebra Superior" : isGrade8 ? "🗺️ Códice del Álgebra" : isGrade7 ? "🗺️ Códice de los Titanes" : isGrade6 ? "🗺️ Terminal Cuántica" : isGrade4 ? "🗺️ Mapa del Explorador" : isGrade3 ? "🧭 Brújula Marina" : isGrade2 ? "🛰️ Radar Cósmico" : "Guía del Explorador"}</span>
                             </div>
-
-                            {/* Blue Play - Not Started */}
-                            <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)] flex items-center justify-center">
-                                    <Play className="w-3.5 h-3.5 text-white fill-white ml-0.5" />
+                            <div className="flex flex-col gap-3 text-[11px] text-slate-300 font-semibold">
+                                {/* Castle / Unit / Space Base / Marine Base / Temple / Quantum Core / Bastion / Dominio */}
+                                <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                        "w-7 h-7 rounded-xl border-2 flex items-center justify-center",
+                                        isGrade9
+                                            ? "border-indigo-300 bg-gradient-to-b from-indigo-500 to-purple-800 shadow-[0_3px_0_#312e81]"
+                                            : isGrade8
+                                            ? "border-cyan-300 bg-gradient-to-b from-cyan-500 to-sky-800 shadow-[0_3px_0_#155e75]"
+                                            : isGrade7
+                                            ? "border-amber-300 bg-gradient-to-b from-amber-500 to-orange-800 shadow-[0_3px_0_#7c2d12]"
+                                            : isGrade6
+                                            ? "border-violet-300 bg-gradient-to-b from-violet-500 to-indigo-800 shadow-[0_3px_0_#3b0764]"
+                                            : isGrade4
+                                            ? "border-emerald-300 bg-gradient-to-b from-emerald-500 to-teal-700 shadow-[0_3px_0_#064e3b]"
+                                            : isGrade3
+                                            ? "border-cyan-300 bg-gradient-to-b from-cyan-500 to-blue-700 shadow-[0_3px_0_#0e7490]"
+                                            : isGrade2
+                                            ? "border-indigo-300 bg-gradient-to-b from-indigo-500 to-purple-700 shadow-[0_3px_0_#312e81]"
+                                            : "border-amber-300 bg-gradient-to-b from-amber-400 to-orange-500 shadow-[0_3px_0_#7c2d12]"
+                                    )}>
+                                        {isGrade9 ? <Sparkles className="w-3.5 h-3.5 text-white" /> : isGrade8 ? <Layers className="w-3.5 h-3.5 text-white" /> : isGrade7 ? <Shield className="w-3.5 h-3.5 text-white" /> : isGrade6 ? <Zap className="w-3.5 h-3.5 text-white" /> : isGrade4 ? <Landmark className="w-3.5 h-3.5 text-white" /> : isGrade3 || isGrade2 ? <Compass className="w-3.5 h-3.5 text-white" /> : <BookOpen className="w-3.5 h-3.5 text-white" />}
+                                    </div>
+                                    <span className={isGrade9 ? "text-indigo-300 font-extrabold" : isGrade8 ? "text-cyan-300 font-extrabold" : isGrade7 ? "text-amber-300 font-extrabold" : isGrade6 ? "text-violet-300 font-extrabold" : isGrade4 ? "text-emerald-300 font-extrabold" : isGrade3 ? "text-cyan-300 font-extrabold" : isGrade2 ? "text-indigo-300 font-extrabold" : "text-amber-300 font-extrabold"}>
+                                        {isGrade9 || isGrade8 ? "🌀 Dominio / Bloque Algebraico" : isGrade7 ? "🛡️ Bastión / Fortaleza Titánica" : isGrade6 ? "⚡ Núcleo / Bastión Cuántico" : isGrade4 ? "🏛️ Templo / Santuario" : isGrade3 ? "🫧 Arrecife / Base Marina" : isGrade2 ? "🪐 Base Espacial / Sector" : "🏰 Unidad Temática"}
+                                    </span>
                                 </div>
-                                <span>Disponible sin iniciar</span>
-                            </div>
 
-                            {/* Soft Green Play - In Progress */}
-                            <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-[#5eead4] shadow-[0_0_10px_rgba(45,212,191,0.3)] flex items-center justify-center">
-                                    <Play className="w-3.5 h-3.5 text-[#2dd4bf] fill-[#2dd4bf] ml-0.5" />
+                                {/* Rocket / Explorer / Terminal / Flame / Sparkles - Ready to play */}
+                                <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                        "w-7 h-7 rounded-xl border-2 flex items-center justify-center",
+                                        isGrade9
+                                            ? "border-indigo-300 bg-gradient-to-b from-indigo-400 to-purple-600 shadow-[0_3px_0_#4338ca]"
+                                            : isGrade8
+                                            ? "border-cyan-300 bg-gradient-to-b from-cyan-400 to-sky-600 shadow-[0_3px_0_#0284c7]"
+                                            : isGrade7
+                                            ? "border-amber-300 bg-gradient-to-b from-amber-400 to-orange-600 shadow-[0_3px_0_#9a3412]"
+                                            : isGrade6
+                                            ? "border-violet-300 bg-gradient-to-b from-violet-400 to-indigo-600 shadow-[0_3px_0_#312e81]"
+                                            : isGrade4
+                                            ? "border-emerald-300 bg-gradient-to-b from-emerald-400 to-green-600 shadow-[0_3px_0_#14532d]"
+                                            : isGrade3
+                                            ? "border-cyan-300 bg-gradient-to-b from-cyan-400 to-teal-600 shadow-[0_3px_0_#0f766e]"
+                                            : "border-sky-300 bg-gradient-to-b from-sky-400 to-blue-600 shadow-[0_3px_0_#1e3a8a]"
+                                    )}>
+                                        {isGrade9 ? <Sparkles className="w-3.5 h-3.5 text-white" /> : isGrade8 ? <Sparkles className="w-3.5 h-3.5 text-white" /> : isGrade7 ? <Flame className="w-3.5 h-3.5 text-white" /> : isGrade6 ? <Terminal className="w-3.5 h-3.5 text-white" /> : isGrade4 ? <Compass className="w-3.5 h-3.5 text-white" /> : <Rocket className="w-3.5 h-3.5 text-white" />}
+                                    </div>
+                                    <span className={isGrade9 ? "text-indigo-300 font-bold" : isGrade8 ? "text-cyan-300 font-bold" : isGrade7 ? "text-amber-300 font-bold" : isGrade6 ? "text-violet-300 font-bold" : isGrade4 ? "text-emerald-300 font-bold" : "text-sky-300 font-bold"}>{isGrade9 ? "⚔️ Misión de Álgebra Superior" : isGrade8 ? "⚔️ Misión Algebraica" : isGrade7 ? "⚔️ Misión Forjada" : isGrade6 ? "🔋 Misión en Línea" : isGrade4 ? "🧭 Misión Lista" : isGrade3 ? "🐬 Explorador en Marcha" : isGrade2 ? "🚀 Nave Lista" : "🚀 Listo para Jugar"}</span>
                                 </div>
-                                <span>Disponible iniciado</span>
-                            </div>
 
-                            {/* Green Check - Completed */}
-                            <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)] flex items-center justify-center">
-                                    <CheckCircle className="w-4 h-4 text-green-500" />
+                                {/* Target - In progress */}
+                                <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 rounded-xl border-2 border-teal-200 bg-gradient-to-b from-teal-300 to-emerald-600 flex items-center justify-center shadow-[0_3px_0_#064e3b]">
+                                        <Target className="w-3.5 h-3.5 text-white" />
+                                    </div>
+                                    <span className="text-teal-300 font-bold">{isGrade9 || isGrade8 ? "🔮 En Resolución" : isGrade7 ? "🌋 En Fundición" : isGrade6 ? "⚙️ En Decodificación" : isGrade4 ? "🏺 En Exploración" : isGrade3 ? "🌊 En Inmersión" : isGrade2 ? "🛸 En Órbita" : "🎯 En Progreso"}</span>
                                 </div>
-                                <span>Completado</span>
-                            </div>
 
-                            {/* Critical - Hexagon */}
-                            <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 hexagon-mask border-2 border-red-400 bg-red-900/20 flex items-center justify-center">
-                                    <Hexagon className="w-3.5 h-3.5 text-red-400" />
+                                {/* Star - Completed */}
+                                <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 rounded-xl border-2 border-emerald-200 bg-gradient-to-b from-emerald-400 to-green-600 flex items-center justify-center shadow-[0_3px_0_#14532d]">
+                                        <Star className="w-4 h-4 text-yellow-300 fill-yellow-400" />
+                                    </div>
+                                    <span className="text-emerald-300 font-bold">{isGrade9 || isGrade8 ? "🏆 Desafío Conquistado" : isGrade7 ? "🏆 Reliquia Conquistada" : isGrade6 ? "💎 Algoritmo Conquistado" : isGrade4 ? "🏆 Reliquia Conquistada" : isGrade3 ? "💎 Perla Conquistada" : isGrade2 ? "🌟 Estrella Conquistada" : "⭐ ¡Misión Cumplida!"}</span>
                                 </div>
-                                <span>Crítico</span>
-                            </div>
 
-                            {/* Featured - Star */}
-                            <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-full bg-slate-800 border-2 border-yellow-400 flex items-center justify-center">
-                                    <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400/20" />
+                                {/* Lock - Locked */}
+                                <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 rounded-xl border-2 border-slate-600 bg-gradient-to-b from-slate-700 to-slate-800 flex items-center justify-center shadow-[0_3px_0_#0f172a]">
+                                        <Lock className="w-3.5 h-3.5 text-amber-400" />
+                                    </div>
+                                    <span className="text-slate-400">{isGrade9 || isGrade8 ? "🔒 Dominio Bloqueado" : isGrade7 ? "🔒 Sello Rúnico Bloqueado" : isGrade6 ? "🔒 Cortafuegos Bloqueado" : isGrade4 ? "🔒 Cámara Bloqueada" : isGrade3 ? "🔒 Gruta Cerrada" : isGrade2 ? "🔒 Sector Bloqueado" : "🔒 Nivel Bloqueado"}</span>
                                 </div>
-                                <span>Destacado</span>
-                            </div>
 
-                            {/* Locked - Under Construction */}
-                            <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)] flex items-center justify-center">
-                                    <Construction className="w-3.5 h-3.5 text-amber-500" />
+                                {/* Crown - Mastery */}
+                                <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 rounded-xl border-2 border-yellow-300 bg-gradient-to-b from-yellow-400 to-purple-600 flex items-center justify-center shadow-[0_3px_0_#581c87]">
+                                        <Crown className="w-4 h-4 text-yellow-200 fill-yellow-300" />
+                                    </div>
+                                    <span className="text-yellow-300 font-extrabold">{isGrade9 ? "👑 Gran Vórtice del Álgebra Superior de 9°" : isGrade8 ? "👑 Gran Vórtice de Maestría de 8°" : isGrade7 ? "👑 Gran Emblema Titánico de 7°" : isGrade6 ? "👑 Gran Orbe Cuántico de 6°" : isGrade1 ? "👑 Maestría de 1°" : isGrade2 ? "👑 Gran Trofeo Cósmico de 2°" : isGrade3 ? "🔱 Gran Tridente de 3°" : isGrade4 ? "👑 Gran Cetro de Maestría de 4°" : "👑 Maestría de 5°"}</span>
                                 </div>
-                                <span>Próximamente</span>
                             </div>
 
                             {/* Total Counter */}
                             {totalVisibleQuizzes > 0 && (
-                                <>
-                                    <div className="h-px bg-slate-700 my-1" />
-                                    <div className="flex items-center gap-2 text-indigo-300 font-medium justify-center pt-1">
-                                        <BookOpen className="w-4 h-4" />
-                                        <span>Total: {totalVisibleQuizzes} Cuestionarios</span>
-                                    </div>
-                                </>
+                                <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
+                                    <span className="flex items-center gap-1.5 text-cyan-300 font-bold">
+                                        <Award className="w-3.5 h-3.5" /> Misiones Totales:
+                                    </span>
+                                    <span className="font-mono font-bold text-yellow-400 text-sm">{totalVisibleQuizzes}</span>
+                                </div>
                             )}
                         </div>
-                    </div>
+                    ) : (
+                        <div className="pointer-events-auto relative z-20 mx-auto md:mx-0 w-fit md:w-full bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-xl min-w-[200px]">
+                            <h4 className="text-slate-300 font-bold mb-3 text-xs uppercase tracking-wider border-b border-slate-700 pb-2">Leyenda</h4>
+                            <div className="flex flex-col gap-3 text-[11px] text-slate-400 font-medium">
+                                {/* Parent Nodes */}
+                                <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 rounded-2xl rotate-45 border-2 border-orange-500 bg-gradient-to-br from-orange-800 to-orange-500 flex items-center justify-center shadow-[0_0_10px_rgba(251,146,60,0.4)]">
+                                        <BookOpen className="w-3.5 h-3.5 -rotate-45 text-white" />
+                                    </div>
+                                    <span className="text-orange-300 font-bold">Unidades / Temas Principales</span>
+                                </div>
+
+                                {/* Blue Play - Not Started */}
+                                <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)] flex items-center justify-center">
+                                        <Play className="w-3.5 h-3.5 text-white fill-white ml-0.5" />
+                                    </div>
+                                    <span>Disponible sin iniciar</span>
+                                </div>
+
+                                {/* Soft Green Play - In Progress */}
+                                <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-[#5eead4] shadow-[0_0_10px_rgba(45,212,191,0.3)] flex items-center justify-center">
+                                        <Play className="w-3.5 h-3.5 text-[#2dd4bf] fill-[#2dd4bf] ml-0.5" />
+                                    </div>
+                                    <span>Disponible iniciado</span>
+                                </div>
+
+                                {/* Green Check - Completed */}
+                                <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)] flex items-center justify-center">
+                                        <CheckCircle className="w-4 h-4 text-green-500" />
+                                    </div>
+                                    <span>Completado</span>
+                                </div>
+
+                                {/* Critical - Hexagon */}
+                                <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 hexagon-mask border-2 border-red-400 bg-red-900/20 flex items-center justify-center">
+                                        <Hexagon className="w-3.5 h-3.5 text-red-400" />
+                                    </div>
+                                    <span>Crítico</span>
+                                </div>
+
+                                {/* Featured - Star */}
+                                <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 rounded-full bg-slate-800 border-2 border-yellow-400 flex items-center justify-center">
+                                        <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400/20" />
+                                    </div>
+                                    <span>Destacado</span>
+                                </div>
+
+                                {/* Locked - Under Construction */}
+                                <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)] flex items-center justify-center">
+                                        <Construction className="w-3.5 h-3.5 text-amber-500" />
+                                    </div>
+                                    <span>Próximamente</span>
+                                </div>
+
+                                {/* Total Counter */}
+                                {totalVisibleQuizzes > 0 && (
+                                    <>
+                                        <div className="h-px bg-slate-700 my-1" />
+                                        <div className="flex items-center gap-2 text-indigo-300 font-medium justify-center pt-1">
+                                            <BookOpen className="w-4 h-4" />
+                                            <span>Total: {totalVisibleQuizzes} Cuestionarios</span>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div
@@ -1446,11 +1659,16 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                             key={`${parent.id}-${node.id}`}
                                                             d={`M ${pPos.x} ${pPos.y} C ${pPos.x} ${midY}, ${cPos.x} ${midY}, ${cPos.x} ${cPos.y}`}
                                                             fill="none"
-                                                            stroke={isHighlighted ? "#fbbf24" : (isUnlocked) ? "#3b82f6" : "rgba(71, 85, 105, 0.5)"} // Amber for highlight
-                                                            strokeWidth={isHighlighted ? "5" : "3"}
+                                                            stroke={
+                                                                isHighlighted ? "#fbbf24" :
+                                                                isKidsGrade
+                                                                    ? (isUnlocked ? (isGrade9 ? "#6366f1" : isGrade8 ? "#06b6d4" : isGrade7 ? "#f59e0b" : isGrade6 ? "#8b5cf6" : isGrade4 ? "#10b981" : isGrade3 ? "#06b6d4" : isGrade2 ? "#818cf8" : "#38bdf8") : "rgba(100, 116, 139, 0.4)")
+                                                                    : (isUnlocked ? "#3b82f6" : "rgba(71, 85, 105, 0.5)")
+                                                            }
+                                                            strokeWidth={isHighlighted ? "5" : isKidsGrade ? "4" : "3"}
                                                             strokeLinecap="round"
-                                                            strokeDasharray={isHighlighted ? "none" : "6 4"}
-                                                            filter={isHighlighted ? "url(#glow)" : undefined}
+                                                            strokeDasharray={isHighlighted ? "none" : isKidsGrade ? "8 6" : "6 4"}
+                                                            filter={isHighlighted || (isKidsGrade && isUnlocked) ? "url(#glow)" : undefined}
                                                             initial={{ pathLength: 0, opacity: 0 }}
                                                             animate={{ pathLength: 1, opacity: 1 }}
                                                             transition={{ duration: 1.5, ease: "easeInOut" }}
@@ -1468,7 +1686,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                             const isAvailable = status === 'available';
                                             const isCompleted = status === 'completed';
                                             const isInProgress = status === 'in_progress';
-                                            const isLocked = status === 'locked' && node.level !== 33;
+                                            const isLocked = status === 'locked' && !node.id.endsWith('mastery');
 
                                             const isHighlighted = highlightedSet.has(node.id);
 
@@ -1530,28 +1748,62 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                         disabled={isLocked && !isAdmin}
                                                                         className={cn(
                                                                             "relative flex items-center justify-center shadow-lg transition-all duration-300 hover:brightness-125",
-                                                                            node.id.endsWith('mastery')
-                                                                                ? "w-28 h-28 hover:shadow-[0_0_35px_rgba(192,38,211,0.6)]"
-                                                                                : node.behavior === 'container'
-                                                                                    ? "w-20 h-20 hover:shadow-[0_0_30px_rgba(251,146,60,0.7)]"
-                                                                                    : "w-20 h-20 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]",
-                                                                            (isSpecial && node.behavior === 'container') ? 'hexagon-mask' :
-                                                                                node.behavior === 'container' ? 'rotate-45 rounded-2xl' : 'rounded-full',
-
-                                                                            (!node.id.endsWith('mastery') && isLocked) && "cursor-not-allowed shadow-[0_0_20px_rgba(245,158,11,0.3)]",
-                                                                            (node.id.endsWith('mastery') || !isLocked) && "cursor-pointer",
-
-                                                                            isHighlighted ? "ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_40px_rgba(251,191,36,0.6)] scale-110" : "",
-                                                                            node.id.endsWith('mastery') ? "shadow-[0_0_50px_rgba(192,38,211,0.8)] animate-pulse" :
-                                                                                !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
-                                                                                    !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf]" :
-                                                                                        !isHighlighted && isAvailable ? (
-                                                                                            node.behavior === 'container' ? "shadow-[0_0_30px_rgba(251,146,60,0.7)] animate-pulse-slow" :
-                                                                                                isSpecial ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" :
-                                                                                                    "shadow-[0_0_30px_#3b82f6]"
-                                                                                        ) : ""
+                                                                            isKidsGrade ? (
+                                                                                node.id.endsWith('mastery')
+                                                                                    ? "w-28 h-28 rounded-full border-4 border-yellow-200 border-b-[8px] border-b-purple-950 shadow-[0_8px_0_#581c87,0_15px_35px_rgba(234,179,8,0.7)] animate-pulse"
+                                                                                    : node.behavior === 'container'
+                                                                                        ? (isGrade9
+                                                                                            ? "w-22 h-22 rounded-3xl border-4 border-indigo-300 border-b-[6px] border-b-indigo-950 shadow-[0_6px_0_#312e81,0_12px_25px_rgba(99,102,241,0.55)]"
+                                                                                            : isGrade8
+                                                                                            ? "w-22 h-22 rounded-3xl border-4 border-cyan-300 border-b-[6px] border-b-cyan-950 shadow-[0_6px_0_#155e75,0_12px_25px_rgba(6,182,212,0.55)]"
+                                                                                            : isGrade7
+                                                                                            ? "w-22 h-22 rounded-3xl border-4 border-amber-300 border-b-[6px] border-b-amber-950 shadow-[0_6px_0_#7c2d12,0_12px_25px_rgba(245,158,11,0.55)]"
+                                                                                            : isGrade6
+                                                                                            ? "w-22 h-22 rounded-3xl border-4 border-violet-300 border-b-[6px] border-b-purple-950 shadow-[0_6px_0_#3b0764,0_12px_25px_rgba(139,92,246,0.55)]"
+                                                                                            : isGrade4
+                                                                                            ? "w-22 h-22 rounded-3xl border-4 border-emerald-300 border-b-[6px] border-b-emerald-950 shadow-[0_6px_0_#064e3b,0_12px_25px_rgba(16,185,129,0.5)]"
+                                                                                            : isGrade3
+                                                                                            ? "w-22 h-22 rounded-3xl border-4 border-cyan-200 border-b-[6px] border-b-cyan-950 shadow-[0_6px_0_#0e7490,0_12px_25px_rgba(6,182,212,0.5)]"
+                                                                                            : isGrade2
+                                                                                            ? "w-22 h-22 rounded-3xl border-4 border-indigo-200 border-b-[6px] border-b-indigo-950 shadow-[0_6px_0_#312e81,0_12px_25px_rgba(99,102,241,0.5)]"
+                                                                                            : "w-22 h-22 rounded-3xl border-4 border-amber-200 border-b-[6px] border-b-amber-950 shadow-[0_6px_0_#7c2d12,0_12px_25px_rgba(245,158,11,0.5)]")
+                                                                                        : cn(
+                                                                                            "w-20 h-20 rounded-[28px] border-4 border-b-[6px] active:translate-y-1 transition-transform",
+                                                                                            isCompleted ? "border-emerald-200 border-b-green-950 shadow-[0_6px_0_#14532d,0_12px_25px_rgba(34,197,94,0.45)]" :
+                                                                                            isInProgress ? "border-teal-200 border-b-emerald-950 shadow-[0_6px_0_#064e3b,0_10px_20px_rgba(45,212,191,0.4)]" :
+                                                                                            isAvailable ? "border-sky-200 border-b-blue-950 shadow-[0_6px_0_#1e3a8a,0_12px_25px_rgba(56,189,248,0.45)]" :
+                                                                                            "border-slate-600 border-b-slate-900 shadow-[0_4px_0_#0f172a] opacity-80 cursor-not-allowed"
+                                                                                        )
+                                                                            ) : cn(
+                                                                                node.id.endsWith('mastery')
+                                                                                    ? "w-28 h-28 hover:shadow-[0_0_35px_rgba(192,38,211,0.6)]"
+                                                                                    : node.behavior === 'container'
+                                                                                        ? "w-20 h-20 hover:shadow-[0_0_30px_rgba(251,146,60,0.7)]"
+                                                                                        : "w-20 h-20 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]",
+                                                                                (isSpecial && node.behavior === 'container') ? 'hexagon-mask' :
+                                                                                    node.behavior === 'container' ? 'rotate-45 rounded-2xl' : 'rounded-full',
+                                                                                (!node.id.endsWith('mastery') && isLocked) && "cursor-not-allowed shadow-[0_0_20px_rgba(245,158,11,0.3)]",
+                                                                                (node.id.endsWith('mastery') || !isLocked) && "cursor-pointer",
+                                                                                isHighlighted ? "ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_40px_rgba(251,191,36,0.6)] scale-110" : "",
+                                                                                node.id.endsWith('mastery') ? "shadow-[0_0_50px_rgba(192,38,211,0.8)] animate-pulse" :
+                                                                                    !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
+                                                                                        !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf]" :
+                                                                                            !isHighlighted && isAvailable ? (
+                                                                                                node.behavior === 'container' ? "shadow-[0_0_30px_rgba(251,146,60,0.7)] animate-pulse-slow" :
+                                                                                                    isSpecial ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" :
+                                                                                                        "shadow-[0_0_30px_#3b82f6]"
+                                                                                            ) : ""
+                                                                            )
                                                                         )}
-                                                                        style={{
+                                                                        style={isKidsGrade ? {
+                                                                            background: isHighlighted ? 'linear-gradient(180deg, #f59e0b, #b45309)' :
+                                                                                node.id.endsWith('mastery') ? 'linear-gradient(180deg, #facc15, #f59e0b 50%, #7e22ce)' :
+                                                                                node.behavior === 'container' ? (isGrade9 ? 'linear-gradient(180deg, #6366f1, #4338ca)' : isGrade8 ? 'linear-gradient(180deg, #06b6d4, #0284c7)' : isGrade7 ? 'linear-gradient(180deg, #f59e0b, #c2410c)' : isGrade6 ? 'linear-gradient(180deg, #a855f7, #4c1d95)' : isGrade4 ? 'linear-gradient(180deg, #34d399, #047857)' : isGrade3 ? 'linear-gradient(180deg, #22d3ee, #0284c7)' : isGrade2 ? 'linear-gradient(180deg, #818cf8, #4338ca)' : 'linear-gradient(180deg, #fbbf24, #ea580c)') :
+                                                                                isCompleted ? 'linear-gradient(180deg, #34d399, #059669)' :
+                                                                                isInProgress ? 'linear-gradient(180deg, #2dd4bf, #0d9488)' :
+                                                                                isAvailable ? 'linear-gradient(180deg, #38bdf8, #2563eb)' :
+                                                                                'linear-gradient(180deg, #475569, #1e293b)'
+                                                                        } : {
                                                                             background: isHighlighted ? 'linear-gradient(135deg, #b45309, #f59e0b)' :
                                                                                 node.id.endsWith('mastery') ? 'linear-gradient(135deg, #4c1d95, #701a75, #db2777)' :
                                                                                     isCompleted
@@ -1582,23 +1834,72 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                             }`
                                                                         }}
                                                                     >
-                                                                        <div className={cn("flex items-center justify-center", node.behavior === 'container' && !isSpecial && "-rotate-45")}>
-                                                                            {isCompleted && !node.id.endsWith('mastery') ? (
-                                                                                <CheckCircle className="w-8 h-8 text-green-400" />
-                                                                            ) : node.id.endsWith('mastery') ? (
-                                                                                <motion.div
-                                                                                    animate={{ rotate: [0, 10, -10, 0] }}
-                                                                                    transition={{ repeat: Infinity, duration: 2 }}
-                                                                                >
-                                                                                    <Crown className="w-14 h-14 text-yellow-300 drop-shadow-[0_0_12px_rgba(253,224,71,0.9)]" />
-                                                                                </motion.div>
-                                                                            ) : isLocked ? (
-                                                                                <Construction className="w-8 h-8 text-amber-500" />
+                                                                        <div className={cn("flex items-center justify-center", !isKidsGrade && node.behavior === 'container' && !isSpecial && "-rotate-45")}>
+                                                                            {isKidsGrade ? (
+                                                                                isCompleted && !node.id.endsWith('mastery') ? (
+                                                                                    <motion.div animate={{ rotate: [0, 8, -8, 0] }} transition={{ repeat: Infinity, duration: 3.5 }}>
+                                                                                        <Star className="w-10 h-10 text-yellow-300 fill-yellow-400 drop-shadow-[0_0_10px_rgba(253,224,71,0.9)]" />
+                                                                                    </motion.div>
+                                                                                ) : node.id.endsWith('mastery') ? (
+                                                                                    <motion.div
+                                                                                        animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
+                                                                                        transition={{ repeat: Infinity, duration: 2.5 }}
+                                                                                    >
+                                                                                        <Crown className="w-16 h-16 text-yellow-200 fill-yellow-300 drop-shadow-[0_0_16px_rgba(253,224,71,1)]" />
+                                                                                    </motion.div>
+                                                                                ) : isLocked ? (
+                                                                                    <Lock className="w-8 h-8 text-amber-300/90 drop-shadow-[0_0_6px_rgba(245,158,11,0.5)]" />
+                                                                                ) : (
+                                                                                    node.behavior === 'container' ? (
+                                                                                        isGrade9 ? (
+                                                                                            <Sparkles className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        ) : isGrade8 ? (
+                                                                                            <Layers className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        ) : isGrade7 ? (
+                                                                                            <Shield className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        ) : isGrade6 ? (
+                                                                                            <Zap className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        ) : isGrade4 ? (
+                                                                                            <Landmark className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        ) : isGrade3 || isGrade2 ? (
+                                                                                            <Compass className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        ) : (
+                                                                                            <BookOpen className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        )
+                                                                                    ) : isInProgress ? (
+                                                                                        <Target className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                    ) : (
+                                                                                        isGrade9 || isGrade8 ? (
+                                                                                            <Sparkles className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        ) : isGrade7 ? (
+                                                                                            <Flame className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        ) : isGrade6 ? (
+                                                                                            <Terminal className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        ) : isGrade4 ? (
+                                                                                            <Compass className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        ) : (
+                                                                                            <Rocket className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        )
+                                                                                    )
+                                                                                )
                                                                             ) : (
-                                                                                isSpecial ? <Star className="w-8 h-8 text-white fill-white/20" /> :
-                                                                                    node.type === 'evaluation' ? <Trophy className="w-8 h-8 text-purple-400 fill-purple-400/20" /> :
-                                                                                        node.behavior === 'container' ? <BookOpen className="w-8 h-8 text-white fill-white/10" /> :
-                                                                                            <Play className="w-8 h-8 text-white fill-white" />
+                                                                                isCompleted && !node.id.endsWith('mastery') ? (
+                                                                                    <CheckCircle className="w-8 h-8 text-green-400" />
+                                                                                ) : node.id.endsWith('mastery') ? (
+                                                                                    <motion.div
+                                                                                        animate={{ rotate: [0, 10, -10, 0] }}
+                                                                                        transition={{ repeat: Infinity, duration: 2 }}
+                                                                                    >
+                                                                                        <Crown className="w-14 h-14 text-yellow-300 drop-shadow-[0_0_12px_rgba(253,224,71,0.9)]" />
+                                                                                    </motion.div>
+                                                                                ) : isLocked ? (
+                                                                                    <Construction className="w-8 h-8 text-amber-500" />
+                                                                                ) : (
+                                                                                    isSpecial ? <Star className="w-8 h-8 text-white fill-white/20" /> :
+                                                                                        node.type === 'evaluation' ? <Trophy className="w-8 h-8 text-purple-400 fill-purple-400/20" /> :
+                                                                                            node.behavior === 'container' ? <BookOpen className="w-8 h-8 text-white fill-white/10" /> :
+                                                                                                <Play className="w-8 h-8 text-white fill-white" />
+                                                                                )
                                                                             )}
                                                                         </div>
                                                                     </motion.button>
@@ -1606,8 +1907,8 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                             })()}
 
                                                             {isLocked && !node.id.endsWith('mastery') && (
-                                                                <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-slate-400 text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none border border-slate-700 z-50">
-                                                                    Próximamente
+                                                                <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-slate-300 text-xs px-2.5 py-1 rounded-lg whitespace-nowrap pointer-events-none border border-slate-700 z-50 shadow-lg font-bold">
+                                                                    {isKidsGrade ? "🔒 Misión Bloqueada" : "Próximamente"}
                                                                 </div>
                                                             )}
 
@@ -1616,7 +1917,9 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                 const mapping = nodeMappings?.find(m => m.nodeId === node.id);
                                                                 const subId = mapping ? mapping.subcategoryId : node.subcategoryId;
                                                                 const additionalSubs = mapping?.additionalSubcategories || node.additionalSubcategories || [];
-                                                                const guestQuizzes = mapping?.additionalQuizzes || [];
+                                                                const guestQuizzes = (mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0)
+                                                                    ? mapping.additionalQuizzes
+                                                                    : (node.additionalQuizzes || []);
                                                                 
                                                                 if (!subId && additionalSubs.length === 0 && guestQuizzes.length === 0) return null;
 
@@ -1766,36 +2069,98 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                             </div>
                                                         )}
 
-                                                        <div className="mt-1 w-32 md:w-40 text-center pointer-events-none flex flex-col items-center">
+                                                        <div className={cn(
+                                                            "text-center pointer-events-none flex flex-col items-center",
+                                                            isKidsGrade ? "mt-2 w-36 md:w-44" : "mt-1 w-32 md:w-40"
+                                                        )}>
                                                             <div className={cn(
                                                                 "inline-flex flex-col items-center px-3 py-1 rounded-xl border backdrop-blur-md shadow-sm transition-colors duration-300 leading-tight",
-                                                                node.behavior === 'container'
-                                                                    ? cn(
-                                                                        "text-[11px] md:text-[13px] font-extrabold uppercase tracking-wide",
-                                                                        isHighlighted ? "bg-yellow-950/60 border-yellow-500/60 text-yellow-200" :
-                                                                        isCompleted ? "bg-orange-950/60 border-orange-500/60 text-orange-200" :
-                                                                        isAvailable || isInProgress ? "bg-orange-950/70 border-orange-500/70 text-orange-300" :
-                                                                        "bg-amber-950/50 border-amber-600/50 text-amber-400"
-                                                                    )
-                                                                    : cn(
-                                                                        "text-[10px] md:text-xs font-bold",
-                                                                        isHighlighted ? "bg-yellow-950/50 border-yellow-500/50 text-yellow-200" :
-                                                                        isCompleted ? "bg-green-950/50 border-green-500/50 text-green-300" :
-                                                                        isAvailable ? "bg-blue-950/50 border-blue-500/50 text-blue-200" :
-                                                                        isLocked ? "bg-amber-950/50 border-amber-600/50 text-amber-400" :
-                                                                        "bg-slate-900/50 border-slate-700 text-slate-500"
-                                                                    )
+                                                                isKidsGrade ? (
+                                                                    node.behavior === 'container'
+                                                                        ? (isGrade9
+                                                                            ? "bg-gradient-to-b from-indigo-950/95 to-slate-900/95 border-2 border-indigo-400/80 text-indigo-200 shadow-[0_4px_14px_rgba(99,102,241,0.35)] rounded-2xl py-1.5"
+                                                                            : isGrade8
+                                                                            ? "bg-gradient-to-b from-cyan-950/95 to-slate-900/95 border-2 border-cyan-400/80 text-cyan-200 shadow-[0_4px_14px_rgba(6,182,212,0.35)] rounded-2xl py-1.5"
+                                                                            : isGrade7
+                                                                            ? "bg-gradient-to-b from-amber-950/95 to-slate-900/95 border-2 border-amber-400/80 text-amber-200 shadow-[0_4px_14px_rgba(245,158,11,0.35)] rounded-2xl py-1.5"
+                                                                            : isGrade6
+                                                                            ? "bg-gradient-to-b from-purple-950/95 to-slate-900/95 border-2 border-violet-400/80 text-violet-200 shadow-[0_4px_14px_rgba(139,92,246,0.35)] rounded-2xl py-1.5"
+                                                                            : isGrade4
+                                                                            ? "bg-gradient-to-b from-emerald-950/95 to-slate-900/95 border-2 border-emerald-400/80 text-emerald-200 shadow-[0_4px_14px_rgba(16,185,129,0.3)] rounded-2xl py-1.5"
+                                                                            : isGrade3
+                                                                            ? "bg-gradient-to-b from-cyan-950/95 to-slate-900/95 border-2 border-cyan-400/80 text-cyan-200 shadow-[0_4px_14px_rgba(6,182,212,0.3)] rounded-2xl py-1.5"
+                                                                            : isGrade2
+                                                                            ? "bg-gradient-to-b from-indigo-950/95 to-slate-900/95 border-2 border-indigo-400/80 text-indigo-200 shadow-[0_4px_14px_rgba(99,102,241,0.3)] rounded-2xl py-1.5"
+                                                                            : "bg-gradient-to-b from-amber-950/95 to-slate-900/95 border-2 border-amber-400/80 text-amber-200 shadow-[0_4px_14px_rgba(245,158,11,0.3)] rounded-2xl py-1.5")
+                                                                        : isCompleted
+                                                                            ? "bg-slate-900/95 border-2 border-emerald-400/80 text-emerald-200 shadow-[0_4px_14px_rgba(34,197,94,0.3)] rounded-2xl py-1.5"
+                                                                            : isAvailable
+                                                                                ? "bg-slate-900/95 border-2 border-sky-400/80 text-sky-100 shadow-[0_4px_14px_rgba(56,189,248,0.3)] rounded-2xl py-1.5"
+                                                                                : isInProgress
+                                                                                    ? "bg-slate-900/95 border-2 border-teal-400/80 text-teal-100 shadow-[0_4px_14px_rgba(45,212,191,0.3)] rounded-2xl py-1.5"
+                                                                                    : "bg-slate-900/80 border-2 border-slate-700/60 text-slate-400 rounded-2xl py-1.5"
+                                                                ) : (
+                                                                    node.behavior === 'container'
+                                                                        ? cn(
+                                                                            "text-[11px] md:text-[13px] font-extrabold uppercase tracking-wide",
+                                                                            isHighlighted ? "bg-yellow-950/60 border-yellow-500/60 text-yellow-200" :
+                                                                            isCompleted ? "bg-orange-950/60 border-orange-500/60 text-orange-200" :
+                                                                            isAvailable || isInProgress ? "bg-orange-950/70 border-orange-500/70 text-orange-300" :
+                                                                            "bg-amber-950/50 border-amber-600/50 text-amber-400"
+                                                                        )
+                                                                        : cn(
+                                                                            "text-[10px] md:text-xs font-bold",
+                                                                            isHighlighted ? "bg-yellow-950/50 border-yellow-500/50 text-yellow-200" :
+                                                                            isCompleted ? "bg-green-950/50 border-green-500/50 text-green-300" :
+                                                                            isAvailable ? "bg-blue-950/50 border-blue-500/50 text-blue-200" :
+                                                                            isLocked ? "bg-amber-950/50 border-amber-600/50 text-amber-400" :
+                                                                            "bg-slate-900/50 border-slate-700 text-slate-500"
+                                                                        )
+                                                                )
                                                             )}>
-                                                                {node.behavior === 'container' && (
-                                                                    <span className="text-[8px] font-black uppercase tracking-widest text-orange-400/80 mb-0.5 block">
-                                                                        📚 Unidad
-                                                                    </span>
+                                                                {isKidsGrade ? (
+                                                                    node.behavior === 'container' ? (
+                                                                        <span className={cn(
+                                                                            "text-[8.5px] font-black uppercase tracking-wider mb-0.5 flex items-center gap-1",
+                                                                            isGrade9 ? "text-indigo-300" : isGrade8 ? "text-cyan-300" : isGrade7 ? "text-amber-300" : isGrade6 ? "text-violet-300" : isGrade4 ? "text-emerald-300" : isGrade3 ? "text-cyan-300" : isGrade2 ? "text-indigo-300" : "text-amber-300"
+                                                                        )}>
+                                                                            {isGrade9 || isGrade8 ? "🌀 DOMINIO" : isGrade7 ? "🛡️ BASTIÓN" : isGrade6 ? "⚡ NÚCLEO" : isGrade4 ? "🏛️ TEMPLO" : isGrade3 ? "🫧 ARRECIFE" : isGrade2 ? "🪐 SECTOR" : "🏰 UNIDAD"}
+                                                                        </span>
+                                                                    ) : isCompleted ? (
+                                                                        <span className="text-[8px] font-black uppercase tracking-wider text-emerald-400 mb-0.5 flex items-center gap-1">
+                                                                            ⭐ ¡SUPERADO!
+                                                                        </span>
+                                                                    ) : isAvailable ? (
+                                                                        <span className="text-[8px] font-black uppercase tracking-wider text-sky-400 mb-0.5 flex items-center gap-1">
+                                                                            {isGrade9 || isGrade8 ? "⚔️ ¡A CONQUISTAR!" : "🚀 ¡A JUGAR!"}
+                                                                        </span>
+                                                                    ) : isLocked ? (
+                                                                        <span className="text-[8px] font-black uppercase tracking-wider text-slate-500 mb-0.5 flex items-center gap-1">
+                                                                            🔒 BLOQUEADO
+                                                                        </span>
+                                                                    ) : null
+                                                                ) : (
+                                                                    node.behavior === 'container' && (
+                                                                        <span className="text-[8px] font-black uppercase tracking-widest text-orange-400/80 mb-0.5 block">
+                                                                            📚 Unidad
+                                                                        </span>
+                                                                    )
                                                                 )}
-                                                                <span className="whitespace-pre-line">{nodeMappings?.find(m => m.nodeId === node.id)?.overrideLabel || node.label}</span>
+                                                                <span className={cn(
+                                                                    "whitespace-pre-line",
+                                                                    isKidsGrade ? "text-[11px] md:text-xs font-black text-white" : ""
+                                                                )}>
+                                                                    {nodeMappings?.find(m => m.nodeId === node.id)?.overrideLabel || node.label}
+                                                                </span>
                                                                 
                                                                 {nodeAverages[node.id] !== undefined && (isCompleted || (node.behavior === 'container' && nodeProgress[node.id] > 0)) && (
-                                                                    <span className="text-[11px] md:text-[12px] font-black text-yellow-400 mt-1 pb-0.5 drop-shadow-[0_0_8px_rgba(234,179,8,0.4)]">
-                                                                        {nodeAverages[node.id].toFixed(1)}
+                                                                    <span className={cn(
+                                                                        "mt-1 pb-0.5 font-black",
+                                                                        isKidsGrade
+                                                                            ? "text-[11px] text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.6)]"
+                                                                            : "text-[11px] md:text-[12px] text-yellow-400 drop-shadow-[0_0_8px_rgba(234,179,8,0.4)]"
+                                                                    )}>
+                                                                        {isKidsGrade ? `⭐ ${nodeAverages[node.id].toFixed(1)}` : nodeAverages[node.id].toFixed(1)}
                                                                     </span>
                                                                 )}
                                                             </div>

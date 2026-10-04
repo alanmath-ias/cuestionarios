@@ -337,7 +337,9 @@ function QuizResults() {
                 const mapping = nodeMappings?.find(m => m.nodeId === fn.id);
                 const subId = mapping?.subcategoryId != null ? mapping.subcategoryId : fn.subcategoryId;
                 const subIds = mapping?.additionalSubcategories || fn.additionalSubcategories || [];
-                const guestQuizzes = mapping?.additionalQuizzes || [];
+                const guestQuizzes = (mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0)
+                  ? mapping.additionalQuizzes
+                  : (fn.additionalQuizzes || []);
 
                 const nodeQuizzes = allCategoryQuizzes.filter(q =>
                   Number(q.subcategoryId) === Number(subId) ||

@@ -12,7 +12,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, EyeOff, Link2, ListChecks, Folder, UserPlus, Pencil, Save, X, Brain, Search, Map as MapIcon, CheckCircle2, AlertTriangle, Ban, GripVertical, ShieldCheck, Crown, Gamepad2, Power, Check } from "lucide-react";
+import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, EyeOff, Link2, ListChecks, Folder, UserPlus, Pencil, Save, X, Brain, Search, Map as MapIcon, CheckCircle2, AlertTriangle, Ban, GripVertical, ShieldCheck, Crown, Gamepad2, Power, Check, Sparkles, GraduationCap, RotateCcw, Rocket, Compass, Landmark, Zap, Flame, Layers } from "lucide-react";
 import { DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,8 +35,25 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SkillTreeView } from "@/components/roadmap/SkillTreeView";
 import { arithmeticMapNodes, ArithmeticNode } from "@/data/arithmetic-map-data";
+import { grade1MapNodes } from "@/data/grade-1-map-data";
+import { grade2MapNodes } from "@/data/grade-2-map-data";
+import { grade3MapNodes } from "@/data/grade-3-map-data";
+import { grade4MapNodes } from "@/data/grade-4-map-data";
+import { grade5MapNodes } from "@/data/grade-5-map-data";
+import { grade6MapNodes } from "@/data/grade-6-map-data";
+import { grade7MapNodes } from "@/data/grade-7-map-data";
+import { grade8MapNodes } from "@/data/grade-8-map-data";
+import { grade9MapNodes } from "@/data/grade-9-map-data";
 import { algebraMapNodes } from "@/data/algebra-map-data";
 import { calculusMapNodes } from "@/data/calculus-map-data";
 import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
@@ -59,7 +76,34 @@ const formSchema = z.object({
   isPublic: z.boolean().default(false),
 });
 
-const getMapData = (catId: any, catName?: string) => {
+const getMapData = (catId: any, catName?: string, selectedGrade?: string | null) => {
+  if (selectedGrade === '1') {
+    return { nodes: grade1MapNodes, title: "Mundo de Exploradores • 1° de Primaria" };
+  }
+  if (selectedGrade === '2') {
+    return { nodes: grade2MapNodes, title: "Misión Cósmica • 2° de Primaria" };
+  }
+  if (selectedGrade === '3') {
+    return { nodes: grade3MapNodes, title: "Expedición Submarina • 3° de Primaria" };
+  }
+  if (selectedGrade === '4') {
+    return { nodes: grade4MapNodes, title: "Templo de los Exploradores • 4° de Primaria" };
+  }
+  if (selectedGrade === '5') {
+    return { nodes: grade5MapNodes, title: "Mapa Curricular: 5° de Primaria" };
+  }
+  if (selectedGrade === '6') {
+    return { nodes: grade6MapNodes, title: "La Ciudadela Cuántica • 6° Grado" };
+  }
+  if (selectedGrade === '7') {
+    return { nodes: grade7MapNodes, title: "La Forja de los Titanes • 7° Grado" };
+  }
+  if (selectedGrade === '8') {
+    return { nodes: grade8MapNodes, title: "La Odisea del Álgebra • 8° Grado" };
+  }
+  if (selectedGrade === '9') {
+    return { nodes: grade9MapNodes, title: "El Vórtice del Álgebra Superior • 9° Grado" };
+  }
   const id = Number(catId);
   const name = catName?.toLowerCase() || "";
 
@@ -503,6 +547,22 @@ export default function QuizzesAdmin() {
     const mapCat = params.get("mapCat");
     return mapCat ? Number(mapCat) : null;
   });
+  const [adminSelectedGrade, setAdminSelectedGrade] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("grade");
+  });
+
+  const handleAdminSelectGrade = (grade: string | null) => {
+    setAdminSelectedGrade(grade);
+    const params = new URLSearchParams(window.location.search);
+    if (grade) {
+      params.set('grade', grade);
+    } else {
+      params.delete('grade');
+    }
+    const newRelativePathQuery = window.location.pathname + (params.toString() ? `?${params.toString()}` : '');
+    window.history.pushState(null, '', newRelativePathQuery);
+  };
   const [selectedSubcategory, setSelectedSubcategory] = useState<any | null>(null);
   const [selectedNode, setSelectedNode] = useState<ArithmeticNode | null>(null);
   const [highlightedQuizId, setHighlightedQuizId] = useState<number | null>(null);
@@ -725,12 +785,23 @@ export default function QuizzesAdmin() {
       changed = true;
     }
 
+    // Handle grade
+    if (activeMapCategory && adminSelectedGrade) {
+      if (params.get("grade") !== adminSelectedGrade) {
+        params.set("grade", adminSelectedGrade);
+        changed = true;
+      }
+    } else if (params.has("grade")) {
+      params.delete("grade");
+      changed = true;
+    }
+
     if (changed) {
       const qs = params.toString();
       const newUrl = `${window.location.pathname}${qs ? '?' + qs : ''}`;
       window.history.replaceState({ path: newUrl }, '', newUrl);
     }
-  }, [activeMapCategory, selectedNode, loadingCategories]);
+  }, [activeMapCategory, selectedNode, loadingCategories, adminSelectedGrade]);
 
   // Helper functions
   // Helper to find the "Topic" (Container) for a given subcategory ID
@@ -1658,22 +1729,303 @@ export default function QuizzesAdmin() {
       <Dialog open={!!activeMapCategory} onOpenChange={(open) => !open && setActiveMapCategory(null)}>
         <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0 bg-slate-950 border-slate-800 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader className="p-6 pb-2 shrink-0 bg-slate-900 border-b border-white/10">
-            <DialogTitle className="flex items-center gap-2 text-slate-100 text-xl font-bold">
-              <MapIcon className="h-6 w-6 text-blue-400" />
-              {activeMapCategory ? getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name)?.title : "Mapa de Habilidades"}
-            </DialogTitle>
-            <DialogDescription className="text-slate-300 font-medium break-words">
-              Visualización del árbol de habilidades y cobertura de contenido.
-            </DialogDescription>
+            <div className="flex items-center justify-between flex-wrap gap-4 pr-6">
+              <div>
+                <DialogTitle className="flex items-center gap-2 text-slate-100 text-xl font-bold">
+                  <MapIcon className="h-6 w-6 text-blue-400" />
+                  {activeMapCategory ? getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name, adminSelectedGrade)?.title : "Mapa de Habilidades"}
+                </DialogTitle>
+                <DialogDescription className="text-slate-300 font-medium break-words">
+                  {adminSelectedGrade === '1'
+                    ? "Ruta lúdica para 1° de primaria: Conjuntos, Números hasta 999, Suma, Resta y Medidas."
+                    : adminSelectedGrade === '2'
+                    ? "Misión cósmica de 2° de primaria: Números hasta 99.999, Suma/Resta llevando, Tablas de Multiplicar y Medidas."
+                    : adminSelectedGrade === '3'
+                    ? "Expedición submarina de 3° de primaria: Conjuntos, Números Romanos, Multiplicación, División, Primos y Fracciones."
+                    : adminSelectedGrade === '4'
+                    ? "Templo de los exploradores de 4° de primaria: Conjuntos, Primos, MCM/MCD, Fracciones y Operaciones con Decimales."
+                    : adminSelectedGrade === '5'
+                    ? "Ruta estructurada para 5° de primaria: Conjuntos, Números Naturales, Divisibilidad y Fracciones."
+                    : adminSelectedGrade === '6'
+                    ? "Ciudadela cuántica de 6° de secundaria: Lógica, Polinomios, Ecuaciones, Divisibilidad, Fracciones, Decimales, Enteros y Finanzas."
+                    : adminSelectedGrade === '7'
+                    ? "La Forja Titánica de 7° grado: Números Enteros (ℤ), Racionales (ℚ), Proporcionalidad, Regla de Tres, Magnitudes y Despertar del Álgebra."
+                    : adminSelectedGrade === '8'
+                    ? "La Odisea del Álgebra de 8° grado: Números Reales, Notación Científica, Polinomios, Productos Notables, Factorización, Fracciones Algebraicas y Funciones."
+                    : "Visualización del árbol de habilidades y cobertura de contenido."}
+                </DialogDescription>
+              </div>
+
+              {/* Selector de Grados (Primaria y Secundaria) */}
+              {(Number(activeMapCategory) === 1 || categories?.find(c => c.id === activeMapCategory)?.name.toLowerCase().includes("aritmética")) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {adminSelectedGrade && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAdminSelectGrade(null)}
+                      className="h-8 px-2.5 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                      title="Volver a la vista completa de Aritmética"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      <span>Ver Área Completa</span>
+                    </Button>
+                  )}
+
+                  {/* Menú Primaria */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                          (adminSelectedGrade === '1' || adminSelectedGrade === '2' || adminSelectedGrade === '3' || adminSelectedGrade === '4' || adminSelectedGrade === '5')
+                            ? "border-blue-500/60 bg-blue-500/20 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                            : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                        )}
+                      >
+                        <Sparkles className="h-3.5 w-3.5 text-blue-400" />
+                        <span>{adminSelectedGrade === '1' ? "1° Primaria" : adminSelectedGrade === '2' ? "2° Primaria" : adminSelectedGrade === '3' ? "3° Primaria" : adminSelectedGrade === '4' ? "4° Primaria" : adminSelectedGrade === '5' ? "5° Primaria" : "Primaria"}</span>
+                        <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-[100]">
+                      <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase tracking-wider font-bold px-2 py-1">
+                        Grados de Primaria
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem
+                        onClick={() => handleAdminSelectGrade('1')}
+                        className={cn(
+                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                          adminSelectedGrade === '1'
+                            ? "bg-amber-600/30 text-amber-200 font-bold"
+                            : "hover:bg-amber-500/10 hover:text-amber-300"
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <BookOpen className="h-3.5 w-3.5 text-amber-400" />
+                          1° Primaria
+                        </span>
+                        <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
+                          Activo
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleAdminSelectGrade('2')}
+                        className={cn(
+                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                          adminSelectedGrade === '2'
+                            ? "bg-indigo-600/30 text-indigo-200 font-bold"
+                            : "hover:bg-indigo-500/10 hover:text-indigo-300"
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Rocket className="h-3.5 w-3.5 text-indigo-400" />
+                          2° Primaria
+                        </span>
+                        <span className="text-[9px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded font-semibold">
+                          Activo
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleAdminSelectGrade('3')}
+                        className={cn(
+                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                          adminSelectedGrade === '3'
+                            ? "bg-cyan-600/30 text-cyan-200 font-bold"
+                            : "hover:bg-cyan-500/10 hover:text-cyan-300"
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Compass className="h-3.5 w-3.5 text-cyan-400" />
+                          3° Primaria
+                        </span>
+                        <span className="text-[9px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded font-semibold">
+                          Activo
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleAdminSelectGrade('4')}
+                        className={cn(
+                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                          adminSelectedGrade === '4'
+                            ? "bg-emerald-600/30 text-emerald-200 font-bold"
+                            : "hover:bg-emerald-500/10 hover:text-emerald-300"
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Landmark className="h-3.5 w-3.5 text-emerald-400" />
+                          4° Primaria
+                        </span>
+                        <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-semibold">
+                          Activo
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-white/5 my-1" />
+                      <DropdownMenuItem
+                        onClick={() => handleAdminSelectGrade('5')}
+                        className={cn(
+                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                          adminSelectedGrade === '5'
+                            ? "bg-blue-600/30 text-blue-200 font-bold"
+                            : "hover:bg-blue-500/10 hover:text-blue-300"
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <BookOpen className="h-3.5 w-3.5 text-blue-400" />
+                          5° Primaria
+                        </span>
+                        <span className="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded font-semibold">
+                          Activo
+                        </span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Menú Secundaria */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                          adminSelectedGrade === '7'
+                            ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                            : adminSelectedGrade === '6'
+                            ? "border-violet-500/60 bg-violet-500/20 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.3)]"
+                            : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                        )}
+                      >
+                        {adminSelectedGrade === '7' ? (
+                          <Flame className="h-3.5 w-3.5 text-amber-400" />
+                        ) : adminSelectedGrade === '6' ? (
+                          <Zap className="h-3.5 w-3.5 text-violet-400" />
+                        ) : (
+                          <GraduationCap className="h-3.5 w-3.5 text-indigo-400" />
+                        )}
+                        <span>{adminSelectedGrade === '7' ? "7° Grado" : adminSelectedGrade === '6' ? "6° Grado" : "Secundaria"}</span>
+                        <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-[100]">
+                      <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase tracking-wider font-bold px-2 py-1">
+                        Bachillerato / Secundaria
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem
+                        onClick={() => handleAdminSelectGrade('6')}
+                        className={cn(
+                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                          adminSelectedGrade === '6'
+                            ? "bg-violet-600/30 text-violet-200 font-bold"
+                            : "hover:bg-violet-500/10 hover:text-violet-300"
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Zap className="h-3.5 w-3.5 text-violet-400" />
+                          6° Grado
+                        </span>
+                        <span className="text-[9px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-1.5 py-0.5 rounded font-semibold">
+                          Activo
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleAdminSelectGrade('7')}
+                        className={cn(
+                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                          adminSelectedGrade === '7'
+                            ? "bg-amber-600/30 text-amber-200 font-bold"
+                            : "hover:bg-amber-500/10 hover:text-amber-300"
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Flame className="h-3.5 w-3.5 text-amber-400" />
+                          7° Grado
+                        </span>
+                        <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
+                          Activo
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-white/5 my-1" />
+                      {['8° Grado', '9° Grado', '10° Grado', '11° Grado'].map(g => (
+                        <DropdownMenuItem key={g} disabled className="text-xs text-slate-500 cursor-not-allowed px-2 py-1.5 rounded-lg flex items-center justify-between">
+                          <span>{g}</span>
+                          <span className="text-[9px] bg-slate-800/80 text-slate-500 px-1.5 py-0.5 rounded font-mono">Próx.</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
+
+              {/* Selector de Grados para Álgebra (8° y 9°) */}
+              {(Number(activeMapCategory) === 2 || categories?.find(c => c.id === activeMapCategory)?.name.toLowerCase().includes("álgebra")) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {adminSelectedGrade && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAdminSelectGrade(null)}
+                      className="h-8 px-2.5 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                      title="Volver a la vista completa de Álgebra"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      <span>Ver Área Completa</span>
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAdminSelectGrade('8')}
+                    className={cn(
+                      "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                      adminSelectedGrade === '8'
+                        ? "border-cyan-500/60 bg-cyan-500/20 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                        : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                    )}
+                  >
+                    <Layers className="h-3.5 w-3.5 text-cyan-400" />
+                    <span>8° Grado</span>
+                    {adminSelectedGrade === '8' && (
+                      <span className="text-[9px] bg-cyan-500/30 text-cyan-200 border border-cyan-400/40 px-1.5 py-0.5 rounded font-bold">
+                        Activo
+                      </span>
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAdminSelectGrade(adminSelectedGrade === '9' ? null : '9')}
+                    className={cn(
+                      "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                      adminSelectedGrade === '9'
+                        ? "border-indigo-500/60 bg-indigo-500/20 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                        : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                    )}
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+                    <span>9° Grado</span>
+                    {adminSelectedGrade === '9' && (
+                      <span className="text-[9px] bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 px-1.5 py-0.5 rounded font-bold">
+                        Activo
+                      </span>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto bg-slate-950 relative">
-            {activeMapCategory && getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name) && (
+            {activeMapCategory && getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name, adminSelectedGrade) && (
               <SkillTreeView
-                nodes={getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name)!.nodes}
+                nodes={getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name, adminSelectedGrade)!.nodes}
                 description=""
                 progressMap={(() => {
-                  const nodes = getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name)!.nodes;
+                  const nodes = getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name, adminSelectedGrade)!.nodes;
                   const map: Record<string, 'locked' | 'available' | 'completed' | 'in_progress'> = {};
 
                   // Use the full quizzes list for the admin progress map to include guests
@@ -1684,7 +2036,9 @@ export default function QuizzesAdmin() {
                     const mapping = nodeMappings?.find(m => m.nodeId === node.id);
                     const subId = mapping?.subcategoryId || node.subcategoryId;
                     const additionalSubs = mapping?.additionalSubcategories || node.additionalSubcategories || [];
-                    const guestIds = mapping?.additionalQuizzes || [];
+                    const guestIds = (mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0)
+                      ? mapping.additionalQuizzes
+                      : (node.additionalQuizzes || []);
 
                     return quizSource.filter(q =>
                       Number(q.subcategoryId) === Number(subId) ||
@@ -1730,9 +2084,10 @@ export default function QuizzesAdmin() {
                 }}
                 isAdmin={true}
                 categoryId={activeMapCategory}
-                title={activeMapCategory ? getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name)?.title || "" : ""}
+                title={activeMapCategory ? getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name, adminSelectedGrade)?.title || "" : ""}
                 subcategories={subcategoriesResponse || []}
                 nodeMappings={nodeMappings}
+                gradeLevel={adminSelectedGrade}
               />
             )}
           </div>
@@ -1876,7 +2231,9 @@ export default function QuizzesAdmin() {
                 const mapping = nodeMappings?.find(m => m.nodeId === node.id);
                 const subId = mapping?.subcategoryId || node.subcategoryId;
                 const additionalSubs = mapping?.additionalSubcategories || node.additionalSubcategories || [];
-                const guestIds = mapping?.additionalQuizzes || [];
+                const guestIds = (mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0)
+                  ? mapping.additionalQuizzes
+                  : (selectedNode.additionalQuizzes || []);
 
                 // Use the full quizzes list and include dynamic mappings
                 const nodeQuizzes = (quizzes || []).filter(q =>
