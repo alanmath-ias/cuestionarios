@@ -33,7 +33,7 @@ export const grade6MapNodes: ArithmeticNode[] = [
         requires: ['g6-u1-logica-naturales'],
         description: 'Determinación por extensión y comprensión, pertenencia, contenencia, unión (∪), intersección (∩), diferencia y diagramas de Venn.',
         xOffset: 45,
-        additionalQuizzes: [], // Amerita nuevos cuestionarios específicos de conjuntos para 6°
+        additionalQuizzes: [991, 992, 993, 994, 995, 996], // Quizzes de Conjuntos de la madre aritmética (Determinación, Clases, Operaciones y Venn)
         behavior: 'quiz_list'
     },
     {

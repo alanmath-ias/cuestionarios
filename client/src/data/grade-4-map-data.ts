@@ -22,6 +22,7 @@ export const grade4MapNodes: ArithmeticNode[] = [
         requires: ['g4-u1-conjuntos-operaciones-sistemas'],
         description: 'Determinación por extensión y comprensión. Relaciones de pertenencia (∈, ∉) y contenencia (⊂, ⊄).',
         xOffset: -45,
+        additionalQuizzes: [991, 992, 993], // Quiz 991: Pertenencia | Quiz 992: Extensión/Comprensión | Quiz 993: Clases y Cardinalidad
         behavior: 'quiz_list'
     },
     {
@@ -32,6 +33,7 @@ export const grade4MapNodes: ArithmeticNode[] = [
         requires: ['g4-u1-conjuntos-operaciones-sistemas'],
         description: 'Unión (∪), intersección (∩), diferencia (A - B) y diagramas de Venn.',
         xOffset: 45,
+        additionalQuizzes: [994, 995, 996], // Quiz 994: Unión/Intersección | Quiz 995: Diferencia/Complemento | Quiz 996: Problemas Venn
         behavior: 'quiz_list'
     },
     {

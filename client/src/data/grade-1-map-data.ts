@@ -22,6 +22,7 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-u1-conjuntos'],
         description: 'Noción de conjunto, agrupación de objetos y símbolo de pertenencia.',
         xOffset: -45,
+        additionalQuizzes: [991], // Quiz 991: Noción de Conjunto, Elementos y Pertenencia
         behavior: 'quiz_list'
     },
     {

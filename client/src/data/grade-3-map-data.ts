@@ -22,6 +22,7 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-u1-conjuntos-romanos'],
         description: 'Elementos, subconjuntos y relaciones de inclusión (pertenece ∈, no pertenece ∉, está contenido ⊂).',
         xOffset: -45,
+        additionalQuizzes: [991], // Quiz 991: Noción de Conjunto, Elementos y Pertenencia
         behavior: 'quiz_list'
     },
     {
@@ -32,6 +33,7 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-u1-conjuntos-romanos'],
         description: 'Operaciones entre conjuntos: unión (U), intersección (∩) y complemento.',
         xOffset: 45,
+        additionalQuizzes: [994, 995], // Quiz 994: Unión e Intersección | Quiz 995: Diferencia y Complemento
         behavior: 'quiz_list'
     },
     {

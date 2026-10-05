@@ -22,6 +22,7 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-u1-conjuntos-999'],
         description: 'Diagramas, elementos, relaciones de pertenencia y agrupaciones.',
         xOffset: -45,
+        additionalQuizzes: [991], // Quiz 991: Noción de Conjunto, Elementos y Pertenencia
         behavior: 'quiz_list'
     },
     {

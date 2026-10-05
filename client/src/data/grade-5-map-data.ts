@@ -22,6 +22,7 @@ export const grade5MapNodes: ArithmeticNode[] = [
         requires: ['g5-conjuntos'],
         description: 'Extensión, comprensión, pertenencia y clases de conjuntos.',
         xOffset: -50,
+        subcategoryId: 544,
         behavior: 'quiz_list'
     },
     {
@@ -32,6 +33,7 @@ export const grade5MapNodes: ArithmeticNode[] = [
         requires: ['g5-conjuntos'],
         description: 'Unión, intersección, diferencia y diagramas de Venn.',
         xOffset: 50,
+        subcategoryId: 545,
         behavior: 'quiz_list'
     },
     {
@@ -42,6 +44,7 @@ export const grade5MapNodes: ArithmeticNode[] = [
         requires: ['g5-det-conjuntos', 'g5-ops-conjuntos'],
         description: 'Pares ordenados y relaciones entre conjuntos.',
         xOffset: 0,
+        subcategoryId: 546,
         behavior: 'quiz_list'
     },
 
