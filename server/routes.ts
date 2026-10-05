@@ -3879,6 +3879,14 @@ Ejemplo de formato:
         return res.status(403).json({ message: "Not authorized to submit answers for this progress" });
       }
 
+      // Guard: reject answer submissions for already-completed quizzes.
+      // This prevents a stale quiz session on another device from corrupting
+      // the score after the quiz was properly finished elsewhere.
+      if (progress.status === 'completed') {
+        console.warn(`[ANSWER GUARD] Rejected late answer for completed progress ${progress.id} (user ${userId})`);
+        return res.status(409).json({ message: "Quiz already completed. Answer not saved." });
+      }
+
       const answer = await storage.createStudentAnswer(answerData);
 
       // Disparar evaluación por IA de forma asíncrona si es una respuesta directa
@@ -3969,6 +3977,30 @@ Ejemplo de formato:
         };
       }
       const answers = await storage.getStudentAnswersByProgress(progressId);
+
+      // Auto-heal: recalculate the authoritative score from real DB answers and fix
+      // progress.score + quizSubmission.score if they are stale/inconsistent.
+      // This corrects scores that may have been corrupted by a late answer from
+      // a stale quiz session on another device.
+      if (progress.status === 'completed' && !isNaN(progress.quizId)) {
+        const quizQuestions = await storage.getQuestionsByQuiz(progress.quizId);
+        const totalQ = quizQuestions.length;
+        if (totalQ > 0) {
+          const correctQ = answers.filter(a => a.isCorrect === true).length;
+          const healedScore = Number(Math.min((correctQ / totalQ) * 10, 10).toFixed(1));
+          if (Math.abs(healedScore - (Number(progress.score) || 0)) > 0.05) {
+            console.log(`[SCORE HEAL] progress ${progressId}: stored=${progress.score} → healed=${healedScore} (${correctQ}/${totalQ})`);
+            await storage.updateStudentProgress(progressId, { score: healedScore });
+            await storage.saveQuizSubmission({
+              userId: progress.userId,
+              quizId: progress.quizId,
+              score: healedScore,
+              progressId: progressId
+            });
+            progress.score = healedScore;
+          }
+        }
+      }
 
       // Obtener detalles de las preguntas para cada respuesta
       const detailedAnswers = await Promise.all(

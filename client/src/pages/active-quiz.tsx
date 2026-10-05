@@ -763,8 +763,31 @@ const ActiveQuiz = () => {
 
   const submitAnswerMutation = useMutation({
     mutationFn: async (answer: any) => {
-      const res = await apiRequest("POST", "/api/answers", answer);
+      const res = await fetch("/api/answers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(answer),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const err: any = new Error(data.message || "Error al guardar respuesta");
+        err.status = res.status;
+        throw err;
+      }
       return res.json();
+    },
+    onError: (error: any) => {
+      if (error?.status === 409) {
+        // Quiz was completed on another device — notify the user
+        toast({
+          title: "Cuestionario ya completado",
+          description: "Este cuestionario fue completado en otro dispositivo. Tus respuestas en este dispositivo no se guardarán.",
+          variant: "destructive",
+        });
+      } else {
+        console.error("[Quiz] Error al guardar respuesta (asíncrono):", error);
+      }
     },
   });
 

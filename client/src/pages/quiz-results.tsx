@@ -132,9 +132,20 @@ function QuizResults() {
     enabled: session?.role === 'student',
   });
 
+  // Guard ref: ensure the achievement check fires at most once per mount,
+  // preventing re-awards when session/data dependencies reload asynchronously.
+  const hasCheckedAchievements = useRef(false);
+
   // Earn Medal / Map Completion Checking Effect
   useEffect(() => {
+    // All required data must be ready before checking
     if (!results?.quiz || session?.role !== 'student') return;
+    if (!allUserQuizzes || !allCategoryQuizzes) return;
+
+    // Only run once per component mount — prevents double-awarding when
+    // session or query dependencies update after the initial check.
+    if (hasCheckedAchievements.current) return;
+    hasCheckedAchievements.current = true;
 
     const checkAchievements = async () => {
       const quizId = results.quiz.id;
