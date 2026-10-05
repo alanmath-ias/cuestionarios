@@ -132,12 +132,31 @@ function QuizResults() {
     enabled: session?.role === 'student',
   });
 
+  // Track if this visit came directly from completing an active quiz session.
+  // We capture it once on mount and clean the URL so subsequent back navigation / refresh
+  // is treated as reviewing past results, never re-triggering celebrations or awards.
+  const isFreshQuiz = useRef(new URLSearchParams(window.location.search).get('source') === 'quiz').current;
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('source') === 'quiz') {
+      searchParams.delete('source');
+      const cleanSearch = searchParams.toString();
+      const cleanUrl = window.location.pathname + (cleanSearch ? `?${cleanSearch}` : '');
+      window.history.replaceState({}, '', cleanUrl);
+    }
+  }, []);
+
   // Guard ref: ensure the achievement check fires at most once per mount,
   // preventing re-awards when session/data dependencies reload asynchronously.
   const hasCheckedAchievements = useRef(false);
 
   // Earn Medal / Map Completion Checking Effect
   useEffect(() => {
+    // Only check achievements if returning freshly from completing a quiz!
+    // Never when reviewing/viewing previous results.
+    if (!isFreshQuiz) return;
+
     // All required data must be ready before checking
     if (!results?.quiz || session?.role !== 'student') return;
     if (!allUserQuizzes || !allCategoryQuizzes) return;
@@ -235,9 +254,6 @@ function QuizResults() {
     if (userId) {
       setLocation(`/admin/users?viewProgress=${userId}`);
     } else {
-      const searchParams = new URLSearchParams(window.location.search);
-      const isFreshQuiz = searchParams.get('source') === 'quiz';
-
       if (isFreshQuiz) {
         const categoryId = results?.quiz?.categoryId || params.categoryId;
         let p = '';
@@ -385,8 +401,11 @@ function QuizResults() {
         // Redirigir al dashboard con parámetro para reabrir el diálogo de entrenamiento
         setLocation(`/dashboard?reopenTraining=${results.quiz.categoryId}`);
       } else {
-        // Si no venimos de un quiz recién terminado, usamos el comportamiento normal de "atrás"
-        if (window.history.length > 1) {
+        // Si no venimos de un quiz recién terminado, volver limpiamente a la vista de mapa o dashboard
+        const categoryId = results?.quiz?.categoryId || params.categoryId;
+        if (categoryId) {
+          setLocation(`/category/${categoryId}?view=roadmap`);
+        } else if (window.history.length > 1) {
           window.history.back();
         } else {
           // Fallback si no hay historial previo

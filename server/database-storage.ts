@@ -607,7 +607,11 @@ export class DatabaseStorage implements IStorage {
       .where(or(
         isNotNull(userQuizzes.quizId),
         isNotNull(studentProgress.id),
-        and(eq(quizzes.createdByUserId, userId), eq(quizzes.isAiGenerated, true))
+        and(
+          eq(quizzes.createdByUserId, userId),
+          eq(quizzes.isAiGenerated, true),
+          isNull(quizzes.subcategoryId)
+        )
       ));
 
     // Deduplicate by quiz id, prioritizing completed status

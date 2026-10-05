@@ -22,7 +22,7 @@ export const grade9MapNodes: ArithmeticNode[] = [
         requires: ['g9-dominio-1'],
         description: 'Clasificación de números reales (ℝ, ℚ, 𝕀), densidad, orden y operaciones con valor absoluto.',
         xOffset: -60,
-        additionalQuizzes: [951, 961, 962, 963],
+        additionalQuizzes: [301, 961, 962, 963],
         behavior: 'quiz_list'
     },
     {
@@ -251,7 +251,7 @@ export const grade9MapNodes: ArithmeticNode[] = [
         requires: ['g9-logaritmos-propiedades-ecuaciones', 'g9-sucesiones-series'],
         description: 'Matemática financiera: interés simple, capitalización compuesta exponencial, tasas y decisiones de ahorro e inversión.',
         xOffset: 0,
-        additionalQuizzes: [958, 959, 960],
+        additionalQuizzes: [392, 393, 518],
         behavior: 'quiz_list'
     },
 

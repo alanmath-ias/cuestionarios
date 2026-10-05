@@ -477,20 +477,22 @@ export const SkillTreeView = React.memo(function SkillTreeView({
     // Handle Focus and Celebration Trigger from URL
     useEffect(() => {
         const searchParams = new URLSearchParams(window.location.search);
-        const focusId = searchParams.get('focusNode') || searchParams.get('nodeId');
+        const focusNodeParam = searchParams.get('focusNode');
+        const nodeIdParam = searchParams.get('nodeId');
+        const scrollTargetId = focusNodeParam || nodeIdParam;
         const source = searchParams.get('source');
         const quizTitleParam = searchParams.get('quizTitle');
 
-        if (!focusId || nodes.length === 0) return;
+        if (!scrollTargetId || nodes.length === 0) return;
 
-        const targetNode = nodes.find(n => n.id === focusId);
+        const targetNode = nodes.find(n => n.id === scrollTargetId);
         if (!targetNode) return;
 
-        // 1. Process Smooth Scroll (Only once per focusId)
-        if (focusId !== processedScrollId) {
-            setProcessedScrollId(focusId);
+        // 1. Process Smooth Scroll (Only once per scrollTargetId)
+        if (scrollTargetId !== processedScrollId) {
+            setProcessedScrollId(scrollTargetId);
             setTimeout(() => {
-                const element = document.getElementById(`node-container-${focusId}`);
+                const element = document.getElementById(`node-container-${scrollTargetId}`);
                 if (element) {
                     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
@@ -498,7 +500,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
 
             // Clean URL after a delay to prevent "sticky" parameters (like source=quiz)
             setTimeout(() => {
-                const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source|quizTitle)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
+                const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source|quizTitle|quizScore|score|nodeCompleted|familyCompleted)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
                 window.history.replaceState({}, '', newUrl);
             }, 6000);
         }
@@ -510,12 +512,14 @@ export const SkillTreeView = React.memo(function SkillTreeView({
         }
 
         // 2. Process Celebrations & Overlay Trigger Sequences
-        if (focusId !== processedCelebrationId && !focusId.endsWith('mastery')) {
+        // STRICT REQUIREMENT: Celebrations only occur when explicitly returning from a freshly finished quiz (source === 'quiz')
+        // and targeting a specific node via focusNode. Never when merely reviewing or browsing previous results!
+        if (source === 'quiz' && focusNodeParam && focusNodeParam !== processedCelebrationId && !focusNodeParam.endsWith('mastery')) {
+            const focusId = focusNodeParam;
             const tourStatus = (session?.tourStatus as any) || {};
             const awardedNodes = tourStatus.awardedNodes || {};
             const awardedUnits = tourStatus.awardedUnits || {};
-            const isUserAdmin = isAdmin || session?.role === 'admin';
-            const isMapPreviouslyCompleted = !isUserAdmin && !!(
+            const isMapPreviouslyCompleted = !!(
                 tourStatus.completedMaps?.[categoryId] ||
                 tourStatus.completedMaps?.[String(categoryId)]
             );
@@ -546,147 +550,90 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                 !focusId.endsWith('mastery') &&
                 !!parentContainer &&
                 !awardedUnits[parentContainer.id] &&
-                (
-                    searchParams.get('familyCompleted') === 'true' ||
-                    progressMap[parentContainer.id] === 'completed'
-                );
+                searchParams.get('familyCompleted') === 'true';
 
             const isNodeCompleted =
                 !focusId.endsWith('mastery') &&
                 !awardedNodes[focusId] &&
-                !(isMapPreviouslyCompleted && searchParams.get('nodeCompleted') !== 'true') &&
-                (
-                    searchParams.get('nodeCompleted') === 'true' ||
-                    progressMap[focusId] === 'completed' || 
-                    (nodeProgress[focusId] !== undefined && nodeProgress[focusId] >= 99.9) || 
-                    (nodeTotalQuizzes[focusId] > 0 && (nodeCompletedCount[focusId] || 0) >= nodeTotalQuizzes[focusId])
-                );
+                !isMapPreviouslyCompleted &&
+                searchParams.get('nodeCompleted') === 'true';
 
-            const titleQuiz = quizTitleParam ? decodeURIComponent(quizTitleParam) : (targetNode.label || "cuestionario");
+            const celebrationTargetNode = nodes.find(n => n.id === focusId);
+            const titleQuiz = quizTitleParam ? decodeURIComponent(quizTitleParam) : (celebrationTargetNode?.label || "cuestionario");
 
             const quizScoreParam = searchParams.get('quizScore') || searchParams.get('score');
             const quizScoreNum = Number(quizScoreParam) || 0;
             const hasScoreBonus = quizScoreNum >= 8.0;
 
-            if (source === 'quiz') {
-                setProcessedCelebrationId(focusId);
-                setCelebratingNodeId(focusId);
-                setCelebratingQuizTitle(titleQuiz);
-                setCelebratingHasScoreBonus(hasScoreBonus);
-                const parentLabel = parentContainer?.label || 'la unidad';
-                setCelebratingUnitTitle(parentLabel);
+            setProcessedCelebrationId(focusId);
+            setCelebratingNodeId(focusId);
+            setCelebratingQuizTitle(titleQuiz);
+            setCelebratingHasScoreBonus(hasScoreBonus);
+            const parentLabel = parentContainer?.label || 'la unidad';
+            setCelebratingUnitTitle(parentLabel);
 
-                if (isFamilyMastery) {
-                    setCelebrationType('family');
-                    setPendingSequence('silver_then_gold_then_cup');
-                } else if (isNodeCompleted) {
-                    // Double reward (Quiz + Subtopic/Node completed!)
-                    setCelebrationType('double');
-                    setPendingSequence('silver_then_gold');
-                } else {
-                    // Quiz only completed
-                    setCelebrationType('quiz');
-                    setPendingSequence('silver');
-                }
-
-                setTimeout(() => {
-                    setShowCelebrationDialog(true);
-                    if (isFamilyMastery) {
-                        fireFamilyFireworks();
-                    } else {
-                        confetti({
-                            particleCount: 150,
-                            spread: 70,
-                            origin: { y: 0.6 },
-                            colors: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
-                        });
-                    }
-                    // Compute and award bonus credits
-                    const creditConfig = getCreditConfig(categoryId);
-                    const nodeQuizCount = nodeTotalQuizzes[focusId] || 1;
-                    const familyQuizCount = parentContainer ? (nodeTotalQuizzes[parentContainer.id] || nodeQuizCount) : nodeQuizCount;
-                    const extraScoreBonus = hasScoreBonus ? creditConfig.scoreBonus : 0;
-                    let bonusCredits = creditConfig.baseRate + extraScoreBonus; // base: quiz completed
-                    let bonusReason = 'quiz_completed';
-                    if (isFamilyMastery) {
-                        bonusCredits = (familyQuizCount * creditConfig.baseRate) + extraScoreBonus;
-                        bonusReason = 'family_completed';
-                    } else if (isNodeCompleted) {
-                        bonusCredits = (nodeQuizCount * creditConfig.baseRate) + extraScoreBonus;
-                        bonusReason = 'node_completed';
-                    }
-                    setCelebrationCredits(bonusCredits);
-
-                    // Only call award-bonus on server if there is an actual node or family bonus to give!
-                    // (Individual quiz credits were already handled by /api/user/earn-medal in quiz-results.tsx)
-                    if (isFamilyMastery || isNodeCompleted) {
-                        fetch('/api/user/award-bonus', {
-                            method: 'POST',
-                            credentials: 'include',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                credits: isFamilyMastery ? (familyQuizCount * creditConfig.baseRate) : (nodeQuizCount * creditConfig.baseRate),
-                                reason: bonusReason,
-                                nodeId: focusId,
-                                familyId: parentContainer?.id,
-                                categoryId
-                            })
-                        }).catch(() => {});
-                    }
-                    // Clear pendingMedalAlert from server so dashboard doesn't show it again
-                    fetch('/api/user/clear-medal-alert', { method: 'POST', credentials: 'include' }).catch(() => {});
-                    const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source|quizTitle|quizScore|score|nodeCompleted|familyCompleted)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
-                    window.history.replaceState({}, '', newUrl);
-                }, 700);
-
+            if (isFamilyMastery) {
+                setCelebrationType('family');
+                setPendingSequence('silver_then_gold_then_cup');
             } else if (isNodeCompleted) {
-                const parentLabel = parentContainer?.label || 'la unidad';
-                setCelebratingUnitTitle(parentLabel);
-                // Subtopic/Node only completed
-                setProcessedCelebrationId(focusId);
-                setCelebratingNodeId(focusId);
-                setCelebrationType(isFamilyMastery ? 'family' : 'node');
-                setPendingSequence(isFamilyMastery ? 'silver_then_gold_then_cup' : 'silver_then_gold');
-
-                setTimeout(() => {
-                    setShowCelebrationDialog(true);
-                    if (isFamilyMastery) {
-                        fireFamilyFireworks();
-                    } else {
-                        confetti({
-                            particleCount: 150,
-                            spread: 70,
-                            origin: { y: 0.6 },
-                            colors: ['#f59e0b', '#eab308', '#ec4899']
-                        });
-                    }
-                    // Compute and award bonus credits
-                    const creditConfig = getCreditConfig(categoryId);
-                    const nodeQuizCount = nodeTotalQuizzes[focusId] || 1;
-                    const familyQuizCount = parentContainer ? (nodeTotalQuizzes[parentContainer.id] || nodeQuizCount) : nodeQuizCount;
-                    const bonusCredits = isFamilyMastery ? (familyQuizCount * creditConfig.baseRate) : (nodeQuizCount * creditConfig.baseRate);
-                    const bonusReason = isFamilyMastery ? 'family_completed' : 'node_completed';
-                    setCelebrationCredits(bonusCredits);
-                    if (isFamilyMastery || isNodeCompleted) {
-                        fetch('/api/user/award-bonus', {
-                            method: 'POST',
-                            credentials: 'include',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                credits: bonusCredits,
-                                reason: bonusReason,
-                                nodeId: focusId,
-                                familyId: parentContainer?.id,
-                                categoryId
-                            })
-                        }).catch(() => {});
-                    }
-                    // Clear pendingMedalAlert from server so dashboard doesn't show it again
-                    fetch('/api/user/clear-medal-alert', { method: 'POST', credentials: 'include' }).catch(() => {});
-                    const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
-                    window.history.replaceState({}, '', newUrl);
-                }, 700);
+                // Double reward (Quiz + Subtopic/Node completed!)
+                setCelebrationType('double');
+                setPendingSequence('silver_then_gold');
+            } else {
+                // Quiz only completed
+                setCelebrationType('quiz');
+                setPendingSequence('silver');
             }
+
+            setTimeout(() => {
+                setShowCelebrationDialog(true);
+                if (isFamilyMastery) {
+                    fireFamilyFireworks();
+                } else {
+                    confetti({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
+                    });
+                }
+                // Compute and award bonus credits
+                const creditConfig = getCreditConfig(categoryId);
+                const nodeQuizCount = nodeTotalQuizzes[focusId] || 1;
+                const familyQuizCount = parentContainer ? (nodeTotalQuizzes[parentContainer.id] || nodeQuizCount) : nodeQuizCount;
+                const extraScoreBonus = hasScoreBonus ? creditConfig.scoreBonus : 0;
+                let bonusCredits = creditConfig.baseRate + extraScoreBonus; // base: quiz completed
+                let bonusReason = 'quiz_completed';
+                if (isFamilyMastery) {
+                    bonusCredits = (familyQuizCount * creditConfig.baseRate) + extraScoreBonus;
+                    bonusReason = 'family_completed';
+                } else if (isNodeCompleted) {
+                    bonusCredits = (nodeQuizCount * creditConfig.baseRate) + extraScoreBonus;
+                    bonusReason = 'node_completed';
+                }
+                setCelebrationCredits(bonusCredits);
+
+                // Only call award-bonus on server if there is an actual node or family bonus to give!
+                // (Individual quiz credits were already handled by /api/user/earn-medal in quiz-results.tsx)
+                if (isFamilyMastery || isNodeCompleted) {
+                    fetch('/api/user/award-bonus', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            credits: isFamilyMastery ? (familyQuizCount * creditConfig.baseRate) : (nodeQuizCount * creditConfig.baseRate),
+                            reason: bonusReason,
+                            nodeId: focusId,
+                            familyId: parentContainer?.id,
+                            categoryId
+                        })
+                    }).catch(() => {});
+                }
+                // Clear pendingMedalAlert from server so dashboard doesn't show it again
+                fetch('/api/user/clear-medal-alert', { method: 'POST', credentials: 'include' }).catch(() => {});
+                const newUrl = window.location.pathname + window.location.search.replace(/([?&])(focusNode|source|quizTitle|quizScore|score|nodeCompleted|familyCompleted)=[^&]+(&|$)/g, '$1').replace(/[?&]$/, '');
+                window.history.replaceState({}, '', newUrl);
+            }, 700);
         }
     }, [nodes, allQuizzes, processedScrollId, processedCelebrationId, nodeProgress, progressMap]);
 

@@ -218,7 +218,7 @@ export const grade7MapNodes: ArithmeticNode[] = [
         requires: ['g7-u4'],
         description: 'Traducción de lenguaje verbal a simbólico, variables y valor numérico de expresiones.',
         xOffset: -60,
-        additionalQuizzes: [943, 944, 945, 946],
+        additionalQuizzes: [421, 422, 65, 66],
         behavior: 'quiz_list'
     },
     {
@@ -229,7 +229,7 @@ export const grade7MapNodes: ArithmeticNode[] = [
         requires: ['g7-u4'],
         description: 'Suma y resta de términos algebraicos y resolución de ecuaciones de primer grado.',
         xOffset: 60,
-        additionalQuizzes: [947, 948, 949, 950],
+        additionalQuizzes: [425, 445, 426, 67],
         behavior: 'quiz_list'
     },
     {

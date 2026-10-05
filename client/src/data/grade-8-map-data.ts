@@ -22,7 +22,7 @@ export const grade8MapNodes: ArithmeticNode[] = [
         requires: ['g8-u1'],
         description: 'Estructura de los números reales, densidad, clasificación y ubicación en la recta.',
         xOffset: -60,
-        additionalQuizzes: [951],
+        additionalQuizzes: [301],
         behavior: 'quiz_list'
     },
     {
@@ -33,7 +33,7 @@ export const grade8MapNodes: ArithmeticNode[] = [
         requires: ['g8-u1'],
         description: 'Conversión a notación científica, potencias de 10 y cálculo de operaciones y aplicaciones.',
         xOffset: 60,
-        additionalQuizzes: [952, 953],
+        additionalQuizzes: [356, 357],
         behavior: 'quiz_list'
     },
     {
@@ -149,7 +149,7 @@ export const grade8MapNodes: ArithmeticNode[] = [
         requires: ['g8-u3'],
         description: 'Descomposición en factores primos y cálculo del MCD numérico como base del factoreo algebraico.',
         xOffset: -70,
-        additionalQuizzes: [954, 955, 956],
+        additionalQuizzes: [3, 955, 956],
         behavior: 'quiz_list'
     },
     {
@@ -262,7 +262,7 @@ export const grade8MapNodes: ArithmeticNode[] = [
         requires: ['g8-operaciones-fracciones-algebraicas', 'g8-funcion-lineal-afin-variacion'],
         description: 'Modelación algebraica del dinero: tasas de interés, valor presente, valor futuro y crecimiento lineal vs exponencial.',
         xOffset: 50,
-        additionalQuizzes: [958, 959, 960],
+        additionalQuizzes: [392, 393, 518],
         behavior: 'quiz_list'
     },
 
