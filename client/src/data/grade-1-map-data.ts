@@ -33,6 +33,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-u1-conjuntos'],
         description: 'Comparación visual y cuantitativa de colecciones de objetos.',
         xOffset: 45,
+        subcategoryId: 547,
+        additionalQuizzes: [999],
         behavior: 'quiz_list'
     },
     {
@@ -43,6 +45,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-nocion-conjuntos', 'g1-comparaciones'],
         description: 'Orden de llegada, posiciones y secuencias del primero al décimo.',
         xOffset: 0,
+        subcategoryId: 548,
+        additionalQuizzes: [1000],
         behavior: 'quiz_list'
     },
 
@@ -67,6 +71,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-u2-digitos'],
         description: 'Adición básica con dibujos, términos de la suma y saltos en la recta numérica.',
         xOffset: -45,
+        subcategoryId: 549,
+        additionalQuizzes: [1001],
         behavior: 'quiz_list'
     },
     {
@@ -77,6 +83,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-u2-digitos'],
         description: 'Sustracción elemental, términos de la resta, recta y comprobación.',
         xOffset: 45,
+        subcategoryId: 550,
+        additionalQuizzes: [1002],
         behavior: 'quiz_list'
     },
     {
@@ -87,6 +95,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-suma-9'],
         description: 'Adiciones encadenadas sencillas como 2 + 3 + 1 = 6.',
         xOffset: -45,
+        subcategoryId: 551,
+        additionalQuizzes: [1003],
         behavior: 'quiz_list'
     },
     {
@@ -97,6 +107,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-suma-9', 'g1-resta-9'],
         description: 'Resolución de situaciones cotidianas infantiles con sumas y restas hasta 9.',
         xOffset: 45,
+        subcategoryId: 552,
+        additionalQuizzes: [1004],
         behavior: 'quiz_list'
     },
 
@@ -121,6 +133,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-u3-decenas'],
         description: 'Conteo de 10 en 10 (10, 20, 30...) y cálculo mental de decenas.',
         xOffset: -45,
+        subcategoryId: 553,
+        additionalQuizzes: [1005],
         behavior: 'quiz_list'
     },
     {
@@ -131,6 +145,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-u3-decenas'],
         description: 'Valor posicional en el ábaco: 1 decena = 10 unidades.',
         xOffset: 45,
+        subcategoryId: 554,
+        additionalQuizzes: [1006],
         behavior: 'quiz_list'
     },
     {
@@ -141,6 +157,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-decenas-exactas', 'g1-desagrupacion-dec'],
         description: 'Adición sin reagrupación y con reagrupación ("llevando").',
         xOffset: -45,
+        subcategoryId: 555,
+        additionalQuizzes: [1007],
         behavior: 'quiz_list'
     },
     {
@@ -151,6 +169,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-decenas-exactas', 'g1-desagrupacion-dec'],
         description: 'Sustracción sin desagrupación y con desagrupación ("prestando").',
         xOffset: 45,
+        subcategoryId: 556,
+        additionalQuizzes: [1008],
         behavior: 'quiz_list'
     },
 
@@ -175,6 +195,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-u4-centenas'],
         description: 'Identificación de la centena, lectura y escritura de números hasta 999.',
         xOffset: -50,
+        subcategoryId: 557,
+        additionalQuizzes: [1009],
         behavior: 'quiz_list'
     },
     {
@@ -185,6 +207,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-u4-centenas'],
         description: 'Sumas y restas con tres cifras, centenas exactas y desagrupación.',
         xOffset: 50,
+        subcategoryId: 558,
+        additionalQuizzes: [1010],
         behavior: 'quiz_list'
     },
     {
@@ -195,6 +219,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-ident-centena', 'g1-suma-resta-999'],
         description: 'Aproximación a los millares, lectura y operaciones elementales hasta 9999.',
         xOffset: 0,
+        subcategoryId: 559,
+        additionalQuizzes: [1011],
         behavior: 'quiz_list'
     },
 
@@ -219,6 +245,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-u5-medidas'],
         description: 'Días de la semana, meses del año, fechas del calendario y lectura del reloj.',
         xOffset: -45,
+        subcategoryId: 560,
+        additionalQuizzes: [1012],
         behavior: 'quiz_list'
     },
     {
@@ -229,6 +257,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-u5-medidas'],
         description: 'Patrones arbitrarios (pasos, palmos), el centímetro, decímetro y el metro.',
         xOffset: 45,
+        subcategoryId: 561,
+        additionalQuizzes: [1013],
         behavior: 'quiz_list'
     },
     {
@@ -239,6 +269,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: ['g1-tiempo', 'g1-longitud'],
         description: 'Desafíos prácticos de estimación, horarios y distancias cotidianas.',
         xOffset: 0,
+        subcategoryId: 562,
+        additionalQuizzes: [1014],
         behavior: 'quiz_list'
     },
 
@@ -253,6 +285,8 @@ export const grade1MapNodes: ArithmeticNode[] = [
         requires: [],
         description: 'El desafío final que corona todo el aprendizaje de primer grado de primaria.',
         xOffset: 0,
+        subcategoryId: 563,
+        additionalQuizzes: [1015],
         behavior: 'quiz_list'
     }
 ];

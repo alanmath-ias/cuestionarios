@@ -3,6 +3,15 @@ import { algebraMapNodes } from '../data/algebra-map-data';
 import { calculusMapNodes } from '../data/calculus-map-data';
 import { integralCalculusMapNodes } from '../data/integral-calculus-map-data';
 import { statisticsMapNodes } from '../data/statistics-map-data';
+import { grade1MapNodes } from '../data/grade-1-map-data';
+import { grade2MapNodes } from '../data/grade-2-map-data';
+import { grade3MapNodes } from '../data/grade-3-map-data';
+import { grade4MapNodes } from '../data/grade-4-map-data';
+import { grade5MapNodes } from '../data/grade-5-map-data';
+import { grade6MapNodes } from '../data/grade-6-map-data';
+import { grade7MapNodes } from '../data/grade-7-map-data';
+import { grade8MapNodes } from '../data/grade-8-map-data';
+import { grade9MapNodes } from '../data/grade-9-map-data';
 import { Category, Quiz, UserQuiz } from '@/types/types';
 
 // Map of categories to their ground-truth data
@@ -13,6 +22,32 @@ const MAP_DATA: Record<number, any[]> = {
     5: integralCalculusMapNodes,
     9: statisticsMapNodes,
     19: statisticsMapNodes
+};
+
+export interface GradeAwardConfig {
+    key: string;              // e.g. 'grade-1'
+    shortLabel: string;       // e.g. '1°'
+    name: string;             // e.g. '1° Primero'
+    title: string;            // e.g. 'Primero de Primaria'
+    icon: string;             // emoji
+    color: string;            // Badge accent colors
+    nodes: any[];
+}
+
+export const CATEGORY_GRADES: Record<number, GradeAwardConfig[]> = {
+    1: [
+        { key: 'grade-1', shortLabel: '1°', name: '1° Primero', title: 'Primero de Primaria', icon: '🎒', color: 'from-amber-400 to-yellow-500', nodes: grade1MapNodes },
+        { key: 'grade-2', shortLabel: '2°', name: '2° Segundo', title: 'Segundo de Primaria', icon: '🚀', color: 'from-orange-400 to-amber-500', nodes: grade2MapNodes },
+        { key: 'grade-3', shortLabel: '3°', name: '3° Tercero', title: 'Tercero de Primaria', icon: '🎯', color: 'from-emerald-400 to-teal-500', nodes: grade3MapNodes },
+        { key: 'grade-4', shortLabel: '4°', name: '4° Cuarto', title: 'Cuarto de Primaria', icon: '🧭', color: 'from-blue-400 to-cyan-500', nodes: grade4MapNodes },
+        { key: 'grade-5', shortLabel: '5°', name: '5° Quinto', title: 'Quinto de Primaria', icon: '💡', color: 'from-indigo-400 to-blue-500', nodes: grade5MapNodes },
+        { key: 'grade-6', shortLabel: '6°', name: '6° Sexto', title: 'Sexto de Primaria', icon: '🔬', color: 'from-purple-400 to-pink-500', nodes: grade6MapNodes },
+        { key: 'grade-7', shortLabel: '7°', name: '7° Séptimo', title: 'Séptimo de Primaria', icon: '⚔️', color: 'from-rose-400 to-red-500', nodes: grade7MapNodes },
+    ],
+    2: [
+        { key: 'grade-8', shortLabel: '8°', name: '8° Octavo', title: 'Octavo Grado', icon: '📐', color: 'from-cyan-400 to-blue-500', nodes: grade8MapNodes },
+        { key: 'grade-9', shortLabel: '9°', name: '9° Noveno', title: 'Noveno Grado', icon: '🔮', color: 'from-purple-400 to-indigo-500', nodes: grade9MapNodes },
+    ]
 };
 
 export interface PerformanceItem {
@@ -95,7 +130,8 @@ export function calculateMasteryStats(
     allQuizzes: any[], // User-quizzes with status
     availableQuizzes?: Quiz[], // All base quizzes in platform
     nodeMappings?: any[],
-    wasPreviouslyCompleted?: boolean // true si tourStatus.completedMaps[categoryId] existe
+    wasPreviouslyCompleted?: boolean, // true si tourStatus.completedMaps[categoryId] existe
+    customNodes?: any[] // Optional: para calcular estadísticas de un subcofre por grado
 ): MasteryStats {
     const emptyResult: MasteryStats = {
         silverMedals: 0, goldMedals: 0, silverTrophies: 0, goldTrophies: 0,
@@ -108,7 +144,7 @@ export function calculateMasteryStats(
         strongestNodes: [], weakestNodes: [], strongestUnits: [], weakestUnits: [], pendingNodes: []
     };
 
-    const rawNodes = MAP_DATA[categoryId] || [];
+    const rawNodes = customNodes || MAP_DATA[categoryId] || [];
     const nodes = rawNodes.filter(n => !n.id.endsWith('mastery'));
     if (nodes.length === 0) return emptyResult;
 
@@ -156,7 +192,9 @@ export function calculateMasteryStats(
             const children = nodes.filter(n => n.requires && n.requires.includes(currentId));
             for (const child of children) {
                 if (child.behavior === 'container' || child.id.endsWith('mastery')) continue;
-                familyNodeIds.push(child.id);
+                if (!familyNodeIds.includes(child.id)) {
+                    familyNodeIds.push(child.id);
+                }
                 queue.push(child.id);
             }
         }

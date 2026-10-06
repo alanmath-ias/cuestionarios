@@ -1786,7 +1786,7 @@ export default function QuizzesAdmin() {
                         )}
                       >
                         <Sparkles className="h-3.5 w-3.5 text-blue-400" />
-                        <span>{adminSelectedGrade === '1' ? "1° Primaria" : adminSelectedGrade === '2' ? "2° Primaria" : adminSelectedGrade === '3' ? "3° Primaria" : adminSelectedGrade === '4' ? "4° Primaria" : adminSelectedGrade === '5' ? "5° Primaria" : "Primaria"}</span>
+                        <span>{adminSelectedGrade === '1' ? "Primero" : adminSelectedGrade === '2' ? "Segundo" : adminSelectedGrade === '3' ? "Tercero" : adminSelectedGrade === '4' ? "Cuarto" : adminSelectedGrade === '5' ? "Quinto" : "Primaria"}</span>
                         <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -1805,7 +1805,7 @@ export default function QuizzesAdmin() {
                       >
                         <span className="flex items-center gap-1.5">
                           <BookOpen className="h-3.5 w-3.5 text-amber-400" />
-                          1° Primaria
+                          Primero
                         </span>
                         <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
                           Activo
@@ -1822,7 +1822,7 @@ export default function QuizzesAdmin() {
                       >
                         <span className="flex items-center gap-1.5">
                           <Rocket className="h-3.5 w-3.5 text-indigo-400" />
-                          2° Primaria
+                          Segundo
                         </span>
                         <span className="text-[9px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded font-semibold">
                           Activo
@@ -1839,7 +1839,7 @@ export default function QuizzesAdmin() {
                       >
                         <span className="flex items-center gap-1.5">
                           <Compass className="h-3.5 w-3.5 text-cyan-400" />
-                          3° Primaria
+                          Tercero
                         </span>
                         <span className="text-[9px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded font-semibold">
                           Activo
@@ -1856,7 +1856,7 @@ export default function QuizzesAdmin() {
                       >
                         <span className="flex items-center gap-1.5">
                           <Landmark className="h-3.5 w-3.5 text-emerald-400" />
-                          4° Primaria
+                          Cuarto
                         </span>
                         <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-semibold">
                           Activo
@@ -1874,7 +1874,7 @@ export default function QuizzesAdmin() {
                       >
                         <span className="flex items-center gap-1.5">
                           <BookOpen className="h-3.5 w-3.5 text-blue-400" />
-                          5° Primaria
+                          Quinto
                         </span>
                         <span className="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded font-semibold">
                           Activo
@@ -1905,7 +1905,7 @@ export default function QuizzesAdmin() {
                         ) : (
                           <GraduationCap className="h-3.5 w-3.5 text-indigo-400" />
                         )}
-                        <span>{adminSelectedGrade === '7' ? "7° Grado" : adminSelectedGrade === '6' ? "6° Grado" : "Secundaria"}</span>
+                        <span>{adminSelectedGrade === '7' ? "Séptimo" : adminSelectedGrade === '6' ? "Sexto" : "Secundaria"}</span>
                         <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -1924,7 +1924,7 @@ export default function QuizzesAdmin() {
                       >
                         <span className="flex items-center gap-1.5">
                           <Zap className="h-3.5 w-3.5 text-violet-400" />
-                          6° Grado
+                          Sexto
                         </span>
                         <span className="text-[9px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-1.5 py-0.5 rounded font-semibold">
                           Activo
@@ -1941,14 +1941,14 @@ export default function QuizzesAdmin() {
                       >
                         <span className="flex items-center gap-1.5">
                           <Flame className="h-3.5 w-3.5 text-amber-400" />
-                          7° Grado
+                          Séptimo
                         </span>
                         <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
                           Activo
                         </span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-white/5 my-1" />
-                      {['8° Grado', '9° Grado', '10° Grado', '11° Grado'].map(g => (
+                      {['Octavo', 'Noveno', 'Décimo', 'Undécimo'].map(g => (
                         <DropdownMenuItem key={g} disabled className="text-xs text-slate-500 cursor-not-allowed px-2 py-1.5 rounded-lg flex items-center justify-between">
                           <span>{g}</span>
                           <span className="text-[9px] bg-slate-800/80 text-slate-500 px-1.5 py-0.5 rounded font-mono">Próx.</span>
@@ -1987,7 +1987,7 @@ export default function QuizzesAdmin() {
                     )}
                   >
                     <Layers className="h-3.5 w-3.5 text-cyan-400" />
-                    <span>8° Grado</span>
+                    <span>Octavo</span>
                     {adminSelectedGrade === '8' && (
                       <span className="text-[9px] bg-cyan-500/30 text-cyan-200 border border-cyan-400/40 px-1.5 py-0.5 rounded font-bold">
                         Activo
@@ -2007,7 +2007,7 @@ export default function QuizzesAdmin() {
                     )}
                   >
                     <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-                    <span>9° Grado</span>
+                    <span>Noveno</span>
                     {adminSelectedGrade === '9' && (
                       <span className="text-[9px] bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 px-1.5 py-0.5 rounded font-bold">
                         Activo

@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MasteryInsignia } from './MasteryInsignia';
 import { Category, Quiz } from '@/types/types';
 import { cn } from '@/lib/utils';
-import { calculateMasteryStats } from '@/lib/mastery-utils';
+import { calculateMasteryStats, CATEGORY_GRADES } from '@/lib/mastery-utils';
 import { useQuery } from '@tanstack/react-query';
 
 interface AwardsDialogProps {
@@ -25,6 +25,7 @@ interface AwardsDialogProps {
     hintCredits?: number;
     isPublicView?: boolean;
     tourStatus?: any; // tourStatus del estudiante — para detectar copa ganada previamente
+    initialGrade?: string | null; // Optional: e.g. 'grade-1'
 }
 
 type DetailType = 'gold_cup' | 'silver_cup' | 'gold_medal' | 'silver_medal' | null;
@@ -38,9 +39,11 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
     wonDuels = 0,
     hintCredits = 0,
     isPublicView = false,
-    tourStatus
+    tourStatus,
+    initialGrade
 }) => {
     const [selectedType, setSelectedType] = useState<DetailType>(null);
+    const [selectedGradeKey, setSelectedGradeKey] = useState<string>('general');
 
     // Fetch all quizzes for the category to have ground truth for map completion
     const { data: allCategoryQuizzes, isLoading: loadingAllQuizzes } = useQuery<Quiz[]>({
@@ -77,37 +80,87 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
         enabled: !!category && isOpen,
     });
 
+    const availableGrades = React.useMemo(() => {
+        if (!category) return [];
+        return CATEGORY_GRADES[category.id] || [];
+    }, [category]);
+
+    // Sincronizar selección de grado al abrir o cambiar de categoría
+    React.useEffect(() => {
+        if (isOpen) {
+            if (initialGrade && availableGrades.some(g => g.key === initialGrade)) {
+                setSelectedGradeKey(initialGrade);
+            } else {
+                setSelectedGradeKey('general');
+            }
+            setSelectedType(null);
+        }
+    }, [isOpen, category?.id, initialGrade]);
+
+    const activeGrade = React.useMemo(() => {
+        if (selectedGradeKey === 'general') return null;
+        return availableGrades.find(g => g.key === selectedGradeKey) || null;
+    }, [selectedGradeKey, availableGrades]);
+
+    // Resúmenes rápidos de cada grado para los badges de las pestañas
+    const gradeSummaries = React.useMemo(() => {
+        if (!category || availableGrades.length === 0) return {};
+        const mergedPool = [...(allQuizzesPool || []), ...(allCategoryQuizzes || [])];
+        const res: Record<string, { progress: number; isComplete: boolean }> = {};
+        for (const g of availableGrades) {
+            const gradeWasPrev = !!(
+                tourStatus?.completedMaps?.[g.key] ||
+                tourStatus?.completedMaps?.[`${category.id}_${g.key}`]
+            );
+            const gradeStats = calculateMasteryStats(category.id, quizzes, mergedPool, nodeMappings, gradeWasPrev, g.nodes);
+            res[g.key] = {
+                progress: Math.round(gradeStats.progress),
+                isComplete: gradeStats.earnedGoldTrophy || (gradeStats.progress === 100 && gradeStats.totalQuizzes > 0)
+            };
+        }
+        return res;
+    }, [category, availableGrades, allQuizzesPool, allCategoryQuizzes, quizzes, nodeMappings, tourStatus]);
+
     const stats = React.useMemo(() => {
         if (!category) return null;
-        const wasPreviouslyCompleted = !!(
-            tourStatus?.completedMaps?.[category.id] ||
-            tourStatus?.completedMaps?.[String(category.id)]
-        );
+        // Si hay un grado seleccionado, su Copa Oro debe depender ÚNICAMENTE de ese grado,
+        // no de la copa ganada previamente en la categoría general.
+        const wasPreviouslyCompleted = activeGrade
+            ? !!(
+                tourStatus?.completedMaps?.[activeGrade.key] ||
+                tourStatus?.completedMaps?.[`${category.id}_${activeGrade.key}`]
+            )
+            : !!(
+                tourStatus?.completedMaps?.[category.id] ||
+                tourStatus?.completedMaps?.[String(category.id)]
+            );
         // Merge category quizzes with all-quiz pool so guest quizzes from other categories are counted
         const mergedPool = [...(allQuizzesPool || []), ...(allCategoryQuizzes || [])];
-        return calculateMasteryStats(category.id, quizzes, mergedPool, nodeMappings, wasPreviouslyCompleted);
-    }, [category, quizzes, allCategoryQuizzes, allQuizzesPool, nodeMappings, tourStatus]);
+        const customNodes = activeGrade ? activeGrade.nodes : undefined;
+        return calculateMasteryStats(category.id, quizzes, mergedPool, nodeMappings, wasPreviouslyCompleted, customNodes);
+    }, [category, quizzes, allCategoryQuizzes, allQuizzesPool, nodeMappings, tourStatus, activeGrade]);
 
     if (!category) return null;
 
     const handleWhatsApp = (type: string, data: any) => {
         const lowestNames = (data || []).map((q: any) => q.label).join(", ");
-        const message = `¡Hola! Soy ${username}, he visto mis estadísticas de ${category.name} en el Cofre y me gustaría reforzar estos temas: ${lowestNames}. ¿Podrían ayudarme?`;
+        const contextStr = activeGrade ? `${category.name} (${activeGrade.title})` : category.name;
+        const message = `¡Hola! Soy ${username}, he visto mis estadísticas de ${contextStr} en el Cofre y me gustaría reforzar estos temas: ${lowestNames}. ¿Podrían ayudarme?`;
         const url = `https://wa.me/573208056799?text=${encodeURIComponent(message)}`;
         window.open(url, '_blank');
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { setSelectedType(null); onClose(); } }}>
-            <DialogContent className="max-w-3xl max-h-[90vh] bg-slate-950/98 border-amber-500/20 backdrop-blur-2xl rounded-[3rem] p-0 overflow-hidden shadow-[0_0_50px_rgba(234,179,8,0.15)] ring-0 focus:outline-none">
-                <ScrollArea className="h-[90vh] p-0">
+            <DialogContent className="w-[96vw] max-w-5xl max-h-[92vh] bg-slate-950/98 border-amber-500/20 backdrop-blur-2xl rounded-[2rem] sm:rounded-[3rem] p-0 overflow-hidden shadow-[0_0_50px_rgba(234,179,8,0.15)] ring-0 focus:outline-none">
+                <ScrollArea className="h-[92vh] max-h-[92vh] p-0 w-full">
                     {(!allCategoryQuizzes || !stats) ? (
                         <div className="h-[400px] flex flex-col items-center justify-center gap-4">
                             <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />
                             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Abriendo Cofre...</p>
                         </div>
                     ) : (
-                        <div className="relative">
+                        <div className="relative w-full min-w-0">
                             <AnimatePresence mode="wait">
                                 {!selectedType ? (
                                     <motion.div
@@ -115,30 +168,93 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: -20 }}
-                                        className="relative"
+                                        className="relative w-full min-w-0"
                                     >
                                         {/* Header with Visual Focus on the specific Map */}
-                                        <div className="relative p-8 md:p-12 pb-6 text-center space-y-6">
+                                        <div className="relative p-4 sm:p-8 md:p-10 pb-4 sm:pb-6 text-center space-y-4 sm:space-y-6 w-full min-w-0">
                                             <div className="absolute top-[-50px] left-1/2 -translate-x-1/2 w-[350px] h-[350px] bg-amber-500/10 rounded-full blur-[100px] -z-10" />
 
-                                            <div className="flex flex-col items-center gap-3">
-                                                <Gift className="w-16 h-16 text-amber-400 drop-shadow-[0_0_20px_rgba(234,179,8,0.6)]" />
+                                            <div className="flex flex-col items-center gap-2 sm:gap-3">
+                                                <Gift className="w-12 h-12 sm:w-16 sm:h-16 text-amber-400 drop-shadow-[0_0_20px_rgba(234,179,8,0.6)]" />
                                                 <div className="space-y-1">
-                                                    <DialogTitle className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-yellow-400 to-amber-600 tracking-tighter uppercase italic">
-                                                        Cofre de {category.name}
+                                                    <DialogTitle className="text-2xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-yellow-400 to-amber-600 tracking-tighter uppercase italic leading-tight">
+                                                        {activeGrade ? `Cofre de ${activeGrade.name}` : `Cofre de ${category.name}`}
                                                     </DialogTitle>
-                                                    <p className="text-slate-400 font-bold text-xs uppercase tracking-[0.4em] opacity-80">
-                                                        Logros de {username}
+                                                    <p className="text-slate-400 font-bold text-[10px] sm:text-xs uppercase tracking-[0.3em] sm:tracking-[0.4em] opacity-80">
+                                                        {activeGrade ? `${activeGrade.title} • Logros de ${username}` : `Logros de ${username}`}
                                                     </p>
                                                 </div>
                                             </div>
 
+                                            {/* Subcofres Navigation Tabs (Grados) */}
+                                            {availableGrades.length > 0 && (
+                                                <div className="w-full max-w-full min-w-0 flex flex-col items-center gap-2 pt-1 sm:pt-2">
+                                                    <div className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-[0.25em] flex items-center gap-2">
+                                                        <Sparkles className="w-3 h-3 text-amber-400 shrink-0" /> Subcofres por Grado
+                                                    </div>
+                                                    <div className="w-full max-w-full min-w-0 overflow-x-auto no-scrollbar touch-pan-x py-1 px-1">
+                                                        <div className="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-full bg-slate-900/90 border border-white/10 backdrop-blur-md shadow-2xl w-fit mx-auto shrink-0">
+                                                            {/* Tab General */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => { setSelectedGradeKey('general'); setSelectedType(null); }}
+                                                                className={cn(
+                                                                    "relative px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1 sm:gap-1.5 shrink-0",
+                                                                    selectedGradeKey === 'general'
+                                                                        ? "bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-slate-950 shadow-[0_0_20px_rgba(234,179,8,0.5)] scale-105"
+                                                                        : "text-slate-400 hover:text-white hover:bg-white/5"
+                                                                )}
+                                                            >
+                                                                <span className="text-xs sm:text-sm">🌟</span>
+                                                                <span>General</span>
+                                                            </button>
+
+                                                            {/* Tabs por Grado */}
+                                                            {availableGrades.map((g) => {
+                                                                const isSelected = selectedGradeKey === g.key;
+                                                                const summary = gradeSummaries[g.key];
+                                                                const isComplete = summary?.isComplete;
+                                                                const progress = summary?.progress || 0;
+
+                                                                return (
+                                                                    <button
+                                                                        key={g.key}
+                                                                        type="button"
+                                                                        onClick={() => { setSelectedGradeKey(g.key); setSelectedType(null); }}
+                                                                        className={cn(
+                                                                            "relative px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1 sm:gap-1.5 shrink-0",
+                                                                            isSelected
+                                                                                ? "bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-slate-950 shadow-[0_0_20px_rgba(234,179,8,0.5)] scale-105"
+                                                                                : "text-slate-400 hover:text-white hover:bg-white/5"
+                                                                        )}
+                                                                    >
+                                                                        <span className="text-xs sm:text-sm">{g.icon}</span>
+                                                                        <span>{g.shortLabel}</span>
+                                                                        {isComplete ? (
+                                                                            <span className={cn(
+                                                                                "text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.2 rounded-full font-black",
+                                                                                isSelected ? "bg-slate-950 text-amber-400" : "bg-amber-500/20 text-amber-400"
+                                                                            )}>★</span>
+                                                                        ) : progress > 0 ? (
+                                                                            <span className={cn(
+                                                                                "text-[8px] sm:text-[9px] px-1 sm:px-1 py-0.2 rounded-full font-bold",
+                                                                                isSelected ? "bg-slate-950/25 text-slate-950" : "bg-white/5 text-slate-400"
+                                                                            )}>{progress}%</span>
+                                                                        ) : null}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {/* Main Stats Grid */}
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-4 mt-6 sm:mt-8 w-full">
                                                 <StatCard
                                                     icon={Trophy}
                                                     label="Copa Oro"
-                                                    sublabel="Materia Completa"
+                                                    sublabel={activeGrade ? `${activeGrade.shortLabel} Completo` : "Materia Completa"}
                                                     value={stats.earnedGoldTrophy ? 1 : 0}
                                                     color={stats.hasPendingNewContent ? "text-red-400" : "text-yellow-500"}
                                                     delay={0.1}
@@ -150,7 +266,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                 <StatCard
                                                     icon={Trophy}
                                                     label="Copa Plata"
-                                                    sublabel="Unidades Completadas"
+                                                    sublabel={activeGrade ? `Unidades de ${activeGrade.shortLabel}` : "Unidades Completadas"}
                                                     value={stats.silverTrophies}
                                                     color="text-blue-100"
                                                     delay={0.2}
@@ -160,7 +276,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                 <StatCard
                                                     icon={Award}
                                                     label="Medalla Oro"
-                                                    sublabel="Temas"
+                                                    sublabel={activeGrade ? `Temas de ${activeGrade.shortLabel}` : "Temas"}
                                                     value={stats.goldMedals}
                                                     color="text-amber-400"
                                                     delay={0.3}
@@ -170,7 +286,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                 <StatCard
                                                     icon={Medal}
                                                     label="Medalla Plata"
-                                                    sublabel="Cuestionarios"
+                                                    sublabel={activeGrade ? `Quizzes de ${activeGrade.shortLabel}` : "Cuestionarios"}
                                                     value={stats.silverMedals}
                                                     color="text-slate-400"
                                                     delay={0.4}
@@ -192,63 +308,70 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                     value={hintCredits}
                                                     color="text-blue-400"
                                                     delay={0.6}
-                                                    onClick={isPublicView ? undefined : undefined} // Zap doesn't have onClick anyway in original code but for consistency
+                                                    onClick={isPublicView ? undefined : undefined}
                                                 />
                                             </div>
                                         </div>
 
-                                        <div className="px-8 md:px-12 pb-12 space-y-8">
+                                        <div className="px-4 sm:px-8 md:px-10 pb-8 sm:pb-12 space-y-6 sm:space-y-8 w-full min-w-0">
                                             {/* Detailed Progress Section */}
-                                            <div className="space-y-4">
-                                                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
-                                                    <span className="h-px w-6 bg-slate-800" /> Resumen del Mapa
+                                            <div className="space-y-3 sm:space-y-4">
+                                                <h4 className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2 sm:gap-3">
+                                                    <span className="h-px w-4 sm:w-6 bg-slate-800" /> {activeGrade ? `Resumen de ${activeGrade.title}` : "Resumen del Mapa"}
                                                 </h4>
 
-                                                <div className="p-6 rounded-[2.5rem] bg-slate-900/40 border border-white/5 relative overflow-hidden group">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <div className="flex items-center gap-4">
-                                                            <MasteryInsignia categoryId={category.id} quizzes={quizzes} size="lg" />
-                                                            <div>
-                                                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Estado Actual</p>
-                                                                <h5 className="text-xl font-black text-white uppercase italic">{category.name}</h5>
+                                                <div className="p-4 sm:p-6 rounded-[1.8rem] sm:rounded-[2.5rem] bg-slate-900/40 border border-white/5 relative overflow-hidden group">
+                                                    <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4">
+                                                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                                            <div className="shrink-0">
+                                                                <MasteryInsignia categoryId={category.id} quizzes={quizzes} size="lg" />
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <p className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest">
+                                                                    {activeGrade ? "Subcofre Activo" : "Estado Actual"}
+                                                                </p>
+                                                                <h5 className="text-base sm:text-xl font-black text-white uppercase italic truncate">
+                                                                    {activeGrade ? `${activeGrade.icon} ${activeGrade.title}` : category.name}
+                                                                </h5>
                                                             </div>
                                                         </div>
-                                                        <div className="text-right">
-                                                            <span className="text-3xl font-black text-amber-400 tracking-tighter">{Math.round(stats.progress)}%</span>
-                                                            <p className="text-[10px] font-bold text-slate-500 uppercase">Completado</p>
+                                                        <div className="text-right shrink-0">
+                                                            <span className="text-2xl sm:text-3xl font-black text-amber-400 tracking-tighter">{Math.round(stats.progress)}%</span>
+                                                            <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase">Completado</p>
                                                         </div>
                                                     </div>
 
-                                                    <div className="h-3 w-full bg-slate-950 rounded-full overflow-hidden border border-white/5 p-0.5">
+                                                    <div className="h-2.5 sm:h-3 w-full bg-slate-950 rounded-full overflow-hidden border border-white/5 p-0.5">
                                                         <motion.div
+                                                            key={selectedGradeKey}
                                                             initial={{ width: 0 }}
                                                             animate={{ width: `${stats.progress}%` }}
-                                                            transition={{ duration: 1.5, ease: "easeOut" }}
+                                                            transition={{ duration: 1.2, ease: "easeOut" }}
                                                             className="h-full rounded-full bg-gradient-to-r from-amber-600 via-yellow-400 to-amber-600 shadow-[0_0_15px_rgba(234,179,8,0.4)]"
                                                         />
                                                     </div>
 
-                                                    <div className="grid grid-cols-2 gap-4 mt-6">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-6">
                                                         <div className="flex items-center gap-2 text-slate-400">
-                                                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                                                            <span className="text-xs font-bold">{stats.completedQuizzes} de {stats.totalQuizzes} Cuestionarios</span>
+                                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                                            <span className="text-xs font-bold truncate">{stats.completedQuizzes} de {stats.totalQuizzes} Cuestionarios</span>
                                                         </div>
                                                         <div className="flex items-center gap-2 text-slate-400">
-                                                            <Target className="w-4 h-4 text-blue-400" />
-                                                            <span className="text-xs font-bold">{stats.goldMedals} Estrategias Dominadas</span>
+                                                            <Target className="w-4 h-4 text-blue-400 shrink-0" />
+                                                            <span className="text-xs font-bold truncate">{stats.goldMedals} Temas Dominados</span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* Motivational Footer */}
-                                            <div className="text-center space-y-4 pt-4">
+                                            <div className="text-center space-y-4 pt-2 sm:pt-4">
                                                 {!isPublicView && (
-                                                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.5em]">Toca una medalla para ver detalles</p>
+                                                    <p className="text-[9px] sm:text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] sm:tracking-[0.5em]">Toca una medalla para ver detalles</p>
                                                 )}
                                                 <button
                                                     onClick={onClose}
-                                                    className="bg-slate-900 border border-white/5 hover:bg-slate-800 text-slate-300 px-12 py-4 rounded-full text-xs font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 shadow-2xl"
+                                                    className="bg-slate-900 border border-white/5 hover:bg-slate-800 text-slate-300 px-10 sm:px-12 py-3.5 sm:py-4 rounded-full text-xs font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 shadow-2xl"
                                                 >
                                                     Cerrar Cofre
                                                 </button>
@@ -262,6 +385,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                         onBack={() => setSelectedType(null)}
                                         onWhatsApp={handleWhatsApp}
                                         categoryId={category?.id}
+                                        gradeTitle={activeGrade ? activeGrade.title : undefined}
                                     />
                                 )}
                             </AnimatePresence>
@@ -289,7 +413,7 @@ const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick, d
             onClick={onClick}
             disabled={disabled}
             className={cn(
-                "relative bg-slate-900/60 rounded-[2.2rem] p-5 border flex flex-col items-center gap-1 shadow-2xl group transition-all border-b-2 active:scale-95 overflow-hidden",
+                "relative bg-slate-900/60 rounded-[1.6rem] sm:rounded-[2.2rem] p-3 sm:p-5 border flex flex-col items-center gap-1 shadow-2xl group transition-all border-b-2 active:scale-95 overflow-hidden w-full",
                 isGoldCup && hasPendingNewContent
                     ? "border-red-500/50 border-b-red-500/80 shadow-[0_0_20px_rgba(239,68,68,0.2)] bg-gradient-to-b from-slate-900 via-slate-900 to-red-950/20"
                     : isGoldCup 
@@ -306,7 +430,7 @@ const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick, d
                         animate={{ scale: [1, 1.15, 1], opacity: [0.15, 0.35, 0.15] }}
                         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                         className={cn(
-                            "absolute inset-0 blur-md rounded-[2.2rem]",
+                            "absolute inset-0 blur-md rounded-[1.6rem] sm:rounded-[2.2rem]",
                             hasPendingNewContent ? "bg-red-500/20" : "bg-yellow-500/20"
                         )}
                     />
@@ -317,10 +441,10 @@ const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick, d
                     />
                 </>
             )}
-            <div className={cn("relative mb-1", color, isGoldCup && "animate-bounce-subtle")}>
+            <div className={cn("relative mb-0.5 sm:mb-1", color, isGoldCup && "animate-bounce-subtle")}>
                 {isGoldCup ? (
                     <div className="relative">
-                        <img src={goldCupImage} className={cn("w-7 h-7 object-contain", hasPendingNewContent ? "drop-shadow-[0_0_8px_rgba(239,68,68,0.6)] opacity-75" : "drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]")} />
+                        <img src={goldCupImage} className={cn("w-6 h-6 sm:w-7 sm:h-7 object-contain", hasPendingNewContent ? "drop-shadow-[0_0_8px_rgba(239,68,68,0.6)] opacity-75" : "drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]")} />
                         {hasPendingNewContent && (
                             <motion.div
                                 animate={{ scale: [1, 1.2, 1] }}
@@ -332,27 +456,27 @@ const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick, d
                         )}
                     </div>
                 ) : (
-                    <Icon className="w-7 h-7 drop-shadow-lg" fill="currentColor" fillOpacity={0.15} />
+                    <Icon className="w-6 h-6 sm:w-7 sm:h-7 drop-shadow-lg" fill="currentColor" fillOpacity={0.15} />
                 )}
                 <div className="absolute inset-0 bg-white/20 blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-1" />
             </div>
-            <span className={cn("text-3xl font-black text-white tracking-tighter leading-none relative z-10", isGoldCup && (hasPendingNewContent ? "text-red-400" : "text-yellow-400"))}>{value}</span>
-            <div className="text-center mt-1 relative z-10">
-                <p className={cn("text-[9px] font-black uppercase tracking-widest", color, isGoldCup && (hasPendingNewContent ? "text-red-400" : "text-yellow-400"))}>{label}</p>
-                <p className="text-[8px] font-bold text-slate-500 uppercase leading-none opacity-60">{sublabel}</p>
+            <span className={cn("text-2xl sm:text-3xl font-black text-white tracking-tighter leading-none relative z-10", isGoldCup && (hasPendingNewContent ? "text-red-400" : "text-yellow-400"))}>{value}</span>
+            <div className="text-center mt-0.5 sm:mt-1 relative z-10 w-full px-1">
+                <p className={cn("text-[8px] sm:text-[9px] font-black uppercase tracking-widest truncate", color, isGoldCup && (hasPendingNewContent ? "text-red-400" : "text-yellow-400"))}>{label}</p>
+                <p className="text-[7px] sm:text-[8px] font-bold text-slate-500 uppercase leading-none opacity-60 truncate mt-0.5">{sublabel}</p>
                 {isGoldCup && hasPendingNewContent && (
                     <p className="text-[7px] font-black text-red-400/80 uppercase tracking-widest mt-0.5">Pendiente</p>
                 )}
             </div>
             {!disabled && (
-                <div className="mt-2 text-[8px] text-amber-500/0 group-hover:text-amber-500/70 font-black uppercase tracking-widest transition-all relative z-10">Ver Más</div>
+                <div className="mt-1 sm:mt-2 text-[7px] sm:text-[8px] text-amber-500/0 group-hover:text-amber-500/70 font-black uppercase tracking-widest transition-all relative z-10">Ver Más</div>
             )}
 
         </motion.button>
     );
 };
 
-const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId }: { type: DetailType, stats: any, onBack: () => void, onWhatsApp: (type: string, data: any) => void, categoryId?: number }) => {
+const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId, gradeTitle }: { type: DetailType, stats: any, onBack: () => void, onWhatsApp: (type: string, data: any) => void, categoryId?: number, gradeTitle?: string }) => {
     let goldCupImage = "/aritmetica_imagenes/copa_de_oro_trofeo.png";
     if (categoryId === 2) {
         goldCupImage = "/aritmetica_imagenes/copa_de_oro_trofeo_algebra.png";
@@ -369,8 +493,8 @@ const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId }: { type: Det
 
     const config: any = {
         silver_medal: {
-            title: "Mis Cuestionarios",
-            subtitle: "Desempeño Individual",
+            title: gradeTitle ? `Cuestionarios • ${gradeTitle}` : "Mis Cuestionarios",
+            subtitle: gradeTitle ? `Desempeño en ${gradeTitle}` : "Desempeño Individual",
             icon: Medal,
             colorClass: "text-slate-400",
             primaryLabel: "Promedio General",
@@ -382,8 +506,8 @@ const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId }: { type: Det
             hasWhatsApp: true
         },
         gold_medal: {
-            title: "Temas Dominados",
-            subtitle: "Dominio de Estrategias",
+            title: gradeTitle ? `Temas • ${gradeTitle}` : "Temas Dominados",
+            subtitle: gradeTitle ? `Estrategias de ${gradeTitle}` : "Dominio de Estrategias",
             icon: Award,
             colorClass: "text-amber-400",
             primaryLabel: "Maestría Promedio",
@@ -395,8 +519,8 @@ const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId }: { type: Det
             hasWhatsApp: true
         },
         silver_cup: {
-            title: "Unidades Clave",
-            subtitle: "Progreso por Unidades",
+            title: gradeTitle ? `Unidades • ${gradeTitle}` : "Unidades Clave",
+            subtitle: gradeTitle ? `Progreso en ${gradeTitle}` : "Progreso por Unidades",
             icon: Trophy,
             colorClass: "text-blue-100",
             primaryLabel: "Unidades Completas",
@@ -408,8 +532,8 @@ const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId }: { type: Det
             hasWhatsApp: true
         },
         gold_cup: {
-            title: "Meta Final",
-            subtitle: "Camino a la Maestría Total",
+            title: gradeTitle ? `Maestría • ${gradeTitle}` : "Meta Final",
+            subtitle: gradeTitle ? `Camino a la Copa de ${gradeTitle}` : "Camino a la Maestría Total",
             icon: Trophy,
             colorClass: "text-yellow-500",
             primaryLabel: "Avance Total",
@@ -428,19 +552,19 @@ const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId }: { type: Det
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="p-8 md:p-12 space-y-8"
+            className="p-4 sm:p-8 md:p-10 space-y-6 sm:space-y-8"
         >
             <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors group">
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 <span className="text-xs font-black uppercase tracking-widest">Volver</span>
             </button>
 
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div className="flex items-center gap-6">
-                    <div className={cn("p-6 rounded-[2rem] bg-slate-900 border border-white/5 shadow-2xl relative overflow-hidden flex items-center justify-center min-w-[96px] min-h-[96px]", c.colorClass)}>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6">
+                <div className="flex items-center gap-4 sm:gap-6">
+                    <div className={cn("p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] bg-slate-900 border border-white/5 shadow-2xl relative overflow-hidden flex items-center justify-center min-w-[72px] min-h-[72px] sm:min-w-[96px] sm:min-h-[96px]", c.colorClass)}>
                         {type === 'gold_cup' && stats.progress === 100 ? (
                             <>
-                                <img src={goldCupImage} className="w-12 h-12 object-contain drop-shadow-[0_0_12px_rgba(251,191,36,0.6)]" />
+                                <img src={goldCupImage} className="w-9 h-9 sm:w-12 sm:h-12 object-contain drop-shadow-[0_0_12px_rgba(251,191,36,0.6)]" />
                                 <motion.div
                                     animate={{ scale: [1, 1.25, 1], opacity: [0.3, 0.6, 0.3] }}
                                     transition={{ duration: 2, repeat: Infinity }}
@@ -448,18 +572,18 @@ const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId }: { type: Det
                                 />
                             </>
                         ) : (
-                            <c.icon className="w-12 h-12 drop-shadow-lg" fill="currentColor" fillOpacity={0.1} />
+                            <c.icon className="w-9 h-9 sm:w-12 sm:h-12 drop-shadow-lg" fill="currentColor" fillOpacity={0.1} />
                         )}
                     </div>
                     <div>
-                        <p className={cn("text-xs font-black uppercase tracking-[0.3em]", c.colorClass)}>{c.subtitle}</p>
-                        <h3 className="text-3xl md:text-5xl font-black text-white italic uppercase tracking-tighter">{c.title}</h3>
+                        <p className={cn("text-[10px] sm:text-xs font-black uppercase tracking-[0.3em]", c.colorClass)}>{c.subtitle}</p>
+                        <h3 className="text-2xl sm:text-3xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-tight">{c.title}</h3>
                     </div>
                 </div>
 
-                <div className="bg-slate-900/40 p-6 rounded-[2rem] border border-white/5 text-right min-w-[150px]">
-                    <span className="text-4xl font-black text-amber-400 tracking-tighter block leading-none">{c.primaryValue}</span>
-                    <p className="text-[10px] font-black text-slate-500 uppercase mt-1">{c.primaryLabel}</p>
+                <div className="bg-slate-900/40 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 text-left sm:text-right min-w-[130px]">
+                    <span className="text-3xl sm:text-4xl font-black text-amber-400 tracking-tighter block leading-none">{c.primaryValue}</span>
+                    <p className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase mt-1">{c.primaryLabel}</p>
                 </div>
             </div>
 

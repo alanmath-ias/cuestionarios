@@ -359,6 +359,7 @@ export default function UserDashboard() {
   const [selectedCategoryForDetails, setSelectedCategoryForDetails] = useState<Category | null>(null);
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [selectedAwardsCategory, setSelectedAwardsCategory] = useState<Category | null>(null);
+  const [selectedAwardsGrade, setSelectedAwardsGrade] = useState<string | null>(null);
 
   // Welcome Dialog State
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
@@ -796,12 +797,19 @@ export default function UserDashboard() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const openAwardsCatId = params.get('openAwardsCategory');
+    const openAwardsGrade = params.get('openAwardsGrade');
     const reopenTrainingCatId = params.get('reopenTraining');
 
     if (openAwardsCatId && categories && sortedCategories) {
       const cat = sortedCategories.find(c => c.id === parseInt(openAwardsCatId));
       if (cat) {
         setSelectedAwardsCategory(cat);
+        if (openAwardsGrade) {
+          setSelectedAwardsGrade(openAwardsGrade);
+          params.delete('openAwardsGrade');
+        } else {
+          setSelectedAwardsGrade(null);
+        }
         // Clear query parameters
         params.delete('openAwardsCategory');
         const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
@@ -2211,8 +2219,12 @@ export default function UserDashboard() {
 
         <AwardsDialog
           isOpen={!!selectedAwardsCategory}
-          onClose={() => setSelectedAwardsCategory(null)}
+          onClose={() => {
+            setSelectedAwardsCategory(null);
+            setSelectedAwardsGrade(null);
+          }}
           category={selectedAwardsCategory}
+          initialGrade={selectedAwardsGrade}
           quizzes={quizzes || []}
           username={currentUser?.username || "Estudiante"}
           wonDuels={wonDuelsData?.count || 0}
