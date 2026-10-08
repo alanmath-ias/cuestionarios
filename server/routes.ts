@@ -22,7 +22,7 @@ import { db } from "./db.js";
 import { userCategories, categories, quizzes, trainingHistory } from "../shared/schema.js";
 import { users } from "../shared/schema.js";
 import { getUsersAssignedToQuiz } from './storage.js'; // Ruta ajustada para usar .js
-import { getCreditConfig } from "../shared/credit-config.js";
+import { getCreditConfig, normalizeGradeKey } from "../shared/credit-config.js";
 //chat gpt entrenamiento
 import { questions as questionsTable } from "../shared/schema.js";
 import { inArray } from "drizzle-orm";
@@ -533,14 +533,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/user/complete-map", async (req: Request, res: Response) => {
     const userId = req.session.userId;
-    const { categoryId } = req.body;
+    const { categoryId, grade } = req.body;
 
     if (!userId) {
       return res.status(401).json({ message: "Not authenticated" });
     }
 
-    if (!categoryId) {
-      return res.status(400).json({ message: "Category ID is required" });
+    if (!categoryId && !grade) {
+      return res.status(400).json({ message: "Category ID or Grade is required" });
     }
 
     try {
@@ -551,17 +551,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const tourStatus = (user.tourStatus as any) || {};
       const completedMaps = tourStatus.completedMaps || {};
+      const gradeKey = normalizeGradeKey(grade);
+      const mapKey = gradeKey || categoryId;
 
       // If already celebrated/pending, don't reward again
-      if (completedMaps[categoryId]) {
+      if (completedMaps[mapKey]) {
         const { password: _, ...userWithoutPassword } = user;
         return res.json(userWithoutPassword);
       }
 
-      completedMaps[categoryId] = 'pending_celebration';
+      completedMaps[mapKey] = 'pending_celebration';
       tourStatus.completedMaps = completedMaps;
 
-      const creditConfig = getCreditConfig(categoryId);
+      const creditConfig = getCreditConfig(categoryId, grade);
       const newCredits = (user.hintCredits || 0) + creditConfig.mapCompletion;
       const updatedUser = await storage.updateUser(userId, {
         tourStatus,
@@ -578,7 +580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/user/earn-medal", async (req: Request, res: Response) => {
     const userId = req.session.userId;
-    const { quizId, score } = req.body;
+    const { quizId, score, grade } = req.body;
 
     if (!userId) {
       return res.status(401).json({ message: "Not authenticated" });
@@ -602,9 +604,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const creditConfig = getCreditConfig(catId);
+      const creditConfig = getCreditConfig(catId, grade);
       const parsedScore = parseFloat(score);
-      const hasScoreBonus = parsedScore >= 8.0;
+      const hasScoreBonus = parsedScore >= 8.0 && creditConfig.scoreBonus > 0;
       const creditReward = hasScoreBonus ? (creditConfig.baseRate + creditConfig.scoreBonus) : creditConfig.baseRate;
       const medalType = 'silver';
 
@@ -705,8 +707,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!userId) {
       return res.status(401).json({ message: "Not authenticated" });
     }
-    if (!credits || credits <= 0) {
-      return res.status(400).json({ message: "credits must be a positive number" });
+    if (credits === undefined || credits === null || credits < 0) {
+      return res.status(400).json({ message: "credits must be a non-negative number" });
     }
 
     try {
@@ -819,14 +821,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/user/clear-map-celebration", async (req: Request, res: Response) => {
     const userId = req.session.userId;
-    const { categoryId } = req.body;
+    const { categoryId, grade } = req.body;
 
     if (!userId) {
       return res.status(401).json({ message: "Not authenticated" });
     }
 
-    if (!categoryId) {
-      return res.status(400).json({ message: "Category ID is required" });
+    if (!categoryId && !grade) {
+      return res.status(400).json({ message: "Category ID or Grade is required" });
     }
 
     try {
@@ -837,7 +839,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const tourStatus = (user.tourStatus as any) || {};
       const completedMaps = tourStatus.completedMaps || {};
-      completedMaps[categoryId] = 'celebrated';
+      const gradeKey = normalizeGradeKey(grade);
+      const mapKey = gradeKey || categoryId;
+      completedMaps[mapKey] = 'celebrated';
       tourStatus.completedMaps = completedMaps;
 
       // Suppress any pending medal alerts to avoid popups after map completion

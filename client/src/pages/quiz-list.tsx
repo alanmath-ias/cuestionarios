@@ -660,8 +660,11 @@ function QuizList() {
 
   const handleQuizAction = (quizId: number) => {
     const parentUserId = searchParams.get('user_id');
-    const modeParam = parentUserId ? '?mode=readonly' : '';
-    setLocation(`/quiz/${quizId}${modeParam}`);
+    const params = new URLSearchParams();
+    if (parentUserId) params.set('mode', 'readonly');
+    if (selectedGrade) params.set('grade', selectedGrade);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    setLocation(`/quiz/${quizId}${queryString}`);
   };
 
   const handleTraining = (subcategoryId: number) => {
@@ -674,7 +677,10 @@ function QuizList() {
 
   const confirmMiniStart = () => {
     if (miniQuizId) {
-      setLocation(`/quiz/${miniQuizId}?mode=mini`);
+      const params = new URLSearchParams();
+      params.set('mode', 'mini');
+      if (selectedGrade) params.set('grade', selectedGrade);
+      setLocation(`/quiz/${miniQuizId}?${params.toString()}`);
       setMiniQuizId(null);
     }
   };
@@ -1670,10 +1676,14 @@ function QuizList() {
       </Dialog>
 
       {/* Map Completion Celebration Overlay */}
-      {session?.tourStatus && (session.tourStatus as any).completedMaps?.[categoryId || ""] === 'pending_celebration' && (
+      {session?.tourStatus && (
+        (selectedGrade && (session.tourStatus as any).completedMaps?.[`grade-${selectedGrade}`] === 'pending_celebration') ||
+        (!selectedGrade && (session.tourStatus as any).completedMaps?.[categoryId || ""] === 'pending_celebration')
+      ) && (
         <MapCompletionCelebration
           categoryId={parseInt(categoryId || "0")}
-          initialCredits={(session.hintCredits || 0) - getCreditConfig(categoryId).mapCompletion} // Subtracting mapCompletion since DB already added it, so count-up looks correct!
+          gradeLevel={selectedGrade}
+          initialCredits={(session.hintCredits || 0) - getCreditConfig(categoryId, selectedGrade).mapCompletion} // Subtracting mapCompletion since DB already added it, so count-up looks correct!
         />
       )}
 

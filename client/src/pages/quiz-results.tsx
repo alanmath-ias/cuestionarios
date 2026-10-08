@@ -23,7 +23,7 @@ import { algebraMapNodes } from "@/data/algebra-map-data";
 import { calculusMapNodes } from "@/data/calculus-map-data";
 import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
 import { statisticsMapNodes } from "@/data/statistics-map-data";
-import { calculateMasteryStats } from '@/lib/mastery-utils';
+import { calculateMasteryStats, getGradeNodes, findGradeForQuiz, getQuizzesForNode } from '@/lib/mastery-utils';
 import { apiRequest } from '@/lib/queryClient';
 
 interface Question {
@@ -45,11 +45,11 @@ function QuizResults() {
 
   const searchParams = new URLSearchParams(window.location.search);
   const userId = searchParams.get('user_id');
+  const gradeFromUrl = searchParams.get('grade');
   const queryClient = useQueryClient();
   console.log('[QuizResults] Render. progressId:', progressId, 'userId param:', userId);
 
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
-
 
   const isTraining = window.location.pathname.includes('/results/training/');
 
@@ -166,6 +166,9 @@ function QuizResults() {
     if (hasCheckedAchievements.current) return;
     hasCheckedAchievements.current = true;
 
+    const inferredGradeInfo = results?.quiz ? findGradeForQuiz(results.quiz.id, results.quiz.subcategoryId) : null;
+    const effectiveGrade = gradeFromUrl || inferredGradeInfo?.gradeNum || null;
+
     const checkAchievements = async () => {
       const quizId = results.quiz.id;
       const score = Number(results.progress?.score) || 0;
@@ -181,7 +184,8 @@ function QuizResults() {
           const res = await apiRequest('POST', '/api/user/earn-medal', {
             quizId,
             score,
-            categoryId: results?.quiz?.categoryId
+            categoryId: results?.quiz?.categoryId,
+            grade: effectiveGrade
           });
           const updatedUser = await res.json();
           // Update session cache locally
@@ -194,23 +198,50 @@ function QuizResults() {
       // 2. Check map completion
       if (allUserQuizzes) {
         const mergedPool = [...(allQuizzesPool || []), ...(allCategoryQuizzes || [])];
-        const stats = calculateMasteryStats(results.quiz.categoryId, allUserQuizzes, mergedPool, nodeMappings);
         const completedMaps = tourStatus.completedMaps || {};
-        
-        if (stats.goldTrophies === 1 && !completedMaps[results.quiz.categoryId]) {
-          try {
-            const res = await apiRequest('POST', '/api/user/complete-map', { categoryId: results.quiz.categoryId });
-            const updatedUser = await res.json();
-            queryClient.setQueryData(['/api/user'], updatedUser);
-          } catch (e) {
-            console.error('Error completing map in frontend:', e);
+
+        if (effectiveGrade) {
+          const gradeNodes = getGradeNodes(effectiveGrade);
+          const gradeKey = `grade-${effectiveGrade}`;
+          if (gradeNodes && !completedMaps[gradeKey]) {
+            const stats = calculateMasteryStats(results.quiz.categoryId, allUserQuizzes, mergedPool, nodeMappings, false, gradeNodes);
+            if (stats.goldTrophies === 1) {
+              try {
+                const res = await apiRequest('POST', '/api/user/complete-map', {
+                  categoryId: results.quiz.categoryId,
+                  grade: effectiveGrade
+                });
+                const updatedUser = await res.json();
+                queryClient.setQueryData(['/api/user'], updatedUser);
+              } catch (e) {
+                console.error('Error completing grade map in frontend:', e);
+              }
+            }
+          }
+        } else {
+          const stats = calculateMasteryStats(results.quiz.categoryId, allUserQuizzes, mergedPool, nodeMappings);
+          if (stats.goldTrophies === 1 && !completedMaps[results.quiz.categoryId]) {
+            try {
+              const res = await apiRequest('POST', '/api/user/complete-map', { categoryId: results.quiz.categoryId });
+              const updatedUser = await res.json();
+              queryClient.setQueryData(['/api/user'], updatedUser);
+            } catch (e) {
+              console.error('Error completing map in frontend:', e);
+            }
           }
         }
       }
     };
 
     checkAchievements();
-  }, [results, session, allUserQuizzes, allCategoryQuizzes]);
+  }, [results, session, allUserQuizzes, allCategoryQuizzes, gradeFromUrl]);
+
+  // Inferred grade info memoized for cross-component use
+  const inferredGradeInfo = useMemo(() => {
+    if (!results?.quiz) return null;
+    return findGradeForQuiz(results.quiz.id, results.quiz.subcategoryId);
+  }, [results?.quiz]);
+  const effectiveGrade = gradeFromUrl || inferredGradeInfo?.gradeNum || null;
 
   // Memoized current node detection for cross-component use (navigation & celebration)
   const currentNode = useMemo(() => {
@@ -220,11 +251,19 @@ function QuizResults() {
     const categoryName = (results.quiz as any)?.categoryName?.toLowerCase() || "";
     let nodes: any[] = [];
 
-    if (categoryId === 1 || categoryName.includes("aritmética")) nodes = arithmeticMapNodes;
-    else if (categoryId === 2 || categoryName.includes("álgebra")) nodes = algebraMapNodes;
-    else if (categoryId === 4 || categoryName.includes("diferencial")) nodes = calculusMapNodes;
-    else if (categoryId === 5 || categoryName.includes("integral")) nodes = integralCalculusMapNodes;
-    else if (categoryId === 19 || categoryName.includes("estadística")) nodes = statisticsMapNodes;
+    if (effectiveGrade) {
+      nodes = getGradeNodes(effectiveGrade) || [];
+    }
+    if (nodes.length === 0 && inferredGradeInfo) {
+      nodes = inferredGradeInfo.nodes;
+    }
+    if (nodes.length === 0) {
+      if (categoryId === 1 || categoryName.includes("aritmética")) nodes = arithmeticMapNodes;
+      else if (categoryId === 2 || categoryName.includes("álgebra")) nodes = algebraMapNodes;
+      else if (categoryId === 4 || categoryName.includes("diferencial")) nodes = calculusMapNodes;
+      else if (categoryId === 5 || categoryName.includes("integral")) nodes = integralCalculusMapNodes;
+      else if (categoryId === 19 || categoryName.includes("estadística")) nodes = statisticsMapNodes;
+    }
 
     if (nodes.length === 0) return null;
 
@@ -241,7 +280,7 @@ function QuizResults() {
 
       return isSubMatch;
     });
-  }, [results, nodeMappings]);
+  }, [results, nodeMappings, effectiveGrade, inferredGradeInfo]);
 
   const handleGoBack = () => {
     // Invalidate queries to ensure map progress is fresh
@@ -262,37 +301,28 @@ function QuizResults() {
           let isNodeComplete = false;
           let isFamilyComplete = false;
 
-          if (results?.quiz && allCategoryQuizzes) {
-            // allCategoryQuizzes: from /api/categories/:id/quizzes
-            // Each quiz has: id, subcategoryId, userStatus ('completed'|'pending'|'optional')
-            // NOTE: The current quiz may still show 'optional'/'pending' in cache, so we treat it as completed manually.
-            const mapping = nodeMappings?.find(m => m.nodeId === currentNode.id);
-            const subId = mapping?.subcategoryId != null ? mapping.subcategoryId : currentNode.subcategoryId;
-            const subIds = mapping?.additionalSubcategories || currentNode.additionalSubcategories || [];
-            const guestQuizzes = mapping?.additionalQuizzes || currentNode.additionalQuizzes || [];
+          // Combine pool of all quizzes to ensure guest/grade quizzes are included
+          const poolMap = new Map<number, any>();
+          (allQuizzesPool || []).forEach(q => { if (q && q.id) poolMap.set(Number(q.id), q); });
+          (allCategoryQuizzes || []).forEach(q => { if (q && q.id) poolMap.set(Number(q.id), q); });
+          const combinedPool = Array.from(poolMap.values());
 
-            const nodeQuizzes = allCategoryQuizzes.filter(q =>
-              Number(q.subcategoryId) === Number(subId) ||
-              (subIds && subIds.map(Number).includes(Number(q.subcategoryId))) ||
-              (guestQuizzes && guestQuizzes.map(Number).includes(Number(q.id)))
-            );
+          if (results?.quiz && combinedPool.length > 0) {
+            const nodeQuizzes = getQuizzesForNode(currentNode, combinedPool, nodeMappings);
 
-            console.log('[NodeComplete] node:', currentNode.id, 'subcategoryId:', currentNode.subcategoryId);
-            console.log('[NodeComplete] nodeQuizzes:', nodeQuizzes.length, nodeQuizzes.map(q => ({ id: q.id, status: q.userStatus })));
+            console.log('[NodeComplete] node:', currentNode.id, 'nodeQuizzes:', nodeQuizzes.length);
             console.log('[NodeComplete] current quiz id:', results.quiz.id, 'score:', results.progress?.score);
 
             const tourStatus = (session?.tourStatus as any) || {};
             const completedMaps = tourStatus.completedMaps || {};
-            const isMapPreviouslyCompleted = !!(
-              completedMaps[results.quiz.categoryId] ||
-              completedMaps[String(results.quiz.categoryId)]
-            );
+            const mapKey = effectiveGrade ? `grade-${effectiveGrade}` : String(results.quiz.categoryId);
+            const isMapPreviouslyCompleted = !!(completedMaps[mapKey] || completedMaps[results.quiz.categoryId]);
             const awardedNodes = tourStatus.awardedNodes || {};
             const awardedUnits = tourStatus.awardedUnits || {};
 
             const isQuizDone = (q: any) => {
               if (Number(q.id) === Number(results.quiz.id)) return true;
-              if (q.userStatus === 'completed') return true;
+              if (q.userStatus === 'completed' || q.status === 'completed') return true;
               if (allUserQuizzes?.some(uq => Number(uq.id) === Number(q.id) && (uq.status === 'completed' || uq.userStatus === 'completed'))) return true;
               return false;
             };
@@ -307,14 +337,18 @@ function QuizResults() {
             }
 
             // Calculate family completion
-            const categoryIdVal = results.quiz.categoryId;
-            const categoryName = (results.quiz as any).categoryName?.toLowerCase() || "";
             let mapNodes: any[] = [];
-            if (Number(categoryIdVal) === 1 || categoryName.includes("aritmética")) mapNodes = arithmeticMapNodes;
-            else if (Number(categoryIdVal) === 2 || categoryName.includes("álgebra")) mapNodes = algebraMapNodes;
-            else if (Number(categoryIdVal) === 4 || categoryName.includes("diferencial")) mapNodes = calculusMapNodes;
-            else if (Number(categoryIdVal) === 5 || categoryName.includes("integral")) mapNodes = integralCalculusMapNodes;
-            else if (Number(categoryIdVal) === 19 || categoryName.includes("estadística")) mapNodes = statisticsMapNodes;
+            if (effectiveGrade) mapNodes = getGradeNodes(effectiveGrade) || [];
+            if (mapNodes.length === 0 && inferredGradeInfo) mapNodes = inferredGradeInfo.nodes;
+            if (mapNodes.length === 0) {
+              const categoryIdVal = results.quiz.categoryId;
+              const categoryName = (results.quiz as any).categoryName?.toLowerCase() || "";
+              if (Number(categoryIdVal) === 1 || categoryName.includes("aritmética")) mapNodes = arithmeticMapNodes;
+              else if (Number(categoryIdVal) === 2 || categoryName.includes("álgebra")) mapNodes = algebraMapNodes;
+              else if (Number(categoryIdVal) === 4 || categoryName.includes("diferencial")) mapNodes = calculusMapNodes;
+              else if (Number(categoryIdVal) === 5 || categoryName.includes("integral")) mapNodes = integralCalculusMapNodes;
+              else if (Number(categoryIdVal) === 19 || categoryName.includes("estadística")) mapNodes = statisticsMapNodes;
+            }
 
             const findParentContainer = (startNodeId: string) => {
               if (startNodeId.endsWith('mastery')) return null;
@@ -361,19 +395,8 @@ function QuizResults() {
 
               const familyQuizzes: any[] = [];
               familyNodes.forEach(fn => {
-                const mapping = nodeMappings?.find(m => m.nodeId === fn.id);
-                const subId = mapping?.subcategoryId != null ? mapping.subcategoryId : fn.subcategoryId;
-                const subIds = mapping?.additionalSubcategories || fn.additionalSubcategories || [];
-                const guestQuizzes = (mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0)
-                  ? mapping.additionalQuizzes
-                  : (fn.additionalQuizzes || []);
-
-                const nodeQuizzes = allCategoryQuizzes.filter(q =>
-                  Number(q.subcategoryId) === Number(subId) ||
-                  (subIds && subIds.map(Number).includes(Number(q.subcategoryId))) ||
-                  guestQuizzes.map(Number).includes(Number(q.id))
-                );
-                familyQuizzes.push(...nodeQuizzes);
+                const fQuizzes = getQuizzesForNode(fn, combinedPool, nodeMappings);
+                familyQuizzes.push(...fQuizzes);
               });
 
               const seenIds = new Set<number>();
@@ -391,20 +414,22 @@ function QuizResults() {
               }
             }
           } else {
-            console.log('[NodeComplete] Missing data - allCategoryQuizzes:', !!allCategoryQuizzes);
+            console.log('[NodeComplete] Missing data - combinedPool length is 0');
           }
 
           p = `&focusNode=${currentNode.id}&source=quiz${quizTitle ? `&quizTitle=${quizTitle}` : ''}&quizScore=${results?.progress?.score || 0}${isNodeComplete ? '&nodeCompleted=true' : ''}${isFamilyComplete ? '&familyCompleted=true' : ''}`;
         }
-        setLocation(`/category/${categoryId}?view=roadmap${p}`);
+        const gradeParamStr = effectiveGrade ? `&grade=${effectiveGrade}` : '';
+        setLocation(`/category/${categoryId}?view=roadmap${gradeParamStr}${p}`);
       } else if (isTraining && results?.quiz?.categoryId) {
         // Redirigir al dashboard con parámetro para reabrir el diálogo de entrenamiento
         setLocation(`/dashboard?reopenTraining=${results.quiz.categoryId}`);
       } else {
         // Si no venimos de un quiz recién terminado, volver limpiamente a la vista de mapa o dashboard
         const categoryId = results?.quiz?.categoryId || params.categoryId;
+        const gradeParamStr = effectiveGrade ? `&grade=${effectiveGrade}` : '';
         if (categoryId) {
-          setLocation(`/category/${categoryId}?view=roadmap`);
+          setLocation(`/category/${categoryId}?view=roadmap${gradeParamStr}`);
         } else if (window.history.length > 1) {
           window.history.back();
         } else {

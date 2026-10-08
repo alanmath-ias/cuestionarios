@@ -50,6 +50,110 @@ export const CATEGORY_GRADES: Record<number, GradeAwardConfig[]> = {
     ]
 };
 
+export function getGradeNodes(gradeLevel?: string | number | null): any[] | null {
+    if (!gradeLevel) return null;
+    const str = String(gradeLevel).trim().toLowerCase();
+    const match = str.match(/grade-?([1-9])/i) || str.match(/\b([1-9])\b/);
+    if (!match) return null;
+    const num = match[1];
+    switch (num) {
+        case '1': return grade1MapNodes;
+        case '2': return grade2MapNodes;
+        case '3': return grade3MapNodes;
+        case '4': return grade4MapNodes;
+        case '5': return grade5MapNodes;
+        case '6': return grade6MapNodes;
+        case '7': return grade7MapNodes;
+        case '8': return grade8MapNodes;
+        case '9': return grade9MapNodes;
+        default: return null;
+    }
+}
+
+export function isGradeRoadmap(gradeLevel?: string | number | null, nodes?: any[]): boolean {
+    if (gradeLevel && getGradeNodes(gradeLevel)) return true;
+    if (nodes && nodes.length > 0) {
+        return nodes.some(n => typeof n.id === 'string' && /^g[1-9]-/.test(n.id));
+    }
+    return false;
+}
+
+export function findGradeForQuiz(quizId: number | string, subcategoryId?: number | string | null): {
+    gradeKey: string;
+    gradeNum: string;
+    node: any;
+    nodes: any[];
+    parentContainer: any;
+} | null {
+    const qId = Number(quizId);
+    const sId = subcategoryId != null ? Number(subcategoryId) : null;
+    const allGrades = [...CATEGORY_GRADES[1], ...CATEGORY_GRADES[2]];
+
+    for (const g of allGrades) {
+        const nodes = g.nodes;
+        for (const node of nodes) {
+            if (node.id.endsWith('mastery') || node.behavior === 'container') continue;
+            const matchesQuiz = Array.isArray(node.additionalQuizzes) && node.additionalQuizzes.map(Number).includes(qId);
+            const matchesSub = sId !== null && (
+                Number(node.subcategoryId) === sId ||
+                (Array.isArray(node.additionalSubcategories) && node.additionalSubcategories.map(Number).includes(sId))
+            );
+
+            if (matchesQuiz || matchesSub) {
+                // Find parent container
+                let parent: any = null;
+                const queue = [node.id];
+                const visited = new Set<string>();
+                while (queue.length > 0) {
+                    const cid = queue.shift()!;
+                    if (visited.has(cid)) continue;
+                    visited.add(cid);
+                    const cnode = nodes.find(n => n.id === cid);
+                    if (!cnode || !cnode.requires) continue;
+                    for (const rid of cnode.requires) {
+                        const rnode = nodes.find(n => n.id === rid);
+                        if (rnode?.behavior === 'container') {
+                            parent = rnode;
+                            break;
+                        }
+                        queue.push(rid);
+                    }
+                    if (parent) break;
+                }
+
+                return {
+                    gradeKey: g.key,
+                    gradeNum: g.key.replace('grade-', ''),
+                    node,
+                    nodes,
+                    parentContainer: parent
+                };
+            }
+        }
+    }
+    return null;
+}
+
+export function getArithmeticQuizIds(allQuizzes: any[], nodeMappings?: any[]): Set<number> {
+    const ids = new Set<number>();
+    arithmeticMapNodes.forEach(node => {
+        if (node.id.endsWith('mastery')) return;
+        const qList = getQuizzesForNode(node, allQuizzes, nodeMappings);
+        qList.forEach(q => ids.add(Number(q.id)));
+    });
+    return ids;
+}
+
+export function getAlgebraQuizIds(allQuizzes: any[], nodeMappings?: any[]): Set<number> {
+    const ids = new Set<number>();
+    algebraMapNodes.forEach(node => {
+        if (node.id.endsWith('mastery')) return;
+        const qList = getQuizzesForNode(node, allQuizzes, nodeMappings);
+        qList.forEach(q => ids.add(Number(q.id)));
+    });
+    return ids;
+}
+
 export interface PerformanceItem {
     id: string | number;
     label: string;

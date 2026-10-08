@@ -8,12 +8,14 @@ import { getCreditConfig } from '@shared/credit-config';
 
 interface MapCompletionCelebrationProps {
   categoryId: number;
+  gradeLevel?: string | number | null;
   initialCredits: number;
   onClose?: () => void;
 }
 
 export const MapCompletionCelebration: React.FC<MapCompletionCelebrationProps> = ({
   categoryId,
+  gradeLevel,
   initialCredits,
   onClose
 }) => {
@@ -21,7 +23,7 @@ export const MapCompletionCelebration: React.FC<MapCompletionCelebrationProps> =
   const [step, setStep] = useState(0);
   const [displayedCredits, setDisplayedCredits] = useState(initialCredits);
   const [isCounting, setIsCounting] = useState(false);
-  const creditConfig = getCreditConfig(categoryId);
+  const creditConfig = getCreditConfig(categoryId, gradeLevel);
   const targetCredits = initialCredits + creditConfig.mapCompletion;
 
   let subjectName = "Aritmética";
@@ -30,7 +32,37 @@ export const MapCompletionCelebration: React.FC<MapCompletionCelebrationProps> =
   let avatarImage = "/aritmetica_imagenes/entrega_copa.png";
   let silverCupTrophyImage = "/aritmetica_imagenes/copa_de_plata_trofeo.png";
 
-  if (categoryId === 2) {
+  const gradeNum = gradeLevel ? String(gradeLevel).replace('grade-', '').trim() : null;
+  if (gradeNum) {
+    if (gradeNum === '1') {
+      subjectName = "1° de Primaria";
+      nextSubjectName = "2° de Primaria";
+    } else if (gradeNum === '2') {
+      subjectName = "2° de Primaria";
+      nextSubjectName = "3° de Primaria";
+    } else if (gradeNum === '3') {
+      subjectName = "3° de Primaria";
+      nextSubjectName = "4° de Primaria";
+    } else if (gradeNum === '4') {
+      subjectName = "4° de Primaria";
+      nextSubjectName = "5° de Primaria";
+    } else if (gradeNum === '5') {
+      subjectName = "5° de Primaria";
+      nextSubjectName = "6° de Secundaria";
+    } else if (gradeNum === '6') {
+      subjectName = "6° de Secundaria";
+      nextSubjectName = "7° de Secundaria";
+    } else if (gradeNum === '7') {
+      subjectName = "7° de Secundaria";
+      nextSubjectName = "8° de Secundaria";
+    } else if (gradeNum === '8') {
+      subjectName = "8° de Secundaria";
+      nextSubjectName = "9° de Secundaria";
+    } else if (gradeNum === '9') {
+      subjectName = "9° de Secundaria";
+      nextSubjectName = "el siguiente nivel";
+    }
+  } else if (categoryId === 2) {
     subjectName = "Álgebra";
     nextSubjectName = "Trigonometría";
     trophyImage = "/aritmetica_imagenes/copa_de_oro_trofeo_algebra.png";
@@ -192,10 +224,11 @@ export const MapCompletionCelebration: React.FC<MapCompletionCelebrationProps> =
 
   const handleFinalize = async () => {
     try {
-      await apiRequest('POST', '/api/user/clear-map-celebration', { categoryId });
+      await apiRequest('POST', '/api/user/clear-map-celebration', { categoryId, grade: gradeLevel });
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       // Redirect to dashboard with the cofre open query parameter
-      setLocation('/dashboard?openAwardsCategory=' + categoryId);
+      const targetParam = gradeLevel ? `grade-${gradeNum}` : String(categoryId);
+      setLocation('/dashboard?openAwardsCategory=' + targetParam);
       if (onClose) onClose();
     } catch (error) {
       console.error('Error completing celebration:', error);

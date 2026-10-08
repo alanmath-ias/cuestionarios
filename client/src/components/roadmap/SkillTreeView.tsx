@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { useSession } from "@/hooks/useSession";
 import { getCreditConfig } from '@shared/credit-config';
+import { getArithmeticQuizIds, getAlgebraQuizIds, getQuizzesForNode } from '@/lib/mastery-utils';
 
 interface SkillTreeViewProps {
     nodes: ArithmeticNode[];
@@ -505,8 +506,13 @@ export const SkillTreeView = React.memo(function SkillTreeView({
             }, 6000);
         }
 
+        const effectiveGradeLevel = searchParams.get('grade') || gradeLevel;
+        const gradeKey = effectiveGradeLevel ? `grade-${effectiveGradeLevel}` : null;
+
         // If map completion is pending, suppress the other local celebrations
-        const isMapCompletionPending = (session?.tourStatus as any)?.completedMaps?.[categoryId] === 'pending_celebration';
+        const completedMaps = (session?.tourStatus as any)?.completedMaps || {};
+        const isMapCompletionPending = (gradeKey && completedMaps[gradeKey] === 'pending_celebration') ||
+            completedMaps[categoryId] === 'pending_celebration';
         if (isMapCompletionPending) {
             return;
         }
@@ -520,6 +526,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
             const awardedNodes = tourStatus.awardedNodes || {};
             const awardedUnits = tourStatus.awardedUnits || {};
             const isMapPreviouslyCompleted = !!(
+                (gradeKey && completedMaps[gradeKey]) ||
                 tourStatus.completedMaps?.[categoryId] ||
                 tourStatus.completedMaps?.[String(categoryId)]
             );
@@ -597,31 +604,99 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                         colors: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
                     });
                 }
-                // Compute and award bonus credits
-                const creditConfig = getCreditConfig(categoryId);
-                const nodeQuizCount = nodeTotalQuizzes[focusId] || 1;
-                const familyQuizCount = parentContainer ? (nodeTotalQuizzes[parentContainer.id] || nodeQuizCount) : nodeQuizCount;
+
+                // Compute and award bonus credits with grade awareness and double-reward protection
+                const creditConfig = getCreditConfig(categoryId, effectiveGradeLevel);
+
+                // Check if this roadmap is a Grade Roadmap (g1-g9)
+                const isGradeMap = !!(effectiveGradeLevel || nodes.some(n => typeof n.id === 'string' && /^g[1-9]-/.test(n.id)));
+                const gradeNumMatch = effectiveGradeLevel ? String(effectiveGradeLevel).match(/([1-9])/) : null;
+                const gradeNum = gradeNumMatch ? Number(gradeNumMatch[1]) : (nodes.find(n => /^g([1-9])-/.test(n.id))?.id?.match(/^g([1-9])-/)?.[1] ? Number(RegExp.$1) : 1);
+
+                // Base map quiz IDs to avoid double rewarding (arithmetic for grades 1-7, algebra for grades 8-9)
+                const baseQuizIds = (gradeNum >= 8)
+                    ? getAlgebraQuizIds(allQuizzes, nodeMappings)
+                    : getArithmeticQuizIds(allQuizzes, nodeMappings);
+
+                // Helper: quiz was already realized outside/prior in base map
+                const isQuizDoneInBaseMap = (q: any) => {
+                    const qId = Number(q.id);
+                    if (!baseQuizIds.has(qId)) return false;
+                    const p = progressMap[qId];
+                    if (p === 'completed') {
+                        return true;
+                    }
+                    return false;
+                };
+
+                let eligibleNodeQuizCount = nodeTotalQuizzes[focusId] || 1;
+                let eligibleFamilyQuizCount = parentContainer ? (nodeTotalQuizzes[parentContainer.id] || eligibleNodeQuizCount) : eligibleNodeQuizCount;
+
+                if (isGradeMap && celebrationTargetNode) {
+                    const targetNodeQuizzes = getQuizzesForNode(celebrationTargetNode, allQuizzes, nodeMappings);
+                    if (targetNodeQuizzes.length > 0) {
+                        const eligible = targetNodeQuizzes.filter(q => !isQuizDoneInBaseMap(q));
+                        eligibleNodeQuizCount = eligible.length;
+                    }
+
+                    if (parentContainer) {
+                        const familyNodeIds: string[] = [parentContainer.id];
+                        const queue = [parentContainer.id];
+                        const visited = new Set<string>();
+                        while (queue.length > 0) {
+                            const cid = queue.shift()!;
+                            if (visited.has(cid)) continue;
+                            visited.add(cid);
+                            const children = nodes.filter(n => n.requires && n.requires.includes(cid));
+                            for (const ch of children) {
+                                if (ch.behavior !== 'container' && !ch.id.endsWith('mastery')) {
+                                    familyNodeIds.push(ch.id);
+                                    queue.push(ch.id);
+                                }
+                            }
+                        }
+                        const familyNodes = nodes.filter(n => familyNodeIds.includes(n.id));
+                        const familyQuizzes: any[] = [];
+                        familyNodes.forEach(fn => {
+                            familyQuizzes.push(...getQuizzesForNode(fn, allQuizzes, nodeMappings));
+                        });
+                        const seenIds = new Set<number>();
+                        const uniqueFamilyQuizzes = familyQuizzes.filter(q => {
+                            if (seenIds.has(Number(q.id))) return false;
+                            seenIds.add(Number(q.id));
+                            return true;
+                        });
+                        if (uniqueFamilyQuizzes.length > 0) {
+                            const eligibleFam = uniqueFamilyQuizzes.filter(q => !isQuizDoneInBaseMap(q));
+                            eligibleFamilyQuizCount = eligibleFam.length;
+                        }
+                    }
+                }
+
                 const extraScoreBonus = hasScoreBonus ? creditConfig.scoreBonus : 0;
                 let bonusCredits = creditConfig.baseRate + extraScoreBonus; // base: quiz completed
                 let bonusReason = 'quiz_completed';
                 if (isFamilyMastery) {
-                    bonusCredits = (familyQuizCount * creditConfig.baseRate) + extraScoreBonus;
+                    bonusCredits = (eligibleFamilyQuizCount * creditConfig.baseRate);
                     bonusReason = 'family_completed';
                 } else if (isNodeCompleted) {
-                    bonusCredits = (nodeQuizCount * creditConfig.baseRate) + extraScoreBonus;
+                    bonusCredits = (eligibleNodeQuizCount * creditConfig.baseRate);
                     bonusReason = 'node_completed';
                 }
                 setCelebrationCredits(bonusCredits);
 
-                // Only call award-bonus on server if there is an actual node or family bonus to give!
-                // (Individual quiz credits were already handled by /api/user/earn-medal in quiz-results.tsx)
+                // Persist bonus on server (even if 0 credits when all quizzes were already in base map, to record node/family completion)
                 if (isFamilyMastery || isNodeCompleted) {
+                    const awardCredits = isFamilyMastery
+                        ? (eligibleFamilyQuizCount * creditConfig.baseRate)
+                        : (eligibleNodeQuizCount * creditConfig.baseRate);
+
                     fetch('/api/user/award-bonus', {
                         method: 'POST',
                         credentials: 'include',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            credits: isFamilyMastery ? (familyQuizCount * creditConfig.baseRate) : (nodeQuizCount * creditConfig.baseRate),
+                            credits: awardCredits,
                             reason: bonusReason,
                             nodeId: focusId,
                             familyId: parentContainer?.id,
@@ -1057,14 +1132,14 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                     )}
                                 </p>
 
-                                {celebratingHasScoreBonus && (
+                                {celebratingHasScoreBonus && getCreditConfig(categoryId, gradeLevel).scoreBonus > 0 && (
                                     <motion.div
                                         initial={{ scale: 0.9, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
                                         className="mb-4 py-2.5 px-3 rounded-2xl bg-gradient-to-r from-amber-500/25 via-yellow-500/20 to-amber-500/25 border-2 border-yellow-400/60 text-yellow-300 font-extrabold text-xs flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(234,179,8,0.35)]"
                                     >
                                         <Sparkles className="w-4 h-4 text-yellow-400 shrink-0 animate-pulse" />
-                                        <span>⭐ ¡Excelente Nota (≥ 8.0)! +{getCreditConfig(categoryId).scoreBonus} Créditos Extra</span>
+                                        <span>⭐ ¡Excelente Nota (≥ 8.0)! +{getCreditConfig(categoryId, gradeLevel).scoreBonus} Créditos Extra</span>
                                     </motion.div>
                                 )}
 
@@ -2168,6 +2243,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
             
             {isAdmin && configNode && (
                 <NodeConfigDialog
+                    key={configNode.id}
                     node={configNode}
                     categoryId={categoryId}
                     mapping={nodeMappings?.find(m => m.nodeId === configNode.id)}
@@ -2204,13 +2280,21 @@ function NodeConfigDialog({
     const [overrideLabel, setOverrideLabel] = useState(mapping?.overrideLabel || node.label);
     const [isSpecial, setIsSpecial] = useState<boolean>(mapping?.isSpecial ?? false);
     const [subId, setSubId] = useState(() => {
-        if (mapping) return mapping.subcategoryId?.toString() || "";
+        if (mapping?.subcategoryId != null) return mapping.subcategoryId.toString();
         return node.subcategoryId?.toString() || "";
     });
     const [subSearch, setSubSearch] = useState("");
     const [quizSearch, setQuizSearch] = useState("");
-    const [additionalSubs, setAdditionalSubs] = useState<number[]>(mapping?.additionalSubcategories || node.additionalSubcategories || []);
-    const [additionalQuizzes, setAdditionalQuizzes] = useState<number[]>(mapping?.additionalQuizzes || []);
+    const [additionalSubs, setAdditionalSubs] = useState<number[]>(
+        (mapping?.additionalSubcategories && mapping.additionalSubcategories.length > 0)
+            ? mapping.additionalSubcategories
+            : (node.additionalSubcategories || [])
+    );
+    const [additionalQuizzes, setAdditionalQuizzes] = useState<number[]>(
+        (mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0)
+            ? mapping.additionalQuizzes
+            : (node.additionalQuizzes || [])
+    );
     const { toast } = useToast();
 
     const filteredQuizzes = useMemo(() => {
@@ -2226,7 +2310,7 @@ function NodeConfigDialog({
             
             const categoryName = (q.category?.name || q.categoryName || "").toLowerCase();
             const matches = title.includes(search) || idStr.includes(search) || categoryName.includes(search);
-            const alreadyAdded = (additionalQuizzes || []).includes(q.id);
+            const alreadyAdded = (additionalQuizzes || []).some((qid: any) => Number(qid) === Number(q.id));
             
             return matches && !alreadyAdded;
         }).slice(0, 15);
@@ -2237,7 +2321,7 @@ function NodeConfigDialog({
         const lowerSearch = subSearch.toLowerCase();
         return subcategories.filter(s =>
             (s.name.toLowerCase().includes(lowerSearch) || s.id.toString() === subSearch) &&
-            !additionalSubs.includes(s.id) &&
+            !additionalSubs.some((sid: any) => Number(sid) === Number(s.id)) &&
             s.id.toString() !== subId
         ).slice(0, 10);
     }, [subSearch, subcategories, additionalSubs, subId]);
@@ -2377,14 +2461,14 @@ function NodeConfigDialog({
                             <div className="flex flex-wrap gap-2">
                                 {additionalSubs.length === 0 && <p className="text-[10px] text-slate-500 italic">No hay subcategorías adicionales.</p>}
                                 {additionalSubs.map(id => {
-                                    const sub = subcategories.find(s => s.id === id);
+                                    const sub = subcategories.find(s => Number(s.id) === Number(id));
                                     return (
                                         <Badge key={id} variant="secondary" className="bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30 text-purple-200 flex items-center gap-2 px-3 py-1.5 group transition-all">
                                             <div className="flex flex-col items-start leading-none">
                                                 <span className="text-[9px] text-purple-400/70 font-mono font-bold">ID: {id}</span>
                                                 <span className="text-xs font-semibold">{sub?.name || 'Cargando...'}</span>
                                             </div>
-                                            <X className="w-3.5 h-3.5 cursor-pointer text-purple-500/50 group-hover:text-red-400 transition-colors" onClick={() => setAdditionalSubs(additionalSubs.filter(s => s !== id))} />
+                                            <X className="w-3.5 h-3.5 cursor-pointer text-purple-500/50 group-hover:text-red-400 transition-colors" onClick={() => setAdditionalSubs(additionalSubs.filter(s => Number(s) !== Number(id)))} />
                                         </Badge>
                                     );
                                 })}
@@ -2448,15 +2532,16 @@ function NodeConfigDialog({
                             )}
 
                             <div className="flex flex-wrap gap-2">
+                                {additionalQuizzes.length === 0 && <p className="text-[10px] text-slate-500 italic">No hay cuestionarios invitados.</p>}
                                 {additionalQuizzes.map(id => {
-                                    const q = allQuizzes.find(aq => aq.id === id);
+                                    const q = allQuizzes.find(aq => Number(aq.id) === Number(id));
                                     return (
                                         <Badge key={id} variant="outline" className="border-pink-500/30 bg-pink-500/5 text-pink-300 flex items-center gap-2 px-2 py-1 group transition-all">
                                             <div className="flex flex-col items-start leading-none">
                                                 <span className="text-[9px] text-pink-500/50 font-mono">ID: {id}</span>
                                                 <span className="text-xs truncate max-w-[120px]">{q?.title || `Quiz #${id}`}</span>
                                             </div>
-                                            <X className="w-3 h-3 cursor-pointer text-pink-700 group-hover:text-red-400" onClick={() => setAdditionalQuizzes(additionalQuizzes.filter(qid => qid !== id))} />
+                                            <X className="w-3 h-3 cursor-pointer text-pink-700 group-hover:text-red-400" onClick={() => setAdditionalQuizzes(additionalQuizzes.filter(qid => Number(qid) !== Number(id)))} />
                                         </Badge>
                                     );
                                 })}

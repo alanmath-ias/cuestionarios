@@ -18,13 +18,55 @@ export const CATEGORY_CREDIT_CONFIG: Record<number, CategoryCreditConfig> = {
   19: { baseRate: 8,  scoreBonus: 5, mapCompletion: 1500 }, // Estadística
 };
 
+export const GRADE_CREDIT_CONFIG: Record<string, CategoryCreditConfig> = {
+  // Primaria (1° a 5°): 4 créditos base, sin bono por nota, copa de oro escalonada
+  'grade-1': { baseRate: 4, scoreBonus: 0, mapCompletion: 400 },
+  'grade-2': { baseRate: 4, scoreBonus: 0, mapCompletion: 500 },
+  'grade-3': { baseRate: 4, scoreBonus: 0, mapCompletion: 600 },
+  'grade-4': { baseRate: 4, scoreBonus: 0, mapCompletion: 700 },
+  'grade-5': { baseRate: 4, scoreBonus: 0, mapCompletion: 800 },
+  // Secundaria: 6° y 7° igual a Aritmética; 8° y 9° igual a Álgebra
+  'grade-6': { baseRate: 5, scoreBonus: 3, mapCompletion: 1000 },
+  'grade-7': { baseRate: 5, scoreBonus: 3, mapCompletion: 1000 },
+  'grade-8': { baseRate: 7, scoreBonus: 4, mapCompletion: 1500 },
+  'grade-9': { baseRate: 7, scoreBonus: 4, mapCompletion: 1500 },
+};
+
 export const DEFAULT_CREDIT_CONFIG: CategoryCreditConfig = {
   baseRate: 5,
   scoreBonus: 3,
   mapCompletion: 1000
 };
 
-export function getCreditConfig(categoryId?: number | string | null): CategoryCreditConfig {
+export function normalizeGradeKey(grade?: string | number | null): string | null {
+  if (grade === undefined || grade === null) return null;
+  const str = String(grade).trim().toLowerCase();
+  if (!str) return null;
+  // Match single digit 1-9 or 'grade-X'
+  const match = str.match(/grade-?([1-9])/i) || str.match(/\b([1-9])\b/);
+  if (match) {
+    return `grade-${match[1]}`;
+  }
+  return null;
+}
+
+export function getCreditConfig(
+  categoryId?: number | string | null,
+  gradeLevel?: number | string | null
+): CategoryCreditConfig {
+  // 1. Check if gradeLevel was passed directly
+  const gradeFromParam = normalizeGradeKey(gradeLevel);
+  if (gradeFromParam && GRADE_CREDIT_CONFIG[gradeFromParam]) {
+    return GRADE_CREDIT_CONFIG[gradeFromParam];
+  }
+
+  // 2. Check if categoryId itself represents a grade key (e.g. 'grade-1' or completedMaps['grade-1'])
+  const gradeFromCategory = normalizeGradeKey(categoryId);
+  if (gradeFromCategory && GRADE_CREDIT_CONFIG[gradeFromCategory]) {
+    return GRADE_CREDIT_CONFIG[gradeFromCategory];
+  }
+
+  // 3. Fallback to categoryId lookup
   if (categoryId === undefined || categoryId === null) {
     return DEFAULT_CREDIT_CONFIG;
   }

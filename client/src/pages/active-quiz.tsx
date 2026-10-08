@@ -1096,7 +1096,10 @@ const ActiveQuiz = () => {
     if (!isInitialized && questions) {
       if (progress) {
         if (progress.status === 'completed' && mode !== 'readonly') {
-          setLocation(`/results/${progress.id}`, { replace: true });
+          const searchParams = new URLSearchParams(window.location.search);
+          const grade = searchParams.get('grade');
+          const gradeQuery = grade ? `?grade=${grade}` : '';
+          setLocation(`/results/${progress.id}${gradeQuery}`, { replace: true });
           return;
         }
 
@@ -1819,7 +1822,10 @@ const ActiveQuiz = () => {
       // El servidor ya guarda quizSubmission dentro de POST /api/progress cuando status='completed'.
       // No se llama a /api/quiz-submission por separado para evitar race condition con el score autoritativo.
 
-      setLocation(`/results/${progress.id}?source=quiz`, { replace: true });
+      const searchParams = new URLSearchParams(window.location.search);
+      const grade = searchParams.get('grade');
+      const gradeQuery = grade ? `&grade=${grade}` : '';
+      setLocation(`/results/${progress.id}?source=quiz${gradeQuery}`, { replace: true });
     } catch (error) {
       toast({
         title: 'Error',

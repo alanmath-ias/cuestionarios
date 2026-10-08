@@ -22,7 +22,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-u1-conjuntos-999'],
         description: 'Diagramas, elementos, relaciones de pertenencia y agrupaciones.',
         xOffset: -45,
-        additionalQuizzes: [991], // Quiz 991: Noción de Conjunto, Elementos y Pertenencia
+        subcategoryId: 564,
+        additionalQuizzes: [1016],
         behavior: 'quiz_list'
     },
     {
@@ -33,7 +34,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-u1-conjuntos-999'],
         description: 'La centena (100), lectura, escritura y orden de números de tres cifras.',
         xOffset: 45,
-        additionalQuizzes: [302, 419], // Quiz 302: Recta Numérica (Nivel 1), Quiz 419: Valor Posicional
+        subcategoryId: 565,
+        additionalQuizzes: [1017],
         behavior: 'quiz_list'
     },
     {
@@ -44,7 +46,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-conjuntos', 'g2-centena-lectura'],
         description: 'Cálculo de adiciones y sustracciones con números de hasta tres cifras.',
         xOffset: -45,
-        additionalQuizzes: [304], // Quiz 304: Suma y Resta Básicos (123+456, 100-35, 22+17) - COHERENTE
+        subcategoryId: 566,
+        additionalQuizzes: [1018],
         behavior: 'quiz_list'
     },
     {
@@ -55,7 +58,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-conjuntos', 'g2-centena-lectura'],
         description: 'Resolución de problemas cotidianos de suma y resta.',
         xOffset: 45,
-        additionalQuizzes: [306, 303], // Quiz 306: Problemas con Naturales (Nivel 1), Quiz 303: Recta Numérica (Nivel 2)
+        subcategoryId: 567,
+        additionalQuizzes: [1019],
         behavior: 'quiz_list'
     },
 
@@ -80,7 +84,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-u2-grandes-numeros'],
         description: 'Unidades de mil y decenas de mil. Lectura y valor posicional.',
         xOffset: -45,
-        additionalQuizzes: [419], // Quiz 419: Valor posicional de unidades, decenas, centenas y millares - COHERENTE
+        subcategoryId: 568,
+        additionalQuizzes: [1020],
         behavior: 'quiz_list'
     },
     {
@@ -91,7 +96,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-u2-grandes-numeros'],
         description: 'Descomposición aditiva y posicional de números.',
         xOffset: 45,
-        additionalQuizzes: [420], // Quiz 420: Descomposición Posicional (789 = 700 + ... + 9, 1.234, billetes)
+        subcategoryId: 569,
+        additionalQuizzes: [1021],
         behavior: 'quiz_list'
     },
     {
@@ -102,7 +108,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-numeros-99999', 'g2-descomposicion'],
         description: 'Sumas llevando y restas prestando con números grandes.',
         xOffset: -45,
-        additionalQuizzes: [305], // Quiz 305: Suma y Resta Avanzado (Nivel 2 - con reserva/llevando)
+        subcategoryId: 570,
+        additionalQuizzes: [1022],
         behavior: 'quiz_list'
     },
     {
@@ -113,6 +120,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-numeros-99999', 'g2-descomposicion'],
         description: 'Lectura de horas y minutos en reloj, días, semanas y meses en el calendario.',
         xOffset: 45,
+        subcategoryId: 571,
+        additionalQuizzes: [1023],
         behavior: 'quiz_list'
     },
     {
@@ -123,6 +132,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-suma-resta-llevando', 'g2-tiempo-reloj-cal'],
         description: 'Situaciones problémicas que combinan operaciones y nociones de tiempo.',
         xOffset: 0,
+        subcategoryId: 572,
+        additionalQuizzes: [1024],
         behavior: 'quiz_list'
     },
 
@@ -147,6 +158,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-u3-inicio-multiplicacion'],
         description: 'Identificación de números pares e impares y patrones de dos en dos.',
         xOffset: -45,
+        subcategoryId: 573,
+        additionalQuizzes: [1025],
         behavior: 'quiz_list'
     },
     {
@@ -157,7 +170,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-u3-inicio-multiplicacion'],
         description: 'La adición de sumandos iguales y arreglos rectangulares (filas y columnas).',
         xOffset: 45,
-        additionalQuizzes: [548], // Quiz 548: ¡Aventura en la Tabla del 2! (patrones de 2 en 2, suma repetida)
+        subcategoryId: 574,
+        additionalQuizzes: [1026],
         behavior: 'quiz_list'
     },
     {
@@ -168,7 +182,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-pares-impares', 'g2-sumandos-iguales'],
         description: 'Construcción y dominio de la multiplicación de números del 1 al 10.',
         xOffset: -45,
-        additionalQuizzes: [515, 549, 551, 588, 626], // Tablas elementales (1-10, tabla 3, tabla 5, tabla 10, V/F)
+        subcategoryId: 575,
+        additionalQuizzes: [1027],
         behavior: 'quiz_list'
     },
     {
@@ -179,6 +194,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-pares-impares', 'g2-sumandos-iguales'],
         description: 'Repartos en partes iguales y relación entre multiplicación y división.',
         xOffset: 45,
+        subcategoryId: 576,
+        additionalQuizzes: [1028],
         behavior: 'quiz_list'
     },
     {
@@ -189,6 +206,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-tablas-1-10', 'g2-repartos-division'],
         description: 'Instrumentos de medida, unidades de longitud y equivalencias básicas.',
         xOffset: 0,
+        subcategoryId: 577,
+        additionalQuizzes: [1029],
         behavior: 'quiz_list'
     },
 
@@ -213,6 +232,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-u4-operaciones-avanzadas'],
         description: 'Propiedad conmutativa y asociativa explicadas con dibujos y ejemplos.',
         xOffset: -45,
+        subcategoryId: 578,
+        additionalQuizzes: [1030],
         behavior: 'quiz_list'
     },
     {
@@ -223,6 +244,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-u4-operaciones-avanzadas'],
         description: 'Cálculo de divisiones exactas utilizando las tablas de multiplicar.',
         xOffset: 45,
+        subcategoryId: 579,
+        additionalQuizzes: [1031],
         behavior: 'quiz_list'
     },
     {
@@ -233,6 +256,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-propiedades-mult', 'g2-division-exacta'],
         description: 'Múltiplos iniciales (de 2, 3, 5 y 10) y factores de un número.',
         xOffset: -45,
+        subcategoryId: 580,
+        additionalQuizzes: [1032],
         behavior: 'quiz_list'
     },
     {
@@ -243,6 +268,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-propiedades-mult', 'g2-division-exacta'],
         description: 'Concepto de peso y masa, la balanza, el gramo y el kilogramo.',
         xOffset: 45,
+        subcategoryId: 581,
+        additionalQuizzes: [1033],
         behavior: 'quiz_list'
     },
     {
@@ -253,7 +280,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: ['g2-multiplos-divisores', 'g2-masa-peso'],
         description: 'Resolución de problemas cotidianos combinando las 4 operaciones y medidas.',
         xOffset: 0,
-        additionalQuizzes: [307], // Quiz 307: Solución de Problemas con Naturales (Nivel 2)
+        subcategoryId: 582,
+        additionalQuizzes: [1034],
         behavior: 'quiz_list'
     },
 
@@ -268,6 +296,8 @@ export const grade2MapNodes: ArithmeticNode[] = [
         requires: [],
         description: 'El gran reto que corona todo el aprendizaje matemático de segundo de primaria.',
         xOffset: 0,
+        subcategoryId: 583,
+        additionalQuizzes: [1035],
         behavior: 'quiz_list'
     }
 ];
