@@ -32,37 +32,7 @@ export const MapCompletionCelebration: React.FC<MapCompletionCelebrationProps> =
   let avatarImage = "/aritmetica_imagenes/entrega_copa.png";
   let silverCupTrophyImage = "/aritmetica_imagenes/copa_de_plata_trofeo.png";
 
-  const gradeNum = gradeLevel ? String(gradeLevel).replace('grade-', '').trim() : null;
-  if (gradeNum) {
-    if (gradeNum === '1') {
-      subjectName = "1° de Primaria";
-      nextSubjectName = "2° de Primaria";
-    } else if (gradeNum === '2') {
-      subjectName = "2° de Primaria";
-      nextSubjectName = "3° de Primaria";
-    } else if (gradeNum === '3') {
-      subjectName = "3° de Primaria";
-      nextSubjectName = "4° de Primaria";
-    } else if (gradeNum === '4') {
-      subjectName = "4° de Primaria";
-      nextSubjectName = "5° de Primaria";
-    } else if (gradeNum === '5') {
-      subjectName = "5° de Primaria";
-      nextSubjectName = "6° de Secundaria";
-    } else if (gradeNum === '6') {
-      subjectName = "6° de Secundaria";
-      nextSubjectName = "7° de Secundaria";
-    } else if (gradeNum === '7') {
-      subjectName = "7° de Secundaria";
-      nextSubjectName = "8° de Secundaria";
-    } else if (gradeNum === '8') {
-      subjectName = "8° de Secundaria";
-      nextSubjectName = "9° de Secundaria";
-    } else if (gradeNum === '9') {
-      subjectName = "9° de Secundaria";
-      nextSubjectName = "el siguiente nivel";
-    }
-  } else if (categoryId === 2) {
+  if (categoryId === 2) {
     subjectName = "Álgebra";
     nextSubjectName = "Trigonometría";
     trophyImage = "/aritmetica_imagenes/copa_de_oro_trofeo_algebra.png";
@@ -98,6 +68,38 @@ export const MapCompletionCelebration: React.FC<MapCompletionCelebrationProps> =
   } else if (categoryId === 19) {
     subjectName = "Estadística";
     nextSubjectName = "el siguiente nivel";
+  }
+
+  const gradeNum = gradeLevel ? String(gradeLevel).replace('grade-', '').trim() : null;
+  if (gradeNum) {
+    if (gradeNum === '1') {
+      subjectName = "1° de Primaria";
+      nextSubjectName = "2° de Primaria";
+    } else if (gradeNum === '2') {
+      subjectName = "2° de Primaria";
+      nextSubjectName = "3° de Primaria";
+    } else if (gradeNum === '3') {
+      subjectName = "3° de Primaria";
+      nextSubjectName = "4° de Primaria";
+    } else if (gradeNum === '4') {
+      subjectName = "4° de Primaria";
+      nextSubjectName = "5° de Primaria";
+    } else if (gradeNum === '5') {
+      subjectName = "5° de Primaria";
+      nextSubjectName = "6° de Secundaria";
+    } else if (gradeNum === '6') {
+      subjectName = "6° de Secundaria";
+      nextSubjectName = "7° de Secundaria";
+    } else if (gradeNum === '7') {
+      subjectName = "7° de Secundaria";
+      nextSubjectName = "8° de Secundaria";
+    } else if (gradeNum === '8') {
+      subjectName = "8° de Secundaria";
+      nextSubjectName = "9° de Secundaria";
+    } else if (gradeNum === '9') {
+      subjectName = "9° de Secundaria";
+      nextSubjectName = "el siguiente nivel";
+    }
   }
 
   // Confetti particles
@@ -312,117 +314,106 @@ export const MapCompletionCelebration: React.FC<MapCompletionCelebrationProps> =
         
         {/* Mobile-only row of earned rewards (appears at top on small screens to avoid overflow/overlap) */}
         <div className="flex md:hidden items-center justify-center gap-4 mb-6 w-full">
-          <AnimatePresence>
-            {step >= 0 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.3 }}
-                animate={{ opacity: 1, scale: 0.7 }}
-                className="relative"
-              >
-                <div className="absolute inset-0 bg-slate-300/40 blur-2xl rounded-full scale-150 animate-pulse" />
-                <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-slate-200/50 bg-slate-950/90 flex items-center justify-center shadow-lg">
-                  <Medal className="w-8 h-8 text-slate-100" />
-                </div>
-              </motion.div>
-            )}
+          {/* Medalla Plata */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.3 }}
+            animate={{ opacity: 1, scale: 0.7 }}
+            className="relative"
+          >
+            <div className="absolute inset-0 bg-slate-300/40 blur-2xl rounded-full scale-150 animate-pulse" />
+            <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-slate-200/50 bg-slate-950/90 flex items-center justify-center shadow-lg">
+              <Medal className="w-8 h-8 text-slate-100" />
+            </div>
+          </motion.div>
 
-            {step >= 2 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.3 }}
-                animate={{ opacity: 1, scale: 0.7 }}
-                className="relative animate-bounce-subtle"
-              >
-                <div className="absolute inset-0 bg-blue-500/30 blur-2xl rounded-full scale-150 animate-pulse" />
-                <div className="relative w-18 h-18 rounded-full overflow-hidden border-2 border-slate-200/50 bg-slate-950/95 flex items-center justify-center shadow-xl">
-                  <img src={silverCupTrophyImage} className="w-10 h-10 object-contain" />
-                </div>
-              </motion.div>
-            )}
-            
-            {step >= 1 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.3 }}
-                animate={{ opacity: 1, scale: 0.7 }}
-                className="relative"
-              >
-                <div className="absolute inset-0 bg-yellow-500/50 blur-2xl rounded-full scale-150 animate-pulse" />
-                <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-yellow-400/60 bg-slate-950/90 flex items-center justify-center shadow-lg">
-                  <Award className="w-8 h-8 text-yellow-400 fill-yellow-400/20" />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Copa de Plata */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.3 }}
+            animate={{ opacity: 1, scale: 0.7 }}
+            className="relative animate-bounce-subtle"
+          >
+            <div className="absolute inset-0 bg-blue-500/30 blur-2xl rounded-full scale-150 animate-pulse" />
+            <div className="relative w-18 h-18 rounded-full overflow-hidden border-2 border-slate-200/50 bg-slate-950/95 flex items-center justify-center shadow-xl">
+              <img src={silverCupTrophyImage} className="w-10 h-10 object-contain" />
+            </div>
+          </motion.div>
+          
+          {/* Medalla Oro */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.3 }}
+            animate={{ opacity: 1, scale: 0.7 }}
+            className="relative"
+          >
+            <div className="absolute inset-0 bg-yellow-500/50 blur-2xl rounded-full scale-150 animate-pulse" />
+            <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-yellow-400/60 bg-slate-950/90 flex items-center justify-center shadow-lg">
+              <Award className="w-8 h-8 text-yellow-400 fill-yellow-400/20" />
+            </div>
+          </motion.div>
         </div>
 
 
         {/* Silver Cup — in flow above the card, centered with the card */}
-        <AnimatePresence>
-          {step >= 2 && (
-            <motion.div
-              key="flow-silver-cup"
-              initial={{ opacity: 0, scale: 0.4, y: -40 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.4 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 150 }}
-              className="hidden md:flex flex-col items-center mb-1 pointer-events-none"
-            >
-              <div className="relative">
-                <div className="absolute inset-0 bg-blue-500/30 blur-3xl rounded-full scale-150 animate-pulse" />
-                <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-slate-200/50 bg-slate-950/95 flex items-center justify-center shadow-[0_0_60px_rgba(203,213,225,0.9)] backdrop-blur-md">
-                  <img src={silverCupTrophyImage} alt="Copa de Plata" className="w-18 h-18 object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.9)]" />
-                </div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white/30 rounded-full animate-ping scale-125" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border border-blue-400/20 rounded-full animate-ping scale-150" />
-              </div>
-              <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mt-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">Copa de Plata</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <motion.div
+          key="flow-silver-cup"
+          initial={{ opacity: 0, scale: 0.4, y: -40 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 150 }}
+          className="hidden md:flex flex-col items-center mb-1 pointer-events-none"
+        >
+          <div className="relative">
+            <div className="absolute inset-0 bg-blue-500/30 blur-3xl rounded-full scale-150 animate-pulse" />
+            <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-slate-200/50 bg-slate-950/95 flex items-center justify-center shadow-[0_0_60px_rgba(203,213,225,0.9)] backdrop-blur-md">
+              <img src={silverCupTrophyImage} alt="Copa de Plata" className="w-18 h-18 object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.9)]" />
+            </div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white/30 rounded-full animate-ping scale-125" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border border-blue-400/20 rounded-full animate-ping scale-150" />
+          </div>
+          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mt-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">Copa de Plata</span>
+        </motion.div>
 
         {/* Card wrapper — relative so medals can be absolute relative to THIS, not the outer wrapper */}
         <div className="relative w-full">
           {/* Desktop medals — absolute relative to card wrapper, not clipped by card's overflow */}
           <div className="hidden md:block absolute inset-0 pointer-events-none" style={{ zIndex: 20 }}>
-            <AnimatePresence>
-              {step >= 0 && (
-                <motion.div
-                  key="desktop-silver-medal"
-                  initial={{ opacity: 0, scale: 0.4, x: -100, y: "-50%" }}
-                  animate={{ opacity: 1, scale: 1, x: 0, y: "-50%" }}
-                  className="absolute right-[calc(100%+1.5rem)] top-1/2"
-                >
-                  <div className="relative flex flex-col items-center">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-slate-300/40 blur-3xl rounded-full scale-150 animate-pulse" />
-                      <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-slate-200/50 bg-slate-950/90 flex items-center justify-center shadow-[0_0_60px_rgba(203,213,225,0.7)] backdrop-blur-md">
-                        <Medal className="w-16 h-16 text-slate-100 drop-shadow-[0_0_20px_rgba(255,255,255,0.7)]" />
-                      </div>
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white/40 rounded-full animate-ping scale-150" />
-                    </div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Medalla Plata</span>
+            {/* Medalla Plata (izquierda) */}
+            <motion.div
+              key="desktop-silver-medal"
+              initial={{ opacity: 0, scale: 0.4, x: -100, y: "-50%" }}
+              animate={{ opacity: 1, scale: 1, x: 0, y: "-50%" }}
+              transition={{ type: 'spring', damping: 20, stiffness: 150 }}
+              className="absolute right-[calc(100%+1.5rem)] top-1/2"
+            >
+              <div className="relative flex flex-col items-center">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-slate-300/40 blur-3xl rounded-full scale-150 animate-pulse" />
+                  <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-slate-200/50 bg-slate-950/90 flex items-center justify-center shadow-[0_0_60px_rgba(203,213,225,0.7)] backdrop-blur-md">
+                    <Medal className="w-16 h-16 text-slate-100 drop-shadow-[0_0_20px_rgba(255,255,255,0.7)]" />
                   </div>
-                </motion.div>
-              )}
-              {step >= 1 && (
-                <motion.div
-                  key="desktop-gold-medal"
-                  initial={{ opacity: 0, scale: 0.4, x: 100, y: "-50%" }}
-                  animate={{ opacity: 1, scale: 1, x: 0, y: "-50%" }}
-                  className="absolute left-[calc(100%+1.5rem)] top-1/2"
-                >
-                  <div className="relative flex flex-col items-center">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-yellow-500/50 blur-3xl rounded-full scale-150 animate-pulse" />
-                      <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-yellow-400/60 bg-slate-950/90 flex items-center justify-center shadow-[0_0_60px_rgba(234,179,8,0.8)] backdrop-blur-md">
-                        <Award className="w-16 h-16 text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_30px_rgba(234,179,8,0.9)]" />
-                      </div>
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-yellow-400/50 rounded-full animate-ping scale-150" />
-                    </div>
-                    <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mt-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Medalla Oro</span>
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white/40 rounded-full animate-ping scale-150" />
+                </div>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Medalla Plata</span>
+              </div>
+            </motion.div>
+
+            {/* Medalla Oro (derecha) */}
+            <motion.div
+              key="desktop-gold-medal"
+              initial={{ opacity: 0, scale: 0.4, x: 100, y: "-50%" }}
+              animate={{ opacity: 1, scale: 1, x: 0, y: "-50%" }}
+              transition={{ type: 'spring', damping: 20, stiffness: 150 }}
+              className="absolute left-[calc(100%+1.5rem)] top-1/2"
+            >
+              <div className="relative flex flex-col items-center">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-yellow-500/50 blur-3xl rounded-full scale-150 animate-pulse" />
+                  <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-yellow-400/60 bg-slate-950/90 flex items-center justify-center shadow-[0_0_60px_rgba(234,179,8,0.8)] backdrop-blur-md">
+                    <Award className="w-16 h-16 text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_30px_rgba(234,179,8,0.9)]" />
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-yellow-400/50 rounded-full animate-ping scale-150" />
+                </div>
+                <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mt-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Medalla Oro</span>
+              </div>
+            </motion.div>
           </div>
 
           {/* Main Celebration Box — NO overflow-hidden so medals aren't clipped */}
