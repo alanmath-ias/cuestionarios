@@ -12,41 +12,39 @@ export function AIMarkdown({ content, className }: AIMarkdownProps) {
     if (!content) return null;
 
     const processedContent = content
-        // Step 0: Normalize legacy delimiters
-        // Fix legacy block: ¡¡...!! -> ¡¡...¡¡
-        .replace(/¡¡([\s\S]*?)!!/g, '¡¡$1¡¡')
-        // Fix legacy inline: ¡...! -> ¡...¡ (matches legacy inline ending in !)
-        .replace(/¡([^¡\n]+?)!/g, '¡$1¡')
+        // Step 0A: Desarmar exclamaciones gramaticales en español (ej: ¡Atención! o ¡No sumes raíces!)
+        // para que no consuman delimitadores matemáticos de apertura
+        .replace(/¡([A-Za-zÁÉÍÓÚáéíóúñÑ¿][^¡\n]*?!(?!¡))/g, '$1')
 
-        // Step 1: Convert $$ block math to \[...\] before anything else
-        .replace(/\$\$([\s\S]*?)\$\$/g, '\\[$1\\]')
+        // Step 0B: Corregir error común de tipeo \! pegado al delimitador de cierre (ej: ¡x_0 = 2\!¡ -> ¡x_0 = 2¡)
+        .replace(/\\!¡/g, '¡')
 
-        // Step 2: Convert block math ¡¡...¡¡ to \[...\]
-        .replace(/¡¡([\s\S]*?)¡¡/g, '\\[$1\\]')
+        // Step 1: Normalizar bloques matemáticos $$...$$ y ¡¡...¡¡ con separación limpia
+        .replace(/\$\$([\s\S]*?)\$\$/g, (_match, inner) => `\n\n\\[${inner.trim()}\\]\n\n`)
+        .replace(/¡¡([\s\S]*?)¡¡/g, (_match, inner) => `\n\n\\[${inner.trim()}\\]\n\n`)
 
-        // Step 3: Handle ¡...¡ (inline, multiline, or environment math)
+        // Step 2: Procesar expresiones ¡...¡ (inline o entornos multilínea)
         .replace(/¡([\s\S]*?)¡/g, (_match, inner) => {
             const trimmed = inner.trim();
             if (!trimmed) return '';
 
-            // If it contains LaTeX environments (cases, aligned, matrix...), render as block math
-            if (/\\begin\{(?:cases|matrix|pmatrix|bmatrix|aligned|align)\}/.test(trimmed)) {
-                return `\\[${trimmed}\\]`;
+            // Si contiene entornos de LaTeX (cases, matrix, aligned...) o saltos \\, renderizar como bloque
+            if (/\\begin\{(?:cases|matrix|pmatrix|bmatrix|aligned|align)\}/.test(trimmed) || trimmed.includes('\\\\')) {
+                return `\n\n\\[${trimmed}\\]\n\n`;
             }
 
-            // Check if inner is pure plain text (no math operators or symbols, not numbers)
-            const hasMath = /[\\^_=+\-<>*/]/.test(trimmed) || /^\d+(?:[.,]\d+)?$/.test(trimmed);
-            if (!hasMath) {
-                return trimmed; // Plain text accidentally wrapped in delimiters
+            // Si es accidentalmente texto en español largo sin operadores ni números, dejar como texto
+            const words = trimmed.split(/\s+/);
+            const hasMathSymbols = /[\\^_=+\-<>*/0-9()[\]{}:,]/.test(trimmed);
+            if (words.length >= 3 && !hasMathSymbols) {
+                return trimmed;
             }
 
             return `\\(${trimmed}\\)`;
         })
 
-        // Step 4: Convert LaTeX \[...\] to $$...$$ (block math for remark-math)
+        // Step 3: Convertir a formato nativo de remark-math ($$ para display, $ para inline)
         .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$')
-
-        // Step 5: Convert LaTeX \(...\) to $...$ (inline math for remark-math)
         .replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$$');
 
     return (
