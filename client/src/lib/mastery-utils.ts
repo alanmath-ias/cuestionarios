@@ -15,7 +15,7 @@ import { grade9MapNodes } from '../data/grade-9-map-data';
 import { Category, Quiz, UserQuiz } from '@/types/types';
 
 // Map of categories to their ground-truth data
-const MAP_DATA: Record<number, any[]> = {
+export const MAP_DATA: Record<number, any[]> = {
     1: arithmeticMapNodes,
     2: algebraMapNodes,
     4: calculusMapNodes,
@@ -381,7 +381,10 @@ export function calculateMasteryStats(
         .map(n => n.label);
 
     // 4. Gold Trophy (real-time)
-    const isMapComplete = unitStats.length > 0 && unitStats.every(u => u.complete);
+    const hasUnits = unitStats.length > 0;
+    const isMapComplete = hasUnits
+        ? unitStats.every(u => u.complete)
+        : (nodeStats.length > 0 && nodeStats.every(s => s.complete));
     const goldTrophies = isMapComplete ? 1 : 0;
 
     // 5. Earned Gold Trophy (persisted logro)

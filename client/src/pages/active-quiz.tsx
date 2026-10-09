@@ -1098,8 +1098,12 @@ const ActiveQuiz = () => {
         if (progress.status === 'completed' && mode !== 'readonly') {
           const searchParams = new URLSearchParams(window.location.search);
           const grade = searchParams.get('grade');
-          const gradeQuery = grade ? `?grade=${grade}` : '';
-          setLocation(`/results/${progress.id}${gradeQuery}`, { replace: true });
+          const originCat = searchParams.get('origin_cat');
+          const qParams = new URLSearchParams();
+          if (grade) qParams.set('grade', grade);
+          if (originCat) qParams.set('origin_cat', originCat);
+          const queryString = qParams.toString() ? `?${qParams.toString()}` : '';
+          setLocation(`/results/${progress.id}${queryString}`, { replace: true });
           return;
         }
 
@@ -1824,8 +1828,12 @@ const ActiveQuiz = () => {
 
       const searchParams = new URLSearchParams(window.location.search);
       const grade = searchParams.get('grade');
-      const gradeQuery = grade ? `&grade=${grade}` : '';
-      setLocation(`/results/${progress.id}?source=quiz${gradeQuery}`, { replace: true });
+      const originCat = searchParams.get('origin_cat');
+      const qParams = new URLSearchParams();
+      qParams.set('source', 'quiz');
+      if (grade) qParams.set('grade', grade);
+      if (originCat) qParams.set('origin_cat', originCat);
+      setLocation(`/results/${progress.id}?${qParams.toString()}`, { replace: true });
     } catch (error) {
       toast({
         title: 'Error',

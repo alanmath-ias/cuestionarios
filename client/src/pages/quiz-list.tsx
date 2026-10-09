@@ -46,6 +46,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@/hooks/useSession";
 import { MapCompletionCelebration } from '@/components/dashboard/MapCompletionCelebration';
 import { getCreditConfig } from '@shared/credit-config';
+import { calculateMasteryStats } from '@/lib/mastery-utils';
 
 interface Category {
   id: number;
@@ -663,6 +664,7 @@ function QuizList() {
     const params = new URLSearchParams();
     if (parentUserId) params.set('mode', 'readonly');
     if (selectedGrade) params.set('grade', selectedGrade);
+    if (categoryId) params.set('origin_cat', categoryId);
     const queryString = params.toString() ? `?${params.toString()}` : '';
     setLocation(`/quiz/${quizId}${queryString}`);
   };
@@ -680,10 +682,48 @@ function QuizList() {
       const params = new URLSearchParams();
       params.set('mode', 'mini');
       if (selectedGrade) params.set('grade', selectedGrade);
+      if (categoryId) params.set('origin_cat', categoryId);
       setLocation(`/quiz/${miniQuizId}?${params.toString()}`);
       setMiniQuizId(null);
     }
   };
+
+  // Safety net: check if currently displayed map is 100% completed and award gold cup celebration if pending/missing
+  const checkingMapCompletionRef = useRef(false);
+  useEffect(() => {
+    if (!session || session.role !== 'student') return;
+    const tourStatus = (session.tourStatus as any) || {};
+    const completedMaps = tourStatus.completedMaps || {};
+    const mapKey = selectedGrade ? `grade-${selectedGrade}` : (categoryId || "");
+    if (!mapKey || completedMaps[mapKey]) return;
+
+    if (currentMapNodes && currentMapNodes.length > 0 && skillTreeAllQuizzes.length > 0) {
+      if (checkingMapCompletionRef.current) return;
+
+      const stats = calculateMasteryStats(
+        parseInt(categoryId || "0"),
+        skillTreeAllQuizzes,
+        skillTreeAllQuizzes,
+        nodeMappingsData,
+        false,
+        selectedGrade ? currentMapNodes : undefined
+      );
+
+      if (stats.goldTrophies === 1) {
+        checkingMapCompletionRef.current = true;
+        apiRequest('POST', '/api/user/complete-map', {
+          categoryId: parseInt(categoryId || "0"),
+          grade: selectedGrade || undefined
+        }).then(async (res) => {
+          const updatedUser = await res.json();
+          queryClient.setQueryData(['/api/user'], updatedUser);
+        }).catch(err => {
+          console.error("Auto-complete map check in quiz-list error:", err);
+          checkingMapCompletionRef.current = false;
+        });
+      }
+    }
+  }, [session, selectedGrade, categoryId, currentMapNodes, skillTreeAllQuizzes, nodeMappingsData]);
 
   // Only show the full-screen loader if we are missing essential data.
   // If we have cached data, we show the map immediately to preserve scroll position.
