@@ -42,8 +42,8 @@ export function normalizeGradeKey(grade?: string | number | null): string | null
   if (grade === undefined || grade === null) return null;
   const str = String(grade).trim().toLowerCase();
   if (!str) return null;
-  // Match single digit 1-9 or 'grade-X'
-  const match = str.match(/grade-?([1-9])/i) || str.match(/\b([1-9])\b/);
+  // Match single digit 1-9 or 'grade-X' (strictly matching whole string)
+  const match = str.match(/^grade-?([1-9])$/i) || str.match(/^([1-9])$/);
   if (match) {
     return `grade-${match[1]}`;
   }
@@ -54,22 +54,29 @@ export function getCreditConfig(
   categoryId?: number | string | null,
   gradeLevel?: number | string | null
 ): CategoryCreditConfig {
-  // 1. Check if gradeLevel was passed directly
-  const gradeFromParam = normalizeGradeKey(gradeLevel);
-  if (gradeFromParam && GRADE_CREDIT_CONFIG[gradeFromParam]) {
-    return GRADE_CREDIT_CONFIG[gradeFromParam];
+  // 1. Check if gradeLevel was passed directly (e.g. grade roadmaps 1° - 9°)
+  if (gradeLevel !== undefined && gradeLevel !== null && String(gradeLevel).trim() !== '') {
+    const gradeFromParam = normalizeGradeKey(gradeLevel);
+    if (gradeFromParam && GRADE_CREDIT_CONFIG[gradeFromParam]) {
+      return GRADE_CREDIT_CONFIG[gradeFromParam];
+    }
   }
 
-  // 2. Check if categoryId itself represents a grade key (e.g. 'grade-1' or completedMaps['grade-1'])
-  const gradeFromCategory = normalizeGradeKey(categoryId);
-  if (gradeFromCategory && GRADE_CREDIT_CONFIG[gradeFromCategory]) {
-    return GRADE_CREDIT_CONFIG[gradeFromCategory];
+  // 2. Check if categoryId itself represents an explicit grade key (e.g. 'grade-1' or completedMaps['grade-1'])
+  if (typeof categoryId === 'string' && /^grade-?[1-9]$/i.test(categoryId.trim())) {
+    const gradeFromCategory = normalizeGradeKey(categoryId);
+    if (gradeFromCategory && GRADE_CREDIT_CONFIG[gradeFromCategory]) {
+      return GRADE_CREDIT_CONFIG[gradeFromCategory];
+    }
   }
 
-  // 3. Fallback to categoryId lookup
-  if (categoryId === undefined || categoryId === null) {
-    return DEFAULT_CREDIT_CONFIG;
+  // 3. Fallback to categoryId lookup (e.g. 1=Aritmética, 2=Álgebra, 4=Cálculo Diferencial, etc.)
+  if (categoryId !== undefined && categoryId !== null) {
+    const id = Number(categoryId);
+    if (!isNaN(id) && CATEGORY_CREDIT_CONFIG[id]) {
+      return CATEGORY_CREDIT_CONFIG[id];
+    }
   }
-  const id = Number(categoryId);
-  return CATEGORY_CREDIT_CONFIG[id] || DEFAULT_CREDIT_CONFIG;
+
+  return DEFAULT_CREDIT_CONFIG;
 }
