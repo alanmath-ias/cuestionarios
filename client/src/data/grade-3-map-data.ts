@@ -22,7 +22,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-u1-conjuntos-romanos'],
         description: 'Elementos, subconjuntos y relaciones de inclusión (pertenece ∈, no pertenece ∉, está contenido ⊂).',
         xOffset: -45,
-        additionalQuizzes: [991], // Quiz 991: Noción de Conjunto, Elementos y Pertenencia
+        subcategoryId: 584,
+        additionalQuizzes: [1036],
         behavior: 'quiz_list'
     },
     {
@@ -33,7 +34,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-u1-conjuntos-romanos'],
         description: 'Operaciones entre conjuntos: unión (U), intersección (∩) y complemento.',
         xOffset: 45,
-        additionalQuizzes: [994, 995], // Quiz 994: Unión e Intersección | Quiz 995: Diferencia y Complemento
+        subcategoryId: 585,
+        additionalQuizzes: [1037],
         behavior: 'quiz_list'
     },
     {
@@ -44,7 +46,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-pertenencia-contenencia', 'g3-union-interseccion'],
         description: 'Ampliación del sistema numérico decimal, valor posicional y descomposición de números.',
         xOffset: -45,
-        additionalQuizzes: [419, 420], // Quiz 419: Valor Posicional | Quiz 420: Descomposición Posicional
+        subcategoryId: 586,
+        additionalQuizzes: [1038],
         behavior: 'quiz_list'
     },
     {
@@ -55,7 +58,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-pertenencia-contenencia', 'g3-union-interseccion'],
         description: 'Propiedad conmutativa, asociativa y algoritmos de suma y resta con reagrupación.',
         xOffset: 45,
-        additionalQuizzes: [313, 304, 305], // Quiz 313: Propiedades | Quiz 304: Suma/Resta Básica | Quiz 305: Suma/Resta Avanzada
+        subcategoryId: 587,
+        additionalQuizzes: [1039],
         behavior: 'quiz_list'
     },
     {
@@ -66,7 +70,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-lectura-escritura-numeros', 'g3-propiedades-adicion'],
         description: 'Reglas de los símbolos romanos (I, V, X, L, C, D, M) y su equivalencia en el sistema decimal.',
         xOffset: 0,
-        additionalQuizzes: [853], // Quiz 853: Escritura de Números Romanos: Fundamentos y Reglas Básicas
+        subcategoryId: 588,
+        additionalQuizzes: [1040],
         behavior: 'quiz_list'
     },
 
@@ -91,7 +96,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-u2-multiplicacion-avanzada'],
         description: 'La multiplicación como adición abreviada y agilidad en el dominio de las tablas del 1 al 10.',
         xOffset: -45,
-        additionalQuizzes: [515, 626, 548, 549, 550, 551, 588], // Dominio del 1 al 10, V/F 1-20 y aventuras por tablas
+        subcategoryId: 589,
+        additionalQuizzes: [1041],
         behavior: 'quiz_list'
     },
     {
@@ -102,7 +108,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-u2-multiplicacion-avanzada'],
         description: 'Propiedades conmutativa, asociativa, distributiva y búsqueda de múltiplos de un número.',
         xOffset: 45,
-        additionalQuizzes: [319, 707], // Quiz 319: Múltiplos y Divisores (Nivel 2) | Quiz 707: MCM números de una cifra
+        subcategoryId: 590,
+        additionalQuizzes: [1042],
         behavior: 'quiz_list'
     },
     {
@@ -113,6 +120,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-mult-como-adicion', 'g3-propiedades-multiplicacion'],
         description: 'Algoritmo y técnica para multiplicar factores de tres cifras con productos intermedios.',
         xOffset: -45,
+        subcategoryId: 591,
+        additionalQuizzes: [1043],
         behavior: 'quiz_list'
     },
     {
@@ -123,7 +132,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-mult-como-adicion', 'g3-propiedades-multiplicacion'],
         description: 'Resolución de problemas de la vida real con operaciones multiplicativas y compras.',
         xOffset: 45,
-        additionalQuizzes: [306, 307], // Quiz 306: Problemas con Naturales Nivel 1 | Quiz 307: Nivel 2
+        subcategoryId: 592,
+        additionalQuizzes: [1044],
         behavior: 'quiz_list'
     },
 
@@ -148,7 +158,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-u3-division-divisibilidad'],
         description: 'Algoritmo de la división entre una cifra, cálculo del residuo, divisiones exactas e inexactas.',
         xOffset: -45,
-        additionalQuizzes: [446, 447, 644], // Quiz 446: Básico | Quiz 447: Intermedio/Residuo | Quiz 644: Problemas Cotidianos
+        subcategoryId: 593,
+        additionalQuizzes: [1045],
         behavior: 'quiz_list'
     },
     {
@@ -159,7 +170,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-u3-division-divisibilidad'],
         description: 'Criterios de divisibilidad rápida por 2, 3, 5 y 10 para identificar divisores sin dividir.',
         xOffset: 45,
-        additionalQuizzes: [320], // Quiz 320: Criterios Básicos (2, 3, 4, 5, 7) - Nivel 2
+        subcategoryId: 594,
+        additionalQuizzes: [1046],
         behavior: 'quiz_list'
     },
     {
@@ -170,7 +182,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-division-exacta-inexacta', 'g3-criterios-divisibilidad'],
         description: 'Diferencia entre números primos (2 divisores) y números compuestos. Factores primos.',
         xOffset: -45,
-        additionalQuizzes: [318, 322], // Quiz 318: Primos y Compuestos | Quiz 322: Descomposición en factores primos básicos
+        subcategoryId: 595,
+        additionalQuizzes: [1047],
         behavior: 'quiz_list'
     },
     {
@@ -181,6 +194,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-division-exacta-inexacta', 'g3-criterios-divisibilidad'],
         description: 'Medida del área contando cuadrículas y unidades arbitrarias de superficie.',
         xOffset: 45,
+        subcategoryId: 596,
+        additionalQuizzes: [1048],
         behavior: 'quiz_list'
     },
 
@@ -205,7 +220,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-u4-fracciones-medidas'],
         description: 'Comprensión gráfica y lógica de fracciones como partes de la unidad y de colecciones de objetos.',
         xOffset: -45,
-        additionalQuizzes: [329, 331], // Quiz 329: Interpretación VISUAL y LÓGICA | Quiz 331: Fracciones Equivalentes Básicas
+        subcategoryId: 597,
+        additionalQuizzes: [1049],
         behavior: 'quiz_list'
     },
     {
@@ -216,7 +232,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-u4-fracciones-medidas'],
         description: 'Numerador, denominador, lectura (medios, tercios, cuartos...) y representación en la recta.',
         xOffset: 45,
-        additionalQuizzes: [436, 437], // Quiz 436: Recta Numérica I | Quiz 437: Recta Numérica II
+        subcategoryId: 598,
+        additionalQuizzes: [1050],
         behavior: 'quiz_list'
     },
     {
@@ -227,7 +244,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-concepto-fraccion-conjunto', 'g3-terminos-lectura-fracciones'],
         description: 'Comparación y operaciones de suma y resta con fracciones de igual denominador.',
         xOffset: -45,
-        additionalQuizzes: [340, 341], // Quiz 340: Homogéneas Nivel 1 | Quiz 341: Homogéneas Nivel 2
+        subcategoryId: 599,
+        additionalQuizzes: [1051],
         behavior: 'quiz_list'
     },
     {
@@ -238,7 +256,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: ['g3-concepto-fraccion-conjunto', 'g3-terminos-lectura-fracciones'],
         description: 'La libra, el gramo y el kilogramo; horas, minutos, días y semanas en la vida diaria.',
         xOffset: 45,
-        additionalQuizzes: [383, 380, 381], // Quiz 383: Tiempo y Horarios | Quiz 380: Masa Directa | Quiz 381: Problemas Cotidianos Masa
+        subcategoryId: 600,
+        additionalQuizzes: [1052],
         behavior: 'quiz_list'
     },
 
@@ -253,6 +272,8 @@ export const grade3MapNodes: ArithmeticNode[] = [
         requires: [],
         description: 'La gran prueba que corona el dominio matemático de tercer grado de primaria.',
         xOffset: 0,
+        subcategoryId: 601,
+        additionalQuizzes: [1053],
         behavior: 'quiz_list'
     }
 ];
