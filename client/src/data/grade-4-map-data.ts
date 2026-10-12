@@ -44,7 +44,7 @@ export const grade4MapNodes: ArithmeticNode[] = [
         requires: ['g4-teoria-conjuntos', 'g4-operaciones-conjuntos'],
         description: 'Operaciones con grandes números naturales y propiedades conmutativa, asociativa y elemento neutro.',
         xOffset: -45,
-        additionalQuizzes: [305, 313], // Quiz 305: Suma y Resta Avanzado | Quiz 313: Propiedades de las Operaciones
+        additionalQuizzes: [305, 1054, 1055], // Quiz 305: Suma y Resta Avanzado | Quiz 1054: Cifras hasta Centenas de Mil | Quiz 1055: Propiedades y Estimaciones
         behavior: 'quiz_list'
     },
     {
@@ -55,7 +55,7 @@ export const grade4MapNodes: ArithmeticNode[] = [
         requires: ['g4-teoria-conjuntos', 'g4-operaciones-conjuntos'],
         description: 'Propiedad distributiva, productos de múltiples factores y divisiones entre una y dos cifras.',
         xOffset: 45,
-        additionalQuizzes: [446, 448, 644], // Quiz 446: División 1 cifra | Quiz 448: División 2 cifras | Quiz 644: Problemas Cotidianos
+        additionalQuizzes: [1056, 1057, 644], // Quiz 1056: Multiplicación 2 y 3 cifras | Quiz 1057: Propiedades y Cálculo Abreviado | Quiz 644: Problemas Cotidianos
         behavior: 'quiz_list'
     },
     {
@@ -91,7 +91,7 @@ export const grade4MapNodes: ArithmeticNode[] = [
         requires: ['g4-u2-divisibilidad-factores-mcm-mcd'],
         description: 'Divisiones exactas e inexactas de varias cifras con cálculo riguroso del residuo.',
         xOffset: -45,
-        additionalQuizzes: [5, 6, 447], // Quiz 5: División 1 cifra | Quiz 6: División 2 cifras | Quiz 447: Intermedio
+        additionalQuizzes: [446, 448, 5, 6, 447], // Quiz 446: División 1 cifra (Básico) | Quiz 448: División 2 cifras (Intro) | Quiz 5: División 1 cifra | Quiz 6: División 2 cifras | Quiz 447: Intermedio
         behavior: 'quiz_list'
     },
     {
@@ -102,7 +102,7 @@ export const grade4MapNodes: ArithmeticNode[] = [
         requires: ['g4-u2-divisibilidad-factores-mcm-mcd'],
         description: 'Conjunto de múltiplos y divisores. Criterios de divisibilidad rápida por 2, 3, 4, 5, 6, 9 y 10.',
         xOffset: 45,
-        additionalQuizzes: [319, 320, 321], // Quiz 319: Múltiplos/Divisores | Quiz 320: Criterios Básicos | Quiz 321: Criterios Avanzados
+        additionalQuizzes: [319, 1058], // Quiz 319: Múltiplos y Divisores | Quiz 1058: Criterios Fundamentales (2, 3, 4, 5, 6, 9 y 10)
         behavior: 'quiz_list'
     },
     {
@@ -182,7 +182,7 @@ export const grade4MapNodes: ArithmeticNode[] = [
         requires: ['g4-conversiones-mixtos'],
         description: 'Suma y resta de fracciones homogéneas y heterogéneas (mcm), producto en línea y división por recíproco o en cruz.',
         xOffset: 45,
-        additionalQuizzes: [340, 341, 342, 44, 344], // Sumas/restas homogéneas (340, 341), heterogéneas (342), productos (44, 344)
+        additionalQuizzes: [340, 341, 342, 1059, 1060], // Sumas/restas homogéneas (340, 341), heterogéneas (342) | Quiz 1059: Multiplicación | Quiz 1060: División
         behavior: 'quiz_list'
     },
 
@@ -207,7 +207,7 @@ export const grade4MapNodes: ArithmeticNode[] = [
         requires: ['g4-u4-decimales-tiempo'],
         description: 'Décimas, centésimas y milésimas. Lectura, escritura, comparación y conversión entre fracción decimal y número con coma.',
         xOffset: -45,
-        additionalQuizzes: [358, 348], // Quiz 358: Conversión Decimal-Fracción | Quiz 348: Comparación de Decimales
+        additionalQuizzes: [348, 1061], // Quiz 348: Comparación de Decimales | Quiz 1061: Fracciones Decimales y Números con Coma
         behavior: 'quiz_list'
     },
     {
@@ -218,7 +218,7 @@ export const grade4MapNodes: ArithmeticNode[] = [
         requires: ['g4-fracciones-decimales'],
         description: 'Suma y resta alineando la coma, multiplicación con decimales, divisiones y resolución de problemas cotidianos de compras.',
         xOffset: 45,
-        additionalQuizzes: [350, 351, 352, 353, 2], // Quiz 350, 351: Suma/Resta | Quiz 352: Producto | Quiz 353: División | Quiz 2: Problemas
+        additionalQuizzes: [350, 351, 352, 1062], // Quiz 350, 351: Suma y Resta | Quiz 352: Producto | Quiz 1062: División Decimal entre Natural
         behavior: 'quiz_list'
     },
     {
@@ -229,7 +229,7 @@ export const grade4MapNodes: ArithmeticNode[] = [
         requires: ['g4-operaciones-decimales'],
         description: 'Equivalencias entre días, horas, minutos y segundos. Cálculo de duraciones, horarios y problemas de la vida real.',
         xOffset: 0,
-        additionalQuizzes: [383], // Quiz 383: Unidades de Tiempo: Conversiones y Horarios
+        additionalQuizzes: [383, 1063], // Quiz 383: Unidades de Tiempo: Conversiones y Horarios | Quiz 1063: Horarios, Duraciones y Problemas
         behavior: 'quiz_list'
     },
 
@@ -244,7 +244,7 @@ export const grade4MapNodes: ArithmeticNode[] = [
         requires: [],
         description: 'El desafío cumbre del Templo: integra la teoría de números, fracciones, decimales y resolución de grandes problemas matemáticos.',
         xOffset: 0,
-        additionalQuizzes: [308, 921], // Quiz 308: Problemas Avanzados Nivel 3 | Quiz 921: Desafío Matemático Aplicado
+        additionalQuizzes: [308, 921, 1064], // Quiz 308: Problemas Avanzados Nivel 3 | Quiz 921: Desafío Aplicado | Quiz 1064: Gran Desafío de Maestría 4° Grado
         behavior: 'quiz_list'
     }
 ];
