@@ -2098,16 +2098,31 @@ Genera SOLO el tip, sin saludos introductorios. Empieza directo con el concepto 
       const wins = friendship ? (friendship.userId === userId ? friendship.userWins : friendship.friendWins) : 0;
       const losses = friendship ? (friendship.userId === userId ? friendship.friendWins : friendship.userWins) : 0;
 
+      // Sanitizar progreso del amigo para proteger privacidad (sin notas numéricas)
+      const sanitizedProgress = allProgress.map(p => ({
+        id: p.id,
+        title: p.title,
+        categoryId: p.categoryId,
+        subcategoryId: p.subcategoryId,
+        status: p.status,
+        completedAt: p.completedAt,
+        totalQuestions: p.totalQuestions,
+        score: p.status === 'completed' ? 10 : 0
+      }));
+
       res.json({
         user: {
           id: user.id,
           name: user.name,
           username: user.username,
-          hintCredits: user.hintCredits
+          hintCredits: user.hintCredits,
+          avatar: user.avatar,
+          tourStatus: user.tourStatus || {},
+          role: user.role
         },
         wonDuels,
         assignedCategories,
-        allProgress,
+        allProgress: sanitizedProgress,
         isFriend: !!friendship,
         personalRecord: { wins, losses }
       });

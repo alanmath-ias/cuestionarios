@@ -258,8 +258,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                     value={stats.earnedGoldTrophy ? 1 : 0}
                                                     color={stats.hasPendingNewContent ? "text-red-400" : "text-yellow-500"}
                                                     delay={0.1}
-                                                    onClick={() => !isPublicView && setSelectedType('gold_cup')}
-                                                    disabled={isPublicView}
+                                                    onClick={() => setSelectedType('gold_cup')}
                                                     categoryId={category?.id}
                                                     hasPendingNewContent={stats.hasPendingNewContent}
                                                 />
@@ -270,8 +269,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                     value={stats.silverTrophies}
                                                     color="text-blue-100"
                                                     delay={0.2}
-                                                    onClick={() => !isPublicView && setSelectedType('silver_cup')}
-                                                    disabled={isPublicView}
+                                                    onClick={() => setSelectedType('silver_cup')}
                                                 />
                                                 <StatCard
                                                     icon={Award}
@@ -280,8 +278,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                     value={stats.goldMedals}
                                                     color="text-amber-400"
                                                     delay={0.3}
-                                                    onClick={() => !isPublicView && setSelectedType('gold_medal')}
-                                                    disabled={isPublicView}
+                                                    onClick={() => setSelectedType('gold_medal')}
                                                 />
                                                 <StatCard
                                                     icon={Medal}
@@ -290,8 +287,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                     value={stats.silverMedals}
                                                     color="text-slate-400"
                                                     delay={0.4}
-                                                    onClick={() => !isPublicView && setSelectedType('silver_medal')}
-                                                    disabled={isPublicView}
+                                                    onClick={() => setSelectedType('silver_medal')}
                                                 />
                                                 <StatCard
                                                     icon={Sword}
@@ -308,7 +304,6 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                                     value={hintCredits}
                                                     color="text-blue-400"
                                                     delay={0.6}
-                                                    onClick={isPublicView ? undefined : undefined}
                                                 />
                                             </div>
                                         </div>
@@ -366,9 +361,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
 
                                             {/* Motivational Footer */}
                                             <div className="text-center space-y-4 pt-2 sm:pt-4">
-                                                {!isPublicView && (
-                                                    <p className="text-[9px] sm:text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] sm:tracking-[0.5em]">Toca una medalla para ver detalles</p>
-                                                )}
+                                                <p className="text-[9px] sm:text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] sm:tracking-[0.5em]">Toca una medalla para ver detalles</p>
                                                 <button
                                                     onClick={onClose}
                                                     className="bg-slate-900 border border-white/5 hover:bg-slate-800 text-slate-300 px-10 sm:px-12 py-3.5 sm:py-4 rounded-full text-xs font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 shadow-2xl"
@@ -386,6 +379,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                         onWhatsApp={handleWhatsApp}
                                         categoryId={category?.id}
                                         gradeTitle={activeGrade ? activeGrade.title : undefined}
+                                        isPublicView={isPublicView}
                                     />
                                 )}
                             </AnimatePresence>
@@ -476,7 +470,7 @@ const StatCard = ({ icon: Icon, label, sublabel, value, color, delay, onClick, d
     );
 };
 
-const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId, gradeTitle }: { type: DetailType, stats: any, onBack: () => void, onWhatsApp: (type: string, data: any) => void, categoryId?: number, gradeTitle?: string }) => {
+const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId, gradeTitle, isPublicView = false }: { type: DetailType, stats: any, onBack: () => void, onWhatsApp: (type: string, data: any) => void, categoryId?: number, gradeTitle?: string, isPublicView?: boolean }) => {
     let goldCupImage = "/aritmetica_imagenes/copa_de_oro_trofeo.png";
     if (categoryId === 2) {
         goldCupImage = "/aritmetica_imagenes/copa_de_oro_trofeo_algebra.png";
@@ -493,30 +487,30 @@ const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId, gradeTitle }:
 
     const config: any = {
         silver_medal: {
-            title: gradeTitle ? `Cuestionarios • ${gradeTitle}` : "Mis Cuestionarios",
+            title: gradeTitle ? `Cuestionarios • ${gradeTitle}` : (isPublicView ? "Cuestionarios del Amigo" : "Mis Cuestionarios"),
             subtitle: gradeTitle ? `Desempeño en ${gradeTitle}` : "Desempeño Individual",
             icon: Medal,
             colorClass: "text-slate-400",
-            primaryLabel: "Promedio General",
-            primaryValue: stats.totalAverage.toFixed(1),
-            itemsLabel: "Temas a mejorar",
+            primaryLabel: isPublicView ? "Cuestionarios Superados" : "Promedio General",
+            primaryValue: isPublicView ? `${stats.completedQuizzes} de ${stats.totalQuizzes}` : stats.totalAverage.toFixed(1),
+            itemsLabel: isPublicView ? "En Camino / Próximos" : "Temas a mejorar",
             items: stats.worstQuizzes,
             bestItems: stats.bestQuizzes,
-            motivation: "¡Cada test es una oportunidad de brillar! Enfócate en tus áreas de entrenamiento para alcanzar el 10.0.",
-            hasWhatsApp: true
+            motivation: isPublicView ? "¡Gran avance en el camino del aprendizaje!" : "¡Cada test es una oportunidad de brillar! Enfócate en tus áreas de entrenamiento para alcanzar el 10.0.",
+            hasWhatsApp: !isPublicView
         },
         gold_medal: {
             title: gradeTitle ? `Temas • ${gradeTitle}` : "Temas Dominados",
             subtitle: gradeTitle ? `Estrategias de ${gradeTitle}` : "Dominio de Estrategias",
             icon: Award,
             colorClass: "text-amber-400",
-            primaryLabel: "Maestría Promedio",
-            primaryValue: stats.totalAverage.toFixed(1),
-            itemsLabel: "Retos sugeridos",
+            primaryLabel: isPublicView ? "Temas Dominados" : "Maestría Promedio",
+            primaryValue: isPublicView ? `${stats.goldMedals}` : stats.totalAverage.toFixed(1),
+            itemsLabel: isPublicView ? "Próximos Retos" : "Retos sugeridos",
             items: stats.weakestNodes,
             bestItems: stats.strongestNodes,
-            motivation: "¡Dominar un tema requiere paciencia! Tus unidades fuertes son la base de tu éxito.",
-            hasWhatsApp: true
+            motivation: isPublicView ? "¡Dominar temas construye una base sólida para el éxito!" : "¡Dominar un tema requiere paciencia! Tus unidades fuertes son la base de tu éxito.",
+            hasWhatsApp: !isPublicView
         },
         silver_cup: {
             title: gradeTitle ? `Unidades • ${gradeTitle}` : "Unidades Clave",
@@ -525,11 +519,11 @@ const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId, gradeTitle }:
             colorClass: "text-blue-100",
             primaryLabel: "Unidades Completas",
             primaryValue: stats.silverTrophies,
-            itemsLabel: "Unidades a reforzar",
+            itemsLabel: isPublicView ? "Unidades en Avance" : "Unidades a reforzar",
             items: stats.weakestUnits,
             bestItems: stats.strongestUnits,
             motivation: "¡Estás construyendo un conocimiento sólido! Sigue avanzando bloque a bloque.",
-            hasWhatsApp: true
+            hasWhatsApp: !isPublicView
         },
         gold_cup: {
             title: gradeTitle ? `Maestría • ${gradeTitle}` : "Meta Final",
@@ -538,9 +532,9 @@ const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId, gradeTitle }:
             colorClass: "text-yellow-500",
             primaryLabel: "Avance Total",
             primaryValue: `${Math.round(stats.progress)}%`,
-            itemsLabel: "Falta por completar",
+            itemsLabel: isPublicView ? "Misiones Restantes" : "Falta por completar",
             items: stats.pendingNodes.map((n: string) => ({ label: n, score: 0 })),
-            motivation: getGoldCupMotivation(stats.progress),
+            motivation: isPublicView ? "¡Avanzando con determinación hacia la copa dorada!" : getGoldCupMotivation(stats.progress),
             hasWhatsApp: false
         }
     };
@@ -598,7 +592,11 @@ const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId, gradeTitle }:
                             {c.bestItems.map((item: any, i: number) => (
                                 <div key={i} className="flex items-start justify-between text-xs gap-4">
                                     <span className="text-slate-300 font-bold leading-tight">{item.label}</span>
-                                    <span className="text-emerald-400 font-black font-mono px-2 py-0.5 bg-emerald-500/10 rounded whitespace-nowrap">{item.score?.toFixed(1) || '---'}</span>
+                                    {isPublicView ? (
+                                        <span className="text-emerald-400 font-bold text-[10px] px-2 py-0.5 bg-emerald-500/10 rounded whitespace-nowrap">Dominado ⭐</span>
+                                    ) : (
+                                        <span className="text-emerald-400 font-black font-mono px-2 py-0.5 bg-emerald-500/10 rounded whitespace-nowrap">{item.score?.toFixed(1) || '---'}</span>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -614,12 +612,16 @@ const DetailView = ({ type, stats, onBack, onWhatsApp, categoryId, gradeTitle }:
                         {c.items.length > 0 ? c.items.map((item: any, i: number) => (
                             <div key={i} className="flex items-start justify-between text-xs gap-4">
                                 <span className="text-slate-300 font-bold leading-tight">{item.label}</span>
-                                {item.score > 0 && (
-                                    <span className="text-blue-400 font-black font-mono px-2 py-0.5 bg-blue-500/10 rounded whitespace-nowrap">{item.score?.toFixed(1)}</span>
+                                {isPublicView ? (
+                                    <span className="text-blue-400 font-bold text-[10px] px-2 py-0.5 bg-blue-500/10 rounded whitespace-nowrap">En Camino 🚀</span>
+                                ) : (
+                                    item.score > 0 && (
+                                        <span className="text-blue-400 font-black font-mono px-2 py-0.5 bg-blue-500/10 rounded whitespace-nowrap">{item.score?.toFixed(1)}</span>
+                                    )
                                 )}
                             </div>
                         )) : (
-                            <p className="text-xs text-slate-500 italic">¡Felicidades! Tienes un excelente desempeño en todas las áreas de esta sección.</p>
+                            <p className="text-xs text-slate-500 italic">¡Felicidades! Excelente desempeño en todas las áreas de esta sección.</p>
                         )}
                     </div>
                 </div>

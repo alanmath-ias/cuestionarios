@@ -621,6 +621,21 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
       <div className="flex items-center gap-2">
         {type === "friend" && (
           <>
+            {user.role !== 'admin' && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  onProfile();
+                }}
+                className="rounded-xl border-amber-500/20 bg-amber-500/5 text-amber-400 hover:bg-amber-500 hover:text-slate-950 hover:border-amber-500 transition-all h-9 px-3 text-xs font-bold"
+                title="Ver progreso, copas y cofre del tesoro"
+              >
+                <Trophy className="w-3.5 h-3.5 sm:mr-1.5" />
+                <span className="hidden sm:inline">Progreso</span>
+              </Button>
+            )}
             <Button 
               size="sm" 
               variant="outline"

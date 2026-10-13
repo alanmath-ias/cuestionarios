@@ -427,9 +427,35 @@ function QuizList() {
     staleTime: 5 * 60 * 1000, // 5 minutes — ensures map counts update after new quizzes are added
   });
 
-  const { data: progress, isLoading: loadingProgress } = useQuery<QuizProgress[]>({
-    queryKey: ['/api/progress', searchParams.get('user_id')],
+  const friendIdParam = searchParams.get('friendId');
+  const isSpectatorMode = !!friendIdParam;
+
+  const { data: friendProfile, isLoading: loadingFriend } = useQuery<any>({
+    queryKey: [`/api/social/profile/${friendIdParam}`],
     queryFn: async () => {
+      const res = await fetch(`/api/social/profile/${friendIdParam}`);
+      if (!res.ok) throw new Error("Error fetching friend profile");
+      return res.json();
+    },
+    enabled: !!friendIdParam,
+  });
+
+  const { data: progress, isLoading: loadingProgress } = useQuery<QuizProgress[]>({
+    queryKey: ['/api/progress', searchParams.get('user_id'), friendIdParam],
+    queryFn: async () => {
+      if (friendIdParam) {
+        const res = await fetch(`/api/social/profile/${friendIdParam}`);
+        if (!res.ok) throw new Error('Error fetching friend progress');
+        const data = await res.json();
+        return (data.allProgress || []).map((p: any) => ({
+          id: p.id,
+          quizId: p.id,
+          status: p.status || 'not_started',
+          score: p.score,
+          completedQuestions: p.status === 'completed' ? (p.totalQuestions || 10) : 0,
+          completedAt: p.completedAt
+        }));
+      }
       const parentUserId = searchParams.get('user_id');
       const url = parentUserId ? `/api/progress?user_id=${parentUserId}` : '/api/progress';
       const res = await fetch(url);
@@ -1213,6 +1239,51 @@ function QuizList() {
         </div>
       ) : (
         <>
+          {/* Banner de Modo Espectador */}
+          {isSpectatorMode && friendProfile?.user && (
+            <div className="mb-6 p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-blue-950/80 via-slate-900/90 to-purple-950/80 border border-blue-500/30 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-3.5">
+                <div className="relative shrink-0">
+                  <div className="w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold text-white text-lg border-2 border-white/20 shadow-lg">
+                    {friendProfile.user.avatar ? (
+                      <img src={friendProfile.user.avatar} alt={friendProfile.user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      friendProfile.user.name.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 p-1 bg-cyan-500 rounded-full border-2 border-slate-950 text-slate-950 shadow">
+                    <Eye className="w-3 h-3" />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-white text-base tracking-tight">
+                      Modo Espectador • Mapa de {friendProfile.user.name}
+                    </h3>
+                    <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 text-[10px] font-bold">
+                      Solo Lectura
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Observa el progreso y los nodos conquistados por tu amigo en tiempo real.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-white/10 bg-slate-900/80 hover:bg-slate-800 text-slate-200 text-xs rounded-xl"
+                  onClick={() => setLocation('/social')}
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+                  Volver a Amigos
+                </Button>
+              </div>
+            </div>
+          )}
+
           {viewMode === 'roadmap' ? (
             ['1', '2', '4', '5', '19'].includes(categoryId) ? (
               <SkillTreeView
@@ -1539,12 +1610,17 @@ function QuizList() {
                               </span>
 
                               <div className="flex flex-col items-end gap-1 shrink-0 ml-auto">
-                                {isCompleted && quizProgress?.score !== undefined && (
+                                {!isSpectatorMode && isCompleted && quizProgress?.score !== undefined && (
                                   <span className="text-xs font-bold text-white mr-1 opacity-90">
                                     Nota: {quizProgress.score.toFixed(1)}/10
                                   </span>
                                 )}
-                                {!isCompleted && (quizProgress?.completedQuestions || 0) > 0 && (
+                                {isSpectatorMode && isCompleted && (
+                                  <span className="text-xs font-bold text-emerald-400 mr-1 flex items-center gap-1">
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Superado
+                                  </span>
+                                )}
+                                {!isCompleted && (quizProgress?.completedQuestions || 0) > 0 && !isSpectatorMode && (
                                   <span className="text-xs font-medium text-yellow-500 mr-1 opacity-90">
                                     Progreso: {quizProgress?.completedQuestions}
                                   </span>
@@ -1567,7 +1643,7 @@ function QuizList() {
                                     )}
                                   </button>
 
-                                  {!isCompleted && !searchParams.get('user_id') && (
+                                  {!isCompleted && !searchParams.get('user_id') && !isSpectatorMode && (
                                     <Button
                                       size="sm"
                                       className="h-7 px-2 text-xs bg-slate-700 hover:bg-slate-600 text-white border border-slate-600 shrink-0"
@@ -1576,27 +1652,37 @@ function QuizList() {
                                       Mini
                                     </Button>
                                   )}
-                                  <Button
-                                    size="sm"
-                                    className={`h-7 px-2.5 sm:px-3 text-xs font-medium shrink-0 ${isCompleted ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
-                                    onClick={() => {
-                                      if (isCompleted && quizProgress) {
-                                        // Ensure user_id, grade and origin_cat are passed if present
-                                        const parentUserId = searchParams.get('user_id');
-                                        const resParams = new URLSearchParams();
-                                        if (parentUserId) resParams.set('user_id', parentUserId);
-                                        if (selectedGrade) resParams.set('grade', selectedGrade);
-                                        if (categoryId) resParams.set('origin_cat', categoryId);
-                                        const qs = resParams.toString();
-                                        const resultUrl = `/results/${quizProgress.id}${qs ? `?${qs}` : ''}`;
-                                        setLocation(resultUrl);
-                                      } else {
-                                        handleQuizAction(quiz.id);
-                                      }
-                                    }}
-                                  >
-                                    {isCompleted ? 'Ver Resultados' : (quizProgress?.completedQuestions || 0) > 0 ? 'Continuar' : 'Comenzar'}
-                                  </Button>
+
+                                  {isSpectatorMode ? (
+                                    <Button
+                                      size="sm"
+                                      disabled
+                                      className="h-7 px-2.5 sm:px-3 text-xs font-semibold bg-slate-800 text-slate-400 border border-white/5 opacity-80 cursor-not-allowed shrink-0"
+                                    >
+                                      {isCompleted ? 'Superado por tu amigo ✅' : 'Pendiente ⏳'}
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      className={`h-7 px-2.5 sm:px-3 text-xs font-medium shrink-0 ${isCompleted ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                                      onClick={() => {
+                                        if (isCompleted && quizProgress) {
+                                          const parentUserId = searchParams.get('user_id');
+                                          const resParams = new URLSearchParams();
+                                          if (parentUserId) resParams.set('user_id', parentUserId);
+                                          if (selectedGrade) resParams.set('grade', selectedGrade);
+                                          if (categoryId) resParams.set('origin_cat', categoryId);
+                                          const qs = resParams.toString();
+                                          const resultUrl = `/results/${quizProgress.id}${qs ? `?${qs}` : ''}`;
+                                          setLocation(resultUrl);
+                                        } else {
+                                          handleQuizAction(quiz.id);
+                                        }
+                                      }}
+                                    >
+                                      {isCompleted ? 'Ver Resultados' : (quizProgress?.completedQuestions || 0) > 0 ? 'Continuar' : 'Comenzar'}
+                                    </Button>
+                                  )}
                                 </div>
                                 {/* ── Botón Vista Previa (solo admin) ── */}
                                 {isAdmin && (

@@ -2316,6 +2316,9 @@ export class DatabaseStorage implements IStorage {
       name: users.name,
       role: users.role,
       avatar: users.avatar,
+      hintCredits: users.hintCredits,
+      duelWins: users.duelWins,
+      tourStatus: users.tourStatus,
       friendshipId: friendships.id,
       rowUserId: friendships.userId,
       rowFriendId: friendships.friendId,
@@ -2355,7 +2358,10 @@ export class DatabaseStorage implements IStorage {
             username: users.username,
             name: users.name,
             role: users.role,
-            avatar: users.avatar
+            avatar: users.avatar,
+            hintCredits: users.hintCredits,
+            duelWins: users.duelWins,
+            tourStatus: users.tourStatus
           })
           .from(users)
           .where(and(
@@ -2380,6 +2386,9 @@ export class DatabaseStorage implements IStorage {
             name: a.name,
             role: a.role,
             avatar: a.avatar,
+            hintCredits: a.hintCredits,
+            duelWins: a.duelWins,
+            tourStatus: a.tourStatus,
             type: 'admin',
             wins: 0,
             losses: 0
@@ -2390,6 +2399,9 @@ export class DatabaseStorage implements IStorage {
             name: p.name,
             role: p.role,
             avatar: p.avatar,
+            hintCredits: p.hintCredits,
+            duelWins: p.duelWins,
+            tourStatus: p.tourStatus,
             type: 'chat_partner',
             wins: 0,
             losses: 0
