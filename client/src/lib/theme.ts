@@ -8,6 +8,7 @@ export interface ThemeConfig {
   previewColors: string[]; // 3-4 hex colors for the swatch preview
   previewGradient: string; // Tailwind gradient class or CSS linear-gradient
   tag: string;
+  category: 'general' | 'girls';
 }
 
 export const APP_THEMES: ThemeConfig[] = [
@@ -18,7 +19,8 @@ export const APP_THEMES: ThemeConfig[] = [
     description: 'La apariencia exacta y sobria de AlanMath: fondo negro limpio, sin orbes externos y diseño clásico de producción.',
     previewColors: ['#020617', '#1e293b', '#3b82f6'],
     previewGradient: 'from-slate-900 via-slate-800 to-black',
-    tag: 'Original'
+    tag: 'Original',
+    category: 'general'
   },
   {
     id: 'cosmic-blue',
@@ -27,16 +29,8 @@ export const APP_THEMES: ThemeConfig[] = [
     description: 'Versión estelar iluminada con orbes celestiales azules/cian, bordes reactivos y atmósfera espacial profunda.',
     previewColors: ['#2563eb', '#06b6d4', '#60a5fa'],
     previewGradient: 'from-blue-600 via-cyan-500 to-indigo-500',
-    tag: 'Galáctico'
-  },
-  {
-    id: 'amethyst-rose',
-    name: 'Amatista & Rosa Neón',
-    subtitle: 'Fantasía, Glam & Cyberpunk',
-    description: 'Elegancia vibrante con violetas profundos, magenta radiante y acentos rosa pastel.',
-    previewColors: ['#d946ef', '#ec4899', '#8b5cf6'],
-    previewGradient: 'from-fuchsia-600 via-pink-500 to-purple-500',
-    tag: 'Vibrante'
+    tag: 'Galáctico',
+    category: 'general'
   },
   {
     id: 'emerald-mint',
@@ -45,7 +39,8 @@ export const APP_THEMES: ThemeConfig[] = [
     description: 'Tonos frescos de verde esmeralda, menta fluorescente y turquesa tecnológico.',
     previewColors: ['#10b981', '#14b8a6', '#06b6d4'],
     previewGradient: 'from-emerald-600 via-teal-500 to-cyan-500',
-    tag: 'Fresco'
+    tag: 'Fresco',
+    category: 'general'
   },
   {
     id: 'amber-sunset',
@@ -54,16 +49,28 @@ export const APP_THEMES: ThemeConfig[] = [
     description: 'Calidez radiante con oro brillante, naranja atardecer y destellos ámbar.',
     previewColors: ['#f59e0b', '#f97316', '#ef4444'],
     previewGradient: 'from-amber-500 via-orange-500 to-red-500',
-    tag: 'Cálido'
+    tag: 'Cálido',
+    category: 'general'
+  },
+  {
+    id: 'amethyst-rose',
+    name: 'Amatista & Rosa Neón',
+    subtitle: 'Especial Chicas • Fantasía Rosa & Glam',
+    description: 'Elegancia vibrante con violetas profundos, magenta radiante y mapas adaptados para exploradoras.',
+    previewColors: ['#d946ef', '#ec4899', '#8b5cf6'],
+    previewGradient: 'from-fuchsia-600 via-pink-500 to-purple-500',
+    tag: '🌸 Femenino',
+    category: 'girls'
   },
   {
     id: 'nebula-indigo',
     name: 'Nebulosa Índigo',
-    subtitle: 'Misterio & Noche Estrellada',
-    description: 'Acentos en azul índigo profundo, púrpura galáctico y toques cian.',
+    subtitle: 'Especial Chicas • Violeta Místico & Noche Estrellada',
+    description: 'Acentos en azul índigo profundo, púrpura galáctico y atmósfera mágica de constelaciones.',
     previewColors: ['#6366f1', '#8b5cf6', '#3b82f6'],
     previewGradient: 'from-indigo-600 via-purple-600 to-blue-500',
-    tag: 'Místico'
+    tag: '🔮 Místico',
+    category: 'girls'
   }
 ];
 

@@ -47,6 +47,8 @@ import { useSession } from "@/hooks/useSession";
 import { MapCompletionCelebration } from '@/components/dashboard/MapCompletionCelebration';
 import { getCreditConfig } from '@shared/credit-config';
 import { calculateMasteryStats, getGradeNodes } from '@/lib/mastery-utils';
+import { useTheme } from '@/lib/theme';
+import { getGradeThemeMeta } from '@/lib/gradeThemeContent';
 
 interface Category {
   id: number;
@@ -212,6 +214,7 @@ function PreviewToggleButton({ quiz }: { quiz: Quiz }) {
 
 function QuizList() {
   const queryClient = useQueryClient();
+  const { theme } = useTheme();
   const { categoryId } = useParams<{ categoryId: string }>();
   const [location, setLocation] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
@@ -560,35 +563,25 @@ function QuizList() {
   }, [currentMapNodes, nodeMappingsData, allQuizzesForAdmin, quizzes, progress]);
 
   const mapTitle = useMemo(() => {
-    if (selectedGrade === '1') return "Mundo de Exploradores • 1° de Primaria";
-    if (selectedGrade === '2') return "Misión Cósmica • 2° de Primaria";
-    if (selectedGrade === '3') return "Expedición Submarina • 3° de Primaria";
-    if (selectedGrade === '4') return "Templo de los Exploradores • 4° de Primaria";
-    if (selectedGrade === '5') return "Mapa Curricular: 5° de Primaria";
-    if (selectedGrade === '6') return "La Ciudadela Cuántica • 6° Grado";
-    if (selectedGrade === '7') return "La Forja de los Titanes • 7° Grado";
-    if (selectedGrade === '8') return "La Odisea del Álgebra • 8° Grado";
-    if (selectedGrade === '9') return "El Vórtice del Álgebra Superior • 9° Grado";
+    if (selectedGrade) {
+      const meta = getGradeThemeMeta(selectedGrade, theme);
+      if (meta) return meta.title;
+    }
     return `Mapa de Habilidades: ${category?.name}`;
-  }, [selectedGrade, category]);
+  }, [selectedGrade, category, theme]);
 
   const mapDescription = useMemo(() => {
-    if (selectedGrade === '1') return "Ruta de aprendizaje lúdica para 1° de Primaria: Conjuntos, Números hasta 999, Suma, Resta y Medidas.";
-    if (selectedGrade === '2') return "Misión cósmica de 2° de Primaria: Números hasta 99.999, Suma/Resta llevando, Tablas de Multiplicar y Medidas.";
-    if (selectedGrade === '3') return "Expedición submarina de 3° de Primaria: Conjuntos, Números Romanos, Multiplicación, División, Primos y Fracciones.";
-    if (selectedGrade === '4') return "¡Adéntrate en el templo ancestral de las matemáticas! Descubre misterios con conjuntos, números primos, MCM/MCD, fracciones y operaciones con decimales.";
-    if (selectedGrade === '5') return "Ruta de aprendizaje estructurada para 5° grado: Conjuntos, Números Naturales, Divisibilidad y Fracciones.";
-    if (selectedGrade === '6') return "¡Bienvenido a la secundaria cuántica! Domina proposiciones lógicas, polinomios, ecuaciones, divisibilidad, fracciones, decimales, enteros y educación financiera.";
-    if (selectedGrade === '7') return "¡Desafío titánico de 7° grado! Domina los números enteros (ℤ), racionales (ℚ), proporcionalidad, regla de tres, magnitudes y el despertar del álgebra.";
-    if (selectedGrade === '8') return "¡Aventura algebraica de 8° grado! Domina los números reales, notación científica, polinomios, productos notables, factorización avanzada, fracciones algebraicas y funciones.";
-    if (selectedGrade === '9') return "¡Ruta maestra de 9° grado! Domina números reales, valor absoluto, leyes de potencias, radicales y racionalización, sistemas 2x2, ecuaciones y funciones cuadráticas, exponenciales, logaritmos, progresiones y educación financiera.";
+    if (selectedGrade) {
+      const meta = getGradeThemeMeta(selectedGrade, theme);
+      if (meta) return meta.description;
+    }
     if (categoryId === '1') return "Un árbol de conocimiento diseñado para dominar la aritmética paso a paso.";
     if (categoryId === '2') return "Explora el álgebra desde sus fundamentos hasta el dominio de funciones.";
     if (categoryId === '4') return "Domina el cálculo diferencial: límites, derivadas y sus aplicaciones.";
     if (categoryId === '5') return "Explora la integración: desde el área bajo la curva hasta las integrales impropias.";
     if (categoryId === '19') return "Domina la estadística descriptiva, probabilidad y análisis de datos.";
     return "";
-  }, [selectedGrade, categoryId]);
+  }, [selectedGrade, categoryId, theme]);
 
   const totalCategoryProgress = useMemo(() => {
     if (!quizzes) return 0;
@@ -980,7 +973,7 @@ function QuizList() {
                       "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
                       selectedGrade === '1'
                         ? "bg-amber-600/30 text-amber-200 font-bold"
-                        : "hover:bg-amber-500/10 hover:text-amber-300"
+                        : "hover:bg-amber-500/20 hover:text-amber-200 focus:bg-amber-500/20 focus:text-amber-200 data-[highlighted]:bg-amber-500/20 data-[highlighted]:text-amber-200"
                     )}
                   >
                     <span className="flex items-center gap-1.5">
@@ -997,7 +990,7 @@ function QuizList() {
                       "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
                       selectedGrade === '2'
                         ? "bg-indigo-600/30 text-indigo-200 font-bold"
-                        : "hover:bg-indigo-500/10 hover:text-indigo-300"
+                        : "hover:bg-indigo-500/20 hover:text-indigo-200 focus:bg-indigo-500/20 focus:text-indigo-200 data-[highlighted]:bg-indigo-500/20 data-[highlighted]:text-indigo-200"
                     )}
                   >
                     <span className="flex items-center gap-1.5">
@@ -1014,7 +1007,7 @@ function QuizList() {
                       "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
                       selectedGrade === '3'
                         ? "bg-cyan-600/30 text-cyan-200 font-bold"
-                        : "hover:bg-cyan-500/10 hover:text-cyan-300"
+                        : "hover:bg-cyan-500/20 hover:text-cyan-200 focus:bg-cyan-500/20 focus:text-cyan-200 data-[highlighted]:bg-cyan-500/20 data-[highlighted]:text-cyan-200"
                     )}
                   >
                     <span className="flex items-center gap-1.5">
@@ -1031,7 +1024,7 @@ function QuizList() {
                       "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
                       selectedGrade === '4'
                         ? "bg-emerald-600/30 text-emerald-200 font-bold"
-                        : "hover:bg-emerald-500/10 hover:text-emerald-300"
+                        : "hover:bg-emerald-500/20 hover:text-emerald-200 focus:bg-emerald-500/20 focus:text-emerald-200 data-[highlighted]:bg-emerald-500/20 data-[highlighted]:text-emerald-200"
                     )}
                   >
                     <span className="flex items-center gap-1.5">
@@ -1049,7 +1042,7 @@ function QuizList() {
                       "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
                       selectedGrade === '5'
                         ? "bg-blue-600/30 text-blue-200 font-bold"
-                        : "hover:bg-blue-500/10 hover:text-blue-300"
+                        : "hover:bg-blue-500/20 hover:text-blue-200 focus:bg-blue-500/20 focus:text-blue-200 data-[highlighted]:bg-blue-500/20 data-[highlighted]:text-blue-200"
                     )}
                   >
                     <span className="flex items-center gap-1.5">
@@ -1099,7 +1092,7 @@ function QuizList() {
                       "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
                       selectedGrade === '6'
                         ? "bg-violet-600/30 text-violet-200 font-bold"
-                        : "hover:bg-violet-500/10 hover:text-violet-300"
+                        : "hover:bg-violet-500/20 hover:text-violet-200 focus:bg-violet-500/20 focus:text-violet-200 data-[highlighted]:bg-violet-500/20 data-[highlighted]:text-violet-200"
                     )}
                   >
                     <span className="flex items-center gap-1.5">
@@ -1116,7 +1109,7 @@ function QuizList() {
                       "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
                       selectedGrade === '7'
                         ? "bg-amber-600/30 text-amber-200 font-bold"
-                        : "hover:bg-amber-500/10 hover:text-amber-300"
+                        : "hover:bg-amber-500/20 hover:text-amber-200 focus:bg-amber-500/20 focus:text-amber-200 data-[highlighted]:bg-amber-500/20 data-[highlighted]:text-amber-200"
                     )}
                   >
                     <span className="flex items-center gap-1.5">

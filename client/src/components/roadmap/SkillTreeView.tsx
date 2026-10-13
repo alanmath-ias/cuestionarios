@@ -26,6 +26,8 @@ import { Switch } from "@/components/ui/switch";
 import { useSession } from "@/hooks/useSession";
 import { getCreditConfig } from '@shared/credit-config';
 import { getArithmeticQuizIds, getAlgebraQuizIds, getQuizzesForNode } from '@/lib/mastery-utils';
+import { useTheme } from '@/lib/theme';
+import { getGradeThemeMeta } from '@/lib/gradeThemeContent';
 
 interface SkillTreeViewProps {
     nodes: ArithmeticNode[];
@@ -89,6 +91,10 @@ export const SkillTreeView = React.memo(function SkillTreeView({
     }, [gradeLevel, nodes, title]);
 
     const isKidsGrade = isGrade1 || isGrade2 || isGrade3 || isGrade4 || isGrade5 || isGrade6 || isGrade7 || isGrade8 || isGrade9;
+    
+    const { theme } = useTheme();
+    const currentGradeKey = isGrade1 ? '1' : isGrade2 ? '2' : isGrade3 ? '3' : isGrade4 ? '4' : isGrade5 ? '5' : isGrade6 ? '6' : isGrade7 ? '7' : isGrade8 ? '8' : isGrade9 ? '9' : null;
+    const gradeThemeMeta = currentGradeKey ? getGradeThemeMeta(currentGradeKey, theme) : null;
     
     // Node configuration state
     const [configNode, setConfigNode] = useState<ArithmeticNode | null>(null);
@@ -948,12 +954,12 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                             : "bg-gradient-to-r from-amber-500/20 via-pink-500/20 to-cyan-500/20 border-amber-400/40 text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.35)]"
                     )}>
                         <Sparkles className={cn("w-3.5 h-3.5", isGrade9 ? "text-violet-300" : isGrade8 ? "text-cyan-300" : isGrade7 ? "text-amber-300" : isGrade6 ? "text-violet-300" : isGrade4 ? "text-emerald-300" : isGrade3 ? "text-cyan-300" : isGrade2 ? "text-indigo-400" : "text-yellow-300")} />
-                        <span>{isGrade1 ? "Mundo de Exploradores • 1° de Primaria" : isGrade2 ? "Misión Cósmica • 2° de Primaria" : isGrade3 ? "Expedición Submarina • 3° de Primaria" : isGrade4 ? "Templo de Exploradores • 4° de Primaria" : isGrade6 ? "Ciber-Nexo Matemático • 6° Grado" : isGrade7 ? "La Forja Titánica • 7° Grado" : isGrade8 ? "La Odisea del Álgebra • 8° Grado" : isGrade9 ? "El Vórtice del Álgebra Superior • 9° Grado" : "Mundo de Aventuras • 5° de Primaria"}</span>
+                        <span>{gradeThemeMeta ? gradeThemeMeta.badge : (isGrade1 ? "Mundo de Exploradores • 1° de Primaria" : isGrade2 ? "Misión Cósmica • 2° de Primaria" : isGrade3 ? "Expedición Submarina • 3° de Primaria" : isGrade4 ? "Templo de Exploradores • 4° de Primaria" : isGrade6 ? "Ciber-Nexo Matemático • 6° Grado" : isGrade7 ? "La Forja Titánica • 7° Grado" : isGrade8 ? "La Odisea del Álgebra • 8° Grado" : isGrade9 ? "El Vórtice del Álgebra Superior • 9° Grado" : "Mundo de Aventuras • 5° de Primaria")}</span>
                         <Sparkles className={cn("w-3.5 h-3.5", isGrade9 ? "text-violet-300" : isGrade8 ? "text-cyan-300" : isGrade7 ? "text-amber-300" : isGrade6 ? "text-violet-300" : isGrade4 ? "text-emerald-300" : "text-cyan-300")} />
                     </div>
                     <h2 className="text-3xl md:text-5xl font-black pb-2 mb-3 md:mb-4 flex items-center justify-center gap-2.5 flex-wrap">
                         <span className="text-2xl md:text-4xl filter drop-shadow-[0_0_12px_rgba(255,255,255,0.4)] select-none">
-                            {isGrade9 ? "✨" : isGrade8 ? "🌀" : isGrade7 ? "🛡️" : isGrade6 ? "⚡" : isGrade4 ? "🏛️" : isGrade3 ? "🌊" : isGrade2 ? "🚀" : "🗺️"}
+                            {gradeThemeMeta ? gradeThemeMeta.emoji : (isGrade9 ? "✨" : isGrade8 ? "🌀" : isGrade7 ? "🛡️" : isGrade6 ? "⚡" : isGrade4 ? "🏛️" : isGrade3 ? "🌊" : isGrade2 ? "🚀" : "🗺️")}
                         </span>
                         <span className={cn(
                             "text-transparent bg-clip-text pb-2 inline-block",
@@ -973,11 +979,11 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                 ? "bg-gradient-to-r from-indigo-300 via-purple-300 to-cyan-300 filter drop-shadow-[0_0_16px_rgba(99,102,241,0.5)]"
                                 : "bg-gradient-to-r from-yellow-300 via-pink-400 to-cyan-300 filter drop-shadow-[0_0_16px_rgba(234,179,8,0.5)]"
                         )}>
-                            {title || (isGrade1 ? "Aventura de 1° de Primaria" : isGrade2 ? "Odisea Espacial de 2° de Primaria" : isGrade3 ? "Reino Submarino de 3° de Primaria" : isGrade4 ? "Templo de los Exploradores de 4° de Primaria" : isGrade6 ? "La Ciudadela Cuántica • 6° Grado" : isGrade7 ? "La Forja de los Titanes • 7° Grado" : isGrade8 ? "La Odisea del Álgebra • 8° Grado" : isGrade9 ? "El Vórtice del Álgebra Superior • 9° Grado" : "Mapa de 5° de Primaria")}
+                            {(gradeThemeMeta ? gradeThemeMeta.title : null) || title || (isGrade1 ? "Aventura de 1° de Primaria" : isGrade2 ? "Odisea Espacial de 2° de Primaria" : isGrade3 ? "Reino Submarino de 3° de Primaria" : isGrade4 ? "Templo de los Exploradores de 4° de Primaria" : isGrade6 ? "La Ciudadela Cuántica • 6° Grado" : isGrade7 ? "La Forja de los Titanes • 7° Grado" : isGrade8 ? "La Odisea del Álgebra • 8° Grado" : isGrade9 ? "El Vórtice del Álgebra Superior • 9° Grado" : "Mapa de 5° de Primaria")}
                         </span>
                     </h2>
                     <p className="text-cyan-100/90 max-w-2xl mx-auto text-sm md:text-base font-semibold leading-relaxed drop-shadow-sm">
-                        {description || (isGrade1 ? "¡Aprende jugando con conjuntos, números del 0 al 999, sumas, restas y el mundo de las medidas!" : isGrade2 ? "¡Viaja por la galaxia matemática, domina las tablas del 1 al 10, números hasta 99.999 y conquista las estrellas!" : isGrade3 ? "¡Sumérgete en los misterios del océano matemático, domina la división, números romanos, fracciones y tesoros numéricos!" : isGrade4 ? "¡Descubre los misterios de los templos antiguos, domina la división formal, MCM/MCD, fracciones, decimales y conquista el Gran Cetro!" : isGrade6 ? "¡Bienvenido a la secundaria cuántica! Domina proposiciones lógicas, polinomios, ecuaciones, divisibilidad, fracciones, decimales, enteros y educación financiera." : isGrade7 ? "¡Desafío titánico de 7° grado! Domina los números enteros (ℤ), racionales (ℚ), proporcionalidad, regla de tres, magnitudes y el despertar del álgebra." : isGrade8 ? "¡Inmersión en el álgebra formal! Domina números reales (ℝ), notación científica, operaciones de polinomios, productos notables, factorización sistemática, fracciones algebraicas y funciones." : isGrade9 ? "¡Desafío culminante de secundaria! Domina radicales, sistemas 2x2, la recta analítica, ecuaciones cuadráticas, exponenciales, logaritmos, sucesiones y finanzas." : "¡Explora los temas, supera cada misión matemática y conquista la Gran Corona de Maestría!")}
+                        {(gradeThemeMeta ? gradeThemeMeta.description : null) || description || (isGrade1 ? "¡Aprende jugando con conjuntos, números del 0 al 999, sumas, restas y el mundo de las medidas!" : isGrade2 ? "¡Viaja por la galaxia matemática, domina las tablas del 1 al 10, números hasta 99.999 y conquista las estrellas!" : isGrade3 ? "¡Sumérgete en los misterios del océano matemático, domina la división, números romanos, fracciones y tesoros numéricos!" : isGrade4 ? "¡Descubre los misterios de los templos antiguos, domina la división formal, MCM/MCD, fracciones, decimales y conquista el Gran Cetro!" : isGrade6 ? "¡Bienvenido a la secundaria cuántica! Domina proposiciones lógicas, polinomios, ecuaciones, divisibilidad, fracciones, decimales, enteros y educación financiera." : isGrade7 ? "¡Desafío titánico de 7° grado! Domina los números enteros (ℤ), racionales (ℚ), proporcionalidad, regla de tres, magnitudes y el despertar del álgebra." : isGrade8 ? "¡Inmersión en el álgebra formal! Domina números reales (ℝ), notación científica, operaciones de polinomios, productos notables, factorización sistemática, fracciones algebraicas y funciones." : isGrade9 ? "¡Desafío culminante de secundaria! Domina radicales, sistemas 2x2, la recta analítica, ecuaciones cuadráticas, exponenciales, logaritmos, sucesiones y finanzas." : "¡Explora los temas, supera cada misión matemática y conquista la Gran Corona de Maestría!")}
                     </p>
                 </div>
             ) : (
@@ -1260,7 +1266,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                         )}>
                             <div className="flex items-center gap-2 text-yellow-400 font-black mb-3 text-xs uppercase tracking-wider border-b border-white/10 pb-2">
                                 <Sparkles className="w-3.5 h-3.5" />
-                                <span>{isGrade9 ? "🗺️ Códice del Álgebra Superior" : isGrade8 ? "🗺️ Códice del Álgebra" : isGrade7 ? "🗺️ Códice de los Titanes" : isGrade6 ? "🗺️ Terminal Cuántica" : isGrade4 ? "🗺️ Mapa del Explorador" : isGrade3 ? "🧭 Brújula Marina" : isGrade2 ? "🛰️ Radar Cósmico" : "Guía del Explorador"}</span>
+                                <span>{gradeThemeMeta ? gradeThemeMeta.legend.title : (isGrade9 ? "🗺️ Códice del Álgebra Superior" : isGrade8 ? "🗺️ Códice del Álgebra" : isGrade7 ? "🗺️ Códice de los Titanes" : isGrade6 ? "🗺️ Terminal Cuántica" : isGrade4 ? "🗺️ Mapa del Explorador" : isGrade3 ? "🧭 Brújula Marina" : isGrade2 ? "🛰️ Radar Cósmico" : "Guía del Explorador")}</span>
                             </div>
                             <div className="flex flex-col gap-3 text-[11px] text-slate-300 font-semibold">
                                 {/* Castle / Unit / Space Base / Marine Base / Temple / Quantum Core / Bastion / Dominio */}
@@ -1286,7 +1292,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                         {isGrade9 ? <Sparkles className="w-3.5 h-3.5 text-white" /> : isGrade8 ? <Layers className="w-3.5 h-3.5 text-white" /> : isGrade7 ? <Shield className="w-3.5 h-3.5 text-white" /> : isGrade6 ? <Zap className="w-3.5 h-3.5 text-white" /> : isGrade4 ? <Landmark className="w-3.5 h-3.5 text-white" /> : isGrade3 || isGrade2 ? <Compass className="w-3.5 h-3.5 text-white" /> : <BookOpen className="w-3.5 h-3.5 text-white" />}
                                     </div>
                                     <span className={isGrade9 ? "text-indigo-300 font-extrabold" : isGrade8 ? "text-cyan-300 font-extrabold" : isGrade7 ? "text-amber-300 font-extrabold" : isGrade6 ? "text-violet-300 font-extrabold" : isGrade4 ? "text-emerald-300 font-extrabold" : isGrade3 ? "text-cyan-300 font-extrabold" : isGrade2 ? "text-indigo-300 font-extrabold" : "text-amber-300 font-extrabold"}>
-                                        {isGrade9 || isGrade8 ? "🌀 Dominio / Bloque Algebraico" : isGrade7 ? "🛡️ Bastión / Fortaleza Titánica" : isGrade6 ? "⚡ Núcleo / Bastión Cuántico" : isGrade4 ? "🏛️ Templo / Santuario" : isGrade3 ? "🫧 Arrecife / Base Marina" : isGrade2 ? "🪐 Base Espacial / Sector" : "🏰 Unidad Temática"}
+                                        {gradeThemeMeta ? gradeThemeMeta.legend.unit : (isGrade9 || isGrade8 ? "🌀 Dominio / Bloque Algebraico" : isGrade7 ? "🛡️ Bastión / Fortaleza Titánica" : isGrade6 ? "⚡ Núcleo / Bastión Cuántico" : isGrade4 ? "🏛️ Templo / Santuario" : isGrade3 ? "🫧 Arrecife / Base Marina" : isGrade2 ? "🪐 Base Espacial / Sector" : "🏰 Unidad Temática")}
                                     </span>
                                 </div>
 
@@ -1310,7 +1316,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                     )}>
                                         {isGrade9 ? <Sparkles className="w-3.5 h-3.5 text-white" /> : isGrade8 ? <Sparkles className="w-3.5 h-3.5 text-white" /> : isGrade7 ? <Flame className="w-3.5 h-3.5 text-white" /> : isGrade6 ? <Terminal className="w-3.5 h-3.5 text-white" /> : isGrade4 ? <Compass className="w-3.5 h-3.5 text-white" /> : <Rocket className="w-3.5 h-3.5 text-white" />}
                                     </div>
-                                    <span className={isGrade9 ? "text-indigo-300 font-bold" : isGrade8 ? "text-cyan-300 font-bold" : isGrade7 ? "text-amber-300 font-bold" : isGrade6 ? "text-violet-300 font-bold" : isGrade4 ? "text-emerald-300 font-bold" : "text-sky-300 font-bold"}>{isGrade9 ? "⚔️ Misión de Álgebra Superior" : isGrade8 ? "⚔️ Misión Algebraica" : isGrade7 ? "⚔️ Misión Forjada" : isGrade6 ? "🔋 Misión en Línea" : isGrade4 ? "🧭 Misión Lista" : isGrade3 ? "🐬 Explorador en Marcha" : isGrade2 ? "🚀 Nave Lista" : "🚀 Listo para Jugar"}</span>
+                                    <span className={isGrade9 ? "text-indigo-300 font-bold" : isGrade8 ? "text-cyan-300 font-bold" : isGrade7 ? "text-amber-300 font-bold" : isGrade6 ? "text-violet-300 font-bold" : isGrade4 ? "text-emerald-300 font-bold" : "text-sky-300 font-bold"}>{gradeThemeMeta ? gradeThemeMeta.legend.ready : (isGrade9 ? "⚔️ Misión de Álgebra Superior" : isGrade8 ? "⚔️ Misión Algebraica" : isGrade7 ? "⚔️ Misión Forjada" : isGrade6 ? "🔋 Misión en Línea" : isGrade4 ? "🧭 Misión Lista" : isGrade3 ? "🐬 Explorador en Marcha" : isGrade2 ? "🚀 Nave Lista" : "🚀 Listo para Jugar")}</span>
                                 </div>
 
                                 {/* Target - In progress */}
@@ -1318,7 +1324,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                     <div className="w-7 h-7 rounded-xl border-2 border-teal-200 bg-gradient-to-b from-teal-300 to-emerald-600 flex items-center justify-center shadow-[0_3px_0_#064e3b]">
                                         <Target className="w-3.5 h-3.5 text-white" />
                                     </div>
-                                    <span className="text-teal-300 font-bold">{isGrade9 || isGrade8 ? "🔮 En Resolución" : isGrade7 ? "🌋 En Fundición" : isGrade6 ? "⚙️ En Decodificación" : isGrade4 ? "🏺 En Exploración" : isGrade3 ? "🌊 En Inmersión" : isGrade2 ? "🛸 En Órbita" : "🎯 En Progreso"}</span>
+                                    <span className="text-teal-300 font-bold">{gradeThemeMeta ? gradeThemeMeta.legend.inProgress : (isGrade9 || isGrade8 ? "🔮 En Resolución" : isGrade7 ? "🌋 En Fundición" : isGrade6 ? "⚙️ En Decodificación" : isGrade4 ? "🏺 En Exploración" : isGrade3 ? "🌊 En Inmersión" : isGrade2 ? "🛸 En Órbita" : "🎯 En Progreso")}</span>
                                 </div>
 
                                 {/* Star - Completed */}
@@ -1326,7 +1332,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                     <div className="w-7 h-7 rounded-xl border-2 border-emerald-200 bg-gradient-to-b from-emerald-400 to-green-600 flex items-center justify-center shadow-[0_3px_0_#14532d]">
                                         <Star className="w-4 h-4 text-yellow-300 fill-yellow-400" />
                                     </div>
-                                    <span className="text-emerald-300 font-bold">{isGrade9 || isGrade8 ? "🏆 Desafío Conquistado" : isGrade7 ? "🏆 Reliquia Conquistada" : isGrade6 ? "💎 Algoritmo Conquistado" : isGrade4 ? "🏆 Reliquia Conquistada" : isGrade3 ? "💎 Perla Conquistada" : isGrade2 ? "🌟 Estrella Conquistada" : "⭐ ¡Misión Cumplida!"}</span>
+                                    <span className="text-emerald-300 font-bold">{gradeThemeMeta ? gradeThemeMeta.legend.completed : (isGrade9 || isGrade8 ? "🏆 Desafío Conquistado" : isGrade7 ? "🏆 Reliquia Conquistada" : isGrade6 ? "💎 Algoritmo Conquistado" : isGrade4 ? "🏆 Reliquia Conquistada" : isGrade3 ? "💎 Perla Conquistada" : isGrade2 ? "🌟 Estrella Conquistada" : "⭐ ¡Misión Cumplida!")}</span>
                                 </div>
 
                                 {/* Lock - Locked */}
@@ -1334,7 +1340,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                     <div className="w-7 h-7 rounded-xl border-2 border-slate-600 bg-gradient-to-b from-slate-700 to-slate-800 flex items-center justify-center shadow-[0_3px_0_#0f172a]">
                                         <Lock className="w-3.5 h-3.5 text-amber-400" />
                                     </div>
-                                    <span className="text-slate-400">{isGrade9 || isGrade8 ? "🔒 Dominio Bloqueado" : isGrade7 ? "🔒 Sello Rúnico Bloqueado" : isGrade6 ? "🔒 Cortafuegos Bloqueado" : isGrade4 ? "🔒 Cámara Bloqueada" : isGrade3 ? "🔒 Gruta Cerrada" : isGrade2 ? "🔒 Sector Bloqueado" : "🔒 Nivel Bloqueado"}</span>
+                                    <span className="text-slate-400">{gradeThemeMeta ? gradeThemeMeta.legend.locked : (isGrade9 || isGrade8 ? "🔒 Dominio Bloqueado" : isGrade7 ? "🔒 Sello Rúnico Bloqueado" : isGrade6 ? "🔒 Cortafuegos Bloqueado" : isGrade4 ? "🔒 Cámara Bloqueada" : isGrade3 ? "🔒 Gruta Cerrada" : isGrade2 ? "🔒 Sector Bloqueado" : "🔒 Nivel Bloqueado")}</span>
                                 </div>
 
                                 {/* Crown - Mastery */}
@@ -1342,7 +1348,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                     <div className="w-7 h-7 rounded-xl border-2 border-yellow-300 bg-gradient-to-b from-yellow-400 to-purple-600 flex items-center justify-center shadow-[0_3px_0_#581c87]">
                                         <Crown className="w-4 h-4 text-yellow-200 fill-yellow-300" />
                                     </div>
-                                    <span className="text-yellow-300 font-extrabold">{isGrade9 ? "👑 Gran Vórtice del Álgebra Superior de 9°" : isGrade8 ? "👑 Gran Vórtice de Maestría de 8°" : isGrade7 ? "👑 Gran Emblema Titánico de 7°" : isGrade6 ? "👑 Gran Orbe Cuántico de 6°" : isGrade1 ? "👑 Maestría de 1°" : isGrade2 ? "👑 Gran Trofeo Cósmico de 2°" : isGrade3 ? "🔱 Gran Tridente de 3°" : isGrade4 ? "👑 Gran Cetro de Maestría de 4°" : "👑 Maestría de 5°"}</span>
+                                    <span className="text-yellow-300 font-extrabold">{gradeThemeMeta ? gradeThemeMeta.legend.mastery : (isGrade9 ? "👑 Gran Vórtice del Álgebra Superior de 9°" : isGrade8 ? "👑 Gran Vórtice de Maestría de 8°" : isGrade7 ? "👑 Gran Emblema Titánico de 7°" : isGrade6 ? "👑 Gran Orbe Cuántico de 6°" : isGrade1 ? "👑 Maestría de 1°" : isGrade2 ? "👑 Gran Trofeo Cósmico de 2°" : isGrade3 ? "🔱 Gran Tridente de 3°" : isGrade4 ? "👑 Gran Cetro de Maestría de 4°" : "👑 Maestría de 5°")}</span>
                                 </div>
                             </div>
 
