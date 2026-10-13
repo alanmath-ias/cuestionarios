@@ -475,7 +475,17 @@ export default function QuestionsAdmin() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => window.location.href = "/admin/quizzes"} className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  window.location.href = "/admin/quizzes";
+                }
+              }}
+              className="bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white"
+            >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Volver a cuestionarios
             </Button>

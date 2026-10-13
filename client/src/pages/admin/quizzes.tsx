@@ -402,7 +402,16 @@ const DraggableDialogQuizItem = ({
               size="sm"
               variant="ghost"
               className="h-8 px-2 sm:px-2.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 flex items-center gap-1.5"
-              onClick={() => setLocation(`/quiz/${quiz.id}`)}
+              onClick={() => {
+                const p = new URLSearchParams();
+                const urlParams = new URLSearchParams(window.location.search);
+                const grade = urlParams.get("grade");
+                const mapCat = urlParams.get("mapCat");
+                if (grade) p.set("grade", grade);
+                if (mapCat) p.set("origin_cat", mapCat);
+                const qs = p.toString();
+                setLocation(`/quiz/${quiz.id}${qs ? `?${qs}` : ''}`);
+              }}
               title="Ver cuestionario"
             >
               <Eye className="h-3.5 w-3.5" />
@@ -618,11 +627,23 @@ export default function QuizzesAdmin() {
 
   // Effect to restore selectedNode once categories/mapData are available
   useEffect(() => {
-    if (!hasRestoredFromUrl && activeMapCategory && !selectedNode && categories && categories.length > 0) {
+    if (!hasRestoredFromUrl && categories && categories.length > 0) {
       const params = new URLSearchParams(window.location.search);
       const nodeId = params.get("nodeId");
+      const grade = params.get("grade") || adminSelectedGrade;
+      const mapCat = params.get("mapCat") ? Number(params.get("mapCat")) : activeMapCategory;
+
+      if (mapCat && mapCat !== activeMapCategory) {
+        setActiveMapCategory(mapCat);
+      }
+      if (grade && grade !== adminSelectedGrade) {
+        setAdminSelectedGrade(grade);
+      }
+
       if (nodeId) {
-        const mapData = getMapData(activeMapCategory, categories.find(c => c.id === activeMapCategory)?.name);
+        const effectiveCat = mapCat || (['8', '9'].includes(grade || '') ? 2 : 1);
+        if (!activeMapCategory) setActiveMapCategory(effectiveCat);
+        const mapData = getMapData(effectiveCat, categories.find(c => c.id === effectiveCat)?.name, grade);
         if (mapData) {
           const node = mapData.nodes.find((n: any) => n.id === nodeId);
           if (node) {
@@ -632,7 +653,15 @@ export default function QuizzesAdmin() {
       }
       setHasRestoredFromUrl(true);
     }
-  }, [categories, activeMapCategory, selectedNode, hasRestoredFromUrl]);
+  }, [categories, activeMapCategory, selectedNode, hasRestoredFromUrl, adminSelectedGrade]);
+
+  // Reset restored flag when navigating back to this page with a nodeId
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("nodeId") && !selectedNode) {
+      setHasRestoredFromUrl(false);
+    }
+  }, [location, selectedNode]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -780,7 +809,7 @@ export default function QuizzesAdmin() {
         params.set("nodeId", selectedNode.id);
         changed = true;
       }
-    } else if (params.has("nodeId")) {
+    } else if (hasRestoredFromUrl && params.has("nodeId")) {
       params.delete("nodeId");
       changed = true;
     }

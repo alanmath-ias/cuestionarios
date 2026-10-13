@@ -46,7 +46,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@/hooks/useSession";
 import { MapCompletionCelebration } from '@/components/dashboard/MapCompletionCelebration';
 import { getCreditConfig } from '@shared/credit-config';
-import { calculateMasteryStats } from '@/lib/mastery-utils';
+import { calculateMasteryStats, getGradeNodes } from '@/lib/mastery-utils';
 
 interface Category {
   id: number;
@@ -215,6 +215,14 @@ function QuizList() {
   const [location, setLocation] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
   const [selectedGrade, setSelectedGrade] = useState<string | null>(searchParams.get('grade'));
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const gradeFromUrl = params.get('grade');
+    if (gradeFromUrl !== selectedGrade) {
+      setSelectedGrade(gradeFromUrl);
+    }
+  }, [location, selectedGrade]);
 
   const handleSelectGrade = (grade: string | null) => {
     setSelectedGrade(grade);
@@ -737,26 +745,67 @@ function QuizList() {
     const params = new URLSearchParams(window.location.search);
     const subId = params.get('subId');
     const nodeId = params.get('nodeId');
-    
-    console.log(`[QuizList] Syncing Dialog: subId=${subId}, hasSubcategories=${!!subcategories}`);
+    const gradeParam = params.get('grade') || selectedGrade;
 
-    if (subId && subcategories) {
+    if (nodeId) {
+      // 1. Determine nodes pool: check grade nodes if grade is present, or currentMapNodes
+      let targetNode: ArithmeticNode | undefined = undefined;
+      if (gradeParam) {
+        const gradeNodes = getGradeNodes(gradeParam);
+        targetNode = gradeNodes?.find((n: any) => n.id === nodeId);
+      }
+      if (!targetNode && currentMapNodes) {
+        targetNode = currentMapNodes.find(n => n.id === nodeId);
+      }
+      // If still not found, check across all grade maps if nodeId starts with g1- ... g9-
+      if (!targetNode) {
+        const gradeMatch = nodeId.match(/^g([1-9])-/i);
+        if (gradeMatch) {
+          const gNodes = getGradeNodes(gradeMatch[1]);
+          targetNode = gNodes?.find((n: any) => n.id === nodeId);
+          if (targetNode && selectedGrade !== gradeMatch[1]) {
+            setSelectedGrade(gradeMatch[1]);
+          }
+        }
+      }
+
+      if (targetNode) {
+        setSelectedNode(targetNode);
+
+        // Find or synthesize subcategory
+        const mapping = nodeMappingsData?.find(m => m.nodeId === targetNode!.id);
+        const targetSubId = mapping?.subcategoryId || targetNode.subcategoryId;
+        let sub = (quizzesBySubcategory || []).find(s => s.id === targetSubId) ||
+                  (subcategories || []).find(s => s.id === targetSubId);
+
+        if (!sub) {
+          sub = {
+            id: Number(targetSubId) || (subId ? Number(subId) : 0),
+            name: mapping?.overrideLabel || targetNode.label,
+            description: targetNode.description || "Contenido personalizado",
+            categoryId: parseInt(categoryId || "0"),
+            quizzes: []
+          };
+        }
+        setSelectedSubcategory(sub);
+      }
+    } else if (subId && subcategories) {
       const sub = subcategories.find(s => s.id === parseInt(subId));
       if (sub) {
         setSelectedSubcategory(sub);
-        if (nodeId) {
-          const node = currentMapNodes.find(n => n.id === nodeId);
-          if (node) setSelectedNode(node);
-        }
+        setSelectedNode(null);
       }
-    } else if (!subId) {
+    } else if (!subId && !nodeId) {
       setSelectedSubcategory(null);
       setSelectedNode(null);
     }
-  }, [location, subcategories, currentMapNodes]);
+  }, [location, subcategories, currentMapNodes, selectedGrade, nodeMappingsData, quizzesBySubcategory, categoryId]);
 
   const updateUrlState = (sub: any | null, node: any | null) => {
     const params = new URLSearchParams(window.location.search);
+    if (selectedGrade) {
+      params.set('grade', selectedGrade);
+    }
     if (sub) {
       params.set('subId', sub.id.toString());
       if (node) params.set('nodeId', node.id);
@@ -1538,9 +1587,14 @@ function QuizList() {
                                     className={`h-7 px-2.5 sm:px-3 text-xs font-medium shrink-0 ${isCompleted ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
                                     onClick={() => {
                                       if (isCompleted && quizProgress) {
-                                        // Ensure user_id is passed if present
+                                        // Ensure user_id, grade and origin_cat are passed if present
                                         const parentUserId = searchParams.get('user_id');
-                                        const resultUrl = `/results/${quizProgress.id}${parentUserId ? `?user_id=${parentUserId}` : ''}`;
+                                        const resParams = new URLSearchParams();
+                                        if (parentUserId) resParams.set('user_id', parentUserId);
+                                        if (selectedGrade) resParams.set('grade', selectedGrade);
+                                        if (categoryId) resParams.set('origin_cat', categoryId);
+                                        const qs = resParams.toString();
+                                        const resultUrl = `/results/${quizProgress.id}${qs ? `?${qs}` : ''}`;
                                         setLocation(resultUrl);
                                       } else {
                                         handleQuizAction(quiz.id);

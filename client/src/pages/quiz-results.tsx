@@ -474,13 +474,12 @@ function QuizResults() {
         // Redirigir al dashboard con parámetro para reabrir el diálogo de entrenamiento
         setLocation(`/dashboard?reopenTraining=${results.quiz.categoryId}`);
       } else {
-        // Si no venimos de un quiz recién terminado, volver limpiamente a la vista de mapa o dashboard
         const categoryId = returnCategoryId;
         const gradeParamStr = returnGrade ? `&grade=${returnGrade}` : '';
-        if (categoryId) {
-          setLocation(`/category/${categoryId}?view=roadmap${gradeParamStr}`);
-        } else if (window.history.length > 1) {
+        if (window.history.length > 1) {
           window.history.back();
+        } else if (categoryId) {
+          setLocation(`/category/${categoryId}?view=roadmap${gradeParamStr}`);
         } else {
           // Fallback si no hay historial previo
           setLocation('/dashboard');
