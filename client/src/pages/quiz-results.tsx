@@ -680,8 +680,8 @@ function QuizResults() {
     <div className="min-h-screen bg-slate-950 relative overflow-hidden">
       {/* Ambient Background */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px]" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[100px]" />
+        <div className="theme-results-orb-1 absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px]" />
+        <div className="theme-results-orb-2 absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[100px]" />
       </div>
 
       <div id="quizResults" className="container mx-auto px-4 py-8 max-w-4xl relative z-10">
@@ -695,7 +695,7 @@ function QuizResults() {
             >
               <ArrowLeft className="h-6 w-6" />
             </Button>
-            <h2 className="text-3xl font-bold text-white">Resultados</h2>
+            <h2 className="theme-results-title text-3xl font-bold text-white">Resultados</h2>
           </div>
 
           <div className="flex items-center gap-3">
@@ -796,26 +796,34 @@ function QuizResults() {
             )}
 
             {/* Header Card */}
-            <Card className={`bg-slate-900/50 border-white/10 backdrop-blur-xl shadow-2xl transition-opacity duration-500 ${hasPendingAI ? 'opacity-50' : 'opacity-100'}`}>
+            <Card className={`theme-results-card bg-slate-900/50 border-white/10 backdrop-blur-xl shadow-2xl transition-opacity duration-500 ${hasPendingAI ? 'opacity-50' : 'opacity-100'}`}>
               <CardContent className="p-8">
                 <div className="text-center mb-8">
                   <h3 className="text-2xl font-bold mb-3 text-white">{results.quiz.title}</h3>
-                  <div className="inline-flex items-center bg-blue-500/10 text-blue-300 px-4 py-1.5 rounded-full text-sm border border-blue-500/20">
-                    <Clock className="mr-2 h-4 w-4" />
-                    Completado en {results.progress ? formatTimeSpent(results.progress.timeSpent) : '--'}
+                  {Number(preciseScore) >= 8.0 && (
+                    <div className="theme-activequiz-adornment inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold border border-current/30 bg-current/10 [color:var(--color-primary)] mb-3 shadow-lg">
+                      <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                      <span>¡Excelente Rendimiento!</span>
+                    </div>
+                  )}
+                  <div>
+                    <div className="inline-flex items-center bg-blue-500/10 text-blue-300 px-4 py-1.5 rounded-full text-sm border border-blue-500/20">
+                      <Clock className="mr-2 h-4 w-4" />
+                      Completado en {results.progress ? formatTimeSpent(results.progress.timeSpent) : '--'}
+                    </div>
                   </div>
                 </div>
 
                 <div id="tour-score-summary" className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-slate-800/50 rounded-2xl p-6 text-center border border-white/5 hover:border-blue-500/30 transition-colors group">
+                  <div className="theme-score-card bg-slate-800/50 rounded-2xl p-6 text-center border border-white/5 hover:border-blue-500/30 transition-colors group">
                     <div className="flex justify-center mb-3">
-                      <div className="p-3 bg-blue-500/10 rounded-full group-hover:bg-blue-500/20 transition-colors">
+                      <div className="theme-trophy-badge p-3 bg-blue-500/10 rounded-full group-hover:bg-blue-500/20 transition-colors">
                         <Trophy className="h-6 w-6 text-blue-400" />
                       </div>
                     </div>
                     <div className="text-sm font-medium text-slate-400 mb-1">Puntuación</div>
                     <div className="text-4xl font-bold text-white">
-                      {preciseScore}<span className="text-xl text-slate-500">/10</span>
+                      <span className="theme-score-value">{preciseScore}</span><span className="text-xl text-slate-500">/10</span>
                     </div>
                   </div>
 

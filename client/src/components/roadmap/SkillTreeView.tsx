@@ -982,7 +982,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                 </div>
             ) : (
                 <div className="text-center mb-2 z-10 relative px-4 pointer-events-none">
-                    <h2 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 pb-4 mb-1 filter drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                    <h2 className="text-4xl md:text-5xl font-extrabold theme-text-gradient pb-4 mb-1 filter drop-shadow-[0_0_15px_var(--theme-glow)] transition-all duration-500">
                         {title}
                     </h2>
                     {description && (
@@ -1685,12 +1685,12 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                 isHighlighted ? "#fbbf24" :
                                                                 isKidsGrade
                                                                     ? (isUnlocked ? (isGrade9 ? "#6366f1" : isGrade8 ? "#06b6d4" : isGrade7 ? "#f59e0b" : isGrade6 ? "#8b5cf6" : isGrade4 ? "#10b981" : isGrade3 ? "#06b6d4" : isGrade2 ? "#818cf8" : "#38bdf8") : "rgba(100, 116, 139, 0.4)")
-                                                                    : (isUnlocked ? "#3b82f6" : "rgba(71, 85, 105, 0.5)")
+                                                                    : (isUnlocked ? "var(--node-line-unlocked, #3b82f6)" : "rgba(71, 85, 105, 0.5)")
                                                             }
                                                             strokeWidth={isHighlighted ? "5" : isKidsGrade ? "4" : "3"}
                                                             strokeLinecap="round"
                                                             strokeDasharray={isHighlighted ? "none" : isKidsGrade ? "8 6" : "6 4"}
-                                                            filter={isHighlighted || (isKidsGrade && isUnlocked) ? "url(#glow)" : undefined}
+                                                            filter={isHighlighted || (isKidsGrade && isUnlocked) || (!isKidsGrade && isUnlocked) ? "url(#glow)" : undefined}
                                                             initial={{ pathLength: 0, opacity: 0 }}
                                                             animate={{ pathLength: 1, opacity: 1 }}
                                                             transition={{ duration: 1.5, ease: "easeInOut" }}
@@ -1808,12 +1808,12 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                                 (node.id.endsWith('mastery') || !isLocked) && "cursor-pointer",
                                                                                 isHighlighted ? "ring-4 ring-yellow-400 ring-offset-4 ring-offset-slate-950 shadow-[0_0_40px_rgba(251,191,36,0.6)] scale-110" : "",
                                                                                 node.id.endsWith('mastery') ? "shadow-[0_0_50px_rgba(192,38,211,0.8)] animate-pulse" :
-                                                                                    !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e]" :
-                                                                                        !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf]" :
+                                                                                    !isHighlighted && isCompleted ? "shadow-[0_0_30px_#22c55e] node-glow-completed" :
+                                                                                        !isHighlighted && isInProgress ? "shadow-[0_0_30px_#2dd4bf] node-glow-inprogress" :
                                                                                             !isHighlighted && isAvailable ? (
-                                                                                                node.behavior === 'container' ? "shadow-[0_0_30px_rgba(251,146,60,0.7)] animate-pulse-slow" :
+                                                                                                node.behavior === 'container' ? "shadow-[0_0_30px_rgba(251,146,60,0.7)] animate-pulse-slow node-glow-container" :
                                                                                                     isSpecial ? "shadow-[0_0_40px_rgba(244,63,94,0.6)] animate-pulse-slow" :
-                                                                                                        "shadow-[0_0_30px_#3b82f6]"
+                                                                                                        "shadow-[0_0_30px_#3b82f6] node-glow-available"
                                                                                             ) : ""
                                                                             )
                                                                         )}
@@ -1830,28 +1830,28 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                                 node.id.endsWith('mastery') ? 'linear-gradient(135deg, #4c1d95, #701a75, #db2777)' :
                                                                                     isCompleted
                                                                                         ? (node.behavior === 'container'
-                                                                                            ? 'linear-gradient(135deg, #1c1007, #78350f)'
-                                                                                            : 'linear-gradient(135deg, #1f2937, #064e3b)')
+                                                                                            ? 'var(--node-container-bg, linear-gradient(135deg, #1c1007, #78350f))'
+                                                                                            : 'var(--node-completed-bg, linear-gradient(135deg, #1f2937, #064e3b))')
                                                                                         : isInProgress
                                                                                             ? (node.behavior === 'container'
-                                                                                                ? 'linear-gradient(135deg, #431407, #c2410c)'
-                                                                                                : 'linear-gradient(135deg, #134e4a, #2dd4bf)')
+                                                                                                ? 'var(--node-container-bg, linear-gradient(135deg, #431407, #c2410c))'
+                                                                                                : 'var(--node-inprogress-bg, linear-gradient(135deg, #134e4a, #2dd4bf))')
                                                                                             : isAvailable
                                                                                                 ? (node.behavior === 'container'
-                                                                                                    ? 'linear-gradient(135deg, #7c2d12, #f97316)'
+                                                                                                    ? 'var(--node-container-bg, linear-gradient(135deg, #7c2d12, #f97316))'
                                                                                                     : isSpecial
                                                                                                         ? 'linear-gradient(135deg, #881337, #f43f5e)'
-                                                                                                        : 'linear-gradient(135deg, #1e3a8a, #3b82f6)')
+                                                                                                        : 'var(--node-available-bg, linear-gradient(135deg, #1e3a8a, #3b82f6))')
                                                                                                 : isLocked ? 'linear-gradient(135deg, #1e293b, #451a03)' : '#1e293b',
 
                                                                             border: `3px solid ${isHighlighted ? '#fbbf24' :
                                                                                 node.id.endsWith('mastery') ? '#fbbf24' :
                                                                                     isCompleted
-                                                                                        ? (node.behavior === 'container' ? '#fb923c' : '#4ade80')
+                                                                                        ? (node.behavior === 'container' ? 'var(--node-container-border, #fb923c)' : 'var(--node-completed-border, #4ade80)')
                                                                                         : isInProgress
-                                                                                            ? (node.behavior === 'container' ? '#f97316' : '#5eead4')
+                                                                                            ? (node.behavior === 'container' ? 'var(--node-container-border, #f97316)' : 'var(--node-inprogress-border, #5eead4)')
                                                                                             : isAvailable
-                                                                                                ? (node.behavior === 'container' ? '#f97316' : (isSpecial ? '#fb7185' : '#3b82f6'))
+                                                                                                ? (node.behavior === 'container' ? 'var(--node-container-border, #f97316)' : (isSpecial ? '#fb7185' : 'var(--node-available-border, #3b82f6)'))
                                                                                                 : isLocked ? '#f59e0b' : '#475569'
                                                                             }`
                                                                         }}
@@ -1906,7 +1906,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                                 )
                                                                             ) : (
                                                                                 isCompleted && !node.id.endsWith('mastery') ? (
-                                                                                    <CheckCircle className="w-8 h-8 text-green-400" />
+                                                                                    <CheckCircle className="w-8 h-8 text-green-400 node-completed-icon" />
                                                                                 ) : node.id.endsWith('mastery') ? (
                                                                                     <motion.div
                                                                                         animate={{ rotate: [0, 10, -10, 0] }}

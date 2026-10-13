@@ -211,6 +211,7 @@ function PreviewToggleButton({ quiz }: { quiz: Quiz }) {
 // ────────────────────────────────────────────────────────────────────────────
 
 function QuizList() {
+  const queryClient = useQueryClient();
   const { categoryId } = useParams<{ categoryId: string }>();
   const [location, setLocation] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
@@ -710,8 +711,8 @@ function QuizList() {
 
       const stats = calculateMasteryStats(
         parseInt(categoryId || "0"),
-        skillTreeAllQuizzes,
-        skillTreeAllQuizzes,
+        skillTreeAllQuizzes as any,
+        skillTreeAllQuizzes as any,
         nodeMappingsData,
         false,
         selectedGrade ? currentMapNodes : undefined
@@ -775,7 +776,7 @@ function QuizList() {
         // Find or synthesize subcategory
         const mapping = nodeMappingsData?.find(m => m.nodeId === targetNode!.id);
         const targetSubId = mapping?.subcategoryId || targetNode.subcategoryId;
-        let sub = (quizzesBySubcategory || []).find(s => s.id === targetSubId) ||
+        let sub: any = (quizzesBySubcategory || []).find(s => s.id === targetSubId) ||
                   (subcategories || []).find(s => s.id === targetSubId);
 
         if (!sub) {
@@ -1406,13 +1407,13 @@ function QuizList() {
           updateUrlState(null, null);
         }
       }}>
-        <DialogContent className="bg-slate-900 border-white/10 text-slate-200 max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden w-[95vw] sm:w-full" onOpenAutoFocus={(e) => e.preventDefault()} tabIndex={-1}>
+        <DialogContent className="theme-node-dialog bg-slate-900 border-white/10 text-slate-200 max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden w-[95vw] sm:w-full" onOpenAutoFocus={(e) => e.preventDefault()} tabIndex={-1}>
           {activeDialogSubcategory && (
             <>
               <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 shrink-0">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <ListChecks className="h-6 w-6 text-blue-400" />
+                  <div className="p-2 bg-blue-500/10 rounded-lg theme-dialog-icon">
+                    <ListChecks className="h-6 w-6 text-blue-400 theme-dialog-icon-svg" />
                   </div>
                   <DialogTitle className="text-xl font-bold text-white">
                     {activeDialogNode ? (nodeMappingsData?.find(m => m.nodeId === activeDialogNode.id)?.overrideLabel || activeDialogNode.label) : activeDialogSubcategory?.name}
@@ -1506,9 +1507,9 @@ function QuizList() {
                               }
                             }}
                             className={cn(
-                              "group flex flex-col gap-2.5 sm:gap-3 p-3 sm:p-4 rounded-xl transition-all",
+                              "theme-node-quiz-card group flex flex-col gap-2.5 sm:gap-3 p-3 sm:p-4 rounded-xl transition-all",
                               isHighlighted
-                                ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.3)] ring-1 ring-blue-400"
+                                ? "is-highlighted bg-blue-500/20 border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.3)] ring-1 ring-blue-400"
                                 : "bg-slate-800/40 border border-white/5 hover:bg-slate-800/60 hover:border-blue-500/30 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.15)]"
                             )}
                           >

@@ -12,9 +12,10 @@ import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { User, Mail, Shield, GraduationCap, ArrowLeft, UserCircle, Pencil, Save, X, Zap, Check, Lock, AlertTriangle } from 'lucide-react';
+import { User, Mail, Shield, GraduationCap, ArrowLeft, UserCircle, Pencil, Save, X, Zap, Check, Lock, AlertTriangle, Palette, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
+import { useTheme, APP_THEMES } from '@/lib/theme';
 import {
   Dialog,
   DialogContent,
@@ -40,6 +41,7 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [_, setLocation] = useLocation();
+  const { theme: currentTheme, setTheme, themeConfig } = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
@@ -217,11 +219,11 @@ export default function ProfilePage() {
           </div>
 
           <Card className="bg-slate-900/50 border-white/10 backdrop-blur-xl shadow-2xl overflow-hidden mb-8">
-            <div className="h-32 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-white/5" />
+            <div className="profile-banner h-32 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-white/5 transition-all duration-500" />
             <div className="px-8 pb-8">
               <div className="relative -mt-16 mb-6 flex justify-between items-end">
                 <div className="h-32 w-32 rounded-full bg-slate-950 p-2 border-4 border-slate-900 shadow-xl">
-                  <div className="h-full w-full rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                  <div className="profile-avatar h-full w-full rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center transition-all duration-500">
                     <span className="text-4xl font-bold text-white">
                       {user.username.charAt(0).toUpperCase()}
                     </span>
@@ -377,6 +379,86 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
+          </Card>
+
+          {/* Personalización y Apariencia Section */}
+          <Card className="border-white/10 bg-slate-900/60 backdrop-blur-xl shadow-2xl overflow-hidden">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-white text-xl">
+                    <Palette className="h-5 w-5 text-purple-400" />
+                    Personalización y Apariencia
+                  </CardTitle>
+                  <CardDescription className="text-slate-400 mt-1">
+                    Elige la paleta y estilo visual que acompañará tu experiencia en AlanMath.
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="border-white/10 text-slate-300 gap-1.5 py-1 px-3 self-start sm:self-auto">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Tema actual: <strong className="theme-text-gradient">{themeConfig.name}</strong></span>
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                {APP_THEMES.map((t) => {
+                  const isSelected = currentTheme === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setTheme(t.id)}
+                      className={`text-left p-4 rounded-2xl border transition-all duration-300 flex flex-col justify-between relative overflow-hidden group ${
+                        isSelected
+                          ? 'border-white/40 bg-white/[0.08] shadow-[0_0_20px_rgba(255,255,255,0.1)]'
+                          : 'border-white/5 bg-slate-800/40 hover:bg-slate-800/80 hover:border-white/20'
+                      }`}
+                    >
+                      {isSelected && (
+                        <div 
+                          className="absolute inset-0 opacity-15 pointer-events-none"
+                          style={{
+                            background: `radial-gradient(circle at top right, ${t.previewColors[0]}, transparent 70%)`
+                          }}
+                        />
+                      )}
+
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="font-bold text-sm text-white group-hover:text-white">
+                            {t.name}
+                          </span>
+                          {isSelected && (
+                            <div className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-400">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-400 leading-snug line-clamp-2">
+                          {t.subtitle}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-white/5 mt-auto">
+                        <div className="flex items-center -space-x-1.5">
+                          {t.previewColors.map((color, idx) => (
+                            <div
+                              key={idx}
+                              className="w-4 h-4 rounded-full border-2 border-slate-900 shadow"
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
+                        <div 
+                          className={`h-2 w-12 rounded-full bg-gradient-to-r ${t.previewGradient}`}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
           </Card>
 
           {/* Subscription Status Section */}

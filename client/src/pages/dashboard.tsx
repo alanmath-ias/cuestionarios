@@ -911,8 +911,19 @@ export default function UserDashboard() {
     <div className="min-h-screen bg-slate-950 text-slate-50 relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500/10 rounded-full blur-[100px]" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px]" />
+        {/* Orbes exactos del original de producción */}
+        <div className="theme-original-orb absolute top-20 left-10 w-72 h-72 bg-purple-500/10 rounded-full blur-[100px]" />
+        <div className="theme-original-orb absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px]" />
+
+        {/* Orbes celestiales para temas vibrantes */}
+        <div
+          className="theme-dynamic-orb absolute top-10 left-4 w-[500px] h-[500px] rounded-full blur-[120px] transition-all duration-700 pointer-events-none"
+          style={{ background: 'var(--theme-ambient-1)' }}
+        />
+        <div
+          className="theme-dynamic-orb absolute bottom-10 right-4 w-[600px] h-[600px] rounded-full blur-[140px] transition-all duration-700 pointer-events-none"
+          style={{ background: 'var(--theme-ambient-2)' }}
+        />
       </div>
 
       <div className="container mx-auto p-4 max-w-7xl space-y-8 relative z-10">
@@ -921,7 +932,7 @@ export default function UserDashboard() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold text-white tracking-tight">
-                Hola <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">{(currentUser?.username || 'Estudiante').charAt(0).toUpperCase() + (currentUser?.username || 'Estudiante').slice(1)}</span> 👋
+                Hola <span className="theme-text-gradient">{(currentUser?.username || 'Estudiante').charAt(0).toUpperCase() + (currentUser?.username || 'Estudiante').slice(1)}</span> 👋
               </h1>
             </div>
             <p className="text-slate-400 mt-1 italic">"{motivationalMessage}"</p>

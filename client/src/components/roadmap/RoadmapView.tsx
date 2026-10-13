@@ -27,7 +27,7 @@ export function RoadmapView({ nodes, title, description }: RoadmapViewProps) {
         <div className="relative w-full min-h-[600px] py-4 px-4 flex flex-col items-center overflow-hidden">
             {/* Header - Moved up */}
             <div className="text-center mb-12 z-10 relative">
-                <h2 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 mb-3 tracking-tight filter drop-shadow-lg">
+                <h2 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 mb-3 tracking-tight filter drop-shadow-lg theme-text-gradient">
                     {title}
                 </h2>
                 {description && (

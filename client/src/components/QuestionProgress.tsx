@@ -54,7 +54,7 @@ export function QuestionProgress({
             </div>
             <div className="h-2 bg-slate-800 rounded-full overflow-hidden mb-6">
                 <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                    className="h-full theme-progress-fill bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                     style={{ width: `${(completedQuestions / totalQuestions) * 100}%` }}
                 />
             </div>
@@ -116,7 +116,7 @@ export function QuestionProgress({
                             className={cn(
                                 "w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 border select-none active:scale-95",
                                 i === currentQuestionIndex
-                                    ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-950 scale-110 bg-blue-500/20 border-blue-500 text-blue-400"
+                                    ? "theme-current-pill ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-950 scale-110 bg-blue-500/20 border-blue-500 text-blue-400"
                                     : "",
                                 bgClass
                             )}

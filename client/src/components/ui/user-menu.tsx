@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, HelpCircle, Gamepad2, BrainCircuit, CreditCard, AlertTriangle } from 'lucide-react';
+import { ChevronDown, HelpCircle, Gamepad2, BrainCircuit, CreditCard, AlertTriangle, Palette } from 'lucide-react';
 import { RestZoneDialog } from '@/components/dialogs/RestZoneDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
@@ -15,6 +15,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { startTour } from '@/lib/tour';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSession } from '@/hooks/useSession';
+import { ThemeSelectorDialog } from '@/components/theme/ThemeSelectorDialog';
 
 interface User {
   id: number;
@@ -37,6 +38,7 @@ export function UserMenu({ user }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const [showRestZone, setShowRestZone] = useState(false);
   const [ageModalOpen, setAgeModalOpen] = useState(false);
+  const [themeDialogOpen, setThemeDialogOpen] = useState(false);
 
   const { session } = useSession(); // Access session to check impersonation status
 
@@ -107,7 +109,7 @@ export function UserMenu({ user }: UserMenuProps) {
                 {user.hintCredits}
               </div>
             )}
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-medium">
+            <div className="header-user-avatar w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-medium transition-all duration-500">
               <span>{getInitials(user.name || 'Usuario')}</span>
             </div>
             <ChevronDown size={16} />
@@ -126,6 +128,11 @@ export function UserMenu({ user }: UserMenuProps) {
           <DropdownMenuItem onClick={() => setLocation('/subscription')}>
             <CreditCard className="mr-2 h-4 w-4" />
             <span>Suscripción</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={() => { setOpen(false); setThemeDialogOpen(true); }}>
+            <Palette className="mr-2 h-4 w-4 text-purple-400" />
+            <span>Tema de la App</span>
           </DropdownMenuItem>
 
           {user.role === 'admin' ? (
@@ -228,6 +235,8 @@ export function UserMenu({ user }: UserMenuProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ThemeSelectorDialog open={themeDialogOpen} onOpenChange={setThemeDialogOpen} />
     </>
   );
 }

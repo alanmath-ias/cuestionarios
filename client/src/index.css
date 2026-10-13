@@ -12,9 +12,447 @@
   }
 }
 
-/* si tu proyecto define variables CSS: */
-:root {
+:root, [data-theme="original-dark"] {
   --border: 210 16% 82%;
+  --color-primary: #3b82f6;
+  --color-accent: #06b6d4;
+  --theme-glow: rgba(59, 130, 246, 0.2);
+  --theme-glow-strong: rgba(6, 182, 212, 0.3);
+  --theme-ambient-1: transparent;
+  --theme-ambient-2: transparent;
+  --theme-card-border: rgba(255, 255, 255, 0.05);
+  --theme-card-border-hover: rgba(255, 255, 255, 0.1);
+  --theme-gradient-text: linear-gradient(to right, #60a5fa, #c084fc);
+  --theme-btn-gradient: linear-gradient(135deg, #2563eb, #06b6d4);
+  --theme-header-border: rgba(255, 255, 255, 0.1);
+  --theme-header-glow: transparent;
+
+  /* Skill Tree Nodes - Exact Original Production */
+  --node-completed-bg: linear-gradient(135deg, #1f2937, #064e3b);
+  --node-completed-border: #4ade80;
+  --node-completed-glow: rgba(34, 197, 94, 0.6);
+  --node-completed-icon: #4ade80;
+  --node-inprogress-bg: linear-gradient(135deg, #134e4a, #2dd4bf);
+  --node-inprogress-border: #5eead4;
+  --node-inprogress-glow: rgba(45, 212, 191, 0.6);
+  --node-available-bg: linear-gradient(135deg, #1e3a8a, #3b82f6);
+  --node-available-border: #3b82f6;
+  --node-available-glow: rgba(59, 130, 246, 0.6);
+  --node-container-bg: linear-gradient(135deg, #7c2d12, #f97316);
+  --node-container-border: #fb923c;
+  --node-container-glow: rgba(251, 146, 60, 0.7);
+  --node-line-unlocked: #3b82f6;
+}
+
+[data-theme="cosmic-blue"] {
+  --border: 210 16% 82%;
+  --color-primary: #3b82f6;
+  --color-accent: #06b6d4;
+  --theme-glow: rgba(59, 130, 246, 0.5);
+  --theme-glow-strong: rgba(6, 182, 212, 0.8);
+  --theme-ambient-1: rgba(37, 99, 235, 0.35);
+  --theme-ambient-2: rgba(6, 182, 212, 0.3);
+  --theme-card-border: rgba(59, 130, 246, 0.3);
+  --theme-card-border-hover: rgba(6, 182, 212, 0.65);
+  --theme-gradient-text: linear-gradient(135deg, #60a5fa 0%, #38bdf8 50%, #818cf8 100%);
+  --theme-btn-gradient: linear-gradient(135deg, #2563eb, #06b6d4);
+  --theme-header-border: rgba(59, 130, 246, 0.25);
+  --theme-header-glow: rgba(59, 130, 246, 0.2);
+
+  /* Skill Tree Nodes - Cosmic Blue */
+  --node-completed-bg: linear-gradient(135deg, #064e3b, #059669);
+  --node-completed-border: #34d399;
+  --node-completed-glow: rgba(16, 185, 129, 0.85);
+  --node-completed-icon: #a7f3d0;
+  --node-inprogress-bg: linear-gradient(135deg, #164e63, #0891b2);
+  --node-inprogress-border: #22d3ee;
+  --node-inprogress-glow: rgba(6, 182, 212, 0.85);
+  --node-available-bg: linear-gradient(135deg, #1e3a8a, #2563eb);
+  --node-available-border: #60a5fa;
+  --node-available-glow: rgba(59, 130, 246, 0.85);
+  --node-container-bg: linear-gradient(135deg, #1e1b4b, #2563eb);
+  --node-container-border: #38bdf8;
+  --node-container-glow: rgba(56, 189, 248, 0.8);
+  --node-line-unlocked: #38bdf8;
+}
+
+[data-theme="amethyst-rose"] {
+  --color-primary: #d946ef;
+  --color-accent: #ec4899;
+  --theme-glow: rgba(217, 70, 239, 0.55);
+  --theme-glow-strong: rgba(236, 72, 153, 0.85);
+  --theme-ambient-1: rgba(192, 38, 211, 0.38);
+  --theme-ambient-2: rgba(236, 72, 153, 0.35);
+  --theme-card-border: rgba(217, 70, 239, 0.35);
+  --theme-card-border-hover: rgba(236, 72, 153, 0.75);
+  --theme-gradient-text: linear-gradient(135deg, #f472b6 0%, #e879f9 50%, #c084fc 100%);
+  --theme-btn-gradient: linear-gradient(135deg, #c026d3, #ec4899);
+  --theme-header-border: rgba(217, 70, 239, 0.35);
+  --theme-header-glow: rgba(217, 70, 239, 0.25);
+
+  /* Skill Tree Nodes - Amatista & Rosa Neón (Completos: púrpura | A medias: fucsia/magenta | Listos: rosa neón) */
+  --node-completed-bg: linear-gradient(135deg, #581c87, #9333ea);
+  --node-completed-border: #c084fc;
+  --node-completed-glow: rgba(168, 85, 247, 0.9);
+  --node-completed-icon: #f3e8ff;
+  --node-inprogress-bg: linear-gradient(135deg, #701a75, #c026d3);
+  --node-inprogress-border: #e879f9;
+  --node-inprogress-glow: rgba(217, 70, 239, 0.9);
+  --node-available-bg: linear-gradient(135deg, #831843, #ec4899);
+  --node-available-border: #f472b6;
+  --node-available-glow: rgba(236, 72, 153, 0.9);
+  --node-container-bg: linear-gradient(135deg, #881337, #db2777);
+  --node-container-border: #fb7185;
+  --node-container-glow: rgba(244, 63, 94, 0.85);
+  --node-line-unlocked: #ec4899;
+}
+
+[data-theme="emerald-mint"] {
+  --color-primary: #10b981;
+  --color-accent: #14b8a6;
+  --theme-glow: rgba(16, 185, 129, 0.55);
+  --theme-glow-strong: rgba(20, 184, 166, 0.85);
+  --theme-ambient-1: rgba(5, 150, 105, 0.38);
+  --theme-ambient-2: rgba(20, 184, 166, 0.35);
+  --theme-card-border: rgba(16, 185, 129, 0.35);
+  --theme-card-border-hover: rgba(45, 212, 191, 0.75);
+  --theme-gradient-text: linear-gradient(135deg, #34d399 0%, #2dd4bf 50%, #38bdf8 100%);
+  --theme-btn-gradient: linear-gradient(135deg, #059669, #0d9488);
+  --theme-header-border: rgba(16, 185, 129, 0.35);
+  --theme-header-glow: rgba(16, 185, 129, 0.25);
+
+  /* Skill Tree Nodes - Emerald Mint */
+  --node-completed-bg: linear-gradient(135deg, #064e3b, #047857);
+  --node-completed-border: #10b981;
+  --node-completed-glow: rgba(16, 185, 129, 0.9);
+  --node-completed-icon: #a7f3d0;
+  --node-inprogress-bg: linear-gradient(135deg, #134e4a, #0d9488);
+  --node-inprogress-border: #2dd4bf;
+  --node-inprogress-glow: rgba(20, 184, 166, 0.9);
+  --node-available-bg: linear-gradient(135deg, #065f46, #059669);
+  --node-available-border: #6ee7b7;
+  --node-available-glow: rgba(52, 211, 153, 0.9);
+  --node-container-bg: linear-gradient(135deg, #064e3b, #0d9488);
+  --node-container-border: #2dd4bf;
+  --node-container-glow: rgba(45, 212, 191, 0.85);
+  --node-line-unlocked: #10b981;
+}
+
+[data-theme="amber-sunset"] {
+  --color-primary: #f59e0b;
+  --color-accent: #f97316;
+  --theme-glow: rgba(245, 158, 11, 0.55);
+  --theme-glow-strong: rgba(249, 115, 22, 0.85);
+  --theme-ambient-1: rgba(217, 119, 6, 0.38);
+  --theme-ambient-2: rgba(234, 88, 12, 0.32);
+  --theme-card-border: rgba(245, 158, 11, 0.35);
+  --theme-card-border-hover: rgba(249, 115, 22, 0.75);
+  --theme-gradient-text: linear-gradient(135deg, #fbbf24 0%, #fb923c 50%, #f87171 100%);
+  --theme-btn-gradient: linear-gradient(135deg, #d97706, #ea580c);
+  --theme-header-border: rgba(245, 158, 11, 0.35);
+  --theme-header-glow: rgba(245, 158, 11, 0.25);
+
+  /* Skill Tree Nodes - Amber Sunset */
+  --node-completed-bg: linear-gradient(135deg, #713f12, #ca8a04);
+  --node-completed-border: #fde047;
+  --node-completed-glow: rgba(234, 179, 8, 0.9);
+  --node-completed-icon: #fef08a;
+  --node-inprogress-bg: linear-gradient(135deg, #7c2d12, #c2410c);
+  --node-inprogress-border: #fb923c;
+  --node-inprogress-glow: rgba(234, 88, 12, 0.9);
+  --node-available-bg: linear-gradient(135deg, #78350f, #d97706);
+  --node-available-border: #fcd34d;
+  --node-available-glow: rgba(245, 158, 11, 0.9);
+  --node-container-bg: linear-gradient(135deg, #431407, #ea580c);
+  --node-container-border: #f97316;
+  --node-container-glow: rgba(249, 115, 22, 0.85);
+  --node-line-unlocked: #f59e0b;
+}
+
+[data-theme="nebula-indigo"] {
+  --color-primary: #6366f1;
+  --color-accent: #8b5cf6;
+  --theme-glow: rgba(99, 102, 241, 0.55);
+  --theme-glow-strong: rgba(139, 92, 246, 0.85);
+  --theme-ambient-1: rgba(79, 70, 229, 0.4);
+  --theme-ambient-2: rgba(139, 92, 246, 0.35);
+  --theme-card-border: rgba(99, 102, 241, 0.35);
+  --theme-card-border-hover: rgba(167, 139, 250, 0.75);
+  --theme-gradient-text: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #60a5fa 100%);
+  --theme-btn-gradient: linear-gradient(135deg, #4f46e5, #7c3aed);
+  --theme-header-border: rgba(99, 102, 241, 0.35);
+  --theme-header-glow: rgba(99, 102, 241, 0.25);
+
+  /* Skill Tree Nodes - Nebula Indigo */
+  --node-completed-bg: linear-gradient(135deg, #4c1d95, #6d28d9);
+  --node-completed-border: #a78bfa;
+  --node-completed-glow: rgba(139, 92, 246, 0.9);
+  --node-completed-icon: #ddd6fe;
+  --node-inprogress-bg: linear-gradient(135deg, #312e81, #4338ca);
+  --node-inprogress-border: #818cf8;
+  --node-inprogress-glow: rgba(99, 102, 241, 0.9);
+  --node-available-bg: linear-gradient(135deg, #1e1b4b, #3730a3);
+  --node-available-border: #6366f1;
+  --node-available-glow: rgba(79, 70, 229, 0.9);
+  --node-container-bg: linear-gradient(135deg, #2e1065, #7c3aed);
+  --node-container-border: #a78bfa;
+  --node-container-glow: rgba(167, 139, 250, 0.85);
+  --node-line-unlocked: #818cf8;
+}
+
+/* Ambient backdrop lighting ONLY for vibrant custom themes (never in original-dark) */
+html[data-theme]:not([data-theme="original-dark"]) body::before {
+  content: "";
+  position: fixed;
+  top: -100px;
+  left: -80px;
+  width: 55vw;
+  max-width: 650px;
+  height: 55vw;
+  max-height: 650px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--theme-ambient-1) 0%, transparent 70%);
+  filter: blur(90px);
+  pointer-events: none;
+  z-index: 0;
+  transition: background 0.7s ease;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) body::after {
+  content: "";
+  position: fixed;
+  bottom: -120px;
+  right: -80px;
+  width: 60vw;
+  max-width: 700px;
+  height: 60vw;
+  max-height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--theme-ambient-2) 0%, transparent 70%);
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
+  transition: background 0.7s ease;
+}
+
+/* Header theme accent ONLY for vibrant themes */
+html[data-theme]:not([data-theme="original-dark"]) header {
+  border-bottom: 1px solid var(--theme-header-border) !important;
+  box-shadow: 0 4px 20px -5px var(--theme-header-glow) !important;
+  transition: border-color 0.5s ease, box-shadow 0.5s ease;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) header .header-logo-glow {
+  background-color: var(--theme-ambient-1) !important;
+  filter: blur(10px);
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .header-user-avatar {
+  background: var(--theme-btn-gradient) !important;
+  box-shadow: 0 0 12px -2px var(--theme-glow);
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Dashboard Cards Reactive Theming ONLY for vibrant themes */
+html[data-theme]:not([data-theme="original-dark"]) .rounded-3xl.bg-slate-900\/60,
+html[data-theme]:not([data-theme="original-dark"]) .rounded-3xl.bg-slate-900\/50 {
+  border-color: var(--theme-card-border) !important;
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .rounded-3xl.bg-slate-900\/60:hover,
+html[data-theme]:not([data-theme="original-dark"]) .rounded-3xl.bg-slate-900\/50:hover {
+  border-color: var(--theme-card-border-hover) !important;
+  box-shadow: 0 0 35px -5px var(--theme-glow) !important;
+}
+
+/* Profile Banner & Avatar Theming ONLY for vibrant themes */
+html[data-theme]:not([data-theme="original-dark"]) .profile-banner {
+  background: linear-gradient(to right, var(--theme-ambient-1), var(--theme-ambient-2)) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .profile-avatar {
+  background: var(--theme-btn-gradient) !important;
+  box-shadow: 0 0 25px var(--theme-glow) !important;
+}
+
+/* =====================================================================
+   SKILL TREE & ROADMAP THEMING (Scaped strictly to custom themes)
+   ===================================================================== */
+html[data-theme]:not([data-theme="original-dark"]) .node-glow-completed {
+  box-shadow: 0 0 32px var(--node-completed-glow) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .node-glow-inprogress {
+  box-shadow: 0 0 30px var(--node-inprogress-glow) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .node-glow-available {
+  box-shadow: 0 0 30px var(--node-available-glow) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .node-glow-container {
+  box-shadow: 0 0 32px var(--node-container-glow) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .node-completed-icon {
+  color: var(--node-completed-icon, #4ade80) !important;
+}
+
+/* Node Modal Dialog & Cards Theming */
+html[data-theme]:not([data-theme="original-dark"]) .theme-node-dialog {
+  border-color: var(--theme-card-border-hover) !important;
+  box-shadow: 0 0 45px -8px var(--theme-glow), 0 25px 35px -5px rgba(0, 0, 0, 0.6) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-dialog-icon {
+  background-color: var(--theme-ambient-1) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-dialog-icon-svg {
+  color: var(--color-primary) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-node-quiz-card:hover {
+  border-color: var(--theme-card-border-hover) !important;
+  box-shadow: 0 0 22px -4px var(--theme-glow) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-node-quiz-card.is-highlighted {
+  background-color: var(--theme-glow) !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 25px var(--theme-glow) !important;
+}
+
+/* =====================================================================
+   ACTIVE QUIZ THEMING (Scaped strictly to custom themes)
+   ===================================================================== */
+html[data-theme]:not([data-theme="original-dark"]) .theme-quiz-option-selected {
+  background-color: var(--theme-glow) !important;
+  border-color: var(--color-primary) !important;
+  color: #fff !important;
+  box-shadow: 0 0 22px var(--theme-glow) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-quiz-option-selected .theme-option-letter {
+  background: var(--theme-btn-gradient) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: #fff !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-quiz-next-btn {
+  background: var(--theme-btn-gradient) !important;
+  box-shadow: 0 4px 20px -2px var(--theme-glow) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-quiz-next-btn:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 25px 0 var(--theme-glow) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-points-badge {
+  background: var(--theme-btn-gradient) !important;
+  box-shadow: 0 0 15px -2px var(--theme-glow) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-progress-fill {
+  background: var(--theme-btn-gradient) !important;
+  box-shadow: 0 0 12px var(--theme-glow) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-current-pill {
+  ring-color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  background-color: var(--theme-glow) !important;
+  color: var(--color-accent) !important;
+  box-shadow: 0 0 12px var(--theme-glow) !important;
+}
+
+html:not([data-theme]) .theme-activequiz-adornment,
+html[data-theme="original-dark"] .theme-activequiz-adornment {
+  display: none !important;
+}
+
+/* =====================================================================
+   QUIZ RESULTS THEMING (Scaped strictly to custom themes)
+   ===================================================================== */
+html[data-theme]:not([data-theme="original-dark"]) .theme-results-orb-1 {
+  background-color: var(--theme-ambient-1) !important;
+  opacity: 0.35;
+  filter: blur(100px);
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-results-orb-2 {
+  background-color: var(--theme-ambient-2) !important;
+  opacity: 0.35;
+  filter: blur(100px);
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-results-card {
+  border-color: var(--theme-card-border) !important;
+  box-shadow: 0 0 35px -8px var(--theme-glow) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-score-card {
+  border-color: var(--theme-card-border) !important;
+  box-shadow: 0 0 20px -5px var(--theme-glow) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-trophy-badge {
+  background-color: var(--theme-ambient-1) !important;
+  color: var(--color-primary) !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-score-value {
+  background: var(--theme-gradient-text) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-results-title {
+  background: var(--theme-gradient-text) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* Dashboard Orbs visibility controller */
+html:not([data-theme]) .theme-dynamic-orb,
+html[data-theme="original-dark"] .theme-dynamic-orb {
+  display: none !important;
+}
+
+html[data-theme]:not([data-theme="original-dark"]) .theme-original-orb {
+  display: none !important;
+}
+
+/* Theme utility classes */
+.theme-text-gradient {
+  background: var(--theme-gradient-text) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.theme-btn-primary {
+  background: var(--theme-btn-gradient) !important;
+  box-shadow: 0 4px 20px -2px var(--theme-glow);
+  transition: all 0.25s ease;
+}
+.theme-btn-primary:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 25px 0 var(--theme-glow);
+  transform: translateY(-1px);
+}
+
+.theme-card-glow {
+  border-color: var(--theme-card-border) !important;
+  transition: all 0.25s ease;
+}
+.theme-card-glow:hover {
+  border-color: var(--theme-card-border-hover) !important;
+  box-shadow: 0 0 25px -5px var(--theme-glow);
 }
 
 /* Driver.js Dark Mode Overrides */

@@ -64,8 +64,12 @@ export function Header({ user, pendingCount }: HeaderProps) {
           <Link href={user ? "/dashboard" : "/"} onClick={() => setMenuOpen(false)}>
             <div className="flex items-center space-x-2 cursor-pointer group">
               <div className="relative">
-                <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-md group-hover:bg-blue-500/30 transition-all" />
-                <img src={logo} alt="Logo AlanMath" className="relative h-10 w-10 rounded-full object-cover border-2 border-white/10 group-hover:border-blue-500/50 transition-colors" />
+                <div className="header-logo-glow absolute inset-0 bg-blue-500/20 rounded-full blur-md group-hover:bg-blue-500/30 transition-all" />
+                <img 
+                  src={logo} 
+                  alt="Logo AlanMath" 
+                  className="header-logo-img relative h-10 w-10 rounded-full object-cover border-2 border-white/10 group-hover:border-blue-500/50 transition-colors" 
+                />
               </div>
               <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400 group-hover:to-white transition-all">AlanMath</span>
             </div>

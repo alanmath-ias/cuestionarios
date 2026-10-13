@@ -2464,9 +2464,19 @@ const ActiveQuiz = () => {
                       currentQuestion.difficulty === 'medium' ? 'Medio' : 'Fácil'}
                   </Badge>
                 </div>
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm px-4 py-1 rounded-full font-medium shadow-lg shadow-blue-500/20">
+                <div className="theme-points-badge bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm px-4 py-1 rounded-full font-medium shadow-lg shadow-blue-500/20">
                   {currentQuestion.points} puntos
                 </div>
+              </div>
+
+              {/* Adorno temático sutil */}
+              <div className="theme-activequiz-adornment flex items-center justify-between mb-4">
+                <div className="h-0.5 flex-1 bg-gradient-to-r from-transparent via-current to-transparent opacity-30 [color:var(--color-primary)]" />
+                <div className="mx-3 flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-semibold tracking-wide uppercase border border-current/30 bg-current/5 [color:var(--color-primary)]">
+                  <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                  <span>Desafío en curso</span>
+                </div>
+                <div className="h-0.5 flex-1 bg-gradient-to-r from-transparent via-current to-transparent opacity-30 [color:var(--color-primary)]" />
               </div>
 
               <div className="mb-8">
@@ -2710,7 +2720,7 @@ const ActiveQuiz = () => {
                             variantClass = "opacity-60 border-white/5 bg-slate-900/20 text-slate-500";
                           }
                         } else if (isSelected) {
-                          variantClass = "bg-blue-600/20 border-blue-500 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.15)]";
+                          variantClass = "bg-blue-600/20 border-blue-500 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.15)] theme-quiz-option-selected";
                         }
 
                         return (
@@ -2721,7 +2731,7 @@ const ActiveQuiz = () => {
                             className={`w-full text-left ${hasMathContent ? 'py-3' : 'py-4'} px-5 rounded-xl border transition-all duration-200 flex items-center justify-between group relative overflow-hidden ${variantClass} ${isReadOnly ? 'cursor-default opacity-80' : ''}`}
                           >
                             <div className="flex items-center gap-4 relative z-10 w-full min-w-0">
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors
+                              <div className={`theme-option-letter w-8 h-8 rounded-lg flex items-center justify-center border text-sm font-bold shrink-0 transition-colors
                                       ${isSelected || (isAnswered && answer.isCorrect)
                                   ? 'bg-white/10 border-white/20 text-white'
                                   : 'bg-slate-900/50 border-white/10 text-slate-500 group-hover:text-slate-300 group-hover:border-white/20'
@@ -2928,7 +2938,7 @@ const ActiveQuiz = () => {
                 (progress?.responseMode !== 'direct_input' || !directResponse.trim()) &&
                 (currentQuestion.type !== 'text' || !textAnswers[currentQuestion.id]?.trim())
               )}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-none shadow-lg shadow-blue-500/20 h-10 px-4 sm:px-6"
+              className="theme-quiz-next-btn bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-none shadow-lg shadow-blue-500/20 h-10 px-4 sm:px-6"
             >
               {isNavigating ? (
                 'Procesando...'
