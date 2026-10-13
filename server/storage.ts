@@ -559,7 +559,8 @@ export class MemStorage implements IStorage {
       duelWins: 0,
       mathTipContent: null,
       mathTipLastGeneratedAt: null,
-      mathTipClaimedAt: null
+      mathTipClaimedAt: null,
+      avatar: null
     };
     this.users.set(id, user);
     return user;

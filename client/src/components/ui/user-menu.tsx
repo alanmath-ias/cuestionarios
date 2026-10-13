@@ -26,6 +26,7 @@ interface User {
   hintCredits: number;
   canReport?: boolean;
   totalReports?: number;
+  avatar?: string | null;
 }
 
 interface UserMenuProps {
@@ -109,8 +110,16 @@ export function UserMenu({ user }: UserMenuProps) {
                 {user.hintCredits}
               </div>
             )}
-            <div className="header-user-avatar w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-medium transition-all duration-500">
-              <span>{getInitials(user.name || 'Usuario')}</span>
+            <div className="header-user-avatar w-8 h-8 rounded-full overflow-hidden bg-white/20 flex items-center justify-center text-sm font-medium transition-all duration-500 border border-white/10">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name || 'Usuario'}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{getInitials(user.name || 'Usuario')}</span>
+              )}
             </div>
             <ChevronDown size={16} />
           </Button>

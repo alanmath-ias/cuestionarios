@@ -38,6 +38,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       mathTipContent: user.mathTipContent,
       mathTipLastGeneratedAt: user.mathTipLastGeneratedAt,
       mathTipClaimedAt: user.mathTipClaimedAt,
+      avatar: user.avatar,
     };
 
     next();

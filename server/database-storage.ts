@@ -2315,6 +2315,7 @@ export class DatabaseStorage implements IStorage {
       username: users.username,
       name: users.name,
       role: users.role,
+      avatar: users.avatar,
       friendshipId: friendships.id,
       rowUserId: friendships.userId,
       rowFriendId: friendships.friendId,
@@ -2353,7 +2354,8 @@ export class DatabaseStorage implements IStorage {
             id: users.id,
             username: users.username,
             name: users.name,
-            role: users.role
+            role: users.role,
+            avatar: users.avatar
           })
           .from(users)
           .where(and(
@@ -2377,6 +2379,7 @@ export class DatabaseStorage implements IStorage {
             username: a.username,
             name: a.name,
             role: a.role,
+            avatar: a.avatar,
             type: 'admin',
             wins: 0,
             losses: 0
@@ -2386,6 +2389,7 @@ export class DatabaseStorage implements IStorage {
             username: p.username,
             name: p.name,
             role: p.role,
+            avatar: p.avatar,
             type: 'chat_partner',
             wins: 0,
             losses: 0

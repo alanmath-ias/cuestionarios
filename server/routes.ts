@@ -1069,6 +1069,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (email) updateData.email = email;
       if (newPassword) updateData.password = newPassword;
       if (tourStatus) updateData.tourStatus = tourStatus;
+      if (req.body.avatar !== undefined) updateData.avatar = req.body.avatar;
 
       const updatedUser = await storage.updateUser(userId, updateData);
 
@@ -1077,6 +1078,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating user:", error);
       res.status(500).json({ message: "Error al actualizar el perfil" });
+    }
+  });
+
+  // Avatar Endpoints
+  apiRouter.post("/user/avatar", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "No autenticado" });
+
+    const { avatar } = req.body;
+    if (avatar !== null && typeof avatar !== 'string') {
+      return res.status(400).json({ message: "Formato de avatar inválido" });
+    }
+
+    if (typeof avatar === 'string' && avatar.length > 350000) {
+      return res.status(400).json({ message: "La imagen es demasiado pesada (máximo 250 KB)" });
+    }
+
+    try {
+      const updatedUser = await storage.updateUser(userId, { avatar: avatar || null });
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error al actualizar avatar:", error);
+      res.status(500).json({ message: "Error al actualizar la foto de perfil" });
+    }
+  });
+
+  apiRouter.delete("/user/avatar", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "No autenticado" });
+
+    try {
+      const updatedUser = await storage.updateUser(userId, { avatar: null });
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error al eliminar avatar:", error);
+      res.status(500).json({ message: "Error al eliminar la foto de perfil" });
     }
   });
 

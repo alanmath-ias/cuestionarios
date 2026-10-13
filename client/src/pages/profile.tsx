@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -12,10 +12,11 @@ import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { User, Mail, Shield, GraduationCap, ArrowLeft, UserCircle, Pencil, Save, X, Zap, Check, Lock, AlertTriangle, Palette, Sparkles } from 'lucide-react';
+import { User, Mail, Shield, GraduationCap, ArrowLeft, UserCircle, Pencil, Save, X, Zap, Check, Lock, AlertTriangle, Palette, Sparkles, Camera, Loader2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
 import { useTheme, APP_THEMES } from '@/lib/theme';
+import { processAvatarImage } from '@/lib/image-utils';
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ interface User {
   subscriptionPlan?: string;
   subscriptionEndDate?: string;
   totalReports?: number;
+  avatar?: string | null;
 }
 
 export default function ProfilePage() {
@@ -43,6 +45,8 @@ export default function ProfilePage() {
   const [_, setLocation] = useLocation();
   const { theme: currentTheme, setTheme, themeConfig } = useTheme();
   const [isEditing, setIsEditing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     email: ''
@@ -140,6 +144,62 @@ export default function ProfilePage() {
     changePasswordMutation.mutate(passwordForm);
   };
 
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingAvatar(true);
+      const webpDataUrl = await processAvatarImage(file, 256, 0.85);
+
+      const res = await apiRequest('POST', '/api/user/avatar', { avatar: webpDataUrl });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Error al guardar la foto de perfil');
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+
+      toast({
+        title: "¡Foto de perfil actualizada!",
+        description: "Tu nueva imagen ya se muestra en toda la plataforma.",
+      });
+    } catch (err: any) {
+      console.error("Error al procesar foto:", err);
+      toast({
+        title: "No se pudo actualizar la foto",
+        description: err.message || "Ocurrió un error al procesar la imagen.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    try {
+      setIsUploadingAvatar(true);
+      const res = await apiRequest('DELETE', '/api/user/avatar');
+      if (!res.ok) throw new Error('Error al eliminar la foto');
+
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+
+      toast({
+        title: "Foto eliminada",
+        description: "Se ha restaurado el avatar con tus iniciales.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "No se pudo eliminar la foto de perfil.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-950">
@@ -222,12 +282,59 @@ export default function ProfilePage() {
             <div className="profile-banner h-32 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-white/5 transition-all duration-500" />
             <div className="px-8 pb-8">
               <div className="relative -mt-16 mb-6 flex justify-between items-end">
-                <div className="h-32 w-32 rounded-full bg-slate-950 p-2 border-4 border-slate-900 shadow-xl">
-                  <div className="profile-avatar h-full w-full rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center transition-all duration-500">
-                    <span className="text-4xl font-bold text-white">
-                      {user.username.charAt(0).toUpperCase()}
-                    </span>
+                <div className="relative group">
+                  <div className="h-32 w-32 rounded-full bg-slate-950 p-1.5 border-4 border-slate-900 shadow-xl overflow-hidden">
+                    <div className="profile-avatar h-full w-full rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center transition-all duration-500">
+                      {user.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt={user.name || user.username}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-4xl font-bold text-white">
+                          {user.username.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Input de archivo nativo oculto */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleAvatarChange}
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    className="hidden"
+                  />
+
+                  {/* Botón flotante para cambiar foto */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="absolute bottom-1 right-1 p-2.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/50 border-2 border-slate-950 transition-all hover:scale-110 active:scale-95 focus:outline-none"
+                    title="Cambiar foto de perfil"
+                  >
+                    {isUploadingAvatar ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Camera className="w-4 h-4" />
+                    )}
+                  </button>
+
+                  {/* Botón para eliminar foto si ya tiene una */}
+                  {user.avatar && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteAvatar}
+                      disabled={isUploadingAvatar}
+                      className="absolute top-1 right-1 p-1.5 rounded-full bg-red-600/90 hover:bg-red-500 text-white shadow-lg border-2 border-slate-950 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none"
+                      title="Eliminar foto de perfil"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
                 <Badge
                   variant="outline"

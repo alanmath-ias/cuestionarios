@@ -26,6 +26,7 @@ export const users = pgTable("users", {
 	mathTipContent: text("math_tip_content"),
 	mathTipLastGeneratedAt: timestamp("math_tip_last_generated_at", { mode: 'string' }),
 	mathTipClaimedAt: timestamp("math_tip_claimed_at", { mode: 'string' }),
+	avatar: text("avatar"),
 }, (table) => [
 	unique("users_username_unique").on(table.username),
 ]);

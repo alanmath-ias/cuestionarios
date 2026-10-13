@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
 import { UserMenu } from '@/components/ui/user-menu';
 import { Menu as MenuIcon, X as CloseIcon, Youtube, Instagram, Globe, HelpCircle, Wand2 } from 'lucide-react';
 import { FaTiktok, FaFacebook } from 'react-icons/fa';
@@ -28,8 +29,28 @@ export function Header({ user, pendingCount }: HeaderProps) {
   const isAdmin = user?.role === 'admin';
   const [showTourHint, setShowTourHint] = useState(false);
 
-  // Show hint for new users only on dashboard
+  // Consulta de cuestionarios completados del usuario (aprovecha la caché de react-query)
+  const { data: userQuizzes } = useQuery<any[]>({
+    queryKey: ["/api/user/quizzes"],
+    enabled: !!user && location === '/dashboard',
+    staleTime: 60000,
+  });
 
+  const completedCount = Array.isArray(userQuizzes)
+    ? userQuizzes.filter(q => q.completedAt || q.score !== undefined).length
+    : 0;
+
+  const dismissTourHint = () => {
+    setShowTourHint(false);
+    if (user?.id) {
+      localStorage.setItem(`tour_hint_dismissed_${user.id}`, 'true');
+      fetch('/api/user/tour-seen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tourType: 'dashboard' })
+      }).catch(() => {});
+    }
+  };
 
   const socialLinks = {
     youtube: 'https://www.youtube.com/@AlanMath',
@@ -39,16 +60,28 @@ export function Header({ user, pendingCount }: HeaderProps) {
     website: 'https://alanmath.com',
   };
 
+  // Solo mostrar el hint del tour si es un usuario NUEVO (menos de 3 cuestionarios)
   useEffect(() => {
-    if (user && !user.tourStatus?.dashboard && location === '/dashboard') {
-      const timer = setTimeout(() => {
-        setShowTourHint(true);
-      }, 2000);
-      return () => clearTimeout(timer);
-    } else {
+    if (!user || location !== '/dashboard') {
       setShowTourHint(false);
+      return;
     }
-  }, [user, location]);
+
+    const isDismissed = localStorage.getItem(`tour_hint_dismissed_${user.id}`);
+    const isExperiencedUser = completedCount >= 3 || user.role === 'admin';
+    const hasSeenTour = !!user.tourStatus?.dashboard || !!user.tourStatus?.onboarding;
+
+    if (isDismissed || isExperiencedUser || hasSeenTour) {
+      setShowTourHint(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowTourHint(true);
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [user, location, completedCount]);
 
   // Close mobile menu whenever the route changes
   useEffect(() => {
@@ -191,7 +224,7 @@ export function Header({ user, pendingCount }: HeaderProps) {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setShowTourHint(false);
+                        dismissTourHint();
                       }}
                       className="absolute -top-2 -right-2 text-slate-500 hover:text-white"
                     >
@@ -201,7 +234,7 @@ export function Header({ user, pendingCount }: HeaderProps) {
                     <p className="text-xs text-slate-400 mb-3">Haz clic aquí para iniciar el tour guiado.</p>
                     <button
                       onClick={() => {
-                        setShowTourHint(false);
+                        dismissTourHint();
                         startTour(location);
                       }}
                       className="w-full py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
