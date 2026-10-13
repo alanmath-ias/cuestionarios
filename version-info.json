@@ -1,0 +1,8 @@
+{
+  "highlight": true,
+  "tag": "NUEVA FUNCIÓN",
+  "title": "¡Ya puedes personalizar el tema de la plataforma!",
+  "description": "Elige entre 6 nuevos estilos visuales (Amatista & Rosa Neón, Azul Cósmico, Esmeralda, Atardecer o Nebulosa) para tus mapas y cuestionarios. Puedes cambiarlo desde tu avatar en la barra superior o en tu Perfil > 'Apariencia'.",
+  "ctaText": "Personalizar Tema",
+  "action": "open-theme-selector"
+}
