@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { QuizCard } from '@/components/dashboard/quiz-card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle, Map as MapIcon, LayoutGrid, Search, CheckCircle2, Ban, Crown, Sparkles, Trophy, Gamepad2, Eye, EyeOff, Link2, Power, Check, Clock, Loader2, ChevronDown, GraduationCap, RotateCcw, Rocket, Compass, Landmark, Zap, Flame, Shield, Layers } from 'lucide-react';
+import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle, Map as MapIcon, LayoutGrid, Search, CheckCircle2, Ban, Crown, Sparkles, Trophy, Gamepad2, Eye, EyeOff, Link2, Power, Check, Clock, Loader2, ChevronDown, GraduationCap, RotateCcw, Rocket, Compass, Landmark, Zap, Flame, Shield, Layers, Flower2 } from 'lucide-react';
 import { useParams, useLocation } from 'wouter';
 import { calculatePercentage } from '@/lib/mathUtils';
 import { cn } from '@/lib/utils';
@@ -48,7 +48,7 @@ import { MapCompletionCelebration } from '@/components/dashboard/MapCompletionCe
 import { getCreditConfig } from '@shared/credit-config';
 import { calculateMasteryStats, getGradeNodes } from '@/lib/mastery-utils';
 import { useTheme } from '@/lib/theme';
-import { getGradeThemeMeta } from '@/lib/gradeThemeContent';
+import { getGradeThemeMeta, isFeminineTheme } from '@/lib/gradeThemeContent';
 
 interface Category {
   id: number;
@@ -994,7 +994,7 @@ function QuizList() {
                     )}
                   >
                     <span className="flex items-center gap-1.5">
-                      <Rocket className="h-3.5 w-3.5 text-indigo-400" />
+                      {isFeminineTheme(theme) ? <Flower2 className="h-3.5 w-3.5 text-pink-400" /> : <Rocket className="h-3.5 w-3.5 text-indigo-400" />}
                       Segundo
                     </span>
                     <span className="text-[9px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded font-semibold">

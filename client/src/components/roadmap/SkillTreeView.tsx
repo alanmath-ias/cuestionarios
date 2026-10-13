@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { cn } from '@/lib/utils';
 import { ArithmeticNode } from '../../data/arithmetic-map-data';
-import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw, LayoutDashboard, Search, X, CheckCircle2, AlertTriangle, PlayCircle, Medal, Award, Sparkles, Rocket, Target, Compass, Landmark, Zap, Terminal, Flame, Layers } from 'lucide-react';
+import { CheckCircle, Lock, Play, Star, Shield, Hexagon, Box, Trophy, ArrowRight, MousePointerClick, BookOpen, Crown, Construction, Maximize, ZoomIn, ZoomOut, RotateCcw, LayoutDashboard, Search, X, CheckCircle2, AlertTriangle, PlayCircle, Medal, Award, Sparkles, Rocket, Target, Compass, Landmark, Zap, Terminal, Flame, Layers, Flower2, Wand2, Gem, Heart } from 'lucide-react';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { TransformWrapper, TransformComponent, ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,7 @@ import { useSession } from "@/hooks/useSession";
 import { getCreditConfig } from '@shared/credit-config';
 import { getArithmeticQuizIds, getAlgebraQuizIds, getQuizzesForNode } from '@/lib/mastery-utils';
 import { useTheme } from '@/lib/theme';
-import { getGradeThemeMeta } from '@/lib/gradeThemeContent';
+import { getGradeThemeMeta, isFeminineTheme } from '@/lib/gradeThemeContent';
 
 interface SkillTreeViewProps {
     nodes: ArithmeticNode[];
@@ -93,6 +93,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
     const isKidsGrade = isGrade1 || isGrade2 || isGrade3 || isGrade4 || isGrade5 || isGrade6 || isGrade7 || isGrade8 || isGrade9;
     
     const { theme } = useTheme();
+    const isGirlGrade = isKidsGrade && isFeminineTheme(theme);
     const currentGradeKey = isGrade1 ? '1' : isGrade2 ? '2' : isGrade3 ? '3' : isGrade4 ? '4' : isGrade5 ? '5' : isGrade6 ? '6' : isGrade7 ? '7' : isGrade8 ? '8' : isGrade9 ? '9' : null;
     const gradeThemeMeta = currentGradeKey ? getGradeThemeMeta(currentGradeKey, theme) : null;
     
@@ -1273,7 +1274,9 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                 <div className="flex items-center gap-3">
                                     <div className={cn(
                                         "w-7 h-7 rounded-xl border-2 flex items-center justify-center",
-                                        isGrade9
+                                        isGirlGrade
+                                            ? "border-fuchsia-300 bg-gradient-to-b from-fuchsia-500 to-purple-800 shadow-[0_3px_0_#581c87]"
+                                            : isGrade9
                                             ? "border-indigo-300 bg-gradient-to-b from-indigo-500 to-purple-800 shadow-[0_3px_0_#312e81]"
                                             : isGrade8
                                             ? "border-cyan-300 bg-gradient-to-b from-cyan-500 to-sky-800 shadow-[0_3px_0_#155e75]"
@@ -1289,9 +1292,9 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                             ? "border-indigo-300 bg-gradient-to-b from-indigo-500 to-purple-700 shadow-[0_3px_0_#312e81]"
                                             : "border-amber-300 bg-gradient-to-b from-amber-400 to-orange-500 shadow-[0_3px_0_#7c2d12]"
                                     )}>
-                                        {isGrade9 ? <Sparkles className="w-3.5 h-3.5 text-white" /> : isGrade8 ? <Layers className="w-3.5 h-3.5 text-white" /> : isGrade7 ? <Shield className="w-3.5 h-3.5 text-white" /> : isGrade6 ? <Zap className="w-3.5 h-3.5 text-white" /> : isGrade4 ? <Landmark className="w-3.5 h-3.5 text-white" /> : isGrade3 || isGrade2 ? <Compass className="w-3.5 h-3.5 text-white" /> : <BookOpen className="w-3.5 h-3.5 text-white" />}
+                                        {isGirlGrade ? <Flower2 className="w-3.5 h-3.5 text-pink-200" /> : isGrade9 ? <Sparkles className="w-3.5 h-3.5 text-white" /> : isGrade8 ? <Layers className="w-3.5 h-3.5 text-white" /> : isGrade7 ? <Shield className="w-3.5 h-3.5 text-white" /> : isGrade6 ? <Zap className="w-3.5 h-3.5 text-white" /> : isGrade4 ? <Landmark className="w-3.5 h-3.5 text-white" /> : isGrade3 || isGrade2 ? <Compass className="w-3.5 h-3.5 text-white" /> : <BookOpen className="w-3.5 h-3.5 text-white" />}
                                     </div>
-                                    <span className={isGrade9 ? "text-indigo-300 font-extrabold" : isGrade8 ? "text-cyan-300 font-extrabold" : isGrade7 ? "text-amber-300 font-extrabold" : isGrade6 ? "text-violet-300 font-extrabold" : isGrade4 ? "text-emerald-300 font-extrabold" : isGrade3 ? "text-cyan-300 font-extrabold" : isGrade2 ? "text-indigo-300 font-extrabold" : "text-amber-300 font-extrabold"}>
+                                    <span className={isGirlGrade ? "text-pink-300 font-extrabold" : isGrade9 ? "text-indigo-300 font-extrabold" : isGrade8 ? "text-cyan-300 font-extrabold" : isGrade7 ? "text-amber-300 font-extrabold" : isGrade6 ? "text-violet-300 font-extrabold" : isGrade4 ? "text-emerald-300 font-extrabold" : isGrade3 ? "text-cyan-300 font-extrabold" : isGrade2 ? "text-indigo-300 font-extrabold" : "text-amber-300 font-extrabold"}>
                                         {gradeThemeMeta ? gradeThemeMeta.legend.unit : (isGrade9 || isGrade8 ? "🌀 Dominio / Bloque Algebraico" : isGrade7 ? "🛡️ Bastión / Fortaleza Titánica" : isGrade6 ? "⚡ Núcleo / Bastión Cuántico" : isGrade4 ? "🏛️ Templo / Santuario" : isGrade3 ? "🫧 Arrecife / Base Marina" : isGrade2 ? "🪐 Base Espacial / Sector" : "🏰 Unidad Temática")}
                                     </span>
                                 </div>
@@ -1300,7 +1303,9 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                 <div className="flex items-center gap-3">
                                     <div className={cn(
                                         "w-7 h-7 rounded-xl border-2 flex items-center justify-center",
-                                        isGrade9
+                                        isGirlGrade
+                                            ? "border-pink-300 bg-gradient-to-b from-pink-400 to-rose-600 shadow-[0_3px_0_#9f1239]"
+                                            : isGrade9
                                             ? "border-indigo-300 bg-gradient-to-b from-indigo-400 to-purple-600 shadow-[0_3px_0_#4338ca]"
                                             : isGrade8
                                             ? "border-cyan-300 bg-gradient-to-b from-cyan-400 to-sky-600 shadow-[0_3px_0_#0284c7]"
@@ -1314,25 +1319,35 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                             ? "border-cyan-300 bg-gradient-to-b from-cyan-400 to-teal-600 shadow-[0_3px_0_#0f766e]"
                                             : "border-sky-300 bg-gradient-to-b from-sky-400 to-blue-600 shadow-[0_3px_0_#1e3a8a]"
                                     )}>
-                                        {isGrade9 ? <Sparkles className="w-3.5 h-3.5 text-white" /> : isGrade8 ? <Sparkles className="w-3.5 h-3.5 text-white" /> : isGrade7 ? <Flame className="w-3.5 h-3.5 text-white" /> : isGrade6 ? <Terminal className="w-3.5 h-3.5 text-white" /> : isGrade4 ? <Compass className="w-3.5 h-3.5 text-white" /> : <Rocket className="w-3.5 h-3.5 text-white" />}
+                                        {isGirlGrade ? <Flower2 className="w-3.5 h-3.5 text-white" /> : isGrade9 ? <Sparkles className="w-3.5 h-3.5 text-white" /> : isGrade8 ? <Sparkles className="w-3.5 h-3.5 text-white" /> : isGrade7 ? <Flame className="w-3.5 h-3.5 text-white" /> : isGrade6 ? <Terminal className="w-3.5 h-3.5 text-white" /> : isGrade4 ? <Compass className="w-3.5 h-3.5 text-white" /> : <Rocket className="w-3.5 h-3.5 text-white" />}
                                     </div>
-                                    <span className={isGrade9 ? "text-indigo-300 font-bold" : isGrade8 ? "text-cyan-300 font-bold" : isGrade7 ? "text-amber-300 font-bold" : isGrade6 ? "text-violet-300 font-bold" : isGrade4 ? "text-emerald-300 font-bold" : "text-sky-300 font-bold"}>{gradeThemeMeta ? gradeThemeMeta.legend.ready : (isGrade9 ? "⚔️ Misión de Álgebra Superior" : isGrade8 ? "⚔️ Misión Algebraica" : isGrade7 ? "⚔️ Misión Forjada" : isGrade6 ? "🔋 Misión en Línea" : isGrade4 ? "🧭 Misión Lista" : isGrade3 ? "🐬 Explorador en Marcha" : isGrade2 ? "🚀 Nave Lista" : "🚀 Listo para Jugar")}</span>
+                                    <span className={isGirlGrade ? "text-pink-300 font-bold" : isGrade9 ? "text-indigo-300 font-bold" : isGrade8 ? "text-cyan-300 font-bold" : isGrade7 ? "text-amber-300 font-bold" : isGrade6 ? "text-violet-300 font-bold" : isGrade4 ? "text-emerald-300 font-bold" : "text-sky-300 font-bold"}>{gradeThemeMeta ? gradeThemeMeta.legend.ready : (isGrade9 ? "⚔️ Misión de Álgebra Superior" : isGrade8 ? "⚔️ Misión Algebraica" : isGrade7 ? "⚔️ Misión Forjada" : isGrade6 ? "🔋 Misión en Línea" : isGrade4 ? "🧭 Misión Lista" : isGrade3 ? "🐬 Explorador en Marcha" : isGrade2 ? "🚀 Nave Lista" : "🚀 Listo para Jugar")}</span>
                                 </div>
 
                                 {/* Target - In progress */}
                                 <div className="flex items-center gap-3">
-                                    <div className="w-7 h-7 rounded-xl border-2 border-teal-200 bg-gradient-to-b from-teal-300 to-emerald-600 flex items-center justify-center shadow-[0_3px_0_#064e3b]">
-                                        <Target className="w-3.5 h-3.5 text-white" />
+                                    <div className={cn(
+                                        "w-7 h-7 rounded-xl border-2 flex items-center justify-center",
+                                        isGirlGrade
+                                            ? "border-purple-200 bg-gradient-to-b from-purple-400 to-fuchsia-600 shadow-[0_3px_0_#581c87]"
+                                            : "border-teal-200 bg-gradient-to-b from-teal-300 to-emerald-600 shadow-[0_3px_0_#064e3b]"
+                                    )}>
+                                        {isGirlGrade ? <Wand2 className="w-3.5 h-3.5 text-white" /> : <Target className="w-3.5 h-3.5 text-white" />}
                                     </div>
-                                    <span className="text-teal-300 font-bold">{gradeThemeMeta ? gradeThemeMeta.legend.inProgress : (isGrade9 || isGrade8 ? "🔮 En Resolución" : isGrade7 ? "🌋 En Fundición" : isGrade6 ? "⚙️ En Decodificación" : isGrade4 ? "🏺 En Exploración" : isGrade3 ? "🌊 En Inmersión" : isGrade2 ? "🛸 En Órbita" : "🎯 En Progreso")}</span>
+                                    <span className={isGirlGrade ? "text-purple-300 font-bold" : "text-teal-300 font-bold"}>{gradeThemeMeta ? gradeThemeMeta.legend.inProgress : (isGrade9 || isGrade8 ? "🔮 En Resolución" : isGrade7 ? "🌋 En Fundición" : isGrade6 ? "⚙️ En Decodificación" : isGrade4 ? "🏺 En Exploración" : isGrade3 ? "🌊 En Inmersión" : isGrade2 ? "🛸 En Órbita" : "🎯 En Progreso")}</span>
                                 </div>
 
                                 {/* Star - Completed */}
                                 <div className="flex items-center gap-3">
-                                    <div className="w-7 h-7 rounded-xl border-2 border-emerald-200 bg-gradient-to-b from-emerald-400 to-green-600 flex items-center justify-center shadow-[0_3px_0_#14532d]">
-                                        <Star className="w-4 h-4 text-yellow-300 fill-yellow-400" />
+                                    <div className={cn(
+                                        "w-7 h-7 rounded-xl border-2 flex items-center justify-center",
+                                        isGirlGrade
+                                            ? "border-pink-200 bg-gradient-to-b from-pink-400 to-rose-600 shadow-[0_3px_0_#9f1239]"
+                                            : "border-emerald-200 bg-gradient-to-b from-emerald-400 to-green-600 shadow-[0_3px_0_#14532d]"
+                                    )}>
+                                        {isGirlGrade ? <Flower2 className="w-4 h-4 text-pink-100 fill-pink-200" /> : <Star className="w-4 h-4 text-yellow-300 fill-yellow-400" />}
                                     </div>
-                                    <span className="text-emerald-300 font-bold">{gradeThemeMeta ? gradeThemeMeta.legend.completed : (isGrade9 || isGrade8 ? "🏆 Desafío Conquistado" : isGrade7 ? "🏆 Reliquia Conquistada" : isGrade6 ? "💎 Algoritmo Conquistado" : isGrade4 ? "🏆 Reliquia Conquistada" : isGrade3 ? "💎 Perla Conquistada" : isGrade2 ? "🌟 Estrella Conquistada" : "⭐ ¡Misión Cumplida!")}</span>
+                                    <span className={isGirlGrade ? "text-pink-300 font-bold" : "text-emerald-300 font-bold"}>{gradeThemeMeta ? gradeThemeMeta.legend.completed : (isGrade9 || isGrade8 ? "🏆 Desafío Conquistado" : isGrade7 ? "🏆 Reliquia Conquistada" : isGrade6 ? "💎 Algoritmo Conquistado" : isGrade4 ? "🏆 Reliquia Conquistada" : isGrade3 ? "💎 Perla Conquistada" : isGrade2 ? "🌟 Estrella Conquistada" : "⭐ ¡Misión Cumplida!")}</span>
                                 </div>
 
                                 {/* Lock - Locked */}
@@ -1690,7 +1705,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                             stroke={
                                                                 isHighlighted ? "#fbbf24" :
                                                                 isKidsGrade
-                                                                    ? (isUnlocked ? (isGrade9 ? "#6366f1" : isGrade8 ? "#06b6d4" : isGrade7 ? "#f59e0b" : isGrade6 ? "#8b5cf6" : isGrade4 ? "#10b981" : isGrade3 ? "#06b6d4" : isGrade2 ? "#818cf8" : "#38bdf8") : "rgba(100, 116, 139, 0.4)")
+                                                                    ? (isUnlocked ? (isGirlGrade ? "#ec4899" : isGrade9 ? "#6366f1" : isGrade8 ? "#06b6d4" : isGrade7 ? "#f59e0b" : isGrade6 ? "#8b5cf6" : isGrade4 ? "#10b981" : isGrade3 ? "#06b6d4" : isGrade2 ? "#818cf8" : "#38bdf8") : (isGirlGrade ? "rgba(244, 114, 182, 0.3)" : "rgba(100, 116, 139, 0.4)"))
                                                                     : (isUnlocked ? "var(--node-line-unlocked, #3b82f6)" : "rgba(71, 85, 105, 0.5)")
                                                             }
                                                             strokeWidth={isHighlighted ? "5" : isKidsGrade ? "4" : "3"}
@@ -1778,9 +1793,13 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                             "relative flex items-center justify-center shadow-lg transition-all duration-300 hover:brightness-125",
                                                                             isKidsGrade ? (
                                                                                 node.id.endsWith('mastery')
-                                                                                    ? "w-28 h-28 rounded-full border-4 border-yellow-200 border-b-[8px] border-b-purple-950 shadow-[0_8px_0_#581c87,0_15px_35px_rgba(234,179,8,0.7)] animate-pulse"
+                                                                                    ? (isGirlGrade
+                                                                                        ? "w-28 h-28 rounded-full border-4 border-pink-200 border-b-[8px] border-b-purple-950 shadow-[0_8px_0_#581c87,0_15px_35px_rgba(244,114,182,0.8)] animate-pulse"
+                                                                                        : "w-28 h-28 rounded-full border-4 border-yellow-200 border-b-[8px] border-b-purple-950 shadow-[0_8px_0_#581c87,0_15px_35px_rgba(234,179,8,0.7)] animate-pulse")
                                                                                     : node.behavior === 'container'
-                                                                                        ? (isGrade9
+                                                                                        ? (isGirlGrade
+                                                                                            ? "w-22 h-22 rounded-[38px_14px_38px_14px] border-4 border-pink-300 border-b-[6px] border-b-purple-950 shadow-[0_6px_0_#581c87,0_14px_28px_rgba(217,70,239,0.55)]"
+                                                                                            : isGrade9
                                                                                             ? "w-22 h-22 rounded-3xl border-4 border-indigo-300 border-b-[6px] border-b-indigo-950 shadow-[0_6px_0_#312e81,0_12px_25px_rgba(99,102,241,0.55)]"
                                                                                             : isGrade8
                                                                                             ? "w-22 h-22 rounded-3xl border-4 border-cyan-300 border-b-[6px] border-b-cyan-950 shadow-[0_6px_0_#155e75,0_12px_25px_rgba(6,182,212,0.55)]"
@@ -1795,13 +1814,21 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                                             : isGrade2
                                                                                             ? "w-22 h-22 rounded-3xl border-4 border-indigo-200 border-b-[6px] border-b-indigo-950 shadow-[0_6px_0_#312e81,0_12px_25px_rgba(99,102,241,0.5)]"
                                                                                             : "w-22 h-22 rounded-3xl border-4 border-amber-200 border-b-[6px] border-b-amber-950 shadow-[0_6px_0_#7c2d12,0_12px_25px_rgba(245,158,11,0.5)]")
-                                                                                        : cn(
-                                                                                            "w-20 h-20 rounded-[28px] border-4 border-b-[6px] active:translate-y-1 transition-transform",
-                                                                                            isCompleted ? "border-emerald-200 border-b-green-950 shadow-[0_6px_0_#14532d,0_12px_25px_rgba(34,197,94,0.45)]" :
-                                                                                            isInProgress ? "border-teal-200 border-b-emerald-950 shadow-[0_6px_0_#064e3b,0_10px_20px_rgba(45,212,191,0.4)]" :
-                                                                                            isAvailable ? "border-sky-200 border-b-blue-950 shadow-[0_6px_0_#1e3a8a,0_12px_25px_rgba(56,189,248,0.45)]" :
-                                                                                            "border-slate-600 border-b-slate-900 shadow-[0_4px_0_#0f172a] opacity-80 cursor-not-allowed"
-                                                                                        )
+                                                                                        : isGirlGrade
+                                                                                            ? cn(
+                                                                                                "w-20 h-20 rounded-[34px_12px_34px_12px] border-4 border-b-[6px] active:translate-y-1 transition-transform",
+                                                                                                isCompleted ? "border-pink-200 border-b-rose-950 shadow-[0_6px_0_#9f1239,0_12px_25px_rgba(244,63,94,0.45)]" :
+                                                                                                isInProgress ? "border-purple-200 border-b-purple-950 shadow-[0_6px_0_#581c87,0_10px_20px_rgba(168,85,247,0.4)]" :
+                                                                                                isAvailable ? "border-rose-200 border-b-fuchsia-950 shadow-[0_6px_0_#701a75,0_12px_25px_rgba(236,72,153,0.45)]" :
+                                                                                                "border-slate-600 border-b-slate-900 shadow-[0_4px_0_#0f172a] opacity-80 cursor-not-allowed"
+                                                                                            )
+                                                                                            : cn(
+                                                                                                "w-20 h-20 rounded-[28px] border-4 border-b-[6px] active:translate-y-1 transition-transform",
+                                                                                                isCompleted ? "border-emerald-200 border-b-green-950 shadow-[0_6px_0_#14532d,0_12px_25px_rgba(34,197,94,0.45)]" :
+                                                                                                isInProgress ? "border-teal-200 border-b-emerald-950 shadow-[0_6px_0_#064e3b,0_10px_20px_rgba(45,212,191,0.4)]" :
+                                                                                                isAvailable ? "border-sky-200 border-b-blue-950 shadow-[0_6px_0_#1e3a8a,0_12px_25px_rgba(56,189,248,0.45)]" :
+                                                                                                "border-slate-600 border-b-slate-900 shadow-[0_4px_0_#0f172a] opacity-80 cursor-not-allowed"
+                                                                                            )
                                                                             ) : cn(
                                                                                 node.id.endsWith('mastery')
                                                                                     ? "w-28 h-28 hover:shadow-[0_0_35px_rgba(192,38,211,0.6)]"
@@ -1825,11 +1852,21 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                         )}
                                                                         style={isKidsGrade ? {
                                                                             background: isHighlighted ? 'linear-gradient(180deg, #f59e0b, #b45309)' :
-                                                                                node.id.endsWith('mastery') ? 'linear-gradient(180deg, #facc15, #f59e0b 50%, #7e22ce)' :
-                                                                                node.behavior === 'container' ? (isGrade9 ? 'linear-gradient(180deg, #6366f1, #4338ca)' : isGrade8 ? 'linear-gradient(180deg, #06b6d4, #0284c7)' : isGrade7 ? 'linear-gradient(180deg, #f59e0b, #c2410c)' : isGrade6 ? 'linear-gradient(180deg, #a855f7, #4c1d95)' : isGrade4 ? 'linear-gradient(180deg, #34d399, #047857)' : isGrade3 ? 'linear-gradient(180deg, #22d3ee, #0284c7)' : isGrade2 ? 'linear-gradient(180deg, #818cf8, #4338ca)' : 'linear-gradient(180deg, #fbbf24, #ea580c)') :
-                                                                                isCompleted ? 'linear-gradient(180deg, #34d399, #059669)' :
-                                                                                isInProgress ? 'linear-gradient(180deg, #2dd4bf, #0d9488)' :
-                                                                                isAvailable ? 'linear-gradient(180deg, #38bdf8, #2563eb)' :
+                                                                                node.id.endsWith('mastery') ? (isGirlGrade ? 'linear-gradient(180deg, #f472b6, #d946ef 50%, #7e22ce)' : 'linear-gradient(180deg, #facc15, #f59e0b 50%, #7e22ce)') :
+                                                                                node.behavior === 'container' ? (
+                                                                                    isGirlGrade ? 'linear-gradient(180deg, #c026d3, #7e22ce)' :
+                                                                                    isGrade9 ? 'linear-gradient(180deg, #6366f1, #4338ca)' :
+                                                                                    isGrade8 ? 'linear-gradient(180deg, #06b6d4, #0284c7)' :
+                                                                                    isGrade7 ? 'linear-gradient(180deg, #f59e0b, #c2410c)' :
+                                                                                    isGrade6 ? 'linear-gradient(180deg, #a855f7, #4c1d95)' :
+                                                                                    isGrade4 ? 'linear-gradient(180deg, #34d399, #047857)' :
+                                                                                    isGrade3 ? 'linear-gradient(180deg, #22d3ee, #0284c7)' :
+                                                                                    isGrade2 ? 'linear-gradient(180deg, #818cf8, #4338ca)' :
+                                                                                    'linear-gradient(180deg, #fbbf24, #ea580c)'
+                                                                                ) :
+                                                                                isCompleted ? (isGirlGrade ? 'linear-gradient(180deg, #fb7185, #e11d48)' : 'linear-gradient(180deg, #34d399, #059669)') :
+                                                                                isInProgress ? (isGirlGrade ? 'linear-gradient(180deg, #d946ef, #9333ea)' : 'linear-gradient(180deg, #2dd4bf, #0d9488)') :
+                                                                                isAvailable ? (isGirlGrade ? 'linear-gradient(180deg, #f472b6, #db2777)' : 'linear-gradient(180deg, #38bdf8, #2563eb)') :
                                                                                 'linear-gradient(180deg, #475569, #1e293b)'
                                                                         } : {
                                                                             background: isHighlighted ? 'linear-gradient(135deg, #b45309, #f59e0b)' :
@@ -1866,20 +1903,26 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                             {isKidsGrade ? (
                                                                                 isCompleted && !node.id.endsWith('mastery') ? (
                                                                                     <motion.div animate={{ rotate: [0, 8, -8, 0] }} transition={{ repeat: Infinity, duration: 3.5 }}>
-                                                                                        <Star className="w-10 h-10 text-yellow-300 fill-yellow-400 drop-shadow-[0_0_10px_rgba(253,224,71,0.9)]" />
+                                                                                        {isGirlGrade ? (
+                                                                                            <Flower2 className="w-10 h-10 text-pink-100 fill-pink-200 drop-shadow-[0_0_12px_rgba(244,114,182,0.95)]" />
+                                                                                        ) : (
+                                                                                            <Star className="w-10 h-10 text-yellow-300 fill-yellow-400 drop-shadow-[0_0_10px_rgba(253,224,71,0.9)]" />
+                                                                                        )}
                                                                                     </motion.div>
                                                                                 ) : node.id.endsWith('mastery') ? (
                                                                                     <motion.div
                                                                                         animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
                                                                                         transition={{ repeat: Infinity, duration: 2.5 }}
                                                                                     >
-                                                                                        <Crown className="w-16 h-16 text-yellow-200 fill-yellow-300 drop-shadow-[0_0_16px_rgba(253,224,71,1)]" />
+                                                                                        <Crown className={cn("w-16 h-16 drop-shadow-[0_0_16px_rgba(253,224,71,1)]", isGirlGrade ? "text-pink-100 fill-yellow-300" : "text-yellow-200 fill-yellow-300")} />
                                                                                     </motion.div>
                                                                                 ) : isLocked ? (
-                                                                                    <Lock className="w-8 h-8 text-amber-300/90 drop-shadow-[0_0_6px_rgba(245,158,11,0.5)]" />
+                                                                                    <Lock className={cn("w-8 h-8", isGirlGrade ? "text-pink-300/90 drop-shadow-[0_0_6px_rgba(244,114,182,0.5)]" : "text-amber-300/90 drop-shadow-[0_0_6px_rgba(245,158,11,0.5)]")} />
                                                                                 ) : (
                                                                                     node.behavior === 'container' ? (
-                                                                                        isGrade9 ? (
+                                                                                        isGirlGrade ? (
+                                                                                            <Flower2 className="w-9 h-9 text-pink-100 drop-shadow-md animate-pulse-slow" />
+                                                                                        ) : isGrade9 ? (
                                                                                             <Sparkles className="w-9 h-9 text-white drop-shadow-md" />
                                                                                         ) : isGrade8 ? (
                                                                                             <Layers className="w-9 h-9 text-white drop-shadow-md" />
@@ -1895,9 +1938,15 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                                             <BookOpen className="w-9 h-9 text-white drop-shadow-md" />
                                                                                         )
                                                                                     ) : isInProgress ? (
-                                                                                        <Target className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        isGirlGrade ? (
+                                                                                            <Wand2 className="w-9 h-9 text-pink-100 drop-shadow-md animate-pulse" />
+                                                                                        ) : (
+                                                                                            <Target className="w-9 h-9 text-white drop-shadow-md" />
+                                                                                        )
                                                                                     ) : (
-                                                                                        isGrade9 || isGrade8 ? (
+                                                                                        isGirlGrade ? (
+                                                                                            <Flower2 className="w-9 h-9 text-white drop-shadow-md animate-pulse-slow" />
+                                                                                        ) : isGrade9 || isGrade8 ? (
                                                                                             <Sparkles className="w-9 h-9 text-white drop-shadow-md" />
                                                                                         ) : isGrade7 ? (
                                                                                             <Flame className="w-9 h-9 text-white drop-shadow-md" />
@@ -2114,18 +2163,18 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                             : isGrade6
                                                                             ? "bg-gradient-to-b from-purple-950/95 to-slate-900/95 border-2 border-violet-400/80 text-violet-200 shadow-[0_4px_14px_rgba(139,92,246,0.35)] rounded-2xl py-1.5"
                                                                             : isGrade4
-                                                                            ? "bg-gradient-to-b from-emerald-950/95 to-slate-900/95 border-2 border-emerald-400/80 text-emerald-200 shadow-[0_4px_14px_rgba(16,185,129,0.3)] rounded-2xl py-1.5"
+                                                                            ? (isGirlGrade ? "bg-gradient-to-b from-purple-950/95 to-slate-900/95 border-2 border-fuchsia-400/80 text-fuchsia-200 shadow-[0_4px_14px_rgba(217,70,239,0.35)] rounded-2xl py-1.5" : "bg-gradient-to-b from-emerald-950/95 to-slate-900/95 border-2 border-emerald-400/80 text-emerald-200 shadow-[0_4px_14px_rgba(16,185,129,0.3)] rounded-2xl py-1.5")
                                                                             : isGrade3
-                                                                            ? "bg-gradient-to-b from-cyan-950/95 to-slate-900/95 border-2 border-cyan-400/80 text-cyan-200 shadow-[0_4px_14px_rgba(6,182,212,0.3)] rounded-2xl py-1.5"
+                                                                            ? (isGirlGrade ? "bg-gradient-to-b from-purple-950/95 to-slate-900/95 border-2 border-fuchsia-400/80 text-fuchsia-200 shadow-[0_4px_14px_rgba(217,70,239,0.35)] rounded-2xl py-1.5" : "bg-gradient-to-b from-cyan-950/95 to-slate-900/95 border-2 border-cyan-400/80 text-cyan-200 shadow-[0_4px_14px_rgba(6,182,212,0.3)] rounded-2xl py-1.5")
                                                                             : isGrade2
-                                                                            ? "bg-gradient-to-b from-indigo-950/95 to-slate-900/95 border-2 border-indigo-400/80 text-indigo-200 shadow-[0_4px_14px_rgba(99,102,241,0.3)] rounded-2xl py-1.5"
-                                                                            : "bg-gradient-to-b from-amber-950/95 to-slate-900/95 border-2 border-amber-400/80 text-amber-200 shadow-[0_4px_14px_rgba(245,158,11,0.3)] rounded-2xl py-1.5")
+                                                                            ? (isGirlGrade ? "bg-gradient-to-b from-purple-950/95 to-slate-900/95 border-2 border-fuchsia-400/80 text-fuchsia-200 shadow-[0_4px_14px_rgba(217,70,239,0.35)] rounded-2xl py-1.5" : "bg-gradient-to-b from-indigo-950/95 to-slate-900/95 border-2 border-indigo-400/80 text-indigo-200 shadow-[0_4px_14px_rgba(99,102,241,0.3)] rounded-2xl py-1.5")
+                                                                            : (isGirlGrade ? "bg-gradient-to-b from-purple-950/95 to-slate-900/95 border-2 border-fuchsia-400/80 text-fuchsia-200 shadow-[0_4px_14px_rgba(217,70,239,0.35)] rounded-2xl py-1.5" : "bg-gradient-to-b from-amber-950/95 to-slate-900/95 border-2 border-amber-400/80 text-amber-200 shadow-[0_4px_14px_rgba(245,158,11,0.3)] rounded-2xl py-1.5"))
                                                                         : isCompleted
-                                                                            ? "bg-slate-900/95 border-2 border-emerald-400/80 text-emerald-200 shadow-[0_4px_14px_rgba(34,197,94,0.3)] rounded-2xl py-1.5"
+                                                                            ? (isGirlGrade ? "bg-slate-900/95 border-2 border-pink-400/80 text-pink-200 shadow-[0_4px_14px_rgba(244,114,182,0.35)] rounded-2xl py-1.5" : "bg-slate-900/95 border-2 border-emerald-400/80 text-emerald-200 shadow-[0_4px_14px_rgba(34,197,94,0.3)] rounded-2xl py-1.5")
                                                                             : isAvailable
-                                                                                ? "bg-slate-900/95 border-2 border-sky-400/80 text-sky-100 shadow-[0_4px_14px_rgba(56,189,248,0.3)] rounded-2xl py-1.5"
+                                                                                ? (isGirlGrade ? "bg-slate-900/95 border-2 border-rose-400/80 text-rose-100 shadow-[0_4px_14px_rgba(244,63,94,0.35)] rounded-2xl py-1.5" : "bg-slate-900/95 border-2 border-sky-400/80 text-sky-100 shadow-[0_4px_14px_rgba(56,189,248,0.3)] rounded-2xl py-1.5")
                                                                                 : isInProgress
-                                                                                    ? "bg-slate-900/95 border-2 border-teal-400/80 text-teal-100 shadow-[0_4px_14px_rgba(45,212,191,0.3)] rounded-2xl py-1.5"
+                                                                                    ? (isGirlGrade ? "bg-slate-900/95 border-2 border-purple-400/80 text-purple-100 shadow-[0_4px_14px_rgba(168,85,247,0.35)] rounded-2xl py-1.5" : "bg-slate-900/95 border-2 border-teal-400/80 text-teal-100 shadow-[0_4px_14px_rgba(45,212,191,0.3)] rounded-2xl py-1.5")
                                                                                     : "bg-slate-900/80 border-2 border-slate-700/60 text-slate-400 rounded-2xl py-1.5"
                                                                 ) : (
                                                                     node.behavior === 'container'
@@ -2150,17 +2199,18 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                                                                     node.behavior === 'container' ? (
                                                                         <span className={cn(
                                                                             "text-[8.5px] font-black uppercase tracking-wider mb-0.5 flex items-center gap-1",
+                                                                            isGirlGrade ? "text-fuchsia-300" :
                                                                             isGrade9 ? "text-indigo-300" : isGrade8 ? "text-cyan-300" : isGrade7 ? "text-amber-300" : isGrade6 ? "text-violet-300" : isGrade4 ? "text-emerald-300" : isGrade3 ? "text-cyan-300" : isGrade2 ? "text-indigo-300" : "text-amber-300"
                                                                         )}>
-                                                                            {isGrade9 || isGrade8 ? "🌀 DOMINIO" : isGrade7 ? "🛡️ BASTIÓN" : isGrade6 ? "⚡ NÚCLEO" : isGrade4 ? "🏛️ TEMPLO" : isGrade3 ? "🫧 ARRECIFE" : isGrade2 ? "🪐 SECTOR" : "🏰 UNIDAD"}
+                                                                            {isGirlGrade ? "🌸 UNIDAD" : (isGrade9 || isGrade8 ? "🌀 DOMINIO" : isGrade7 ? "🛡️ BASTIÓN" : isGrade6 ? "⚡ NÚCLEO" : isGrade4 ? "🏛️ TEMPLO" : isGrade3 ? "🫧 ARRECIFE" : isGrade2 ? "🪐 SECTOR" : "🏰 UNIDAD")}
                                                                         </span>
                                                                     ) : isCompleted ? (
-                                                                        <span className="text-[8px] font-black uppercase tracking-wider text-emerald-400 mb-0.5 flex items-center gap-1">
-                                                                            ⭐ ¡SUPERADO!
+                                                                        <span className={cn("text-[8px] font-black uppercase tracking-wider mb-0.5 flex items-center gap-1", isGirlGrade ? "text-pink-300" : "text-emerald-400")}>
+                                                                            {isGirlGrade ? "🌸 ¡SUPERADA!" : "⭐ ¡SUPERADO!"}
                                                                         </span>
                                                                     ) : isAvailable ? (
-                                                                        <span className="text-[8px] font-black uppercase tracking-wider text-sky-400 mb-0.5 flex items-center gap-1">
-                                                                            {isGrade9 || isGrade8 ? "⚔️ ¡A CONQUISTAR!" : "🚀 ¡A JUGAR!"}
+                                                                        <span className={cn("text-[8px] font-black uppercase tracking-wider mb-0.5 flex items-center gap-1", isGirlGrade ? "text-pink-300" : "text-sky-400")}>
+                                                                            {isGirlGrade ? "✨ ¡A JUGAR!" : (isGrade9 || isGrade8 ? "⚔️ ¡A CONQUISTAR!" : "🚀 ¡A JUGAR!")}
                                                                         </span>
                                                                     ) : isLocked ? (
                                                                         <span className="text-[8px] font-black uppercase tracking-wider text-slate-500 mb-0.5 flex items-center gap-1">
