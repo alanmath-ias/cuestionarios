@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "wouter";
 import { Eye, Trash2, ArrowLeft, CheckCircle, Clock } from "lucide-react";
+import { formatAppDateTime } from "@/lib/date-utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -263,7 +264,7 @@ const Calificar = () => {
                         <div className="space-y-2 text-slate-300">
                           <p><strong className="text-slate-200">Quiz:</strong> {submission.quiz?.title || "Quiz desconocido"}</p>
                           <p><strong className="text-slate-200">Puntaje:</strong> {submission.progress ? submission.progress.score : "No disponible"}</p>
-                          <p><strong className="text-slate-200">Fecha:</strong> {new Date(submission.completedAt).toLocaleString()}</p>
+                          <p><strong className="text-slate-200">Fecha:</strong> {formatAppDateTime(submission.completedAt)}</p>
                           <p className="text-xs text-slate-500">ID: {submission.progress ? submission.progress.id : "N/A"}</p>
                         </div>
                         {submission.progress && (
@@ -306,7 +307,7 @@ const Calificar = () => {
                         <div className="space-y-2 text-slate-300">
                           <p><strong className="text-slate-200">Quiz:</strong> {submission.quiz?.title || "Quiz desconocido"}</p>
                           <p><strong className="text-slate-200">Puntaje:</strong> {submission.progress ? submission.progress.score : "No disponible"}</p>
-                          <p><strong className="text-slate-200">Fecha:</strong> {new Date(submission.completedAt).toLocaleString()}</p>
+                          <p><strong className="text-slate-200">Fecha:</strong> {formatAppDateTime(submission.completedAt)}</p>
                           <p className="text-xs text-slate-500">ID: {submission.progress ? submission.progress.id : "N/A"}</p>
                         </div>
                         {submission.progress && (

@@ -36,6 +36,7 @@ import { Label } from "@/components/ui/label";
 import { Brain } from "lucide-react";
 import { QuizBreadcrumb } from "@/components/QuizBreadcrumb";
 import { getNodeMeta } from "@/lib/quiz-node-lookup";
+import { formatAppShortDate } from "@/lib/date-utils";
 
 type SortField = 'date' | 'name' | 'subject';
 type SortDir = 'asc' | 'desc';
@@ -377,7 +378,7 @@ export function UserProgressDetails({ userId, username, onBack }: { userId: numb
                                                     <QuizBreadcrumb categoryName={q.categoryName} subcategoryId={q.subcategoryId} />
                                                     <h3 className="font-semibold text-slate-200 text-sm sm:text-base mb-1.5 break-words">{q.title}</h3>
                                                     <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
-                                                        <span>Completado: {q.completedAt ? new Date(q.completedAt).toLocaleDateString() : 'N/A'}</span>
+                                                        <span>Completado: {q.completedAt ? formatAppShortDate(q.completedAt) : 'N/A'}</span>
                                                     </div>
                                                     {q.responseMode === 'direct_input' ? (
                                                         <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-2 flex w-fit items-center gap-1">

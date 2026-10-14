@@ -9,6 +9,7 @@ import { UserQuiz } from "@/types/types";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { QuizBreadcrumb } from "@/components/QuizBreadcrumb";
+import { formatAppShortDate } from "@/lib/date-utils";
 
 interface QuizWithFeedback extends UserQuiz {
     progressId?: string;
@@ -157,7 +158,7 @@ export default function HistoryPage() {
                                                 <div className="flex items-center gap-4 text-sm text-slate-500 mt-1 flex-wrap">
                                                     <span className="flex items-center gap-1.5">
                                                         <Calendar className="w-3.5 h-3.5" />
-                                                        {new Date(quiz.completedAt || '').toLocaleDateString()}
+                                                        {formatAppShortDate(quiz.completedAt)}
                                                     </span>
                                                     <span className="flex items-center gap-1.5">
                                                         <Clock className="w-3.5 h-3.5" />

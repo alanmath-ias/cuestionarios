@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { formatAppDate, parseAppDate } from "@/lib/date-utils";
 
 interface QuizDetailsDialogProps {
     open: boolean;
@@ -73,7 +74,7 @@ export function QuizDetailsDialog({ open, onOpenChange, quiz, childId }: QuizDet
     const toLocalDateStr = (d: Date) => {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
-    const uniqueDayStrs = Array.from(new Set((history || []).map((h: any) => toLocalDateStr(new Date(h.date))))).sort().reverse();
+    const uniqueDayStrs = Array.from(new Set((history || []).map((h: any) => toLocalDateStr(parseAppDate(h.date))))).sort().reverse();
     let currentStreak = 0;
     const todayLocal = new Date();
     for (let i = 0; i < 60; i++) {
@@ -130,7 +131,7 @@ export function QuizDetailsDialog({ open, onOpenChange, quiz, childId }: QuizDet
                     </div>
                     <DialogDescription className="text-slate-400 pt-1">
                         {quiz.completedAt
-                            ? `Completado el ${new Date(quiz.completedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                            ? `Completado el ${formatAppDate(quiz.completedAt)}`
                             : 'Pendiente para hoy'}
                     </DialogDescription>
                 </DialogHeader>

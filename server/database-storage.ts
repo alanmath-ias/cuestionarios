@@ -44,6 +44,15 @@ interface QuizWithRelations extends Quiz {
   subcategory?: Subcategory | null;
 }
 
+export function toUtcIsoString(dateInput: string | Date | null | undefined): string | null {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date) return dateInput.toISOString();
+  const str = String(dateInput).trim();
+  if (!str) return null;
+  if (str.endsWith('Z') || /[+\-]\d{2}(:?\d{2})?$/.test(str)) return str;
+  return str.replace(' ', 'T') + 'Z';
+}
+
 export class DatabaseStorage implements IStorage {
   constructor(private readonly db: DbClient) { }
 
@@ -361,7 +370,7 @@ export class DatabaseStorage implements IStorage {
         userStatus: status,
         score: progress?.score,
         timeSpent: progress?.timeSpent,
-        completedAt: progress?.completedAt,
+        completedAt: toUtcIsoString(progress?.completedAt),
         progressId: progress?.id,
         subcategoryId: quiz.subcategoryId, // Added to support map filtering
         responseMode: assignment?.responseMode || progress?.responseMode || 'multiple_choice'
@@ -672,6 +681,7 @@ export class DatabaseStorage implements IStorage {
 
     return uniqueResult.map(q => ({
       ...q,
+      completedAt: toUtcIsoString(q.completedAt),
       userStatus: q.status === 'completed' ? 'completed' : 'pending',
       responseMode: q.progressResponseMode || q.responseMode || 'multiple_choice'
     }));

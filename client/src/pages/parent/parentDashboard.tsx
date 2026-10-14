@@ -55,6 +55,7 @@ import { QuizDetailsDialog } from "@/components/dialogs/QuizDetailsDialog";
 import { OnboardingTour } from "@/components/dialogs/OnboardingTour";
 import { startParentDashboardTour } from "@/lib/tour";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { formatAppShortDate } from "@/lib/date-utils";
 
 // --- Types ---
 interface QuizWithFeedback extends UserQuiz {
@@ -244,7 +245,7 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback; onClick: (qui
       <div className="flex-1 min-w-0">
         <h4 className="font-semibold text-sm text-slate-200 transition-colors line-clamp-3 group-hover:text-white">{quiz.title}</h4>
         <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
-          <span className="truncate max-w-[120px]">{quiz.difficulty} • {new Date(quiz.completedAt || '').toLocaleDateString()}</span>
+          <span className="truncate max-w-[120px]">{quiz.difficulty} • {formatAppShortDate(quiz.completedAt)}</span>
           {hasFeedback && (
             <span className="flex items-center gap-1 text-emerald-400 font-bold animate-pulse shrink-0">
               <MessageSquare className="w-3 h-3" /> Comentario

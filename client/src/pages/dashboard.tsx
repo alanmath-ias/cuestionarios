@@ -72,6 +72,7 @@ import { AwardsDialog } from "@/components/dashboard/AwardsDialog";
 import { MathTipCard } from "@/components/dashboard/MathTipCard";
 import { BonusCelebrationDialog } from "@/components/dialogs/BonusCelebrationDialog";
 import { CategoryStarItem } from "@/components/dashboard/CategoryStarItem";
+import { formatAppDate, formatAppShortDate } from "@/lib/date-utils";
 
 
 interface QuizWithFeedback {
@@ -299,7 +300,7 @@ function ActivityItem({ quiz, onClick }: { quiz: QuizWithFeedback, onClick: (qui
       <div className="flex-1 min-w-0">
         <h4 className="font-semibold text-sm text-slate-200 transition-colors line-clamp-3 group-hover:text-white">{quiz.title}</h4>
         <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
-          <span className="truncate max-w-[120px]">{quiz.difficulty} • {new Date(quiz.completedAt || '').toLocaleDateString()}</span>
+          <span className="truncate max-w-[120px]">{quiz.difficulty} • {formatAppShortDate(quiz.completedAt)}</span>
           {quiz.responseMode === 'direct_input' ? (
             <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20 px-1.5 h-4 flex items-center gap-1">
               <Brain className="w-2.5 h-2.5" /> IA
@@ -2188,7 +2189,7 @@ export default function UserDashboard() {
                     </div>
                     <div>
                       <h4 className="font-semibold text-slate-200 group-hover:text-blue-400 transition-colors">{quiz.title}</h4>
-                      <p className="text-xs text-slate-500">{new Date(quiz.completedAt || '').toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-500">{formatAppShortDate(quiz.completedAt)}</p>
                     </div>
                   </div>
                   <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-slate-400" />
@@ -2279,7 +2280,7 @@ export default function UserDashboard() {
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-slate-500">Fecha</span>
                     <span className="text-slate-300 font-medium">
-                      {new Date(selectedTraining.lastResult.completedAt).toLocaleDateString('es-ES', { 
+                      {formatAppDate(selectedTraining.lastResult.completedAt, { 
                         day: 'numeric', month: 'short', year: 'numeric'
                       })}
                     </span>
