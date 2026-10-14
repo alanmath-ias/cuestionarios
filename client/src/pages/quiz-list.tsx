@@ -1316,6 +1316,7 @@ function QuizList() {
           {viewMode === 'roadmap' ? (
             ['1', '2', '4', '5', '19'].includes(categoryId) ? (
               <SkillTreeView
+                key={selectedGrade ? `grade-${selectedGrade}` : `category-${categoryId}`}
                 nodes={currentMapNodes}
                 allQuizzes={skillTreeAllQuizzes}
                 title={mapTitle}

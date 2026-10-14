@@ -140,7 +140,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
     const [processedSilverMedalId, setProcessedSilverMedalId] = useState<string | null>(null); // To avoid repeat
     const [showLastWorkedHint, setShowLastWorkedHint] = useState<string | null>(null); // Friendly indicator
     const [showNewContentHint, setShowNewContentHint] = useState<string | null>(null); // Indicator for new content added by admin
-    const lastWorkedScrollProcessed = useRef<boolean>(false);
+    const lastWorkedScrollKey = useRef<string | null>(null);
     const [celebrationCredits, setCelebrationCredits] = useState<number>(0); // credits earned in current celebration
     const [celebratingHasScoreBonus, setCelebratingHasScoreBonus] = useState<boolean>(false); // score >= 8.0 bonus
 
@@ -763,27 +763,31 @@ export const SkillTreeView = React.memo(function SkillTreeView({
         return ids;
     }, [nodes, nodeMappings, allQuizzes]);
 
-    // NEW Logic: Automatic Scroll to Last Worked Node FOR THIS MAP (if no focusNode in URL)
+    // Automatic Scroll to Last Worked Node FOR THIS MAP / GRADE (if no focusNode in URL)
     useEffect(() => {
         const searchParams = new URLSearchParams(window.location.search);
         const focusId = searchParams.get('focusNode');
         const hasSubId = searchParams.get('subId');
         const hasNodeId = searchParams.get('nodeId');
+        const effectiveGradeLevel = searchParams.get('grade') || gradeLevel;
+        const gradeKey = effectiveGradeLevel ? `grade-${effectiveGradeLevel}` : null;
+        const currentMapKey = gradeKey || `cat-${categoryId}`;
 
         // If we have a focusNode, a subId (open dialog), or nodeId, we consider the "initial focus" 
         // as handled by the URL and we should NOT trigger the automatic "Last Worked" scroll later.
         if (focusId || hasSubId || hasNodeId) {
-            lastWorkedScrollProcessed.current = true;
+            lastWorkedScrollKey.current = currentMapKey;
             return;
         }
 
-        // We skip if nodes aren't ready or if we already processed the scroll for this mount.
-        if (nodes.length === 0 || allQuizzes.length === 0 || lastWorkedScrollProcessed.current) return;
+        // We skip if nodes aren't ready or if we already processed the scroll for this specific map/grade.
+        if (nodes.length === 0 || allQuizzes.length === 0 || lastWorkedScrollKey.current === currentMapKey) return;
 
         const isUserAdmin = isAdmin || session?.role === 'admin';
         const isMapPreviouslyCompleted = !isUserAdmin && !!(
-            (session?.tourStatus as any)?.completedMaps?.[categoryId] ||
-            (session?.tourStatus as any)?.completedMaps?.[String(categoryId)]
+            (gradeKey && (session?.tourStatus as any)?.completedMaps?.[gradeKey]) ||
+            (!gradeKey && ((session?.tourStatus as any)?.completedMaps?.[categoryId] ||
+                          (session?.tourStatus as any)?.completedMaps?.[String(categoryId)]))
         );
 
         // If map was previously completed, check if admin added new quizzes to any node
@@ -795,7 +799,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
         });
 
         if (isMapPreviouslyCompleted && newContentNode) {
-            lastWorkedScrollProcessed.current = true;
+            lastWorkedScrollKey.current = currentMapKey;
             const nodeId = newContentNode.id;
 
             setTimeout(() => {
@@ -831,8 +835,9 @@ export const SkillTreeView = React.memo(function SkillTreeView({
             
         if (!recentQuiz) return;
         
-        // Find node for this quiz in current map
+        // Find node for this quiz in current map (excluding containers and mastery nodes)
         let targetNode = nodes.find(n => {
+            if (n.behavior === 'container' || n.id.endsWith('mastery')) return false;
             const mapping = nodeMappings?.find(m => m.nodeId === n.id);
             const subId = mapping ? mapping.subcategoryId : n.subcategoryId;
             const additionalSubs = mapping?.additionalSubcategories || n.additionalSubcategories || [];
@@ -850,20 +855,20 @@ export const SkillTreeView = React.memo(function SkillTreeView({
         });
 
         if (targetNode) {
-            lastWorkedScrollProcessed.current = true;
+            lastWorkedScrollKey.current = currentMapKey;
             const nodeId = targetNode.id;
             
             setTimeout(() => {
                 const element = document.getElementById(`node-container-${nodeId}`);
                 if (element) {
                     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    // Show a friendly hint
+                    // Show friendly hint
                     setShowLastWorkedHint(nodeId);
                     setTimeout(() => setShowLastWorkedHint(null), 5000);
                 }
             }, 800);
         }
-    }, [nodes, allQuizzes, mapQuizIds, nodeMappings, categoryId, session, nodeTotalQuizzes, nodeCompletedCount]);
+    }, [nodes, allQuizzes, mapQuizIds, nodeMappings, categoryId, gradeLevel, session, nodeTotalQuizzes, nodeCompletedCount]);
 
     // Search Logic
     const [searchQuery, setSearchQuery] = useState("");
