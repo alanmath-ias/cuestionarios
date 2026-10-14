@@ -23,7 +23,7 @@ import { algebraMapNodes } from "@/data/algebra-map-data";
 import { calculusMapNodes } from "@/data/calculus-map-data";
 import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
 import { statisticsMapNodes } from "@/data/statistics-map-data";
-import { calculateMasteryStats, getGradeNodes, findGradeForQuiz, getQuizzesForNode, CATEGORY_GRADES, MAP_DATA } from '@/lib/mastery-utils';
+import { calculateMasteryStats, getGradeNodes, findGradeForQuiz, getQuizzesForNode, getArithmeticQuizIds, getAlgebraQuizIds, CATEGORY_GRADES, MAP_DATA } from '@/lib/mastery-utils';
 import { apiRequest } from '@/lib/queryClient';
 
 interface Question {
@@ -388,9 +388,6 @@ function QuizResults() {
             console.log('[NodeComplete] current quiz id:', results.quiz.id, 'score:', results.progress?.score);
 
             const tourStatus = (session?.tourStatus as any) || {};
-            const completedMaps = tourStatus.completedMaps || {};
-            const mapKey = returnGrade ? `grade-${returnGrade}` : String(returnCategoryId);
-            const isMapPreviouslyCompleted = !!(completedMaps[mapKey] || completedMaps[returnCategoryId]);
             const awardedNodes = tourStatus.awardedNodes || {};
             const awardedUnits = tourStatus.awardedUnits || {};
 
@@ -401,13 +398,26 @@ function QuizResults() {
               return false;
             };
 
+            let hasActiveNodeEffort = true;
+            if (returnGrade) {
+              const gNum = parseInt(returnGrade, 10);
+              const baseQuizIds = (gNum >= 8)
+                ? getAlgebraQuizIds(combinedPool, nodeMappings)
+                : getArithmeticQuizIds(combinedPool, nodeMappings);
+
+              const hasGradeSpecificQuiz = nodeQuizzes.some(q => !baseQuizIds.has(Number(q.id)));
+              const completedFreshBaseQuiz = nodeQuizzes.some(q => {
+                const qId = Number(q.id);
+                return baseQuizIds.has(qId) && !tourStatus.seenMedals?.[qId];
+              });
+              hasActiveNodeEffort = hasGradeSpecificQuiz || completedFreshBaseQuiz;
+            }
+
             if (nodeQuizzes.length > 0) {
               const completedCount = nodeQuizzes.filter(q => isQuizDone(q)).length;
               console.log('[NodeComplete] completedCount:', completedCount, '/', nodeQuizzes.length);
               const allDone = completedCount >= nodeQuizzes.length;
-              const priorCompletedCount = nodeQuizzes.filter(q => isQuizDone(q) && Number(q.id) !== Number(results.quiz.id)).length;
-              const isExistingNodeInCompletedMap = isMapPreviouslyCompleted && priorCompletedCount > 0;
-              isNodeComplete = allDone && !awardedNodes[currentNode.id] && !isExistingNodeInCompletedMap;
+              isNodeComplete = allDone && !awardedNodes[currentNode.id] && hasActiveNodeEffort;
             }
 
             // Calculate family completion
@@ -481,7 +491,23 @@ function QuizResults() {
               if (uniqueFamilyQuizzes.length > 0) {
                 const completedCount = uniqueFamilyQuizzes.filter(q => isQuizDone(q)).length;
                 const allDone = completedCount >= uniqueFamilyQuizzes.length;
-                isFamilyComplete = allDone && !isMapPreviouslyCompleted && !awardedUnits[parentContainer.id];
+
+                let hasActiveFamilyEffort = true;
+                if (returnGrade) {
+                  const gNum = parseInt(returnGrade, 10);
+                  const baseQuizIds = (gNum >= 8)
+                    ? getAlgebraQuizIds(combinedPool, nodeMappings)
+                    : getArithmeticQuizIds(combinedPool, nodeMappings);
+
+                  const hasGradeSpecificQuiz = uniqueFamilyQuizzes.some(q => !baseQuizIds.has(Number(q.id)));
+                  const completedFreshBaseQuiz = uniqueFamilyQuizzes.some(q => {
+                    const qId = Number(q.id);
+                    return baseQuizIds.has(qId) && !tourStatus.seenMedals?.[qId];
+                  });
+                  hasActiveFamilyEffort = hasGradeSpecificQuiz || completedFreshBaseQuiz;
+                }
+
+                isFamilyComplete = allDone && !awardedUnits[parentContainer.id] && hasActiveFamilyEffort;
                 console.log('[FamilyComplete] parent:', parentContainer.id, 'completed:', isFamilyComplete, completedCount, '/', uniqueFamilyQuizzes.length);
               }
             }

@@ -560,7 +560,6 @@ export const SkillTreeView = React.memo(function SkillTreeView({
 
             const parentContainer = findParentContainer(focusId);
             const isFamilyMastery =
-                !isMapPreviouslyCompleted &&
                 !focusId.endsWith('mastery') &&
                 !!parentContainer &&
                 !awardedUnits[parentContainer.id] &&
@@ -569,7 +568,6 @@ export const SkillTreeView = React.memo(function SkillTreeView({
             const isNodeCompleted =
                 !focusId.endsWith('mastery') &&
                 !awardedNodes[focusId] &&
-                !isMapPreviouslyCompleted &&
                 searchParams.get('nodeCompleted') === 'true';
 
             const celebrationTargetNode = nodes.find(n => n.id === focusId);
@@ -707,7 +705,8 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                             reason: bonusReason,
                             nodeId: focusId,
                             familyId: parentContainer?.id,
-                            categoryId
+                            categoryId,
+                            grade: effectiveGradeLevel
                         })
                     }).catch(() => {});
                 }

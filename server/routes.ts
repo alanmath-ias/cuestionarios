@@ -726,18 +726,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tourStatus = (user.tourStatus as any) || {};
       const awardedNodes = { ...(tourStatus.awardedNodes || {}) };
       const awardedUnits = { ...(tourStatus.awardedUnits || {}) };
-      const completedMaps = tourStatus.completedMaps || {};
-      const isMapAlreadyCompleted = categoryId && !!(completedMaps[categoryId] || completedMaps[String(categoryId)]);
 
       if (reason === 'family_completed') {
         if (familyId && awardedUnits[familyId]) {
-          const { password: _, ...userWithoutPassword } = user;
-          return res.json({ ...userWithoutPassword, bonusAwarded: 0, alreadyClaimed: true });
-        }
-        if (isMapAlreadyCompleted && familyId) {
-          // If map was previously completed, existing family units were already completed/celebrated
-          awardedUnits[familyId] = true;
-          await storage.updateUser(userId, { tourStatus: { ...tourStatus, awardedUnits } });
           const { password: _, ...userWithoutPassword } = user;
           return res.json({ ...userWithoutPassword, bonusAwarded: 0, alreadyClaimed: true });
         }
@@ -746,13 +737,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else if (reason === 'node_completed') {
         if (nodeId && awardedNodes[nodeId]) {
-          const { password: _, ...userWithoutPassword } = user;
-          return res.json({ ...userWithoutPassword, bonusAwarded: 0, alreadyClaimed: true });
-        }
-        if (isMapAlreadyCompleted && nodeId && !awardedNodes[nodeId]) {
-          // If map was previously completed, existing node was already completed
-          awardedNodes[nodeId] = true;
-          await storage.updateUser(userId, { tourStatus: { ...tourStatus, awardedNodes } });
           const { password: _, ...userWithoutPassword } = user;
           return res.json({ ...userWithoutPassword, bonusAwarded: 0, alreadyClaimed: true });
         }

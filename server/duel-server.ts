@@ -177,6 +177,9 @@ export class DuelServer {
 
     (socket as any).isAlive = true;
     socket.on('pong', () => { (socket as any).isAlive = true; });
+    socket.on('error', (err) => {
+      console.warn(`⚠️ [WS] Socket error for user ${userId}:`, (err as any)?.message || err);
+    });
 
     if (user.role === 'admin') {
         this.adminSockets.add(socket);
