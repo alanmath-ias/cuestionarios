@@ -153,8 +153,31 @@ function QuizResults() {
   const hasCheckedAchievements = useRef(false);
 
   // Return destination: strictly determined by where the user entered the quiz from (origin)
-  const returnGrade = gradeFromUrl || null;
-  const returnCategoryId = originCatFromUrl ? Number(originCatFromUrl) : (results?.quiz?.categoryId || Number(params.categoryId) || 1);
+  // or auto-detected with fallback to ensure the user ALWAYS returns to the correct grade map!
+  const returnGrade = useMemo(() => {
+    if (gradeFromUrl) {
+      return gradeFromUrl.replace('grade-', '');
+    }
+    if (results?.quiz?.id) {
+      const savedGrade = sessionStorage.getItem(`active_quiz_grade_${results.quiz.id}`);
+      if (savedGrade) return savedGrade.replace('grade-', '');
+    }
+    if (results?.quiz) {
+      const match = findGradeForQuiz(results.quiz.id, results.quiz.subcategoryId, nodeMappings);
+      if (match) return match.gradeNum;
+    }
+    return null;
+  }, [gradeFromUrl, results?.quiz, nodeMappings]);
+
+  const returnCategoryId = useMemo(() => {
+    if (originCatFromUrl) return Number(originCatFromUrl);
+    if (returnGrade) {
+      if (returnGrade === '8' || returnGrade === '9') return 2;
+      const gNum = parseInt(returnGrade, 10);
+      if (gNum >= 1 && gNum <= 7) return 1;
+    }
+    return results?.quiz?.categoryId || Number(params.categoryId) || 1;
+  }, [originCatFromUrl, returnGrade, results?.quiz, params.categoryId]);
 
   // Merge current quiz progress into userQuizzes pool so real-time completion check is NEVER evaluated against stale cache
   const currentUserQuizzesPool = useMemo(() => {
@@ -476,12 +499,10 @@ function QuizResults() {
       } else {
         const categoryId = returnCategoryId;
         const gradeParamStr = returnGrade ? `&grade=${returnGrade}` : '';
-        if (window.history.length > 1) {
-          window.history.back();
-        } else if (categoryId) {
+        if (categoryId) {
           setLocation(`/category/${categoryId}?view=roadmap${gradeParamStr}`);
         } else {
-          // Fallback si no hay historial previo
+          // Fallback si no hay categoría
           setLocation('/dashboard');
         }
       }

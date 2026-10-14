@@ -78,7 +78,7 @@ export function isGradeRoadmap(gradeLevel?: string | number | null, nodes?: any[
     return false;
 }
 
-export function findGradeForQuiz(quizId: number | string, subcategoryId?: number | string | null): {
+export function findGradeForQuiz(quizId: number | string, subcategoryId?: number | string | null, nodeMappings?: any[]): {
     gradeKey: string;
     gradeNum: string;
     node: any;
@@ -93,10 +93,16 @@ export function findGradeForQuiz(quizId: number | string, subcategoryId?: number
         const nodes = g.nodes;
         for (const node of nodes) {
             if (node.id.endsWith('mastery') || node.behavior === 'container') continue;
-            const matchesQuiz = Array.isArray(node.additionalQuizzes) && node.additionalQuizzes.map(Number).includes(qId);
+
+            const mapping = nodeMappings?.find(m => m.nodeId === node.id);
+            const addQuizzes = (mapping?.additionalQuizzes && mapping.additionalQuizzes.length > 0) ? mapping.additionalQuizzes : (node.additionalQuizzes || []);
+            const addSubs = (mapping?.additionalSubcategories && mapping.additionalSubcategories.length > 0) ? mapping.additionalSubcategories : (node.additionalSubcategories || []);
+            const effectiveSub = mapping?.subcategoryId != null ? Number(mapping.subcategoryId) : (node.subcategoryId != null ? Number(node.subcategoryId) : null);
+
+            const matchesQuiz = Array.isArray(addQuizzes) && addQuizzes.map(Number).includes(qId);
             const matchesSub = sId !== null && (
-                Number(node.subcategoryId) === sId ||
-                (Array.isArray(node.additionalSubcategories) && node.additionalSubcategories.map(Number).includes(sId))
+                effectiveSub === sId ||
+                (Array.isArray(addSubs) && addSubs.map(Number).includes(sId))
             );
 
             if (matchesQuiz || matchesSub) {

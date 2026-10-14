@@ -46,7 +46,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@/hooks/useSession";
 import { MapCompletionCelebration } from '@/components/dashboard/MapCompletionCelebration';
 import { getCreditConfig } from '@shared/credit-config';
-import { calculateMasteryStats, getGradeNodes } from '@/lib/mastery-utils';
+import { calculateMasteryStats, getGradeNodes, findGradeForQuiz } from '@/lib/mastery-utils';
 import { useTheme } from '@/lib/theme';
 import { getGradeThemeMeta, isFeminineTheme } from '@/lib/gradeThemeContent';
 
@@ -218,21 +218,25 @@ function QuizList() {
   const { categoryId } = useParams<{ categoryId: string }>();
   const [location, setLocation] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
-  const [selectedGrade, setSelectedGrade] = useState<string | null>(searchParams.get('grade'));
+  const rawInitialGrade = searchParams.get('grade');
+  const normalizedInitialGrade = rawInitialGrade ? rawInitialGrade.replace('grade-', '') : null;
+  const [selectedGrade, setSelectedGrade] = useState<string | null>(normalizedInitialGrade);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const gradeFromUrl = params.get('grade');
+    const rawGrade = params.get('grade');
+    const gradeFromUrl = rawGrade ? rawGrade.replace('grade-', '') : null;
     if (gradeFromUrl !== selectedGrade) {
       setSelectedGrade(gradeFromUrl);
     }
   }, [location, selectedGrade]);
 
   const handleSelectGrade = (grade: string | null) => {
-    setSelectedGrade(grade);
+    const cleanGrade = grade ? grade.replace('grade-', '') : null;
+    setSelectedGrade(cleanGrade);
     const params = new URLSearchParams(window.location.search);
-    if (grade) {
-      params.set('grade', grade);
+    if (cleanGrade) {
+      params.set('grade', cleanGrade);
     } else {
       params.delete('grade');
     }
@@ -691,8 +695,21 @@ function QuizList() {
     const parentUserId = searchParams.get('user_id');
     const params = new URLSearchParams();
     if (parentUserId) params.set('mode', 'readonly');
-    if (selectedGrade) params.set('grade', selectedGrade);
-    if (categoryId) params.set('origin_cat', categoryId);
+    
+    const effectiveGrade = selectedGrade || (() => {
+      const match = findGradeForQuiz(quizId, null, nodeMappingsData);
+      return match ? match.gradeNum : null;
+    })();
+
+    if (effectiveGrade) {
+      const cleanGrade = effectiveGrade.replace('grade-', '');
+      params.set('grade', cleanGrade);
+      sessionStorage.setItem(`active_quiz_grade_${quizId}`, cleanGrade);
+    }
+
+    const effectiveCat = categoryId || (effectiveGrade && (effectiveGrade === '8' || effectiveGrade === '9') ? '2' : '1');
+    if (effectiveCat) params.set('origin_cat', effectiveCat);
+
     const queryString = params.toString() ? `?${params.toString()}` : '';
     setLocation(`/quiz/${quizId}${queryString}`);
   };
@@ -709,8 +726,20 @@ function QuizList() {
     if (miniQuizId) {
       const params = new URLSearchParams();
       params.set('mode', 'mini');
-      if (selectedGrade) params.set('grade', selectedGrade);
-      if (categoryId) params.set('origin_cat', categoryId);
+      const effectiveGrade = selectedGrade || (() => {
+        const match = findGradeForQuiz(miniQuizId, null, nodeMappingsData);
+        return match ? match.gradeNum : null;
+      })();
+
+      if (effectiveGrade) {
+        const cleanGrade = effectiveGrade.replace('grade-', '');
+        params.set('grade', cleanGrade);
+        sessionStorage.setItem(`active_quiz_grade_${miniQuizId}`, cleanGrade);
+      }
+
+      const effectiveCat = categoryId || (effectiveGrade && (effectiveGrade === '8' || effectiveGrade === '9') ? '2' : '1');
+      if (effectiveCat) params.set('origin_cat', effectiveCat);
+
       setLocation(`/quiz/${miniQuizId}?${params.toString()}`);
       setMiniQuizId(null);
     }
@@ -1670,8 +1699,17 @@ function QuizList() {
                                           const parentUserId = searchParams.get('user_id');
                                           const resParams = new URLSearchParams();
                                           if (parentUserId) resParams.set('user_id', parentUserId);
-                                          if (selectedGrade) resParams.set('grade', selectedGrade);
-                                          if (categoryId) resParams.set('origin_cat', categoryId);
+                                          const effectiveGrade = selectedGrade || (() => {
+                                            const match = findGradeForQuiz(quiz.id, null, nodeMappingsData);
+                                            return match ? match.gradeNum : null;
+                                          })();
+                                          if (effectiveGrade) {
+                                            const cleanGrade = effectiveGrade.replace('grade-', '');
+                                            resParams.set('grade', cleanGrade);
+                                            sessionStorage.setItem(`active_quiz_grade_${quiz.id}`, cleanGrade);
+                                          }
+                                          const effectiveCat = categoryId || (effectiveGrade && (effectiveGrade === '8' || effectiveGrade === '9') ? '2' : '1');
+                                          if (effectiveCat) resParams.set('origin_cat', effectiveCat);
                                           const qs = resParams.toString();
                                           const resultUrl = `/results/${quizProgress.id}${qs ? `?${qs}` : ''}`;
                                           setLocation(resultUrl);

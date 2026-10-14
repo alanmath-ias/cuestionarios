@@ -152,15 +152,18 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { setSelectedType(null); onClose(); } }}>
-            <DialogContent className="w-[96vw] max-w-5xl max-h-[92vh] bg-slate-950/98 border-amber-500/20 backdrop-blur-2xl rounded-[2rem] sm:rounded-[3rem] p-0 overflow-hidden shadow-[0_0_50px_rgba(234,179,8,0.15)] ring-0 focus:outline-none">
-                <ScrollArea className="h-[92vh] max-h-[92vh] p-0 w-full">
+            <DialogContent 
+                onOpenAutoFocus={(e) => e.preventDefault()}
+                className="w-[95vw] max-w-4xl max-h-[92vh] bg-slate-950/98 border-amber-500/20 backdrop-blur-2xl rounded-[2rem] sm:rounded-[3rem] p-0 overflow-hidden shadow-[0_0_50px_rgba(234,179,8,0.15)] ring-0 focus:outline-none min-w-0"
+            >
+                <div className="h-[92vh] max-h-[92vh] overflow-y-auto overflow-x-hidden p-0 w-full max-w-full min-w-0 scroll-smooth">
                     {(!allCategoryQuizzes || !stats) ? (
                         <div className="h-[400px] flex flex-col items-center justify-center gap-4">
                             <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />
                             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Abriendo Cofre...</p>
                         </div>
                     ) : (
-                        <div className="relative w-full min-w-0">
+                        <div className="relative w-full max-w-full min-w-0 overflow-x-hidden">
                             <AnimatePresence mode="wait">
                                 {!selectedType ? (
                                     <motion.div
@@ -168,19 +171,19 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: -20 }}
-                                        className="relative w-full min-w-0"
+                                        className="relative w-full max-w-full min-w-0 overflow-x-hidden"
                                     >
                                         {/* Header with Visual Focus on the specific Map */}
-                                        <div className="relative p-4 sm:p-8 md:p-10 pb-4 sm:pb-6 text-center space-y-4 sm:space-y-6 w-full min-w-0">
+                                        <div className="relative p-3.5 sm:p-8 md:p-10 pb-3 sm:pb-6 text-center space-y-3 sm:space-y-6 w-full max-w-full min-w-0">
                                             <div className="absolute top-[-50px] left-1/2 -translate-x-1/2 w-[350px] h-[350px] bg-amber-500/10 rounded-full blur-[100px] -z-10" />
 
                                             <div className="flex flex-col items-center gap-2 sm:gap-3">
-                                                <Gift className="w-12 h-12 sm:w-16 sm:h-16 text-amber-400 drop-shadow-[0_0_20px_rgba(234,179,8,0.6)]" />
-                                                <div className="space-y-1">
-                                                    <DialogTitle className="text-2xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-yellow-400 to-amber-600 tracking-tighter uppercase italic leading-tight">
+                                                <Gift className="w-10 h-10 sm:w-16 sm:h-16 text-amber-400 drop-shadow-[0_0_20px_rgba(234,179,8,0.6)]" />
+                                                <div className="space-y-1 w-full min-w-0">
+                                                    <DialogTitle className="text-xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-yellow-400 to-amber-600 tracking-tighter uppercase italic leading-tight truncate px-1">
                                                         {activeGrade ? `Cofre de ${activeGrade.name}` : `Cofre de ${category.name}`}
                                                     </DialogTitle>
-                                                    <p className="text-slate-400 font-bold text-[10px] sm:text-xs uppercase tracking-[0.3em] sm:tracking-[0.4em] opacity-80">
+                                                    <p className="text-slate-400 font-bold text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.4em] opacity-80 truncate px-1">
                                                         {activeGrade ? `${activeGrade.title} • Logros de ${username}` : `Logros de ${username}`}
                                                     </p>
                                                 </div>
@@ -188,12 +191,12 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
 
                                             {/* Subcofres Navigation Tabs (Grados) */}
                                             {availableGrades.length > 0 && (
-                                                <div className="w-full max-w-full min-w-0 flex flex-col items-center gap-2 pt-1 sm:pt-2">
+                                                <div className="w-full max-w-full min-w-0 flex flex-col items-center gap-1.5 pt-1 sm:pt-2">
                                                     <div className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-[0.25em] flex items-center gap-2">
                                                         <Sparkles className="w-3 h-3 text-amber-400 shrink-0" /> Subcofres por Grado
                                                     </div>
-                                                    <div className="w-full max-w-full min-w-0 overflow-x-auto no-scrollbar touch-pan-x py-1 px-1">
-                                                        <div className="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-full bg-slate-900/90 border border-white/10 backdrop-blur-md shadow-2xl w-fit mx-auto shrink-0">
+                                                    <div className="w-full max-w-full min-w-0 overflow-x-auto no-scrollbar touch-pan-x overscroll-x-contain py-1 px-1">
+                                                        <div className="inline-flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-full bg-slate-900/90 border border-white/10 backdrop-blur-md shadow-2xl shrink-0">
                                                             {/* Tab General */}
                                                             <button
                                                                 type="button"
@@ -250,7 +253,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                             )}
 
                                             {/* Main Stats Grid */}
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-4 mt-6 sm:mt-8 w-full">
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4 mt-6 sm:mt-8 w-full max-w-full min-w-0">
                                                 <StatCard
                                                     icon={Trophy}
                                                     label="Copa Oro"
@@ -308,7 +311,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                                             </div>
                                         </div>
 
-                                        <div className="px-4 sm:px-8 md:px-10 pb-8 sm:pb-12 space-y-6 sm:space-y-8 w-full min-w-0">
+                                        <div className="px-3.5 sm:px-8 md:px-10 pb-6 sm:pb-12 space-y-4 sm:space-y-8 w-full max-w-full min-w-0">
                                             {/* Detailed Progress Section */}
                                             <div className="space-y-3 sm:space-y-4">
                                                 <h4 className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2 sm:gap-3">
@@ -385,7 +388,7 @@ export const AwardsDialog: React.FC<AwardsDialogProps> = ({
                             </AnimatePresence>
                         </div>
                     )}
-                </ScrollArea>
+                </div>
             </DialogContent>
         </Dialog>
     );

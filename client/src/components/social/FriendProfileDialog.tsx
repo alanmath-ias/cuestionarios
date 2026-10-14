@@ -115,10 +115,15 @@ export const FriendProfileDialog: React.FC<FriendProfileDialogProps> = ({
     return (
         <>
             <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-                <DialogContent className="max-w-md bg-slate-950/98 border-white/10 backdrop-blur-2xl rounded-[2.5rem] p-0 overflow-hidden shadow-2xl">
-                    <ScrollArea className="max-h-[85vh]">
+                <DialogContent 
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                    className="w-[95vw] max-w-md bg-slate-950/98 border-white/10 backdrop-blur-2xl rounded-[2.5rem] p-0 overflow-hidden shadow-2xl min-w-0"
+                >
+                    <div className="max-h-[85vh] overflow-y-auto overflow-x-hidden p-0 w-full scroll-smooth">
                         {isLoading ? (
                             <div className="h-64 flex flex-col items-center justify-center gap-4">
+                                <DialogTitle className="sr-only">Cargando Perfil</DialogTitle>
+                                <DialogDescription className="sr-only">Cargando la información del estudiante...</DialogDescription>
                                 <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
                                 <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Cargando Perfil...</p>
                             </div>
@@ -338,7 +343,7 @@ export const FriendProfileDialog: React.FC<FriendProfileDialogProps> = ({
                                 </div>
                             </div>
                         )}
-                    </ScrollArea>
+                    </div>
                 </DialogContent>
             </Dialog>
 

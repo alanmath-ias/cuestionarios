@@ -570,12 +570,12 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ x: 5, backgroundColor: "rgba(30, 41, 59, 0.6)" }}
       onClick={user.role === 'admin' ? undefined : onProfile}
-      className={`bg-slate-900/40 border border-white/5 rounded-2xl p-3 px-5 flex items-center justify-between group backdrop-blur-sm ${user.role === 'admin' ? 'cursor-default' : 'cursor-pointer'} transition-all ${disabled ? 'pointer-events-none opacity-50' : ''}`}
+      className={`bg-slate-900/40 border border-white/5 rounded-2xl p-2.5 px-3.5 sm:p-3 sm:px-5 flex items-center justify-between group backdrop-blur-sm ${user.role === 'admin' ? 'cursor-default' : 'cursor-pointer'} transition-all ${disabled ? 'pointer-events-none opacity-50' : ''}`}
     >
-      {/* Left: Avatar & Identity */}
-      <div className="flex items-center gap-4 flex-1 min-w-0">
+      {/* Left: Avatar & Identity - PRIORIDAD MÁXIMA AL NOMBRE */}
+      <div className="flex items-center gap-2.5 sm:gap-4 flex-1 min-w-0 pr-2">
         <div className="relative flex-shrink-0">
-          <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-lg font-bold border border-white/10">
+          <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-lg font-bold border border-white/10 shrink-0">
             {user.avatar ? (
               <img
                 src={user.avatar}
@@ -588,23 +588,25 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
           </div>
           <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-slate-900 ${onlineUsers.has(user.id) ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-slate-600'}`} />
         </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="font-bold text-slate-100 truncate leading-tight">{user.name}</h3>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+            <h3 className="font-bold text-slate-100 text-xs sm:text-base leading-snug break-words line-clamp-2 sm:line-clamp-1">
+              {user.name}
+            </h3>
             {user.duelWins > 0 && (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20" title="Victorias globales">
+              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shrink-0" title="Victorias globales">
                 <Trophy className="w-2.5 h-2.5 text-emerald-400" />
                 <span className="text-[9px] font-black text-emerald-400 leading-none">{user.duelWins}</span>
               </div>
             )}
           </div>
-          <p className="text-[10px] text-slate-500 truncate">@{user.role === 'admin' ? 'Administrador' : user.username}</p>
+          <p className="text-[10px] text-slate-400 truncate mt-0.5">@{user.role === 'admin' ? 'Administrador' : user.username}</p>
         </div>
       </div>
 
       {/* Middle: Compact Record (Desktop only) */}
       {type === "friend" && (user.wins > 0 || user.losses > 0) && (
-        <div className="hidden sm:flex items-center gap-4 mx-6 px-4 py-1.5 bg-slate-950/30 border border-white/5 rounded-xl group-hover:bg-slate-950/50 transition-colors">
+        <div className="hidden md:flex items-center gap-4 mx-4 px-4 py-1.5 bg-slate-950/30 border border-white/5 rounded-xl group-hover:bg-slate-950/50 transition-colors shrink-0">
           <div className="flex flex-col items-center">
             <span className="text-[7px] font-black text-emerald-500 uppercase tracking-tighter">Victorias</span>
             <span className="text-sm font-black text-emerald-400 italic leading-none">{user.wins}V</span>
@@ -617,8 +619,8 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
         </div>
       )}
 
-      {/* Right: Actions */}
-      <div className="flex items-center gap-2">
+      {/* Right: Actions - BOTONES COMPACTOS EN MÓVIL */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         {type === "friend" && (
           <>
             {user.role !== 'admin' && (
@@ -629,7 +631,7 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
                   e.stopPropagation(); 
                   onProfile();
                 }}
-                className="rounded-xl border-amber-500/20 bg-amber-500/5 text-amber-400 hover:bg-amber-500 hover:text-slate-950 hover:border-amber-500 transition-all h-9 px-3 text-xs font-bold"
+                className="rounded-xl border-amber-500/20 bg-amber-500/5 text-amber-400 hover:bg-amber-500 hover:text-slate-950 hover:border-amber-500 transition-all h-8 w-8 sm:h-9 sm:w-auto p-0 sm:px-3 text-xs font-bold shrink-0"
                 title="Ver progreso, copas y cofre del tesoro"
               >
                 <Trophy className="w-3.5 h-3.5 sm:mr-1.5" />
@@ -643,52 +645,50 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
                 e.stopPropagation(); 
                 window.dispatchEvent(new CustomEvent('open-chat', { detail: { friend: user } }));
               }}
-              className="rounded-xl border-blue-500/20 bg-blue-500/5 text-blue-400 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all h-9 px-3 text-xs font-bold"
+              className="rounded-xl border-blue-500/20 bg-blue-500/5 text-blue-400 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all h-8 w-8 sm:h-9 sm:w-auto p-0 sm:px-3 text-xs font-bold shrink-0"
+              title="Chatear con este amigo"
             >
-              <MessageSquare className="w-3.5 h-3.5 mr-1.5" /> Chatear
+              <MessageSquare className="w-3.5 h-3.5 sm:mr-1.5" />
+              <span className="hidden sm:inline">Chatear</span>
             </Button>
             {user.role !== 'admin' && (
               <Button 
                 size="sm" 
                 onClick={(e) => { 
                   e.stopPropagation(); 
-                  if (!onlineUsers.has(user.id)) {
-                    // This is handled in the parent via state but we need a callback or just use the same handler pattern
-                    // For simplicity in this functional component, I'll use a direct check if I can access the state
-                    // Wait, this is a sub-component. I should pass a handler down or use a global-ish state.
-                    // Actually, let's just make onChallenge in the parent handle it.
-                  }
                   onChallenge(user); 
                 }}
                 disabled={sentChallenges.has(user.id)}
-                className={`rounded-xl shadow-lg transition-all duration-300 h-9 px-3 text-xs font-bold ${
+                className={`rounded-xl shadow-lg transition-all duration-300 h-8 w-8 sm:h-9 sm:w-auto p-0 sm:px-3 text-xs font-bold shrink-0 ${
                   sentChallenges.has(user.id) 
                     ? 'bg-slate-800 text-slate-500 cursor-default shadow-none' 
                     : 'bg-blue-600 hover:bg-blue-500 shadow-blue-950/20 active:scale-95'
                 }`}
+                title={sentChallenges.has(user.id) ? "Duelo ya enviado" : "Retar a un duelo"}
               >
-                <Sword className="w-3.5 h-3.5 mr-1.5" /> 
-                {sentChallenges.has(user.id) ? 'Retado' : 'Retar'}
+                <Sword className="w-3.5 h-3.5 sm:mr-1.5" /> 
+                <span className="hidden sm:inline">{sentChallenges.has(user.id) ? 'Retado' : 'Retar'}</span>
               </Button>
             )}
           </>
         )}
 
         {type === "request" && (
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <Button 
               size="sm"
               variant="default" 
               onClick={(e) => { e.stopPropagation(); onAccept(); }}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-500 h-9 px-4 font-bold text-xs"
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-500 h-8 sm:h-9 px-2.5 sm:px-4 font-bold text-xs shrink-0"
             >
-              <Check className="w-3.5 h-3.5 mr-1.5" /> Aceptar
+              <Check className="w-3.5 h-3.5 sm:mr-1.5" />
+              <span className="hidden sm:inline">Aceptar</span>
             </Button>
             <Button 
               size="icon"
               variant="destructive" 
               onClick={(e) => { e.stopPropagation(); onReject(); }}
-              className="rounded-xl h-9 w-9"
+              className="rounded-xl h-8 w-8 sm:h-9 sm:w-9 shrink-0"
               title="Rechazar"
             >
               <X className="w-3.5 h-3.5" />
@@ -696,29 +696,29 @@ function UserCard({ user, type, onChallenge, onAccept, onReject, onAdd, onBlock,
           </div>
         )}
 
-         {type === "search" && (
-           <div className="flex gap-2">
-             <Button 
-               size="sm"
-               onClick={(e) => { e.stopPropagation(); onAdd(); }}
-               disabled={disabled}
-               className={`rounded-xl h-9 px-4 font-bold text-xs transition-all ${disabled ? 'bg-slate-800' : 'bg-slate-100 text-slate-950 hover:bg-white'}`}
-             >
-               {status === "accepted" ? (
-                 <><UserCheck className="w-3.5 h-3.5 mr-1.5" /> Amigo</>
-               ) : status === "pending" ? (
-                 <><Clock className="w-3.5 h-3.5 mr-1.5" /> Pendiente</>
-               ) : (
-                 <><UserPlus className="w-3.5 h-3.5 mr-1.5" /> Agregar</>
-               )}
-             </Button>
-             {status !== "accepted" && status !== "pending" && (
-               <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); onBlock(); }} title="Bloquear" className="rounded-xl text-slate-500 hover:text-red-400 h-9 w-9 hover:bg-red-500/10">
-                 <ShieldAlert className="w-3.5 h-3.5" />
-               </Button>
-             )}
-           </div>
-         )}
+        {type === "search" && (
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <Button 
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); onAdd(); }}
+              disabled={disabled}
+              className={`rounded-xl h-8 sm:h-9 px-2.5 sm:px-4 font-bold text-xs transition-all shrink-0 ${disabled ? 'bg-slate-800' : 'bg-slate-100 text-slate-950 hover:bg-white'}`}
+            >
+              {status === "accepted" ? (
+                <><UserCheck className="w-3.5 h-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Amigo</span></>
+              ) : status === "pending" ? (
+                <><Clock className="w-3.5 h-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Pendiente</span></>
+              ) : (
+                <><UserPlus className="w-3.5 h-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Agregar</span></>
+              )}
+            </Button>
+            {status !== "accepted" && status !== "pending" && (
+              <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); onBlock(); }} title="Bloquear" className="rounded-xl text-slate-500 hover:text-red-400 h-8 w-8 sm:h-9 sm:w-9 hover:bg-red-500/10 shrink-0">
+                <ShieldAlert className="w-3.5 h-3.5" />
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );

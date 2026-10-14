@@ -47,6 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { findGradeForQuiz } from "@/lib/mastery-utils";
 
 const SURVEY_QUIZ_IDS = [68, 69, 73, 72];
 
@@ -1091,14 +1092,41 @@ const ActiveQuiz = () => {
     }
   }, [elapsedTime, isLiveSharing, broadcastTimerSync]);
 
+  const resolveQuizGradeInfo = () => {
+    const searchParams = new URLSearchParams(window.location.search);
+    let grade = searchParams.get('grade');
+    let originCat = searchParams.get('origin_cat');
+    const qId = quizId ? Number(quizId) : (quiz?.id ? Number(quiz.id) : null);
+
+    if (grade && qId) {
+      sessionStorage.setItem(`active_quiz_grade_${qId}`, grade);
+    }
+    if (!grade && qId) {
+      grade = sessionStorage.getItem(`active_quiz_grade_${qId}`);
+    }
+    if (!grade && qId && quiz) {
+      const match = findGradeForQuiz(qId, quiz?.subcategoryId);
+      if (match) {
+        grade = match.gradeNum;
+      }
+    }
+    if (!originCat && grade) {
+      originCat = (grade === '8' || grade === '9') ? '2' : '1';
+    } else if (!originCat && quiz?.categoryId) {
+      originCat = String(quiz.categoryId);
+    }
+    return {
+      grade: grade ? grade.replace('grade-', '') : null,
+      originCat
+    };
+  };
+
   // Effects
   useEffect(() => {
     if (!isInitialized && questions) {
       if (progress) {
         if (progress.status === 'completed' && mode !== 'readonly') {
-          const searchParams = new URLSearchParams(window.location.search);
-          const grade = searchParams.get('grade');
-          const originCat = searchParams.get('origin_cat');
+          const { grade, originCat } = resolveQuizGradeInfo();
           const qParams = new URLSearchParams();
           if (grade) qParams.set('grade', grade);
           if (originCat) qParams.set('origin_cat', originCat);
@@ -1826,9 +1854,7 @@ const ActiveQuiz = () => {
       // El servidor ya guarda quizSubmission dentro de POST /api/progress cuando status='completed'.
       // No se llama a /api/quiz-submission por separado para evitar race condition con el score autoritativo.
 
-      const searchParams = new URLSearchParams(window.location.search);
-      const grade = searchParams.get('grade');
-      const originCat = searchParams.get('origin_cat');
+      const { grade, originCat } = resolveQuizGradeInfo();
       const qParams = new URLSearchParams();
       qParams.set('source', 'quiz');
       if (grade) qParams.set('grade', grade);
