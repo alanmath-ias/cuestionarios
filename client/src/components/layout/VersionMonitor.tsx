@@ -4,6 +4,7 @@ import { RefreshCw, Sparkles, Palette, X, ChevronRight } from 'lucide-react';
 import { ThemeSelectorDialog } from '@/components/theme/ThemeSelectorDialog';
 
 interface VersionData {
+  id?: string;
   version: string;
   timestamp: string;
   highlight?: boolean;
@@ -32,16 +33,25 @@ export const VersionMonitor: React.FC = () => {
         const data: VersionData = await response.json();
         setVersionData(data);
 
-        // 1. Detección de nueva versión para recarga (si el usuario ya tenía la app abierta)
+        // 1. Detección de nueva versión para recarga (si el usuario ya tenía la app abierta durante un build)
         if (myVersion && data.version && data.version !== myVersion) {
           console.log(`🚀 New version detected: ${data.version} (Current: ${myVersion})`);
           setNewVersionAvailable(true);
         }
 
         // 2. Anuncio de novedad destacada al abrir la app (si está marcada con highlight: true)
-        if (data.highlight && data.version) {
-          const lastSeen = localStorage.getItem('last_seen_feature_version');
-          if (lastSeen !== data.version) {
+        if (data.highlight) {
+          const featureKey = data.id || data.title || data.version;
+          let seenList: string[] = [];
+          try {
+            seenList = JSON.parse(localStorage.getItem('seen_feature_announcements') || '[]');
+          } catch {
+            seenList = [];
+          }
+
+          const alreadySeen = seenList.includes(featureKey) || localStorage.getItem(`seen_feature_${featureKey}`) === 'true';
+
+          if (!alreadySeen) {
             setShowFeatureAnnouncement(true);
           }
         }
@@ -74,17 +84,37 @@ export const VersionMonitor: React.FC = () => {
     window.location.reload();
   };
 
-  const handleDismissFeature = () => {
-    if (versionData?.version) {
-      localStorage.setItem('last_seen_feature_version', versionData.version);
+  const markFeatureAsSeen = () => {
+    const featureKey = versionData?.id || versionData?.title || versionData?.version;
+    if (featureKey) {
+      try {
+        let seenList: string[] = [];
+        try {
+          seenList = JSON.parse(localStorage.getItem('seen_feature_announcements') || '[]');
+        } catch {
+          seenList = [];
+        }
+        if (!seenList.includes(featureKey)) {
+          seenList.push(featureKey);
+          localStorage.setItem('seen_feature_announcements', JSON.stringify(seenList));
+        }
+        localStorage.setItem(`seen_feature_${featureKey}`, 'true');
+        if (versionData?.version) {
+          localStorage.setItem('last_seen_feature_version', versionData.version);
+        }
+      } catch (e) {
+        console.warn('Error saving seen feature', e);
+      }
     }
+  };
+
+  const handleDismissFeature = () => {
+    markFeatureAsSeen();
     setShowFeatureAnnouncement(false);
   };
 
   const handleActionClick = () => {
-    if (versionData?.version) {
-      localStorage.setItem('last_seen_feature_version', versionData.version);
-    }
+    markFeatureAsSeen();
     setShowFeatureAnnouncement(false);
 
     if (versionData?.action === 'open-theme-selector') {

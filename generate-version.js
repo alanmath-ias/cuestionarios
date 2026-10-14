@@ -7,6 +7,7 @@ const __dirname = path.dirname(__filename);
 
 const versionInfoPath = path.join(__dirname, 'version-info.json');
 let customInfo = {
+  id: "default-feature",
   highlight: false,
   tag: "Optimización & Mejoras",
   title: "¡Nueva actualización disponible!",
@@ -26,6 +27,7 @@ if (fs.existsSync(versionInfoPath)) {
 
 const versionFilePath = path.join(__dirname, 'client', 'public', 'version.json');
 const versionData = {
+  id: customInfo.id || "feature-" + (customInfo.title ? customInfo.title.substring(0, 20) : "default"),
   version: Date.now().toString(),
   timestamp: new Date().toISOString(),
   highlight: Boolean(customInfo.highlight),
