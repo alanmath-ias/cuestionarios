@@ -10,7 +10,7 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 0,
         type: 'basic',
         requires: [],
-        description: 'Estructura de los enteros, valor absoluto, polinomios aritméticos y ecuaciones.',
+        description: 'Estructura de los enteros, valor absoluto, recta numérica, operatoria con ley de signos, potencias, raíces exactas, polinomios aritméticos y ecuaciones.',
         xOffset: 0,
         behavior: 'container'
     },
@@ -20,9 +20,9 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 1,
         type: 'basic',
         requires: ['g7-u1'],
-        description: 'Números signados, orden en ℤ y valor absoluto.',
+        description: 'Números signados, recta numérica extendida, orden en ℤ, opuestos, comparación y valor absoluto.',
         xOffset: -60,
-        additionalQuizzes: [315, 288, 316, 317],
+        additionalQuizzes: [309, 287, 315, 288, 316, 317, 311],
         behavior: 'quiz_list'
     },
     {
@@ -31,7 +31,7 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 1,
         type: 'basic',
         requires: ['g7-u1'],
-        description: 'Suma, resta y situaciones aditivas con enteros.',
+        description: 'Suma y resta de enteros con signos iguales y distintos, y resolución de problemas aditivos en contextos reales.',
         xOffset: 60,
         additionalQuizzes: [442, 443, 1, 435],
         behavior: 'quiz_list'
@@ -42,9 +42,9 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 2,
         type: 'basic',
         requires: ['g7-enteros-relativos-orden', 'g7-enteros-adicion-sustraccion'],
-        description: 'Operaciones multiplicativas y ley de signos en ℤ.',
+        description: 'Productos, cocientes y operaciones combinadas multiplicativas en ℤ aplicando estrictamente la ley de signos.',
         xOffset: -50,
-        additionalQuizzes: [444, 312],
+        additionalQuizzes: [1074, 1075, 312],
         behavior: 'quiz_list'
     },
     {
@@ -53,9 +53,9 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 2,
         type: 'critical',
         requires: ['g7-enteros-adicion-sustraccion'],
-        description: 'Propiedades de potencias de enteros, radicales y simplificación.',
+        description: 'Potencias de base entera con exponentes pares e impares, propiedades de las potencias y cálculo de raíces exactas en ℤ.',
         xOffset: 50,
-        additionalQuizzes: [43, 327, 10, 11, 395],
+        additionalQuizzes: [43, 327, 1076],
         behavior: 'quiz_list'
     },
     {
@@ -64,67 +64,67 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 3,
         type: 'critical',
         requires: ['g7-enteros-multiplicacion-division', 'g7-enteros-potencias-raices'],
-        description: 'Signos de agrupación, jerarquía combinada y ecuaciones de primer grado en ℤ.',
+        description: 'Signos de agrupación (paréntesis, corchetes, llaves), jerarquía combinada estricta y ecuaciones de primer grado en ℤ.',
         xOffset: 0,
-        additionalQuizzes: [14, 440, 15, 17, 314, 50, 51, 521],
+        additionalQuizzes: [14, 440, 17, 314, 521],
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // BASTIÓN II: NÚMEROS RACIONALES (ℚ) Y ECUACIONES (Periodo II)
+    // BASTIÓN II: NÚMEROS RACIONALES (ℚ) Y DECIMALES SIGNADOS (Periodo II)
     // ==========================================
     {
         id: 'g7-u2',
-        label: 'BASTIÓN II • Números Racionales (ℚ), Decimales y Ecuaciones',
+        label: 'BASTIÓN II • Números Racionales (ℚ), Decimales Signados y Ecuaciones',
         level: 4,
         type: 'basic',
         requires: ['g7-enteros-polinomios-ecuaciones'],
-        description: 'El conjunto de los números racionales, decimales, operaciones combinadas y ecuaciones.',
+        description: 'El conjunto ℚ, fracciones y decimales positivos y negativos, fracción generatriz, operatoria con signos, potencias y ecuaciones racionales.',
         xOffset: 0,
         behavior: 'container'
     },
     {
         id: 'g7-racionales-concepto-orden',
-        label: 'Conjunto ℚ, Fracciones y Recta Numérica',
+        label: 'Conjunto ℚ, Recta Numérica y Decimales',
         level: 5,
         type: 'basic',
         requires: ['g7-u2'],
-        description: 'Fracciones en la recta, equivalencias, comparación y expresión decimal.',
+        description: 'Fracciones negativas y positivas en la recta numérica extendida, relaciones de orden, comparación, densidad y fracción generatriz de decimales signados.',
         xOffset: -60,
-        additionalQuizzes: [301, 358, 359, 330, 436, 437],
+        additionalQuizzes: [1077, 1078],
         behavior: 'quiz_list'
     },
     {
         id: 'g7-racionales-operaciones',
-        label: 'Operaciones Combinadas en ℚ y Decimales',
+        label: 'Operaciones Combinadas en ℚ (+, -, ×, ÷)',
         level: 5,
         type: 'critical',
         requires: ['g7-u2'],
-        description: 'Suma, resta, multiplicación y división con fracciones y números decimales.',
+        description: 'Suma, resta, multiplicación, división y polinomios aritméticos combinados con fracciones y números decimales signados.',
         xOffset: 60,
-        additionalQuizzes: [24, 462, 44, 344, 345, 346, 350, 351, 352, 353, 354],
+        additionalQuizzes: [1079, 1080, 1081],
         behavior: 'quiz_list'
     },
     {
         id: 'g7-racionales-problemas',
-        label: 'Situaciones Problémicas con Fracciones y Decimales',
+        label: 'Situaciones Problémicas con Racionales (ℚ)',
         level: 6,
         type: 'applied',
         requires: ['g7-racionales-concepto-orden', 'g7-racionales-operaciones'],
-        description: 'Resolución de problemas contextualizados aditivos y multiplicativos en ℚ.',
+        description: 'Modelado y resolución de problemas cotidianos de balance, trayectorias, mezclas y presupuestos con fracciones y decimales en ℚ.',
         xOffset: -50,
-        additionalQuizzes: [7, 347, 2, 355],
+        additionalQuizzes: [1082],
         behavior: 'quiz_list'
     },
     {
         id: 'g7-racionales-potencias-ecuaciones',
-        label: 'Potencias, Radicales y Ecuaciones en ℚ',
+        label: 'Potenciación y Ecuaciones Lineales en ℚ',
         level: 6,
         type: 'critical',
         requires: ['g7-racionales-operaciones'],
-        description: 'Potenciación con exponentes fraccionarios, racionalización y ecuaciones fraccionarias.',
+        description: 'Potencias con base racional y exponentes enteros, propiedades algebraicas y resolución de ecuaciones de primer grado con coeficientes fraccionarios.',
         xOffset: 50,
-        additionalQuizzes: [394, 418, 12, 13, 61, 457, 62, 458],
+        additionalQuizzes: [1083, 1084],
         behavior: 'quiz_list'
     },
 
@@ -137,7 +137,7 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 7,
         type: 'basic',
         requires: ['g7-racionales-problemas', 'g7-racionales-potencias-ecuaciones'],
-        description: 'Razones, proporciones, regla de tres simple y compuesta, repartos proporcionales y magnitudes.',
+        description: 'Razones, proporciones, constante k, proporcionalidad directa e inversa, regla de tres simple y compuesta, repartos y factores de conversión métrica.',
         xOffset: 0,
         behavior: 'container'
     },
@@ -147,9 +147,9 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 8,
         type: 'basic',
         requires: ['g7-u3'],
-        description: 'Razón matemática, proporción geométrica y propiedades fundamentales.',
+        description: 'Razón matemática, antecedente y consecuente, proporción geométrica, propiedad fundamental y cálculo de términos desconocidos.',
         xOffset: -70,
-        additionalQuizzes: [363, 364, 499, 365, 366],
+        additionalQuizzes: [1085],
         behavior: 'quiz_list'
     },
     {
@@ -158,9 +158,9 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 8,
         type: 'critical',
         requires: ['g7-u3'],
-        description: 'Magnitudes directas e inversas, constantes de proporcionalidad y regla de tres simple.',
+        description: 'Magnitudes directa e inversamente proporcionales, constante de proporcionalidad, modelado con tablas y problemas aplicados de regla de tres simple.',
         xOffset: 0,
-        additionalQuizzes: [860, 367, 368, 369],
+        additionalQuizzes: [1086, 369],
         behavior: 'quiz_list'
     },
     {
@@ -169,9 +169,9 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 8,
         type: 'critical',
         requires: ['g7-u3'],
-        description: 'Problemas complejos con múltiples magnitudes directa e inversamente proporcionales.',
+        description: 'Problemas avanzados con múltiples magnitudes directa e inversamente proporcionales en niveles intermedio, avanzado y experto.',
         xOffset: 70,
-        additionalQuizzes: [370, 371, 372, 373],
+        additionalQuizzes: [371, 372, 373],
         behavior: 'quiz_list'
     },
     {
@@ -180,20 +180,20 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 9,
         type: 'applied',
         requires: ['g7-razones-proporciones', 'g7-proporcionalidad-directa-inversa'],
-        description: 'Reparto de cantidades en partes proporcionales simples y compuestas.',
+        description: 'Distribución de cantidades en partes proporcionales directas e inversas mediante el método de la constante de reparto.',
         xOffset: -50,
-        additionalQuizzes: [870, 871],
+        additionalQuizzes: [1087],
         behavior: 'quiz_list'
     },
     {
         id: 'g7-unidades-magnitudes',
-        label: 'Unidades de Capacidad, Masa y Tiempo',
+        label: 'Unidades de Superficie, Volumen, Masa y Tiempo',
         level: 9,
         type: 'applied',
         requires: ['g7-proporcionalidad-directa-inversa', 'g7-regla-tres-compuesta'],
-        description: 'Factores de conversión y resolución de problemas de medición en el sistema métrico.',
+        description: 'Factores de conversión del sistema métrico decimal para superficie, volumen, masa y tiempo, y resolución de problemas cotidianos de medida.',
         xOffset: 50,
-        additionalQuizzes: [380, 381, 463, 382, 383],
+        additionalQuizzes: [379, 380, 381, 463, 382, 383],
         behavior: 'quiz_list'
     },
 
@@ -206,7 +206,7 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 10,
         type: 'basic',
         requires: ['g7-repartos-proporcionales', 'g7-unidades-magnitudes'],
-        description: 'Iniciación al álgebra formal, evaluación de expresiones, monomios y finanzas personales.',
+        description: 'Iniciación al álgebra simbólica, monomios, reducción de términos semejantes, despeje de fórmulas, porcentajes comerciales e inteligencia financiera.',
         xOffset: 0,
         behavior: 'container'
     },
@@ -216,20 +216,20 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 11,
         type: 'basic',
         requires: ['g7-u4'],
-        description: 'Traducción de lenguaje verbal a simbólico, variables y valor numérico de expresiones.',
+        description: 'Traducción de lenguaje verbal a simbólico, variables, modelado con letras y cálculo del valor numérico de fórmulas matemáticas.',
         xOffset: -60,
-        additionalQuizzes: [421, 422, 65, 66],
+        additionalQuizzes: [421, 1088, 65, 66],
         behavior: 'quiz_list'
     },
     {
         id: 'g7-algebra-terminos-ecuaciones',
-        label: 'Términos Semejantes, Monomios y Ecuaciones',
+        label: 'Términos Semejantes, Monomios y Despeje',
         level: 11,
         type: 'critical',
         requires: ['g7-u4'],
-        description: 'Suma y resta de términos algebraicos y resolución de ecuaciones de primer grado.',
+        description: 'Suma y resta de monomios, reducción de términos semejantes de una y varias variables, y despeje de variables en fórmulas elementales.',
         xOffset: 60,
-        additionalQuizzes: [425, 445, 426, 67],
+        additionalQuizzes: [425, 445, 426, 67, 407],
         behavior: 'quiz_list'
     },
     {
@@ -238,9 +238,9 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 12,
         type: 'applied',
         requires: ['g7-algebra-lenguaje-expresiones', 'g7-algebra-terminos-ecuaciones'],
-        description: 'Cálculo de incrementos, descuentos, porcentajes y modelos de interés simple.',
+        description: 'Cálculo de porcentajes aplicados a compras, facturación con IVA, descuentos comerciales y modelos de interés simple.',
         xOffset: -50,
-        additionalQuizzes: [374, 375, 376, 518],
+        additionalQuizzes: [1089, 518],
         behavior: 'quiz_list'
     },
     {
@@ -249,9 +249,9 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 12,
         type: 'applied',
         requires: ['g7-algebra-terminos-ecuaciones'],
-        description: 'Educación financiera: presupuesto personal, medios de pago y metas de ahorro.',
+        description: 'Educación financiera integral: presupuesto familiar, saldo neto, metas de ahorro, medios de pago y conceptos de interés.',
         xOffset: 50,
-        additionalQuizzes: [392, 393],
+        additionalQuizzes: [1090, 393],
         behavior: 'quiz_list'
     },
 
@@ -264,9 +264,9 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 13,
         type: 'evaluation',
         requires: ['g7-finanzas-porcentajes-interes', 'g7-finanzas-presupuesto-credito'],
-        description: '¡Prueba cumbre de los Titanes! Supera la evaluación de 7° grado y asciende a Álgebra.',
+        description: '¡Prueba cumbre de los Titanes! Supera la evaluación integral de 7° grado (enteros, racionales signados, proporcionalidad, álgebra y finanzas) y asciende victorioso a Álgebra.',
         xOffset: 0,
-        additionalQuizzes: [921, 279],
+        additionalQuizzes: [1091],
         behavior: 'quiz_list'
     }
 ];

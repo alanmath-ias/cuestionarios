@@ -23,7 +23,7 @@ import { algebraMapNodes } from "@/data/algebra-map-data";
 import { calculusMapNodes } from "@/data/calculus-map-data";
 import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
 import { statisticsMapNodes } from "@/data/statistics-map-data";
-import { calculateMasteryStats, getGradeNodes, findGradeForQuiz, getQuizzesForNode, getArithmeticQuizIds, getAlgebraQuizIds, CATEGORY_GRADES, MAP_DATA } from '@/lib/mastery-utils';
+import { calculateMasteryStats, getGradeNodes, getQuizzesForNode, getArithmeticQuizIds, getAlgebraQuizIds, CATEGORY_GRADES, MAP_DATA } from '@/lib/mastery-utils';
 import { apiRequest } from '@/lib/queryClient';
 
 interface Question {
@@ -47,8 +47,9 @@ function QuizResults() {
   const userId = initialSearchParams.get('user_id');
   const gradeFromUrl = initialSearchParams.get('grade');
   const originCatFromUrl = initialSearchParams.get('origin_cat');
+  const originViewFromUrl = initialSearchParams.get('origin_view');
   const queryClient = useQueryClient();
-  console.log('[QuizResults] Render. progressId:', progressId, 'userId param:', userId, 'gradeFromUrl:', gradeFromUrl, 'originCatFromUrl:', originCatFromUrl);
+  console.log('[QuizResults] Render. progressId:', progressId, 'userId param:', userId, 'gradeFromUrl:', gradeFromUrl, 'originCatFromUrl:', originCatFromUrl, 'originViewFromUrl:', originViewFromUrl);
 
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
 
@@ -153,21 +154,20 @@ function QuizResults() {
   const hasCheckedAchievements = useRef(false);
 
   // Return destination: strictly determined by where the user entered the quiz from (origin)
-  // or auto-detected with fallback to ensure the user ALWAYS returns to the correct grade map!
   const returnGrade = useMemo(() => {
     if (gradeFromUrl) {
       return gradeFromUrl.replace('grade-', '');
     }
     if (results?.quiz?.id) {
+      const savedOrigin = sessionStorage.getItem(`active_quiz_origin_${results.quiz.id}`);
+      if (savedOrigin === 'category') {
+        return null;
+      }
       const savedGrade = sessionStorage.getItem(`active_quiz_grade_${results.quiz.id}`);
       if (savedGrade) return savedGrade.replace('grade-', '');
     }
-    if (results?.quiz) {
-      const match = findGradeForQuiz(results.quiz.id, results.quiz.subcategoryId, nodeMappings);
-      if (match) return match.gradeNum;
-    }
     return null;
-  }, [gradeFromUrl, results?.quiz, nodeMappings]);
+  }, [gradeFromUrl, results?.quiz]);
 
   const returnCategoryId = useMemo(() => {
     if (originCatFromUrl) return Number(originCatFromUrl);
@@ -518,15 +518,17 @@ function QuizResults() {
           p = `&focusNode=${currentNode.id}&source=quiz${quizTitle ? `&quizTitle=${quizTitle}` : ''}&quizScore=${results?.progress?.score || 0}${isNodeComplete ? '&nodeCompleted=true' : ''}${isFamilyComplete ? '&familyCompleted=true' : ''}`;
         }
         const gradeParamStr = returnGrade ? `&grade=${returnGrade}` : '';
-        setLocation(`/category/${categoryId}?view=roadmap${gradeParamStr}${p}`);
+        const viewParam = originViewFromUrl ? `view=${originViewFromUrl}` : 'view=roadmap';
+        setLocation(`/category/${categoryId}?${viewParam}${gradeParamStr}${p}`);
       } else if (isTraining && results?.quiz?.categoryId) {
         // Redirigir al dashboard con parámetro para reabrir el diálogo de entrenamiento
         setLocation(`/dashboard?reopenTraining=${results.quiz.categoryId}`);
       } else {
         const categoryId = returnCategoryId;
         const gradeParamStr = returnGrade ? `&grade=${returnGrade}` : '';
+        const viewParam = originViewFromUrl ? `view=${originViewFromUrl}` : 'view=roadmap';
         if (categoryId) {
-          setLocation(`/category/${categoryId}?view=roadmap${gradeParamStr}`);
+          setLocation(`/category/${categoryId}?${viewParam}${gradeParamStr}`);
         } else {
           // Fallback si no hay categoría
           setLocation('/dashboard');

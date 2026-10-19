@@ -46,7 +46,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@/hooks/useSession";
 import { MapCompletionCelebration } from '@/components/dashboard/MapCompletionCelebration';
 import { getCreditConfig } from '@shared/credit-config';
-import { calculateMasteryStats, getGradeNodes, findGradeForQuiz } from '@/lib/mastery-utils';
+import { calculateMasteryStats, getGradeNodes } from '@/lib/mastery-utils';
 import { useTheme } from '@/lib/theme';
 import { getGradeThemeMeta, isFeminineTheme } from '@/lib/gradeThemeContent';
 
@@ -696,19 +696,19 @@ function QuizList() {
     const params = new URLSearchParams();
     if (parentUserId) params.set('mode', 'readonly');
     
-    const effectiveGrade = selectedGrade || (() => {
-      const match = findGradeForQuiz(quizId, null, nodeMappingsData);
-      return match ? match.gradeNum : null;
-    })();
-
-    if (effectiveGrade) {
-      const cleanGrade = effectiveGrade.replace('grade-', '');
+    if (selectedGrade) {
+      const cleanGrade = selectedGrade.replace('grade-', '');
       params.set('grade', cleanGrade);
       sessionStorage.setItem(`active_quiz_grade_${quizId}`, cleanGrade);
+      sessionStorage.setItem(`active_quiz_origin_${quizId}`, 'grade');
+    } else {
+      sessionStorage.removeItem(`active_quiz_grade_${quizId}`);
+      sessionStorage.setItem(`active_quiz_origin_${quizId}`, 'category');
     }
 
-    const effectiveCat = categoryId || (effectiveGrade && (effectiveGrade === '8' || effectiveGrade === '9') ? '2' : '1');
+    const effectiveCat = categoryId || (selectedGrade && (selectedGrade === '8' || selectedGrade === '9') ? '2' : '1');
     if (effectiveCat) params.set('origin_cat', effectiveCat);
+    if (viewMode) params.set('origin_view', viewMode);
 
     const queryString = params.toString() ? `?${params.toString()}` : '';
     setLocation(`/quiz/${quizId}${queryString}`);
@@ -726,19 +726,20 @@ function QuizList() {
     if (miniQuizId) {
       const params = new URLSearchParams();
       params.set('mode', 'mini');
-      const effectiveGrade = selectedGrade || (() => {
-        const match = findGradeForQuiz(miniQuizId, null, nodeMappingsData);
-        return match ? match.gradeNum : null;
-      })();
-
-      if (effectiveGrade) {
-        const cleanGrade = effectiveGrade.replace('grade-', '');
+      
+      if (selectedGrade) {
+        const cleanGrade = selectedGrade.replace('grade-', '');
         params.set('grade', cleanGrade);
         sessionStorage.setItem(`active_quiz_grade_${miniQuizId}`, cleanGrade);
+        sessionStorage.setItem(`active_quiz_origin_${miniQuizId}`, 'grade');
+      } else {
+        sessionStorage.removeItem(`active_quiz_grade_${miniQuizId}`);
+        sessionStorage.setItem(`active_quiz_origin_${miniQuizId}`, 'category');
       }
 
-      const effectiveCat = categoryId || (effectiveGrade && (effectiveGrade === '8' || effectiveGrade === '9') ? '2' : '1');
+      const effectiveCat = categoryId || (selectedGrade && (selectedGrade === '8' || selectedGrade === '9') ? '2' : '1');
       if (effectiveCat) params.set('origin_cat', effectiveCat);
+      if (viewMode) params.set('origin_view', viewMode);
 
       setLocation(`/quiz/${miniQuizId}?${params.toString()}`);
       setMiniQuizId(null);
@@ -1700,17 +1701,18 @@ function QuizList() {
                                           const parentUserId = searchParams.get('user_id');
                                           const resParams = new URLSearchParams();
                                           if (parentUserId) resParams.set('user_id', parentUserId);
-                                          const effectiveGrade = selectedGrade || (() => {
-                                            const match = findGradeForQuiz(quiz.id, null, nodeMappingsData);
-                                            return match ? match.gradeNum : null;
-                                          })();
-                                          if (effectiveGrade) {
-                                            const cleanGrade = effectiveGrade.replace('grade-', '');
+                                          if (selectedGrade) {
+                                            const cleanGrade = selectedGrade.replace('grade-', '');
                                             resParams.set('grade', cleanGrade);
                                             sessionStorage.setItem(`active_quiz_grade_${quiz.id}`, cleanGrade);
+                                            sessionStorage.setItem(`active_quiz_origin_${quiz.id}`, 'grade');
+                                          } else {
+                                            sessionStorage.removeItem(`active_quiz_grade_${quiz.id}`);
+                                            sessionStorage.setItem(`active_quiz_origin_${quiz.id}`, 'category');
                                           }
-                                          const effectiveCat = categoryId || (effectiveGrade && (effectiveGrade === '8' || effectiveGrade === '9') ? '2' : '1');
+                                          const effectiveCat = categoryId || (selectedGrade && (selectedGrade === '8' || selectedGrade === '9') ? '2' : '1');
                                           if (effectiveCat) resParams.set('origin_cat', effectiveCat);
+                                          if (viewMode) resParams.set('origin_view', viewMode);
                                           const qs = resParams.toString();
                                           const resultUrl = `/results/${quizProgress.id}${qs ? `?${qs}` : ''}`;
                                           setLocation(resultUrl);

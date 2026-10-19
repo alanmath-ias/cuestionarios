@@ -54,7 +54,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { findGradeForQuiz } from "@/lib/mastery-utils";
 
 const SURVEY_QUIZ_IDS = [68, 69, 73, 72];
 
@@ -1128,20 +1127,25 @@ const ActiveQuiz = () => {
     const searchParams = new URLSearchParams(window.location.search);
     let grade = searchParams.get('grade');
     let originCat = searchParams.get('origin_cat');
+    let originView = searchParams.get('origin_view');
     const qId = quizId ? Number(quizId) : (quiz?.id ? Number(quiz.id) : null);
 
     if (grade && qId) {
       sessionStorage.setItem(`active_quiz_grade_${qId}`, grade);
-    }
-    if (!grade && qId) {
-      grade = sessionStorage.getItem(`active_quiz_grade_${qId}`);
-    }
-    if (!grade && qId && quiz) {
-      const match = findGradeForQuiz(qId, quiz?.subcategoryId);
-      if (match) {
-        grade = match.gradeNum;
+      sessionStorage.setItem(`active_quiz_origin_${qId}`, 'grade');
+    } else if (qId && searchParams.has('origin_cat') && !grade) {
+      sessionStorage.removeItem(`active_quiz_grade_${qId}`);
+      sessionStorage.setItem(`active_quiz_origin_${qId}`, 'category');
+      grade = null;
+    } else if (!grade && qId) {
+      const savedOrigin = sessionStorage.getItem(`active_quiz_origin_${qId}`);
+      if (savedOrigin === 'category') {
+        grade = null;
+      } else {
+        grade = sessionStorage.getItem(`active_quiz_grade_${qId}`);
       }
     }
+
     if (!originCat && grade) {
       originCat = (grade === '8' || grade === '9') ? '2' : '1';
     } else if (!originCat && quiz?.categoryId) {
@@ -1149,7 +1153,8 @@ const ActiveQuiz = () => {
     }
     return {
       grade: grade ? grade.replace('grade-', '') : null,
-      originCat
+      originCat,
+      originView: originView || 'roadmap'
     };
   };
 
@@ -1158,10 +1163,11 @@ const ActiveQuiz = () => {
     if (!isInitialized && questions) {
       if (progress) {
         if (progress.status === 'completed' && mode !== 'readonly') {
-          const { grade, originCat } = resolveQuizGradeInfo();
+          const { grade, originCat, originView } = resolveQuizGradeInfo();
           const qParams = new URLSearchParams();
           if (grade) qParams.set('grade', grade);
           if (originCat) qParams.set('origin_cat', originCat);
+          if (originView) qParams.set('origin_view', originView);
           const queryString = qParams.toString() ? `?${qParams.toString()}` : '';
           setLocation(`/results/${progress.id}${queryString}`, { replace: true });
           return;
@@ -1893,11 +1899,12 @@ const ActiveQuiz = () => {
       // El servidor ya guarda quizSubmission dentro de POST /api/progress cuando status='completed'.
       // No se llama a /api/quiz-submission por separado para evitar race condition con el score autoritativo.
 
-      const { grade, originCat } = resolveQuizGradeInfo();
+      const { grade, originCat, originView } = resolveQuizGradeInfo();
       const qParams = new URLSearchParams();
       qParams.set('source', 'quiz');
       if (grade) qParams.set('grade', grade);
       if (originCat) qParams.set('origin_cat', originCat);
+      if (originView) qParams.set('origin_view', originView);
       setLocation(`/results/${progress.id}?${qParams.toString()}`, { replace: true });
     } catch (error) {
       toast({
@@ -1920,8 +1927,13 @@ const ActiveQuiz = () => {
       }
     }
 
+    const { grade, originCat, originView } = resolveQuizGradeInfo();
     if (window.history.length > 1) {
       window.history.back();
+    } else if (originCat) {
+      const viewParam = originView ? `view=${originView}` : 'view=roadmap';
+      const gradeParam = grade ? `&grade=${grade}` : '';
+      setLocation(`/category/${originCat}?${viewParam}${gradeParam}`);
     } else {
       setLocation(session?.role === 'admin' ? "/admin/quizzes" : "/dashboard");
     }
