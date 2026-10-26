@@ -20,9 +20,9 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 1,
         type: 'basic',
         requires: ['g7-u1'],
-        description: 'Números signados, recta numérica extendida, orden en ℤ, opuestos, comparación y valor absoluto.',
-        xOffset: -60,
-        additionalQuizzes: [309, 287, 315, 288, 316, 317, 311],
+        description: 'Números signados, recta numérica extendida, orden en ℤ, opuestos, comparación y valor absoluto (niveles 1, 2 y 3).',
+        xOffset: -36,
+        additionalQuizzes: [309, 311, 315, 316, 317],
         behavior: 'quiz_list'
     },
     {
@@ -32,7 +32,7 @@ export const grade7MapNodes: ArithmeticNode[] = [
         type: 'basic',
         requires: ['g7-u1'],
         description: 'Suma y resta de enteros con signos iguales y distintos, y resolución de problemas aditivos en contextos reales.',
-        xOffset: 60,
+        xOffset: 36,
         additionalQuizzes: [442, 443, 1, 435],
         behavior: 'quiz_list'
     },
@@ -66,7 +66,7 @@ export const grade7MapNodes: ArithmeticNode[] = [
         requires: ['g7-enteros-multiplicacion-division', 'g7-enteros-potencias-raices'],
         description: 'Signos de agrupación (paréntesis, corchetes, llaves), jerarquía combinada estricta y ecuaciones de primer grado en ℤ.',
         xOffset: 0,
-        additionalQuizzes: [14, 440, 17, 314, 521],
+        additionalQuizzes: [14, 440, 314, 17, 521],
         behavior: 'quiz_list'
     },
 
@@ -193,7 +193,7 @@ export const grade7MapNodes: ArithmeticNode[] = [
         requires: ['g7-proporcionalidad-directa-inversa', 'g7-regla-tres-compuesta'],
         description: 'Factores de conversión del sistema métrico decimal para superficie, volumen, masa y tiempo, y resolución de problemas cotidianos de medida.',
         xOffset: 50,
-        additionalQuizzes: [379, 380, 381, 463, 382, 383],
+        additionalQuizzes: [379, 380, 381, 382, 383],
         behavior: 'quiz_list'
     },
 
@@ -227,9 +227,9 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 11,
         type: 'critical',
         requires: ['g7-u4'],
-        description: 'Suma y resta de monomios, reducción de términos semejantes de una y varias variables, y despeje de variables en fórmulas elementales.',
+        description: 'Suma y resta de monomios, reducción de términos semejantes y despeje de variables en fórmulas lineales elementales.',
         xOffset: 60,
-        additionalQuizzes: [425, 445, 426, 67, 407],
+        additionalQuizzes: [425, 445, 426, 67],
         behavior: 'quiz_list'
     },
     {
@@ -249,9 +249,9 @@ export const grade7MapNodes: ArithmeticNode[] = [
         level: 12,
         type: 'applied',
         requires: ['g7-algebra-terminos-ecuaciones'],
-        description: 'Educación financiera integral: presupuesto familiar, saldo neto, metas de ahorro, medios de pago y conceptos de interés.',
+        description: 'Educación financiera integral: presupuesto familiar, balance de ingresos y gastos, metas de ahorro, medios de pago y consumo inteligente.',
         xOffset: 50,
-        additionalQuizzes: [1090, 393],
+        additionalQuizzes: [1090],
         behavior: 'quiz_list'
     },
 
