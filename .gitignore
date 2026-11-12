@@ -16,11 +16,13 @@ gcp-key.json
 project-*.json
  
 # Imágenes y archivos temporales
+/tmp/
 /algebra_imagenes/
 /aritmetica_imagenes/
 /calculo_imagenes/
 /calculo_integral_imagenes/
 /estadistica_imagenes/
+/geometria_imagenes/
 /trigonometria_imagenes/
 /ecuaciones_diferenciales_imagenes/
 /fisica_imagenes/

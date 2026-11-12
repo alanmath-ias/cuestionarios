@@ -12,7 +12,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, EyeOff, Link2, ListChecks, Folder, UserPlus, Pencil, Save, X, Brain, Search, Map as MapIcon, CheckCircle2, AlertTriangle, Ban, GripVertical, ShieldCheck, Crown, Gamepad2, Power, Check, Sparkles, GraduationCap, RotateCcw, Rocket, Compass, Landmark, Zap, Flame, Layers } from "lucide-react";
+import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, EyeOff, Link2, ListChecks, Folder, UserPlus, Pencil, Save, X, Brain, Search, Map as MapIcon, CheckCircle2, AlertTriangle, Ban, GripVertical, ShieldCheck, Crown, Gamepad2, Power, Check, Sparkles, GraduationCap, RotateCcw, Rocket, Compass, Landmark, Zap, Flame, Layers, BarChart2 } from "lucide-react";
 import { DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -58,6 +58,10 @@ import { algebraMapNodes } from "@/data/algebra-map-data";
 import { calculusMapNodes } from "@/data/calculus-map-data";
 import { integralCalculusMapNodes } from "@/data/integral-calculus-map-data";
 import { statisticsMapNodes } from "@/data/statistics-map-data";
+import { geometryMapNodes } from "@/data/geometry-map-data";
+import { grade1GeometryNodes } from "@/data/grade-1-geometry-map-data";
+import { grade1StatisticsNodes } from "@/data/grade-1-statistics-map-data";
+import { getGradeThemeMeta, getGeometryThemeMeta, getStatisticsThemeMeta } from "@/lib/gradeThemeContent";
 import { Reorder, AnimatePresence, useDragControls, motion } from "framer-motion";
 
 const difficultyOptions = [
@@ -77,6 +81,24 @@ const formSchema = z.object({
 });
 
 const getMapData = (catId: any, catName?: string, selectedGrade?: string | null) => {
+  const id = Number(catId);
+  const name = catName?.toLowerCase() || "";
+
+  // Geometría General (Cat 22)
+  if (id === 22 || name.includes("geometría") || name.includes("geometria")) {
+    const meta = getGeometryThemeMeta(selectedGrade);
+    const nodes = selectedGrade === '1' ? grade1GeometryNodes : geometryMapNodes;
+    return { nodes, title: meta.title };
+  }
+
+  // Estadística (Cat 19)
+  if (id === 19 || name.includes("estadística") || name.includes("estadistica")) {
+    const meta = getStatisticsThemeMeta(selectedGrade);
+    const nodes = selectedGrade === '1' ? grade1StatisticsNodes : statisticsMapNodes;
+    return { nodes, title: meta.title };
+  }
+
+  // Grados de Aritmética y Álgebra
   if (selectedGrade === '1') {
     return { nodes: grade1MapNodes, title: "Mundo de Exploradores • 1° de Primaria" };
   }
@@ -104,15 +126,39 @@ const getMapData = (catId: any, catName?: string, selectedGrade?: string | null)
   if (selectedGrade === '9') {
     return { nodes: grade9MapNodes, title: "El Vórtice del Álgebra Superior • 9° Grado" };
   }
-  const id = Number(catId);
-  const name = catName?.toLowerCase() || "";
 
   if (id === 1 || name.includes("aritmética")) return { nodes: arithmeticMapNodes, title: "Mapa de Aritmética" };
   if (id === 2 || name.includes("álgebra")) return { nodes: algebraMapNodes, title: "Mapa de Álgebra" };
   if (id === 4 || name.includes("diferencial")) return { nodes: calculusMapNodes, title: "Mapa de Cálculo Diferencial" };
   if (id === 5 || name.includes("integral")) return { nodes: integralCalculusMapNodes, title: "Mapa de Cálculo Integral" };
-  if (id === 19 || name.includes("estadística") || name.includes("estadistica")) return { nodes: statisticsMapNodes, title: "Mapa de Estadística" };
   return null;
+};
+
+const getMapDescription = (catId: any, catName?: string, selectedGrade?: string | null) => {
+  const id = Number(catId);
+  const name = catName?.toLowerCase() || "";
+
+  if (id === 22 || name.includes("geometría") || name.includes("geometria")) {
+    return getGeometryThemeMeta(selectedGrade)?.description || "El universo de las formas, el espacio, las dimensiones, construcciones y teoremas geométricos.";
+  }
+
+  if (id === 19 || name.includes("estadística") || name.includes("estadistica")) {
+    return getStatisticsThemeMeta(selectedGrade)?.description || "El universo de los datos, frecuencias, medidas estadísticas, muestreo y probabilidad.";
+  }
+
+  if (selectedGrade === '1') return "Ruta lúdica para 1° de primaria: Conjuntos, Números hasta 999, Suma, Resta y Medidas.";
+  if (selectedGrade === '2') return "Misión cósmica de 2° de primaria: Números hasta 99.999, Suma/Resta llevando, Tablas de Multiplicar y Medidas.";
+  if (selectedGrade === '3') return "Expedición submarina de 3° de primaria: Conjuntos, Números Romanos, Multiplicación, División, Primos y Fracciones.";
+  if (selectedGrade === '4') return "Templo de los exploradores de 4° de primaria: Conjuntos, Primos, MCM/MCD, Fracciones y Operaciones con Decimales.";
+  if (selectedGrade === '5') return "Ruta estructurada para 5° de primaria: Conjuntos, Números Naturales, Divisibilidad y Fracciones.";
+  if (selectedGrade === '6') return "Ciudadela cuántica de 6° de secundaria: Lógica, Polinomios, Ecuaciones, Divisibilidad, Fracciones, Decimales, Enteros y Finanzas.";
+  if (selectedGrade === '7') return "La Forja Titánica de 7° grado: Números Enteros (ℤ), Racionales (ℚ), Proporcionalidad, Regla de Tres, Magnitudes y Despertar del Álgebra.";
+  if (selectedGrade === '8') return "La Odisea del Álgebra de 8° grado: Números Reales, Notación Científica, Polinomios, Productos Notables, Factorización, Fracciones Algebraicas y Funciones.";
+  if (selectedGrade === '9') return "El Vórtice del Álgebra Superior de 9° grado: Desafío culminante de secundaria! Domina radicales, sistemas 2x2, la recta analítica, ecuaciones cuadráticas, exponenciales, logaritmos, sucesiones y finanzas.";
+
+  if (id === 1 || name.includes("aritmética")) return "Visualización del árbol de habilidades y cobertura de contenido de Aritmética.";
+  if (id === 2 || name.includes("álgebra")) return "Visualización del árbol de habilidades y cobertura de contenido de Álgebra.";
+  return "Visualización del árbol de habilidades y cobertura de contenido.";
 };
 
 // Helper para copiar al portapapeles de forma infalible (API moderna + fallback)
@@ -1759,298 +1805,596 @@ export default function QuizzesAdmin() {
         <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0 bg-slate-950 border-slate-800 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader className="p-6 pb-2 shrink-0 bg-slate-900 border-b border-white/10">
             <div className="flex items-center justify-between flex-wrap gap-4 pr-6">
-              <div>
-                <DialogTitle className="flex items-center gap-2 text-slate-100 text-xl font-bold">
-                  <MapIcon className="h-6 w-6 text-blue-400" />
-                  {activeMapCategory ? getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name, adminSelectedGrade)?.title : "Mapa de Habilidades"}
+              <div className="flex-1 min-w-[280px] max-w-xl">
+                <DialogTitle className="flex items-center gap-2 text-slate-100 text-lg md:text-xl font-bold">
+                  <MapIcon className="h-5 w-5 text-blue-400 shrink-0" />
+                  <span>
+                    {categories?.find(c => c.id === activeMapCategory)?.name || "Mapa de Habilidades"}
+                    {adminSelectedGrade ? ` • ${['8', '9'].includes(adminSelectedGrade) ? (adminSelectedGrade === '8' ? '8° Octavo' : '9° Noveno') : `${adminSelectedGrade}° Grado`}` : ''}
+                  </span>
                 </DialogTitle>
-                <DialogDescription className="text-slate-300 font-medium break-words">
-                  {adminSelectedGrade === '1'
-                    ? "Ruta lúdica para 1° de primaria: Conjuntos, Números hasta 999, Suma, Resta y Medidas."
-                    : adminSelectedGrade === '2'
-                    ? "Misión cósmica de 2° de primaria: Números hasta 99.999, Suma/Resta llevando, Tablas de Multiplicar y Medidas."
-                    : adminSelectedGrade === '3'
-                    ? "Expedición submarina de 3° de primaria: Conjuntos, Números Romanos, Multiplicación, División, Primos y Fracciones."
-                    : adminSelectedGrade === '4'
-                    ? "Templo de los exploradores de 4° de primaria: Conjuntos, Primos, MCM/MCD, Fracciones y Operaciones con Decimales."
-                    : adminSelectedGrade === '5'
-                    ? "Ruta estructurada para 5° de primaria: Conjuntos, Números Naturales, Divisibilidad y Fracciones."
-                    : adminSelectedGrade === '6'
-                    ? "Ciudadela cuántica de 6° de secundaria: Lógica, Polinomios, Ecuaciones, Divisibilidad, Fracciones, Decimales, Enteros y Finanzas."
-                    : adminSelectedGrade === '7'
-                    ? "La Forja Titánica de 7° grado: Números Enteros (ℤ), Racionales (ℚ), Proporcionalidad, Regla de Tres, Magnitudes y Despertar del Álgebra."
-                    : adminSelectedGrade === '8'
-                    ? "La Odisea del Álgebra de 8° grado: Números Reales, Notación Científica, Polinomios, Productos Notables, Factorización, Fracciones Algebraicas y Funciones."
-                    : "Visualización del árbol de habilidades y cobertura de contenido."}
+                <DialogDescription className="text-slate-400 text-xs sm:text-sm font-medium">
+                  Visualización del árbol de habilidades y cobertura de contenido.
                 </DialogDescription>
               </div>
 
-              {/* Selector de Grados (Primaria y Secundaria) */}
-              {(Number(activeMapCategory) === 1 || categories?.find(c => c.id === activeMapCategory)?.name.toLowerCase().includes("aritmética")) && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  {adminSelectedGrade && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAdminSelectGrade(null)}
-                      className="h-8 px-2.5 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
-                      title="Volver a la vista completa de Aritmética"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      <span>Ver Área Completa</span>
-                    </Button>
-                  )}
-
-                  {/* Menú Primaria */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+              {/* Controles de Grados y Conexión de Áreas */}
+              <div className="flex items-center gap-2.5 flex-wrap ml-auto justify-end">
+                {/* Selector de Grados (Primaria y Secundaria) para Aritmética */}
+                {(Number(activeMapCategory) === 1 || categories?.find(c => c.id === activeMapCategory)?.name.toLowerCase().includes("aritmética")) && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {adminSelectedGrade && (
                       <Button
                         variant="outline"
                         size="sm"
-                        className={cn(
-                          "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
-                          (adminSelectedGrade === '1' || adminSelectedGrade === '2' || adminSelectedGrade === '3' || adminSelectedGrade === '4' || adminSelectedGrade === '5')
-                            ? "border-blue-500/60 bg-blue-500/20 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-                            : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
-                        )}
+                        onClick={() => handleAdminSelectGrade(null)}
+                        className="h-8 px-2.5 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                        title="Volver al mapa madre de Aritmética"
                       >
-                        <Sparkles className="h-3.5 w-3.5 text-blue-400" />
-                        <span>{adminSelectedGrade === '1' ? "Primero" : adminSelectedGrade === '2' ? "Segundo" : adminSelectedGrade === '3' ? "Tercero" : adminSelectedGrade === '4' ? "Cuarto" : adminSelectedGrade === '5' ? "Quinto" : "Primaria"}</span>
-                        <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        <span><span className="hidden sm:inline">Mapa Madre: </span>Aritmética</span>
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-[100]">
-                      <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase tracking-wider font-bold px-2 py-1">
-                        Grados de Primaria
-                      </DropdownMenuLabel>
-                      <DropdownMenuItem
-                        onClick={() => handleAdminSelectGrade('1')}
-                        className={cn(
-                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                          adminSelectedGrade === '1'
-                            ? "bg-amber-600/30 text-amber-200 font-bold"
-                            : "hover:bg-amber-500/10 hover:text-amber-300"
-                        )}
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <BookOpen className="h-3.5 w-3.5 text-amber-400" />
-                          Primero
-                        </span>
-                        <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
-                          Activo
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleAdminSelectGrade('2')}
-                        className={cn(
-                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                          adminSelectedGrade === '2'
-                            ? "bg-indigo-600/30 text-indigo-200 font-bold"
-                            : "hover:bg-indigo-500/10 hover:text-indigo-300"
-                        )}
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Rocket className="h-3.5 w-3.5 text-indigo-400" />
-                          Segundo
-                        </span>
-                        <span className="text-[9px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded font-semibold">
-                          Activo
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleAdminSelectGrade('3')}
-                        className={cn(
-                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                          adminSelectedGrade === '3'
-                            ? "bg-cyan-600/30 text-cyan-200 font-bold"
-                            : "hover:bg-cyan-500/10 hover:text-cyan-300"
-                        )}
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Compass className="h-3.5 w-3.5 text-cyan-400" />
-                          Tercero
-                        </span>
-                        <span className="text-[9px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded font-semibold">
-                          Activo
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleAdminSelectGrade('4')}
-                        className={cn(
-                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                          adminSelectedGrade === '4'
-                            ? "bg-emerald-600/30 text-emerald-200 font-bold"
-                            : "hover:bg-emerald-500/10 hover:text-emerald-300"
-                        )}
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Landmark className="h-3.5 w-3.5 text-emerald-400" />
-                          Cuarto
-                        </span>
-                        <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-semibold">
-                          Activo
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-white/5 my-1" />
-                      <DropdownMenuItem
-                        onClick={() => handleAdminSelectGrade('5')}
-                        className={cn(
-                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                          adminSelectedGrade === '5'
-                            ? "bg-blue-600/30 text-blue-200 font-bold"
-                            : "hover:bg-blue-500/10 hover:text-blue-300"
-                        )}
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <BookOpen className="h-3.5 w-3.5 text-blue-400" />
-                          Quinto
-                        </span>
-                        <span className="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded font-semibold">
-                          Activo
-                        </span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    )}
 
-                  {/* Menú Secundaria */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
-                          adminSelectedGrade === '7'
-                            ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
-                            : adminSelectedGrade === '6'
-                            ? "border-violet-500/60 bg-violet-500/20 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.3)]"
-                            : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
-                        )}
-                      >
-                        {adminSelectedGrade === '7' ? (
-                          <Flame className="h-3.5 w-3.5 text-amber-400" />
-                        ) : adminSelectedGrade === '6' ? (
-                          <Zap className="h-3.5 w-3.5 text-violet-400" />
-                        ) : (
-                          <GraduationCap className="h-3.5 w-3.5 text-indigo-400" />
-                        )}
-                        <span>{adminSelectedGrade === '7' ? "Séptimo" : adminSelectedGrade === '6' ? "Sexto" : "Secundaria"}</span>
-                        <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-[100]">
-                      <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase tracking-wider font-bold px-2 py-1">
-                        Bachillerato / Secundaria
-                      </DropdownMenuLabel>
-                      <DropdownMenuItem
-                        onClick={() => handleAdminSelectGrade('6')}
-                        className={cn(
-                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                          adminSelectedGrade === '6'
-                            ? "bg-violet-600/30 text-violet-200 font-bold"
-                            : "hover:bg-violet-500/10 hover:text-violet-300"
-                        )}
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Zap className="h-3.5 w-3.5 text-violet-400" />
-                          Sexto
-                        </span>
-                        <span className="text-[9px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-1.5 py-0.5 rounded font-semibold">
-                          Activo
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleAdminSelectGrade('7')}
-                        className={cn(
-                          "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                          adminSelectedGrade === '7'
-                            ? "bg-amber-600/30 text-amber-200 font-bold"
-                            : "hover:bg-amber-500/10 hover:text-amber-300"
-                        )}
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Flame className="h-3.5 w-3.5 text-amber-400" />
-                          Séptimo
-                        </span>
-                        <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
-                          Activo
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-white/5 my-1" />
-                      {['Octavo', 'Noveno', 'Décimo', 'Undécimo'].map(g => (
-                        <DropdownMenuItem key={g} disabled className="text-xs text-slate-500 cursor-not-allowed px-2 py-1.5 rounded-lg flex items-center justify-between">
-                          <span>{g}</span>
-                          <span className="text-[9px] bg-slate-800/80 text-slate-500 px-1.5 py-0.5 rounded font-mono">Próx.</span>
+                    {/* Menú Primaria */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                            (adminSelectedGrade === '1' || adminSelectedGrade === '2' || adminSelectedGrade === '3' || adminSelectedGrade === '4' || adminSelectedGrade === '5')
+                              ? "border-blue-500/60 bg-blue-500/20 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                              : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                          )}
+                        >
+                          <Sparkles className="h-3.5 w-3.5 text-blue-400" />
+                          <span>{adminSelectedGrade === '1' ? "Primero" : adminSelectedGrade === '2' ? "Segundo" : adminSelectedGrade === '3' ? "Tercero" : adminSelectedGrade === '4' ? "Cuarto" : adminSelectedGrade === '5' ? "Quinto" : "Primaria"}</span>
+                          <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-[100]">
+                        <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase tracking-wider font-bold px-2 py-1">
+                          Grados de Primaria
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem
+                          onClick={() => handleAdminSelectGrade('1')}
+                          className={cn(
+                            "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                            adminSelectedGrade === '1'
+                              ? "bg-amber-600/30 text-amber-200 font-bold"
+                              : "hover:bg-amber-500/10 hover:text-amber-300"
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <BookOpen className="h-3.5 w-3.5 text-amber-400" />
+                            Primero
+                          </span>
+                          <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
+                            Activo
+                          </span>
                         </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              )}
+                        <DropdownMenuItem
+                          onClick={() => handleAdminSelectGrade('2')}
+                          className={cn(
+                            "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                            adminSelectedGrade === '2'
+                              ? "bg-indigo-600/30 text-indigo-200 font-bold"
+                              : "hover:bg-indigo-500/10 hover:text-indigo-300"
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Rocket className="h-3.5 w-3.5 text-indigo-400" />
+                            Segundo
+                          </span>
+                          <span className="text-[9px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded font-semibold">
+                            Activo
+                          </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleAdminSelectGrade('3')}
+                          className={cn(
+                            "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                            adminSelectedGrade === '3'
+                              ? "bg-cyan-600/30 text-cyan-200 font-bold"
+                              : "hover:bg-cyan-500/10 hover:text-cyan-300"
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Compass className="h-3.5 w-3.5 text-cyan-400" />
+                            Tercero
+                          </span>
+                          <span className="text-[9px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded font-semibold">
+                            Activo
+                          </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleAdminSelectGrade('4')}
+                          className={cn(
+                            "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                            adminSelectedGrade === '4'
+                              ? "bg-emerald-600/30 text-emerald-200 font-bold"
+                              : "hover:bg-emerald-500/10 hover:text-emerald-300"
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Landmark className="h-3.5 w-3.5 text-emerald-400" />
+                            Cuarto
+                          </span>
+                          <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-semibold">
+                            Activo
+                          </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-white/5 my-1" />
+                        <DropdownMenuItem
+                          onClick={() => handleAdminSelectGrade('5')}
+                          className={cn(
+                            "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                            adminSelectedGrade === '5'
+                              ? "bg-blue-600/30 text-blue-200 font-bold"
+                              : "hover:bg-blue-500/10 hover:text-blue-300"
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <BookOpen className="h-3.5 w-3.5 text-blue-400" />
+                            Quinto
+                          </span>
+                          <span className="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded font-semibold">
+                            Activo
+                          </span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
 
-              {/* Selector de Grados para Álgebra (8° y 9°) */}
-              {(Number(activeMapCategory) === 2 || categories?.find(c => c.id === activeMapCategory)?.name.toLowerCase().includes("álgebra")) && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  {adminSelectedGrade && (
+                    {/* Menú Secundaria */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                            adminSelectedGrade === '7'
+                              ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                              : adminSelectedGrade === '6'
+                              ? "border-violet-500/60 bg-violet-500/20 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.3)]"
+                              : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                          )}
+                        >
+                          {adminSelectedGrade === '7' ? (
+                            <Flame className="h-3.5 w-3.5 text-amber-400" />
+                          ) : adminSelectedGrade === '6' ? (
+                            <Zap className="h-3.5 w-3.5 text-violet-400" />
+                          ) : (
+                            <GraduationCap className="h-3.5 w-3.5 text-indigo-400" />
+                          )}
+                          <span>{adminSelectedGrade === '7' ? "Séptimo" : adminSelectedGrade === '6' ? "Sexto" : "Secundaria"}</span>
+                          <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-[100]">
+                        <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase tracking-wider font-bold px-2 py-1">
+                          Bachillerato / Secundaria
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem
+                          onClick={() => handleAdminSelectGrade('6')}
+                          className={cn(
+                            "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                            adminSelectedGrade === '6'
+                              ? "bg-violet-600/30 text-violet-200 font-bold"
+                              : "hover:bg-violet-500/10 hover:text-violet-300"
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Zap className="h-3.5 w-3.5 text-violet-400" />
+                            Sexto
+                          </span>
+                          <span className="text-[9px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-1.5 py-0.5 rounded font-semibold">
+                            Activo
+                          </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleAdminSelectGrade('7')}
+                          className={cn(
+                            "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                            adminSelectedGrade === '7'
+                              ? "bg-amber-600/30 text-amber-200 font-bold"
+                              : "hover:bg-amber-500/10 hover:text-amber-300"
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Flame className="h-3.5 w-3.5 text-amber-400" />
+                            Séptimo
+                          </span>
+                          <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
+                            Activo
+                          </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-white/5 my-1" />
+                        {['Octavo', 'Noveno', 'Décimo', 'Undécimo'].map(g => (
+                          <DropdownMenuItem key={g} disabled className="text-xs text-slate-500 cursor-not-allowed px-2 py-1.5 rounded-lg flex items-center justify-between">
+                            <span>{g}</span>
+                            <span className="text-[9px] bg-slate-800/80 text-slate-500 px-1.5 py-0.5 rounded font-mono">Próx.</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
+
+                {/* Selector de Grados para Álgebra (8° y 9°) */}
+                {(Number(activeMapCategory) === 2 || categories?.find(c => c.id === activeMapCategory)?.name.toLowerCase().includes("álgebra")) && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {adminSelectedGrade && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAdminSelectGrade(null)}
+                        className="h-8 px-2.5 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                        title="Volver al mapa madre de Álgebra"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        <span><span className="hidden sm:inline">Mapa Madre: </span>Álgebra</span>
+                      </Button>
+                    )}
+
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleAdminSelectGrade(null)}
-                      className="h-8 px-2.5 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
-                      title="Volver a la vista completa de Álgebra"
+                      onClick={() => handleAdminSelectGrade('8')}
+                      className={cn(
+                        "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                        adminSelectedGrade === '8'
+                          ? "border-cyan-500/60 bg-cyan-500/20 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                          : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                      )}
                     >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      <span>Ver Área Completa</span>
+                      <Layers className="h-3.5 w-3.5 text-cyan-400" />
+                      <span>Octavo</span>
+                      {adminSelectedGrade === '8' && (
+                        <span className="text-[9px] bg-cyan-500/30 text-cyan-200 border border-cyan-400/40 px-1.5 py-0.5 rounded font-bold">
+                          Activo
+                        </span>
+                      )}
                     </Button>
-                  )}
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleAdminSelectGrade('8')}
-                    className={cn(
-                      "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
-                      adminSelectedGrade === '8'
-                        ? "border-cyan-500/60 bg-cyan-500/20 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
-                        : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
-                    )}
-                  >
-                    <Layers className="h-3.5 w-3.5 text-cyan-400" />
-                    <span>Octavo</span>
-                    {adminSelectedGrade === '8' && (
-                      <span className="text-[9px] bg-cyan-500/30 text-cyan-200 border border-cyan-400/40 px-1.5 py-0.5 rounded font-bold">
-                        Activo
-                      </span>
-                    )}
-                  </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAdminSelectGrade(adminSelectedGrade === '9' ? null : '9')}
+                      className={cn(
+                        "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                        adminSelectedGrade === '9'
+                          ? "border-indigo-500/60 bg-indigo-500/20 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                          : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                      )}
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+                      <span>Noveno</span>
+                      {adminSelectedGrade === '9' && (
+                        <span className="text-[9px] bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 px-1.5 py-0.5 rounded font-bold">
+                          Activo
+                        </span>
+                      )}
+                    </Button>
+                  </div>
+                )}
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleAdminSelectGrade(adminSelectedGrade === '9' ? null : '9')}
-                    className={cn(
-                      "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
-                      adminSelectedGrade === '9'
-                        ? "border-indigo-500/60 bg-indigo-500/20 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.3)]"
-                        : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                {/* Selector de Grados para Geometría General (Cat 22) */}
+                {(Number(activeMapCategory) === 22 || categories?.find(c => c.id === activeMapCategory)?.name.toLowerCase().includes("geometría") || categories?.find(c => c.id === activeMapCategory)?.name.toLowerCase().includes("geometria")) && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {adminSelectedGrade && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAdminSelectGrade(null)}
+                        className="h-8 px-2.5 rounded-xl border-teal-500/30 bg-teal-500/10 text-teal-300 hover:bg-teal-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                        title="Volver al mapa madre de Geometría"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        <span><span className="hidden sm:inline">Mapa Madre: </span>Geometría</span>
+                      </Button>
                     )}
-                  >
-                    <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-                    <span>Noveno</span>
-                    {adminSelectedGrade === '9' && (
-                      <span className="text-[9px] bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 px-1.5 py-0.5 rounded font-bold">
-                        Activo
-                      </span>
+
+                    {/* Menú Primaria Geometría */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                            ['1', '2', '3', '4', '5'].includes(adminSelectedGrade || '')
+                              ? "border-teal-500/60 bg-teal-500/20 text-teal-300 shadow-[0_0_15px_rgba(20,184,166,0.3)]"
+                              : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                          )}
+                        >
+                          <Compass className="h-3.5 w-3.5 text-teal-400" />
+                          <span>{adminSelectedGrade === '1' ? "Primero" : adminSelectedGrade === '2' ? "Segundo" : adminSelectedGrade === '3' ? "Tercero" : adminSelectedGrade === '4' ? "Cuarto" : adminSelectedGrade === '5' ? "Quinto" : "Primaria"}</span>
+                          <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-[100]">
+                        <DropdownMenuLabel className="text-[10px] text-teal-400 uppercase tracking-wider font-bold px-2 py-1">
+                          Geometría Primaria
+                        </DropdownMenuLabel>
+                        {[
+                          { id: '1', label: 'Primero', icon: BookOpen },
+                          { id: '2', label: 'Segundo', icon: Rocket },
+                          { id: '3', label: 'Tercero', icon: Compass },
+                          { id: '4', label: 'Cuarto', icon: Landmark },
+                          { id: '5', label: 'Quinto', icon: BookOpen },
+                        ].map(g => {
+                          const Icon = g.icon;
+                          const isActive = adminSelectedGrade === g.id;
+                          return (
+                            <DropdownMenuItem
+                              key={g.id}
+                              onClick={() => handleAdminSelectGrade(g.id)}
+                              className={cn(
+                                "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                                isActive ? "bg-teal-600/30 text-teal-200 font-bold" : "hover:bg-teal-500/10 hover:text-teal-300"
+                              )}
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <Icon className="h-3.5 w-3.5 text-teal-400" />
+                                {g.label}
+                              </span>
+                              {isActive && (
+                                <span className="text-[9px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-1.5 py-0.5 rounded font-semibold">
+                                  Activo
+                                </span>
+                              )}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Menú Secundaria Geometría */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                            ['6', '7', '8', '9'].includes(adminSelectedGrade || '')
+                              ? "border-teal-500/60 bg-teal-500/20 text-teal-300 shadow-[0_0_15px_rgba(20,184,166,0.3)]"
+                              : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                          )}
+                        >
+                          <GraduationCap className="h-3.5 w-3.5 text-teal-400" />
+                          <span>{adminSelectedGrade === '6' ? "Sexto" : adminSelectedGrade === '7' ? "Séptimo" : adminSelectedGrade === '8' ? "Octavo" : adminSelectedGrade === '9' ? "Noveno" : "Secundaria"}</span>
+                          <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-[100]">
+                        <DropdownMenuLabel className="text-[10px] text-teal-400 uppercase tracking-wider font-bold px-2 py-1">
+                          Geometría Secundaria
+                        </DropdownMenuLabel>
+                        {[
+                          { id: '6', label: 'Sexto', icon: Zap },
+                          { id: '7', label: 'Séptimo', icon: Flame },
+                          { id: '8', label: 'Octavo', icon: Layers },
+                          { id: '9', label: 'Noveno', icon: Sparkles },
+                        ].map(g => {
+                          const Icon = g.icon;
+                          const isActive = adminSelectedGrade === g.id;
+                          return (
+                            <DropdownMenuItem
+                              key={g.id}
+                              onClick={() => handleAdminSelectGrade(g.id)}
+                              className={cn(
+                                "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                                isActive ? "bg-teal-600/30 text-teal-200 font-bold" : "hover:bg-teal-500/10 hover:text-teal-300"
+                              )}
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <Icon className="h-3.5 w-3.5 text-teal-400" />
+                                {g.label}
+                              </span>
+                              {isActive && (
+                                <span className="text-[9px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-1.5 py-0.5 rounded font-semibold">
+                                  Activo
+                                </span>
+                              )}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
+
+                {/* Selector de Grados para Estadística (Cat 19) */}
+                {(Number(activeMapCategory) === 19 || categories?.find(c => c.id === activeMapCategory)?.name.toLowerCase().includes("estadística") || categories?.find(c => c.id === activeMapCategory)?.name.toLowerCase().includes("estadistica")) && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {adminSelectedGrade && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAdminSelectGrade(null)}
+                        className="h-8 px-2.5 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                        title="Volver al mapa madre de Estadística"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        <span><span className="hidden sm:inline">Mapa Madre: </span>Estadística</span>
+                      </Button>
                     )}
-                  </Button>
-                </div>
-              )}
+
+                    {/* Menú Primaria Estadística */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                            ['1', '2', '3', '4', '5'].includes(adminSelectedGrade || '')
+                              ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                              : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                          )}
+                        >
+                          <BarChart2 className="h-3.5 w-3.5 text-amber-400" />
+                          <span>{adminSelectedGrade === '1' ? "Primero" : adminSelectedGrade === '2' ? "Segundo" : adminSelectedGrade === '3' ? "Tercero" : adminSelectedGrade === '4' ? "Cuarto" : adminSelectedGrade === '5' ? "Quinto" : "Primaria"}</span>
+                          <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-[100]">
+                        <DropdownMenuLabel className="text-[10px] text-amber-400 uppercase tracking-wider font-bold px-2 py-1">
+                          Estadística Primaria
+                        </DropdownMenuLabel>
+                        {[
+                          { id: '1', label: 'Primero', icon: BookOpen },
+                          { id: '2', label: 'Segundo', icon: Rocket },
+                          { id: '3', label: 'Tercero', icon: Compass },
+                          { id: '4', label: 'Cuarto', icon: Landmark },
+                          { id: '5', label: 'Quinto', icon: BookOpen },
+                        ].map(g => {
+                          const Icon = g.icon;
+                          const isActive = adminSelectedGrade === g.id;
+                          return (
+                            <DropdownMenuItem
+                              key={g.id}
+                              onClick={() => handleAdminSelectGrade(g.id)}
+                              className={cn(
+                                "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                                isActive ? "bg-amber-600/30 text-amber-200 font-bold" : "hover:bg-amber-500/10 hover:text-amber-300"
+                              )}
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <Icon className="h-3.5 w-3.5 text-amber-400" />
+                                {g.label}
+                              </span>
+                              {isActive && (
+                                <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
+                                  Activo
+                                </span>
+                              )}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Menú Secundaria Estadística */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                            ['6', '7', '8', '9'].includes(adminSelectedGrade || '')
+                              ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                              : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                          )}
+                        >
+                          <GraduationCap className="h-3.5 w-3.5 text-amber-400" />
+                          <span>{adminSelectedGrade === '6' ? "Sexto" : adminSelectedGrade === '7' ? "Séptimo" : adminSelectedGrade === '8' ? "Octavo" : adminSelectedGrade === '9' ? "Noveno" : "Secundaria"}</span>
+                          <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-[100]">
+                        <DropdownMenuLabel className="text-[10px] text-amber-400 uppercase tracking-wider font-bold px-2 py-1">
+                          Estadística Secundaria
+                        </DropdownMenuLabel>
+                        {[
+                          { id: '6', label: 'Sexto', icon: Zap },
+                          { id: '7', label: 'Séptimo', icon: Flame },
+                          { id: '8', label: 'Octavo', icon: Layers },
+                          { id: '9', label: 'Noveno', icon: Sparkles },
+                        ].map(g => {
+                          const Icon = g.icon;
+                          const isActive = adminSelectedGrade === g.id;
+                          return (
+                            <DropdownMenuItem
+                              key={g.id}
+                              onClick={() => handleAdminSelectGrade(g.id)}
+                              className={cn(
+                                "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                                isActive ? "bg-amber-600/30 text-amber-200 font-bold" : "hover:bg-amber-500/10 hover:text-amber-300"
+                              )}
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <Icon className="h-3.5 w-3.5 text-amber-400" />
+                                {g.label}
+                              </span>
+                              {isActive && (
+                                <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
+                                  Activo
+                                </span>
+                              )}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
+
+                {/* Conexión cruzada entre Áreas para el Grado Seleccionado */}
+                {adminSelectedGrade && (
+                  <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/90 border border-white/10 shadow-inner">
+                    {/* Botón Aritmética / Álgebra */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setActiveMapCategory(['8', '9'].includes(adminSelectedGrade) ? 2 : 1)}
+                      className={cn(
+                        "h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all",
+                        (Number(activeMapCategory) === 1 || Number(activeMapCategory) === 2)
+                          ? "bg-blue-500/20 text-blue-300 border border-blue-500/40 shadow-sm"
+                          : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                      )}
+                    >
+                      <Layers className="h-3.5 w-3.5 text-blue-400" />
+                      <span>{['8', '9'].includes(adminSelectedGrade) ? 'Álgebra' : 'Aritmética'}</span>
+                    </Button>
+
+                    {/* Botón Geometría */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setActiveMapCategory(22)}
+                      className={cn(
+                        "h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all",
+                        Number(activeMapCategory) === 22
+                          ? "bg-teal-500/20 text-teal-300 border border-teal-500/40 shadow-sm"
+                          : "text-slate-400 hover:text-teal-300 hover:bg-slate-800/60"
+                      )}
+                    >
+                      <Compass className="h-3.5 w-3.5 text-teal-400" />
+                      <span>Geometría</span>
+                    </Button>
+
+                    {/* Botón Estadística */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setActiveMapCategory(19)}
+                      className={cn(
+                        "h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all",
+                        Number(activeMapCategory) === 19
+                          ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
+                          : "text-slate-400 hover:text-amber-300 hover:bg-slate-800/60"
+                      )}
+                    >
+                      <BarChart2 className="h-3.5 w-3.5 text-amber-400" />
+                      <span>Estadística</span>
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto bg-slate-950 relative">
             {activeMapCategory && getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name, adminSelectedGrade) && (
               <SkillTreeView
+                key={`${activeMapCategory}-${adminSelectedGrade || 'mother'}`}
                 nodes={getMapData(activeMapCategory, categories?.find(c => c.id === activeMapCategory)?.name, adminSelectedGrade)!.nodes}
                 description=""
                 progressMap={(() => {

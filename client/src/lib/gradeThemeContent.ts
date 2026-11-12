@@ -316,3 +316,325 @@ export function getGradeThemeMeta(gradeId: string, themeId?: string | null): Gra
   if (!meta) return null;
   return isFeminineTheme(themeId) ? meta.feminine : meta.standard;
 }
+
+const GEOMETRY_METAS: Record<string, GradeThemeMeta> = {
+  '1': {
+    badge: '🎨 El Reino de las Formas • 1° de Primaria (6 años)',
+    title: 'El Reino de las Formas • 1° Grado',
+    emoji: '🎨',
+    description: '¡Juega, explora y descubre figuras mágicas! Aprende arriba y abajo, izquierda y derecha, líneas divertidas, círculos, cuadrados y cuerpos que ruedan.',
+    legend: {
+      title: '🗺️ Guía de los Pequeños Geómetras',
+      unit: '🏰 Castillo de las Formas',
+      ready: '🎨 Misión de Figuras Lista',
+      inProgress: '✏️ En Trazo y Dibujo',
+      completed: '⭐ ¡Figura Descubierta!',
+      locked: '🔒 Cofre de Formas Bloqueado',
+      mastery: '👑 Corona Mágica de las Formas'
+    }
+  },
+  '2': {
+    badge: '📐 Elementos y Figuras Planas • 2° de Primaria',
+    title: 'El Taller de las Figuras • 2° Grado',
+    emoji: '📐',
+    description: 'Puntos, líneas, segmentos, figuras planas, lados, vértices, cuerpos geométricos y simetría intuitiva.',
+    legend: {
+      title: '🗺️ Códice de la Geometría',
+      unit: '📐 Dominio Geométrico',
+      ready: '📐 Desafío Geométrico',
+      inProgress: '✏️ En Construcción',
+      completed: '⭐ ¡Misión Geométrica Conquistada!',
+      locked: '🔒 Sector Bloqueado',
+      mastery: '👑 Corona Geométrica de 2°'
+    }
+  },
+  '3': {
+    badge: '📐 Medición y Propiedades • 3° de Primaria',
+    title: 'La Brújula Geométrica • 3° Grado',
+    emoji: '📐',
+    description: 'Semirrectas, segmentos, clasificación de ángulos, polígonos, círculos y perímetros de figuras.',
+    legend: {
+      title: '🗺️ Códice de la Geometría',
+      unit: '📐 Dominio Geométrico',
+      ready: '📐 Desafío Geométrico',
+      inProgress: '✏️ En Construcción',
+      completed: '💎 Reliquia Geométrica',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Corona Geométrica de 3°'
+    }
+  },
+  '4': {
+    badge: '📐 Geometría Plana y Medición • 4° de Primaria',
+    title: 'El Templo de las Medidas • 4° Grado',
+    emoji: '📐',
+    description: 'Paralelismo, perpendicularidad, transportador, construcción de triángulos, cuadriláteros, perímetros y áreas de rectángulos.',
+    legend: {
+      title: '🗺️ Códice de la Geometría',
+      unit: '📐 Dominio Geométrico',
+      ready: '📐 Desafío Geométrico',
+      inProgress: '✏️ En Construcción',
+      completed: '🏆 Desafío Conquistado',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Corona Geométrica de 4°'
+    }
+  },
+  '5': {
+    badge: '📐 Áreas, Volúmenes y Transformaciones • 5° de Primaria',
+    title: 'La Ciudadela de las Dimensiones • 5° Grado',
+    emoji: '📐',
+    description: 'Áreas de triángulos y polígonos, circunferencia, cuerpos geométricos, volúmenes de prismas y plano cartesiano.',
+    legend: {
+      title: '🗺️ Códice de la Geometría',
+      unit: '📐 Dominio Geométrico',
+      ready: '📐 Desafío Geométrico',
+      inProgress: '✏️ En Construcción',
+      completed: '🏆 Desafío Conquistado',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Corona Geométrica de 5°'
+    }
+  },
+  '6': {
+    badge: '📐 Fundamentos Euclidianos y Polígonos • 6° Grado',
+    title: 'El Nexo de la Geometría Euclidiana • 6° Grado',
+    emoji: '📐',
+    description: 'Conceptos primitivos, ángulos complementarios/suplementarios, polígonos, áreas, perímetros y construcciones con regla y compás.',
+    legend: {
+      title: '🗺️ Códice de la Geometría',
+      unit: '📐 Dominio Geométrico',
+      ready: '📐 Desafío Geométrico',
+      inProgress: '✏️ En Construcción',
+      completed: '🏆 Teorema Conquistado',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Corona Geométrica de 6°'
+    }
+  },
+  '7': {
+    badge: '📐 Relaciones Angulares y Métrica • 7° Grado',
+    title: 'La Forja de la Proporcionalidad • 7° Grado',
+    emoji: '📐',
+    description: 'Rectas paralelas cortadas por secante, ángulos en triángulos, semejanza, Teorema de Tales y cuerpos redondos.',
+    legend: {
+      title: '🗺️ Códice de la Geometría',
+      unit: '📐 Dominio Geométrico',
+      ready: '📐 Desafío Geométrico',
+      inProgress: '✏️ En Construcción',
+      completed: '🏆 Teorema Conquistado',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Corona Titánica de Geometría de 7°'
+    }
+  },
+  '8': {
+    badge: '📐 Razonamiento y Teoremas • 8° Grado',
+    title: 'El Universo de la Geometría • 8° Grado',
+    emoji: '📐',
+    description: 'Demostraciones, criterios de congruencia y semejanza, Teorema de Tales, Teorema de Pitágoras y áreas compuestas.',
+    legend: {
+      title: '🗺️ CÓDICE DE LA GEOMETRÍA',
+      unit: '📐 Dominio Geométrico',
+      ready: '📐 Desafío Geométrico',
+      inProgress: '✏️ En Construcción',
+      completed: '🏆 Teorema Conquistado',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Cetro de la Geometría de 8°'
+    }
+  },
+  '9': {
+    badge: '📐 Geometría Analítica y Razonamiento • 9° Grado',
+    title: 'El Universo de la Geometría • 9° Grado',
+    emoji: '📐',
+    description: 'Plano cartesiano avanzado, distancia entre puntos, punto medio, pendiente, ecuación de la recta, paralelismo analítico y trigonometría.',
+    legend: {
+      title: '🗺️ CÓDICE DE LA GEOMETRÍA',
+      unit: '📐 Dominio Geométrico',
+      ready: '📐 Desafío Geométrico',
+      inProgress: '✏️ En Construcción',
+      completed: '🏆 Teorema Conquistado',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Corona Suprema de la Geometría de 9°'
+    }
+  }
+};
+
+const GEOMETRY_MOTHER_META: GradeThemeMeta = {
+  badge: '📐 El Gran Códice de la Geometría • 1° a 11°',
+  title: 'Super Mapa de Geometría',
+  emoji: '📐',
+  description: 'El universo de las formas, el espacio, las dimensiones, construcciones euclidianas y geometría analítica.',
+  legend: {
+    title: '🗺️ CÓDICE DE LA GEOMETRÍA',
+    unit: '📐 Macro-Dominio Geométrico',
+    ready: '📐 Desafío Geométrico',
+    inProgress: '✏️ En Construcción',
+    completed: '🏆 Teorema Conquistado',
+    locked: '🔒 Dominio Bloqueado',
+    mastery: '👑 Pantocrátor del Espacio y la Forma'
+  }
+};
+
+export function getGeometryThemeMeta(gradeId?: string | null, _themeId?: string | null): GradeThemeMeta {
+  if (gradeId && GEOMETRY_METAS[gradeId]) {
+    return GEOMETRY_METAS[gradeId];
+  }
+  return GEOMETRY_MOTHER_META;
+}
+
+const STATISTICS_METAS: Record<string, GradeThemeMeta> = {
+  '1': {
+    badge: '🧸 El Club del Conteo y los Datos • 1° de Primaria (6 años)',
+    title: 'El Club del Conteo • 1° Grado',
+    emoji: '🧸',
+    description: '¡Conviértete en un pequeño detective de datos! Aprende a agrupar juguetes por color, contar con palitos, leer dibujos en pictogramas y descubrir qué tiene más o menos.',
+    legend: {
+      title: '🗺️ Guía del Pequeño Investigador',
+      unit: '📊 Rincón de Conteo',
+      ready: '🧸 Reto de Conteo Listo',
+      inProgress: '🔍 En Búsqueda y Conteo',
+      completed: '⭐ ¡Dato Descubierto!',
+      locked: '🔒 Rincón Bloqueado',
+      mastery: '👑 Medalla de Oro del Conteo'
+    }
+  },
+  '2': {
+    badge: '📊 Tablas y Gráficos Básicos • 2° de Primaria',
+    title: 'El Mundo de los Datos • 2° Grado',
+    emoji: '📊',
+    description: 'Tablas de doble entrada, gráficos de barras simples, interpretación y noción intuitiva de probabilidad.',
+    legend: {
+      title: '🗺️ Códice de la Estadística',
+      unit: '📊 Dominio Estadístico',
+      ready: '📈 Misión Estadística',
+      inProgress: '🔍 En Análisis',
+      completed: '⭐ ¡Gráfico Conquistado!',
+      locked: '🔒 Nivel Bloqueado',
+      mastery: '👑 Corona de Estadística de 2°'
+    }
+  },
+  '3': {
+    badge: '📊 Frecuencias y Gráficos de Barras • 3° de Primaria',
+    title: 'El Mundo de los Datos • 3° Grado',
+    emoji: '📊',
+    description: 'Tablas de frecuencias simples, gráficos de barras verticales y horizontales, moda intuitiva y eventos seguros o imposibles.',
+    legend: {
+      title: '🗺️ Códice de la Estadística',
+      unit: '📊 Dominio Estadístico',
+      ready: '📈 Misión Estadística',
+      inProgress: '🔍 En Análisis',
+      completed: '💎 Reliquia de Datos',
+      locked: '🔒 Nivel Bloqueado',
+      mastery: '👑 Corona de Estadística de 3°'
+    }
+  },
+  '4': {
+    badge: '📊 Organización de Datos y Probabilidad • 4° Grado',
+    title: 'El Mundo de los Datos • 4° Grado',
+    emoji: '📊',
+    description: 'Variables cualitativas y cuantitativas discretas, gráficos de líneas, moda, promedio intuitivo y probabilidad experimental.',
+    legend: {
+      title: '🗺️ Códice de la Estadística',
+      unit: '📊 Dominio Estadístico',
+      ready: '📈 Misión Estadística',
+      inProgress: '🔍 En Análisis',
+      completed: '🏆 Desafío Conquistado',
+      locked: '🔒 Nivel Bloqueado',
+      mastery: '👑 Corona de Estadística de 4°'
+    }
+  },
+  '5': {
+    badge: '📊 Tendencia Central y Gráficos Circulares • 5° Grado',
+    title: 'El Mundo de la Estadística • 5° Grado',
+    emoji: '📊',
+    description: 'Media aritmética, mediana, moda, gráficos circulares, diagramas de tallo y hojas y cálculo de probabilidades simples.',
+    legend: {
+      title: '🗺️ Códice de la Estadística',
+      unit: '📊 Dominio Estadístico',
+      ready: '📈 Misión Estadística',
+      inProgress: '🔍 En Análisis',
+      completed: '🏆 Desafío Conquistado',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Corona de Estadística de 5°'
+    }
+  },
+  '6': {
+    badge: '📊 Población, Muestra y Frecuencias • 6° Grado',
+    title: 'El Mundo de la Estadística • 6° Grado',
+    emoji: '📊',
+    description: 'Población y muestra, tablas de frecuencias absolutas y relativas, histogramas, polígonos de frecuencias y probabilidad elemental.',
+    legend: {
+      title: '🗺️ Códice de la Estadística',
+      unit: '📊 Dominio Estadístico',
+      ready: '📈 Misión Estadística',
+      inProgress: '🔍 En Análisis',
+      completed: '🏆 Desafío Conquistado',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Corona de Estadística de 6°'
+    }
+  },
+  '7': {
+    badge: '📊 Medidas de Tendencia Central y Dispersión • 7° Grado',
+    title: 'El Mundo de la Estadística • 7° Grado',
+    emoji: '📊',
+    description: 'Media, mediana y moda para datos agrupados y no agrupados, rango, diagramas de dispersión y probabilidad teórica.',
+    legend: {
+      title: '🗺️ Códice de la Estadística',
+      unit: '📊 Dominio Estadístico',
+      ready: '📈 Misión Estadística',
+      inProgress: '🔍 En Análisis',
+      completed: '🏆 Desafío Conquistado',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Corona Titánica de Estadística de 7°'
+    }
+  },
+  '8': {
+    badge: '📊 Muestreo, Medidas y Probabilidad • 8° Grado',
+    title: 'El Mundo de los Datos y la Estadística • 8° Grado',
+    emoji: '📊',
+    description: 'Técnicas de muestreo, medidas de posición (cuartiles, percentiles), varianza, desviación estándar y regla de Laplace.',
+    legend: {
+      title: '🗺️ CÓDICE DE LA ESTADÍSTICA',
+      unit: '📊 Dominio Estadístico',
+      ready: '📈 Misión Estadística',
+      inProgress: '🔍 En Análisis',
+      completed: '🏆 Desafío Conquistado',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Cetro de la Estadística de 8°'
+    }
+  },
+  '9': {
+    badge: '📊 Regresión, Inferencia y Probabilidad • 9° Grado',
+    title: 'El Mundo de los Datos y la Estadística • 9° Grado',
+    emoji: '📊',
+    description: 'Correlación lineal, recta de regresión, probabilidad condicional, regla de Bayes y análisis de distribuciones.',
+    legend: {
+      title: '🗺️ CÓDICE DE LA ESTADÍSTICA',
+      unit: '📊 Dominio Estadístico',
+      ready: '📈 Misión Estadística',
+      inProgress: '🔍 En Análisis',
+      completed: '🏆 Desafío Conquistado',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Corona Suprema de Estadística de 9°'
+    }
+  }
+};
+
+const STATISTICS_MOTHER_META: GradeThemeMeta = {
+  badge: '📊 El Gran Universo de los Datos y la Probabilidad',
+  title: 'Super Mapa de Estadística',
+  emoji: '📊',
+  description: 'Desde el conteo y la recolección de datos hasta la inferencia estadística, distribuciones y probabilidad avanzada.',
+  legend: {
+    title: '🗺️ CÓDICE DE LA ESTADÍSTICA',
+    unit: '📊 Macro-Dominio Estadístico',
+    ready: '📈 Misión Estadística',
+    inProgress: '🔍 En Análisis',
+    completed: '🏆 Análisis Conquistado',
+    locked: '🔒 Dominio Bloqueado',
+    mastery: '👑 Oráculo Maestro de los Datos'
+  }
+};
+
+export function getStatisticsThemeMeta(gradeId?: string | null, _themeId?: string | null): GradeThemeMeta {
+  if (gradeId && STATISTICS_METAS[gradeId]) {
+    return STATISTICS_METAS[gradeId];
+  }
+  return STATISTICS_MOTHER_META;
+}

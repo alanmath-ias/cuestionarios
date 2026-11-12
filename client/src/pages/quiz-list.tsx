@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { QuizCard } from '@/components/dashboard/quiz-card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle, Map as MapIcon, LayoutGrid, Search, CheckCircle2, Ban, Crown, Sparkles, Trophy, Gamepad2, Eye, EyeOff, Link2, Power, Check, Clock, Loader2, ChevronDown, GraduationCap, RotateCcw, Rocket, Compass, Landmark, Zap, Flame, Shield, Layers, Flower2 } from 'lucide-react';
+import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle, Map as MapIcon, LayoutGrid, Search, CheckCircle2, Ban, Crown, Sparkles, Trophy, Gamepad2, Eye, EyeOff, Link2, Power, Check, Clock, Loader2, ChevronDown, GraduationCap, RotateCcw, Rocket, Compass, Landmark, Zap, Flame, Shield, Layers, Flower2, BarChart2 } from 'lucide-react';
 import { useParams, useLocation } from 'wouter';
 import { calculatePercentage } from '@/lib/mathUtils';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,9 @@ import { algebraMapNodes } from '@/data/algebra-map-data';
 import { calculusMapNodes } from '@/data/calculus-map-data';
 import { integralCalculusMapNodes } from '@/data/integral-calculus-map-data';
 import { statisticsMapNodes } from '@/data/statistics-map-data';
+import { geometryMapNodes } from '@/data/geometry-map-data';
+import { grade1GeometryNodes } from '@/data/grade-1-geometry-map-data';
+import { grade1StatisticsNodes } from '@/data/grade-1-statistics-map-data';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +51,7 @@ import { MapCompletionCelebration } from '@/components/dashboard/MapCompletionCe
 import { getCreditConfig } from '@shared/credit-config';
 import { calculateMasteryStats, getGradeNodes } from '@/lib/mastery-utils';
 import { useTheme } from '@/lib/theme';
-import { getGradeThemeMeta, isFeminineTheme } from '@/lib/gradeThemeContent';
+import { getGradeThemeMeta, getGeometryThemeMeta, getStatisticsThemeMeta, isFeminineTheme } from '@/lib/gradeThemeContent';
 
 interface Category {
   id: number;
@@ -245,7 +248,12 @@ function QuizList() {
   };
 
   // Determine which map nodes to use
-  const currentMapNodes = selectedGrade === '1' ? grade1MapNodes :
+  const isGeometry = categoryId === '22' || category?.name?.toLowerCase().includes('geometría') || category?.name?.toLowerCase().includes('geometria');
+  const isStatistics = categoryId === '19' || category?.name?.toLowerCase().includes('estadística') || category?.name?.toLowerCase().includes('estadistica');
+
+  const currentMapNodes = isGeometry ? (selectedGrade === '1' ? grade1GeometryNodes : geometryMapNodes) :
+    isStatistics ? (selectedGrade === '1' ? grade1StatisticsNodes : statisticsMapNodes) :
+    selectedGrade === '1' ? grade1MapNodes :
     selectedGrade === '2' ? grade2MapNodes :
     selectedGrade === '3' ? grade3MapNodes :
     selectedGrade === '4' ? grade4MapNodes :
@@ -257,8 +265,7 @@ function QuizList() {
     categoryId === '2' ? algebraMapNodes :
       categoryId === '4' ? calculusMapNodes :
         categoryId === '5' ? integralCalculusMapNodes :
-          categoryId === '19' ? statisticsMapNodes :
-            arithmeticMapNodes;
+          arithmeticMapNodes;
   const initialViewMode = searchParams.get('view') as 'roadmap' | 'grid' | null;
   const { toast } = useToast();
   const { session } = useSession();
@@ -594,14 +601,28 @@ function QuizList() {
 
   const mapTitle = useMemo(() => {
     if (selectedGrade) {
+      if (isGeometry) {
+        return getGeometryThemeMeta(selectedGrade, theme).title;
+      }
+      if (isStatistics) {
+        return getStatisticsThemeMeta(selectedGrade, theme).title;
+      }
       const meta = getGradeThemeMeta(selectedGrade, theme);
       if (meta) return meta.title;
     }
+    if (isGeometry) return "Super Mapa de Geometría";
+    if (isStatistics) return "Super Mapa de Estadística";
     return `Mapa de Habilidades: ${category?.name}`;
-  }, [selectedGrade, category, theme]);
+  }, [selectedGrade, category, theme, isGeometry, isStatistics]);
 
   const mapDescription = useMemo(() => {
     if (selectedGrade) {
+      if (isGeometry) {
+        return getGeometryThemeMeta(selectedGrade, theme).description;
+      }
+      if (isStatistics) {
+        return getStatisticsThemeMeta(selectedGrade, theme).description;
+      }
       const meta = getGradeThemeMeta(selectedGrade, theme);
       if (meta) return meta.description;
     }
@@ -609,9 +630,10 @@ function QuizList() {
     if (categoryId === '2') return "Explora el álgebra desde sus fundamentos hasta el dominio de funciones.";
     if (categoryId === '4') return "Domina el cálculo diferencial: límites, derivadas y sus aplicaciones.";
     if (categoryId === '5') return "Explora la integración: desde el área bajo la curva hasta las integrales impropias.";
-    if (categoryId === '19') return "Domina la estadística descriptiva, probabilidad y análisis de datos.";
+    if (categoryId === '19' || isStatistics) return "El universo de los datos, frecuencias, medidas estadísticas, muestreo y probabilidad.";
+    if (categoryId === '22' || isGeometry) return "El universo de las formas, el espacio, las dimensiones, construcciones y teoremas geométricos.";
     return "";
-  }, [selectedGrade, categoryId, theme]);
+  }, [selectedGrade, categoryId, theme, isGeometry, isStatistics]);
 
   const totalCategoryProgress = useMemo(() => {
     if (!quizzes) return 0;
@@ -801,7 +823,7 @@ function QuizList() {
       // 1. Determine nodes pool: check grade nodes if grade is present, or currentMapNodes
       let targetNode: ArithmeticNode | undefined = undefined;
       if (gradeParam) {
-        const gradeNodes = getGradeNodes(gradeParam);
+        const gradeNodes = getGradeNodes(gradeParam, categoryId);
         targetNode = gradeNodes?.find((n: any) => n.id === nodeId);
       }
       if (!targetNode && currentMapNodes) {
@@ -811,7 +833,7 @@ function QuizList() {
       if (!targetNode) {
         const gradeMatch = nodeId.match(/^g([1-9])-/i);
         if (gradeMatch) {
-          const gNodes = getGradeNodes(gradeMatch[1]);
+          const gNodes = getGradeNodes(gradeMatch[1], categoryId);
           targetNode = gNodes?.find((n: any) => n.id === nodeId);
           if (targetNode && selectedGrade !== gradeMatch[1]) {
             setSelectedGrade(gradeMatch[1]);
@@ -985,266 +1007,576 @@ function QuizList() {
             </h1>
           </div>
 
-          {/* Selector de Grados (Primaria y Secundaria) */}
-          {categoryId === '1' && (
-            <div className="flex items-center gap-2 flex-wrap">
-              {selectedGrade && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSelectGrade(null)}
-                  className="h-8 px-2.5 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
-                  title="Volver a la vista completa de la materia"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Ver</span> Área Completa
-                </Button>
-              )}
-
-              {/* Menú Primaria */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+          {/* Controles de Grados y Conexión de Áreas */}
+          <div className="flex items-center gap-2.5 flex-wrap ml-auto justify-end">
+            {/* Selector de Grados (Primaria y Secundaria) para Aritmética */}
+            {categoryId === '1' && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {selectedGrade && (
                   <Button
                     variant="outline"
                     size="sm"
-                    className={cn(
-                      "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
-                      (selectedGrade === '1' || selectedGrade === '2' || selectedGrade === '3' || selectedGrade === '4' || selectedGrade === '5')
-                        ? "border-blue-500/60 bg-blue-500/20 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-                        : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
-                    )}
+                    onClick={() => handleSelectGrade(null)}
+                    className="h-8 px-2.5 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                    title="Volver al mapa madre de Aritmética"
                   >
-                    <Sparkles className="h-3.5 w-3.5 text-blue-400" />
-                    <span>{selectedGrade === '1' ? "Primero" : selectedGrade === '2' ? "Segundo" : selectedGrade === '3' ? "Tercero" : selectedGrade === '4' ? "Cuarto" : selectedGrade === '5' ? "Quinto" : "Primaria"}</span>
-                    <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Mapa Madre: </span>Aritmética
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-50">
-                  <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase tracking-wider font-bold px-2 py-1">
-                    Grados de Primaria
-                  </DropdownMenuLabel>
-                  <DropdownMenuItem
-                    onClick={() => handleSelectGrade('1')}
-                    className={cn(
-                      "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                      selectedGrade === '1'
-                        ? "bg-amber-600/30 text-amber-200 font-bold"
-                        : "hover:bg-amber-500/20 hover:text-amber-200 focus:bg-amber-500/20 focus:text-amber-200 data-[highlighted]:bg-amber-500/20 data-[highlighted]:text-amber-200"
-                    )}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <BookOpen className="h-3.5 w-3.5 text-amber-400" />
-                      Primero
-                    </span>
-                    <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
-                      Activo
-                    </span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleSelectGrade('2')}
-                    className={cn(
-                      "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                      selectedGrade === '2'
-                        ? "bg-indigo-600/30 text-indigo-200 font-bold"
-                        : "hover:bg-indigo-500/20 hover:text-indigo-200 focus:bg-indigo-500/20 focus:text-indigo-200 data-[highlighted]:bg-indigo-500/20 data-[highlighted]:text-indigo-200"
-                    )}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      {isFeminineTheme(theme) ? <Flower2 className="h-3.5 w-3.5 text-pink-400" /> : <Rocket className="h-3.5 w-3.5 text-indigo-400" />}
-                      Segundo
-                    </span>
-                    <span className="text-[9px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded font-semibold">
-                      Activo
-                    </span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleSelectGrade('3')}
-                    className={cn(
-                      "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                      selectedGrade === '3'
-                        ? "bg-cyan-600/30 text-cyan-200 font-bold"
-                        : "hover:bg-cyan-500/20 hover:text-cyan-200 focus:bg-cyan-500/20 focus:text-cyan-200 data-[highlighted]:bg-cyan-500/20 data-[highlighted]:text-cyan-200"
-                    )}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <Compass className="h-3.5 w-3.5 text-cyan-400" />
-                      Tercero
-                    </span>
-                    <span className="text-[9px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded font-semibold">
-                      Activo
-                    </span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleSelectGrade('4')}
-                    className={cn(
-                      "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                      selectedGrade === '4'
-                        ? "bg-emerald-600/30 text-emerald-200 font-bold"
-                        : "hover:bg-emerald-500/20 hover:text-emerald-200 focus:bg-emerald-500/20 focus:text-emerald-200 data-[highlighted]:bg-emerald-500/20 data-[highlighted]:text-emerald-200"
-                    )}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <Landmark className="h-3.5 w-3.5 text-emerald-400" />
-                      Cuarto
-                    </span>
-                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-semibold">
-                      Activo
-                    </span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-white/5 my-1" />
-                  <DropdownMenuItem
-                    onClick={() => handleSelectGrade('5')}
-                    className={cn(
-                      "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                      selectedGrade === '5'
-                        ? "bg-blue-600/30 text-blue-200 font-bold"
-                        : "hover:bg-blue-500/20 hover:text-blue-200 focus:bg-blue-500/20 focus:text-blue-200 data-[highlighted]:bg-blue-500/20 data-[highlighted]:text-blue-200"
-                    )}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <BookOpen className="h-3.5 w-3.5 text-blue-400" />
-                      Quinto
-                    </span>
-                    <span className="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded font-semibold">
-                      Activo
-                    </span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                )}
 
-              {/* Menú Secundaria */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
-                      selectedGrade === '7'
-                        ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
-                        : selectedGrade === '6'
-                        ? "border-violet-500/60 bg-violet-500/20 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.3)]"
-                        : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
-                    )}
-                  >
-                    {selectedGrade === '7' ? (
-                      <Flame className="h-3.5 w-3.5 text-amber-400" />
-                    ) : selectedGrade === '6' ? (
-                      <Zap className="h-3.5 w-3.5 text-violet-400" />
-                    ) : (
-                      <GraduationCap className="h-3.5 w-3.5 text-indigo-400" />
-                    )}
-                    <span>{selectedGrade === '7' ? "Séptimo" : selectedGrade === '6' ? "Sexto" : "Secundaria"}</span>
-                    <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-50">
-                  <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase tracking-wider font-bold px-2 py-1">
-                    Bachillerato / Secundaria
-                  </DropdownMenuLabel>
-                  <DropdownMenuItem
-                    onClick={() => handleSelectGrade('6')}
-                    className={cn(
-                      "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                      selectedGrade === '6'
-                        ? "bg-violet-600/30 text-violet-200 font-bold"
-                        : "hover:bg-violet-500/20 hover:text-violet-200 focus:bg-violet-500/20 focus:text-violet-200 data-[highlighted]:bg-violet-500/20 data-[highlighted]:text-violet-200"
-                    )}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <Zap className="h-3.5 w-3.5 text-violet-400" />
-                      Sexto
-                    </span>
-                    <span className="text-[9px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-1.5 py-0.5 rounded font-semibold">
-                      Activo
-                    </span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleSelectGrade('7')}
-                    className={cn(
-                      "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
-                      selectedGrade === '7'
-                        ? "bg-amber-600/30 text-amber-200 font-bold"
-                        : "hover:bg-amber-500/20 hover:text-amber-200 focus:bg-amber-500/20 focus:text-amber-200 data-[highlighted]:bg-amber-500/20 data-[highlighted]:text-amber-200"
-                    )}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <Flame className="h-3.5 w-3.5 text-amber-400" />
-                      Séptimo
-                    </span>
-                    <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
-                      Activo
-                    </span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-white/5 my-1" />
-                  {['Octavo', 'Noveno', 'Décimo', 'Undécimo'].map(g => (
-                    <DropdownMenuItem key={g} disabled className="text-xs text-slate-500 cursor-not-allowed px-2 py-1.5 rounded-lg flex items-center justify-between">
-                      <span>{g}</span>
-                      <span className="text-[9px] bg-slate-800/80 text-slate-500 px-1.5 py-0.5 rounded font-mono">Próx.</span>
+                {/* Menú Primaria */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                        (selectedGrade === '1' || selectedGrade === '2' || selectedGrade === '3' || selectedGrade === '4' || selectedGrade === '5')
+                          ? "border-blue-500/60 bg-blue-500/20 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                          : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                      )}
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-blue-400" />
+                      <span>{selectedGrade === '1' ? "Primero" : selectedGrade === '2' ? "Segundo" : selectedGrade === '3' ? "Tercero" : selectedGrade === '4' ? "Cuarto" : selectedGrade === '5' ? "Quinto" : "Primaria"}</span>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-50">
+                    <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase tracking-wider font-bold px-2 py-1">
+                      Grados de Primaria
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem
+                      onClick={() => handleSelectGrade('1')}
+                      className={cn(
+                        "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                        selectedGrade === '1'
+                          ? "bg-amber-600/30 text-amber-200 font-bold"
+                          : "hover:bg-amber-500/20 hover:text-amber-200 focus:bg-amber-500/20 focus:text-amber-200 data-[highlighted]:bg-amber-500/20 data-[highlighted]:text-amber-200"
+                      )}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <BookOpen className="h-3.5 w-3.5 text-amber-400" />
+                        Primero
+                      </span>
+                      <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
+                        Activo
+                      </span>
                     </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
+                    <DropdownMenuItem
+                      onClick={() => handleSelectGrade('2')}
+                      className={cn(
+                        "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                        selectedGrade === '2'
+                          ? "bg-indigo-600/30 text-indigo-200 font-bold"
+                          : "hover:bg-indigo-500/20 hover:text-indigo-200 focus:bg-indigo-500/20 focus:text-indigo-200 data-[highlighted]:bg-indigo-500/20 data-[highlighted]:text-indigo-200"
+                      )}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        {isFeminineTheme(theme) ? <Flower2 className="h-3.5 w-3.5 text-pink-400" /> : <Rocket className="h-3.5 w-3.5 text-indigo-400" />}
+                        Segundo
+                      </span>
+                      <span className="text-[9px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded font-semibold">
+                        Activo
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleSelectGrade('3')}
+                      className={cn(
+                        "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                        selectedGrade === '3'
+                          ? "bg-cyan-600/30 text-cyan-200 font-bold"
+                          : "hover:bg-cyan-500/20 hover:text-cyan-200 focus:bg-cyan-500/20 focus:text-cyan-200 data-[highlighted]:bg-cyan-500/20 data-[highlighted]:text-cyan-200"
+                      )}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Compass className="h-3.5 w-3.5 text-cyan-400" />
+                        Tercero
+                      </span>
+                      <span className="text-[9px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded font-semibold">
+                        Activo
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleSelectGrade('4')}
+                      className={cn(
+                        "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                        selectedGrade === '4'
+                          ? "bg-emerald-600/30 text-emerald-200 font-bold"
+                          : "hover:bg-emerald-500/20 hover:text-emerald-200 focus:bg-emerald-500/20 focus:text-emerald-200 data-[highlighted]:bg-emerald-500/20 data-[highlighted]:text-emerald-200"
+                      )}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Landmark className="h-3.5 w-3.5 text-emerald-400" />
+                        Cuarto
+                      </span>
+                      <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-semibold">
+                        Activo
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-white/5 my-1" />
+                    <DropdownMenuItem
+                      onClick={() => handleSelectGrade('5')}
+                      className={cn(
+                        "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                        selectedGrade === '5'
+                          ? "bg-blue-600/30 text-blue-200 font-bold"
+                          : "hover:bg-blue-500/20 hover:text-blue-200 focus:bg-blue-500/20 focus:text-blue-200 data-[highlighted]:bg-blue-500/20 data-[highlighted]:text-blue-200"
+                      )}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <BookOpen className="h-3.5 w-3.5 text-blue-400" />
+                        Quinto
+                      </span>
+                      <span className="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded font-semibold">
+                        Activo
+                      </span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
-          {/* Selector de Grados para Álgebra (8° y 9°) */}
-          {categoryId === '2' && (
-            <div className="flex items-center gap-2 flex-wrap">
-              {selectedGrade && (
+                {/* Menú Secundaria */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                        selectedGrade === '7'
+                          ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                          : selectedGrade === '6'
+                          ? "border-violet-500/60 bg-violet-500/20 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.3)]"
+                          : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                      )}
+                    >
+                      {selectedGrade === '7' ? (
+                        <Flame className="h-3.5 w-3.5 text-amber-400" />
+                      ) : selectedGrade === '6' ? (
+                        <Zap className="h-3.5 w-3.5 text-violet-400" />
+                      ) : (
+                        <GraduationCap className="h-3.5 w-3.5 text-indigo-400" />
+                      )}
+                      <span>{selectedGrade === '7' ? "Séptimo" : selectedGrade === '6' ? "Sexto" : "Secundaria"}</span>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-50">
+                    <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase tracking-wider font-bold px-2 py-1">
+                      Bachillerato / Secundaria
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem
+                      onClick={() => handleSelectGrade('6')}
+                      className={cn(
+                        "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                        selectedGrade === '6'
+                          ? "bg-violet-600/30 text-violet-200 font-bold"
+                          : "hover:bg-violet-500/20 hover:text-violet-200 focus:bg-violet-500/20 focus:text-violet-200 data-[highlighted]:bg-violet-500/20 data-[highlighted]:text-violet-200"
+                      )}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Zap className="h-3.5 w-3.5 text-violet-400" />
+                        Sexto
+                      </span>
+                      <span className="text-[9px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-1.5 py-0.5 rounded font-semibold">
+                        Activo
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleSelectGrade('7')}
+                      className={cn(
+                        "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                        selectedGrade === '7'
+                          ? "bg-amber-600/30 text-amber-200 font-bold"
+                          : "hover:bg-amber-500/20 hover:text-amber-200 focus:bg-amber-500/20 focus:text-amber-200 data-[highlighted]:bg-amber-500/20 data-[highlighted]:text-amber-200"
+                      )}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Flame className="h-3.5 w-3.5 text-amber-400" />
+                        Séptimo
+                      </span>
+                      <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
+                        Activo
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-white/5 my-1" />
+                    {['Octavo', 'Noveno', 'Décimo', 'Undécimo'].map(g => (
+                      <DropdownMenuItem key={g} disabled className="text-xs text-slate-500 cursor-not-allowed px-2 py-1.5 rounded-lg flex items-center justify-between">
+                        <span>{g}</span>
+                        <span className="text-[9px] bg-slate-800/80 text-slate-500 px-1.5 py-0.5 rounded font-mono">Próx.</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
+
+            {/* Selector de Grados para Álgebra (8° y 9°) */}
+            {categoryId === '2' && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {selectedGrade && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSelectGrade(null)}
+                    className="h-8 px-2.5 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                    title="Volver al mapa madre de Álgebra"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Mapa Madre: </span>Álgebra
+                  </Button>
+                )}
+
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleSelectGrade(null)}
-                  className="h-8 px-2.5 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
-                  title="Volver a la vista completa de Álgebra"
+                  onClick={() => handleSelectGrade('8')}
+                  className={cn(
+                    "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                    selectedGrade === '8'
+                      ? "border-cyan-500/60 bg-cyan-500/20 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                      : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                  )}
                 >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Ver</span> Área Completa
+                  <Layers className="h-3.5 w-3.5 text-cyan-400" />
+                  <span>Octavo</span>
+                  {selectedGrade === '8' && (
+                    <span className="text-[9px] bg-cyan-500/30 text-cyan-200 border border-cyan-400/40 px-1.5 py-0.5 rounded font-bold">
+                      Activo
+                    </span>
+                  )}
                 </Button>
-              )}
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleSelectGrade('8')}
-                className={cn(
-                  "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
-                  selectedGrade === '8'
-                    ? "border-cyan-500/60 bg-cyan-500/20 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
-                    : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
-                )}
-              >
-                <Layers className="h-3.5 w-3.5 text-cyan-400" />
-                <span>Octavo</span>
-                {selectedGrade === '8' && (
-                  <span className="text-[9px] bg-cyan-500/30 text-cyan-200 border border-cyan-400/40 px-1.5 py-0.5 rounded font-bold">
-                    Activo
-                  </span>
-                )}
-              </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSelectGrade('9')}
+                  className={cn(
+                    "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                    selectedGrade === '9'
+                      ? "border-indigo-500/60 bg-indigo-500/20 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                      : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                  )}
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+                  <span>Noveno</span>
+                  {selectedGrade === '9' && (
+                    <span className="text-[9px] bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 px-1.5 py-0.5 rounded font-bold">
+                      Activo
+                    </span>
+                  )}
+                </Button>
+              </div>
+            )}
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleSelectGrade('9')}
-                className={cn(
-                  "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
-                  selectedGrade === '9'
-                    ? "border-indigo-500/60 bg-indigo-500/20 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.3)]"
-                    : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+            {/* Selector de Grados para Geometría General */}
+            {(categoryId === '22' || category?.name?.toLowerCase().includes('geometría') || category?.name?.toLowerCase().includes('geometria')) && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {selectedGrade && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSelectGrade(null)}
+                    className="h-8 px-2.5 rounded-xl border-teal-500/30 bg-teal-500/10 text-teal-300 hover:bg-teal-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                    title="Volver al mapa madre de Geometría"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Mapa Madre: </span>Geometría
+                  </Button>
                 )}
-              >
-                <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-                <span>Noveno</span>
-                {selectedGrade === '9' && (
-                  <span className="text-[9px] bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 px-1.5 py-0.5 rounded font-bold">
-                    Activo
-                  </span>
+
+                {/* Menú Primaria Geometría */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                        ['1', '2', '3', '4', '5'].includes(selectedGrade || '')
+                          ? "border-teal-500/60 bg-teal-500/20 text-teal-300 shadow-[0_0_15px_rgba(20,184,166,0.3)]"
+                          : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                      )}
+                    >
+                      <Compass className="h-3.5 w-3.5 text-teal-400" />
+                      <span>{selectedGrade === '1' ? "Primero" : selectedGrade === '2' ? "Segundo" : selectedGrade === '3' ? "Tercero" : selectedGrade === '4' ? "Cuarto" : selectedGrade === '5' ? "Quinto" : "Primaria"}</span>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-50">
+                    <DropdownMenuLabel className="text-[10px] text-teal-400 uppercase tracking-wider font-bold px-2 py-1">
+                      Geometría Primaria
+                    </DropdownMenuLabel>
+                    {[
+                      { id: '1', label: 'Primero', icon: BookOpen },
+                      { id: '2', label: 'Segundo', icon: Rocket },
+                      { id: '3', label: 'Tercero', icon: Compass },
+                      { id: '4', label: 'Cuarto', icon: Landmark },
+                      { id: '5', label: 'Quinto', icon: BookOpen },
+                    ].map(g => {
+                      const Icon = g.icon;
+                      const isActive = selectedGrade === g.id;
+                      return (
+                        <DropdownMenuItem
+                          key={g.id}
+                          onClick={() => handleSelectGrade(g.id)}
+                          className={cn(
+                            "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                            isActive ? "bg-teal-600/30 text-teal-200 font-bold" : "hover:bg-teal-500/10 hover:text-teal-300"
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Icon className="h-3.5 w-3.5 text-teal-400" />
+                            {g.label}
+                          </span>
+                          {isActive && (
+                            <span className="text-[9px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-1.5 py-0.5 rounded font-semibold">
+                              Activo
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Menú Secundaria Geometría */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                        ['6', '7', '8', '9'].includes(selectedGrade || '')
+                          ? "border-teal-500/60 bg-teal-500/20 text-teal-300 shadow-[0_0_15px_rgba(20,184,166,0.3)]"
+                          : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                      )}
+                    >
+                      <GraduationCap className="h-3.5 w-3.5 text-teal-400" />
+                      <span>{selectedGrade === '6' ? "Sexto" : selectedGrade === '7' ? "Séptimo" : selectedGrade === '8' ? "Octavo" : selectedGrade === '9' ? "Noveno" : "Secundaria"}</span>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-50">
+                    <DropdownMenuLabel className="text-[10px] text-teal-400 uppercase tracking-wider font-bold px-2 py-1">
+                      Geometría Secundaria
+                    </DropdownMenuLabel>
+                    {[
+                      { id: '6', label: 'Sexto', icon: Zap },
+                      { id: '7', label: 'Séptimo', icon: Flame },
+                      { id: '8', label: 'Octavo', icon: Layers },
+                      { id: '9', label: 'Noveno', icon: Sparkles },
+                    ].map(g => {
+                      const Icon = g.icon;
+                      const isActive = selectedGrade === g.id;
+                      return (
+                        <DropdownMenuItem
+                          key={g.id}
+                          onClick={() => handleSelectGrade(g.id)}
+                          className={cn(
+                            "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                            isActive ? "bg-teal-600/30 text-teal-200 font-bold" : "hover:bg-teal-500/10 hover:text-teal-300"
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Icon className="h-3.5 w-3.5 text-teal-400" />
+                            {g.label}
+                          </span>
+                          {isActive && (
+                            <span className="text-[9px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-1.5 py-0.5 rounded font-semibold">
+                              Activo
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
+
+            {/* Selector de Grados para Estadística */}
+            {(categoryId === '19' || category?.name?.toLowerCase().includes('estadística') || category?.name?.toLowerCase().includes('estadistica')) && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {selectedGrade && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSelectGrade(null)}
+                    className="h-8 px-2.5 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                    title="Volver al mapa madre de Estadística"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Mapa Madre: </span>Estadística
+                  </Button>
                 )}
-              </Button>
-            </div>
-          )}
+
+                {/* Menú Primaria Estadística */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                        ['1', '2', '3', '4', '5'].includes(selectedGrade || '')
+                          ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                          : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                      )}
+                    >
+                      <BarChart2 className="h-3.5 w-3.5 text-amber-400" />
+                      <span>{selectedGrade === '1' ? "Primero" : selectedGrade === '2' ? "Segundo" : selectedGrade === '3' ? "Tercero" : selectedGrade === '4' ? "Cuarto" : selectedGrade === '5' ? "Quinto" : "Primaria"}</span>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-50">
+                    <DropdownMenuLabel className="text-[10px] text-amber-400 uppercase tracking-wider font-bold px-2 py-1">
+                      Estadística Primaria
+                    </DropdownMenuLabel>
+                    {[
+                      { id: '1', label: 'Primero', icon: BookOpen },
+                      { id: '2', label: 'Segundo', icon: Rocket },
+                      { id: '3', label: 'Tercero', icon: Compass },
+                      { id: '4', label: 'Cuarto', icon: Landmark },
+                      { id: '5', label: 'Quinto', icon: BookOpen },
+                    ].map(g => {
+                      const Icon = g.icon;
+                      const isActive = selectedGrade === g.id;
+                      return (
+                        <DropdownMenuItem
+                          key={g.id}
+                          onClick={() => handleSelectGrade(g.id)}
+                          className={cn(
+                            "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                            isActive ? "bg-amber-600/30 text-amber-200 font-bold" : "hover:bg-amber-500/10 hover:text-amber-300"
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Icon className="h-3.5 w-3.5 text-amber-400" />
+                            {g.label}
+                          </span>
+                          {isActive && (
+                            <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
+                              Activo
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Menú Secundaria Estadística */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                        ['6', '7', '8', '9'].includes(selectedGrade || '')
+                          ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                          : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                      )}
+                    >
+                      <GraduationCap className="h-3.5 w-3.5 text-amber-400" />
+                      <span>{selectedGrade === '6' ? "Sexto" : selectedGrade === '7' ? "Séptimo" : selectedGrade === '8' ? "Octavo" : selectedGrade === '9' ? "Noveno" : "Secundaria"}</span>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-50">
+                    <DropdownMenuLabel className="text-[10px] text-amber-400 uppercase tracking-wider font-bold px-2 py-1">
+                      Estadística Secundaria
+                    </DropdownMenuLabel>
+                    {[
+                      { id: '6', label: 'Sexto', icon: Zap },
+                      { id: '7', label: 'Séptimo', icon: Flame },
+                      { id: '8', label: 'Octavo', icon: Layers },
+                      { id: '9', label: 'Noveno', icon: Sparkles },
+                    ].map(g => {
+                      const Icon = g.icon;
+                      const isActive = selectedGrade === g.id;
+                      return (
+                        <DropdownMenuItem
+                          key={g.id}
+                          onClick={() => handleSelectGrade(g.id)}
+                          className={cn(
+                            "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                            isActive ? "bg-amber-600/30 text-amber-200 font-bold" : "hover:bg-amber-500/10 hover:text-amber-300"
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Icon className="h-3.5 w-3.5 text-amber-400" />
+                            {g.label}
+                          </span>
+                          {isActive && (
+                            <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
+                              Activo
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
+
+            {/* Conexión cruzada entre Áreas para el Grado Seleccionado */}
+            {selectedGrade && (
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/90 border border-white/10 shadow-inner">
+                {/* Botón Aritmética / Álgebra */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLocation(`/category/${['8', '9'].includes(selectedGrade) ? '2' : '1'}?grade=${selectedGrade}`)}
+                  className={cn(
+                    "h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all",
+                    (categoryId === '1' || categoryId === '2')
+                      ? "bg-blue-500/20 text-blue-300 border border-blue-500/40 shadow-sm"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                  )}
+                >
+                  <Layers className="h-3.5 w-3.5 text-blue-400" />
+                  <span>{['8', '9'].includes(selectedGrade) ? 'Álgebra' : 'Aritmética'}</span>
+                </Button>
+
+                {/* Botón Geometría */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLocation(`/category/22?grade=${selectedGrade}`)}
+                  className={cn(
+                    "h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all",
+                    categoryId === '22'
+                      ? "bg-teal-500/20 text-teal-300 border border-teal-500/40 shadow-sm"
+                      : "text-slate-400 hover:text-teal-300 hover:bg-slate-800/60"
+                  )}
+                >
+                  <Compass className="h-3.5 w-3.5 text-teal-400" />
+                  <span>Geometría</span>
+                </Button>
+
+                {/* Botón Estadística */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLocation(`/category/19?grade=${selectedGrade}`)}
+                  className={cn(
+                    "h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all",
+                    categoryId === '19'
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
+                      : "text-slate-400 hover:text-amber-300 hover:bg-slate-800/60"
+                  )}
+                >
+                  <BarChart2 className="h-3.5 w-3.5 text-amber-400" />
+                  <span>Estadística</span>
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1315,7 +1647,7 @@ function QuizList() {
           )}
 
           {viewMode === 'roadmap' ? (
-            ['1', '2', '4', '5', '19'].includes(categoryId) ? (
+            ['1', '2', '4', '5', '19', '22'].includes(categoryId) ? (
               <SkillTreeView
                 key={selectedGrade ? `grade-${selectedGrade}` : `category-${categoryId}`}
                 nodes={currentMapNodes}

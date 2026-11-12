@@ -22,7 +22,7 @@ export const grade8MapNodes: ArithmeticNode[] = [
         requires: ['g8-u1'],
         description: 'Estructura de los números reales, densidad, clasificación y ubicación en la recta.',
         xOffset: -60,
-        additionalQuizzes: [301],
+        additionalQuizzes: [301, 1107],
         behavior: 'quiz_list'
     },
     {
@@ -38,13 +38,13 @@ export const grade8MapNodes: ArithmeticNode[] = [
     },
     {
         id: 'g8-ecuaciones-lineales',
-        label: 'Ecuaciones Lineales y Paréntesis',
+        label: 'Ecuaciones Lineales y Signos de Agrupación',
         level: 2,
         type: 'critical',
         requires: ['g8-reales-orden-recta', 'g8-notacion-cientifica'],
-        description: 'Transposición de términos, eliminación de signos de agrupación y ecuaciones de una variable.',
+        description: 'Transposición de términos, eliminación de paréntesis y resolución de ecuaciones lineales de una variable.',
         xOffset: -50,
-        additionalQuizzes: [50, 51, 52],
+        additionalQuizzes: [50, 51],
         behavior: 'quiz_list'
     },
     {
@@ -53,20 +53,20 @@ export const grade8MapNodes: ArithmeticNode[] = [
         level: 2,
         type: 'critical',
         requires: ['g8-reales-orden-recta'],
-        description: 'Desigualdades algebraicas, intervalos en la recta real e inecuaciones simultáneas.',
+        description: 'Desigualdades lineales, intervalos en la recta real y propiedades de inversión con coeficientes negativos.',
         xOffset: 50,
-        additionalQuizzes: [480, 481, 75],
+        additionalQuizzes: [480],
         behavior: 'quiz_list'
     },
     {
         id: 'g8-problemas-ecuaciones-modelado',
-        label: 'Modelado de Problemas con Ecuaciones y Fórmulas',
+        label: 'Modelado de Problemas Verbales y Móviles',
         level: 3,
         type: 'applied',
         requires: ['g8-ecuaciones-lineales', 'g8-inecuaciones-lineales'],
-        description: 'Planteamiento y resolución de problemas verbales, razonamiento inductivo, deductivo y despeje.',
+        description: 'Planteamiento y resolución de problemas verbales de edades, relaciones numéricas, problemas de móviles en MRU y aplicaciones de inecuaciones.',
         xOffset: 0,
-        additionalQuizzes: [53, 54, 484, 65, 66],
+        additionalQuizzes: [53, 54, 55, 64, 484],
         behavior: 'quiz_list'
     },
 
@@ -102,7 +102,7 @@ export const grade8MapNodes: ArithmeticNode[] = [
         requires: ['g8-u2'],
         description: 'Producto de polinomios, división sintética, regla de Ruffini y teorema del residuo.',
         xOffset: 60,
-        additionalQuizzes: [428, 429, 430, 475, 476, 702],
+        additionalQuizzes: [428, 429, 430, 475, 476, 702, 703, 705],
         behavior: 'quiz_list'
     },
     {
@@ -113,18 +113,18 @@ export const grade8MapNodes: ArithmeticNode[] = [
         requires: ['g8-polinomios-clasificacion-orden', 'g8-operaciones-polinomios'],
         description: 'Cuadrado y cubo de un binomio, suma por diferencia y producto de binomios con término común.',
         xOffset: -50,
-        additionalQuizzes: [18, 19, 21, 22, 23],
+        additionalQuizzes: [402, 18, 401, 19, 21, 22, 408],
         behavior: 'quiz_list'
     },
     {
         id: 'g8-pascal-cocientes-notables',
-        label: 'Triángulo de Pascal y Cocientes Notables',
+        label: 'Triángulo de Pascal, Cocientes Notables y Ecuaciones con Productos',
         level: 6,
         type: 'applied',
         requires: ['g8-operaciones-polinomios'],
-        description: 'Coeficientes binomiales de Pascal, expansión de potencias algebraicas y fórmulas de cocientes notables.',
+        description: 'Coeficientes binomiales de Pascal, expansión de potencias, cocientes notables, identidades algebraicas y ecuaciones/inecuaciones con productos.',
         xOffset: 50,
-        additionalQuizzes: [473, 474],
+        additionalQuizzes: [473, 474, 20, 23, 409, 410, 52, 481, 75],
         behavior: 'quiz_list'
     },
 
@@ -143,13 +143,13 @@ export const grade8MapNodes: ArithmeticNode[] = [
     },
     {
         id: 'g8-descomposicion-primos-mcd',
-        label: 'Descomposición Factorial y Máximo Común Divisor',
+        label: 'MCD y mcm de Monomios',
         level: 8,
         type: 'basic',
         requires: ['g8-u3'],
-        description: 'Descomposición en factores primos y cálculo del MCD numérico como base del factoreo algebraico.',
+        description: 'Máximo Común Divisor y Mínimo Común Múltiplo de monomios como base para la simplificación y adición racional.',
         xOffset: -70,
-        additionalQuizzes: [3, 955, 956],
+        additionalQuizzes: [431, 432],
         behavior: 'quiz_list'
     },
     {
@@ -169,9 +169,9 @@ export const grade8MapNodes: ArithmeticNode[] = [
         level: 8,
         type: 'critical',
         requires: ['g8-u3'],
-        description: 'Factorización de binomios: diferencias de cuadrados perfectos y cubos perfectos.',
+        description: 'Factorización de binomios: diferencias de cuadrados perfectos (básico, especial y polinomios) y cubos perfectos.',
         xOffset: 70,
-        additionalQuizzes: [30, 711, 38, 453],
+        additionalQuizzes: [30, 711, 31, 412, 37, 38, 453],
         behavior: 'quiz_list'
     },
     {
@@ -180,20 +180,20 @@ export const grade8MapNodes: ArithmeticNode[] = [
         level: 9,
         type: 'critical',
         requires: ['g8-factor-comun-agrupacion', 'g8-diferencia-cuadrados-cubos'],
-        description: 'Factorización sistemática de trinomios mediante raíces, tanteo y descomposición de coeficientes.',
+        description: 'Factorización sistemática de trinomios mediante raíces, tanteo, descomposición de coeficientes y adición/sustracción.',
         xOffset: -50,
-        additionalQuizzes: [29, 35, 36, 450, 452],
+        additionalQuizzes: [29, 413, 35, 450, 36, 452, 33, 34],
         behavior: 'quiz_list'
     },
     {
         id: 'g8-factorizacion-combinada-aplicaciones',
-        label: 'Factorizaciones Combinadas y Aplicaciones (MCD/mcm de Polinomios)',
+        label: 'Factorizaciones Combinadas, División Sintética y mcm/MCD Polinómico',
         level: 9,
         type: 'applied',
         requires: ['g8-trinomios-cuadrados', 'g8-descomposicion-primos-mcd'],
-        description: 'Combinación de múltiples casos de factoreo, simplificación avanzada y cálculo de mcm y MCD de polinomios.',
+        description: 'Combinación de múltiples casos de factoreo, división sintética con el teorema del residuo y cálculo de mcm y MCD de polinomios.',
         xOffset: 50,
-        additionalQuizzes: [32, 40, 39, 438, 439],
+        additionalQuizzes: [32, 40, 451, 39, 477, 478, 41, 857, 438, 439],
         behavior: 'quiz_list'
     },
 
@@ -216,9 +216,9 @@ export const grade8MapNodes: ArithmeticNode[] = [
         level: 11,
         type: 'basic',
         requires: ['g8-u4'],
-        description: 'Dominio y restricciones en denominadores, simplificación de monomios y polinomios factorizados.',
+        description: 'Dominio y restricciones en denominadores, simplificación de monomios, polinomios factorizados y fracciones complejas.',
         xOffset: -70,
-        additionalQuizzes: [42, 45, 49],
+        additionalQuizzes: [42, 45, 454, 49],
         behavior: 'quiz_list'
     },
     {
@@ -227,9 +227,9 @@ export const grade8MapNodes: ArithmeticNode[] = [
         level: 11,
         type: 'critical',
         requires: ['g8-u4'],
-        description: 'Suma, resta, multiplicación, división y resolución de ecuaciones fraccionarias lineales.',
+        description: 'Suma, resta, multiplicación, operaciones avanzadas y resolución de ecuaciones fraccionarias lineales mediante factorización.',
         xOffset: 0,
-        additionalQuizzes: [46, 47, 48, 830, 831, 833],
+        additionalQuizzes: [46, 47, 455, 48, 456, 830, 831, 832, 833, 834],
         behavior: 'quiz_list'
     },
     {
@@ -274,10 +274,10 @@ export const grade8MapNodes: ArithmeticNode[] = [
         label: 'Gran Vórtice Algebraico • Maestría de 8° Grado',
         level: 13,
         type: 'evaluation',
-        requires: ['g8-funcion-lineal-afin-variacion', 'g8-educacion-financiera-algebraica'],
+        requires: [],
         description: 'Máximo galardón del álgebra de 8° grado. Demuestra dominio absoluto en números reales, polinomios, factorización, fracciones y funciones.',
         xOffset: 0,
-        additionalQuizzes: [486, 493, 494],
+        additionalQuizzes: [1108],
         behavior: 'quiz_list'
     }
 ];

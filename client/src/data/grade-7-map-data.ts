@@ -193,7 +193,7 @@ export const grade7MapNodes: ArithmeticNode[] = [
         requires: ['g7-proporcionalidad-directa-inversa', 'g7-regla-tres-compuesta'],
         description: 'Factores de conversión del sistema métrico decimal para superficie, volumen, masa y tiempo, y resolución de problemas cotidianos de medida.',
         xOffset: 50,
-        additionalQuizzes: [379, 380, 381, 382, 383],
+        additionalQuizzes: [379, 380, 381, 382, 383, 1109, 1110, 1111],
         behavior: 'quiz_list'
     },
 
@@ -263,7 +263,7 @@ export const grade7MapNodes: ArithmeticNode[] = [
         label: 'Gran Emblema Titánico • 7° Grado',
         level: 13,
         type: 'evaluation',
-        requires: ['g7-finanzas-porcentajes-interes', 'g7-finanzas-presupuesto-credito'],
+        requires: [],
         description: '¡Prueba cumbre de los Titanes! Supera la evaluación integral de 7° grado (enteros, racionales signados, proporcionalidad, álgebra y finanzas) y asciende victorioso a Álgebra.',
         xOffset: 0,
         additionalQuizzes: [1091],

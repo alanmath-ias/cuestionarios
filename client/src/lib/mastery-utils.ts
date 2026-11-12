@@ -3,7 +3,10 @@ import { algebraMapNodes } from '../data/algebra-map-data';
 import { calculusMapNodes } from '../data/calculus-map-data';
 import { integralCalculusMapNodes } from '../data/integral-calculus-map-data';
 import { statisticsMapNodes } from '../data/statistics-map-data';
+import { geometryMapNodes } from '../data/geometry-map-data';
 import { grade1MapNodes } from '../data/grade-1-map-data';
+import { grade1GeometryNodes } from '../data/grade-1-geometry-map-data';
+import { grade1StatisticsNodes } from '../data/grade-1-statistics-map-data';
 import { grade2MapNodes } from '../data/grade-2-map-data';
 import { grade3MapNodes } from '../data/grade-3-map-data';
 import { grade4MapNodes } from '../data/grade-4-map-data';
@@ -21,7 +24,8 @@ export const MAP_DATA: Record<number, any[]> = {
     4: calculusMapNodes,
     5: integralCalculusMapNodes,
     9: statisticsMapNodes,
-    19: statisticsMapNodes
+    19: statisticsMapNodes,
+    22: geometryMapNodes
 };
 
 export interface GradeAwardConfig {
@@ -47,15 +51,32 @@ export const CATEGORY_GRADES: Record<number, GradeAwardConfig[]> = {
     2: [
         { key: 'grade-8', shortLabel: '8°', name: '8° Octavo', title: 'Octavo Grado', icon: '📐', color: 'from-cyan-400 to-blue-500', nodes: grade8MapNodes },
         { key: 'grade-9', shortLabel: '9°', name: '9° Noveno', title: 'Noveno Grado', icon: '🔮', color: 'from-purple-400 to-indigo-500', nodes: grade9MapNodes },
+    ],
+    22: [
+        { key: 'grade-1', shortLabel: '1°', name: '1° Primero', title: 'Primero de Primaria', icon: '🎨', color: 'from-teal-400 to-emerald-500', nodes: grade1GeometryNodes },
+    ],
+    19: [
+        { key: 'grade-1', shortLabel: '1°', name: '1° Primero', title: 'Primero de Primaria', icon: '🧸', color: 'from-amber-400 to-orange-500', nodes: grade1StatisticsNodes },
     ]
 };
 
-export function getGradeNodes(gradeLevel?: string | number | null): any[] | null {
+export function getGradeNodes(gradeLevel?: string | number | null, categoryId?: string | number | null): any[] | null {
     if (!gradeLevel) return null;
     const str = String(gradeLevel).trim().toLowerCase();
     const match = str.match(/grade-?([1-9])/i) || str.match(/\b([1-9])\b/);
     if (!match) return null;
     const num = match[1];
+    const cat = Number(categoryId);
+
+    if (cat === 22) {
+        if (num === '1') return grade1GeometryNodes;
+        return null;
+    }
+    if (cat === 19) {
+        if (num === '1') return grade1StatisticsNodes;
+        return null;
+    }
+
     switch (num) {
         case '1': return grade1MapNodes;
         case '2': return grade2MapNodes;
@@ -87,7 +108,12 @@ export function findGradeForQuiz(quizId: number | string, subcategoryId?: number
 } | null {
     const qId = Number(quizId);
     const sId = subcategoryId != null ? Number(subcategoryId) : null;
-    const allGrades = [...CATEGORY_GRADES[1], ...CATEGORY_GRADES[2]];
+    const allGrades = [
+        ...(CATEGORY_GRADES[1] || []),
+        ...(CATEGORY_GRADES[2] || []),
+        ...(CATEGORY_GRADES[22] || []),
+        ...(CATEGORY_GRADES[19] || [])
+    ];
 
     for (const g of allGrades) {
         const nodes = g.nodes;
