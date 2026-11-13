@@ -22,6 +22,8 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-u1-espacio'],
         description: 'Reconoce posiciones espaciales arriba/abajo y encima/debajo con objetos cotidianos.',
         xOffset: -45,
+        subcategoryId: 629,
+        additionalQuizzes: [1143],
         behavior: 'quiz_list'
     },
     {
@@ -32,6 +34,8 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-u1-espacio'],
         description: 'Identifica si un objeto o juguete está en el interior, exterior o en el borde.',
         xOffset: 45,
+        subcategoryId: 630,
+        additionalQuizzes: [1144],
         behavior: 'quiz_list'
     },
     {
@@ -42,6 +46,8 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-arriba-abajo', 'g1-geo-dentro-fuera'],
         description: 'Descubre tu mano izquierda, tu mano derecha y hacia dónde miran las cosas.',
         xOffset: 0,
+        subcategoryId: 631,
+        additionalQuizzes: [1145],
         behavior: 'quiz_list'
     },
     {
@@ -52,6 +58,8 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-izquierda-derecha'],
         description: 'Compara distancias y posiciones en fila: quién está delante, detrás, más cerca o más lejos.',
         xOffset: 0,
+        subcategoryId: 632,
+        additionalQuizzes: [1146],
         behavior: 'quiz_list'
     },
 
@@ -76,6 +84,8 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-u2-lineas'],
         description: 'Líneas derechas como una regla y onduladas o curvas como una serpiente.',
         xOffset: -45,
+        subcategoryId: 633,
+        additionalQuizzes: [1147],
         behavior: 'quiz_list'
     },
     {
@@ -86,6 +96,8 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-u2-lineas'],
         description: 'Caminos abiertos por donde se puede salir y caminos cerrados que encierran una región.',
         xOffset: 45,
+        subcategoryId: 634,
+        additionalQuizzes: [1148],
         behavior: 'quiz_list'
     },
     {
@@ -96,6 +108,8 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-rectas-curvas', 'g1-geo-abiertas-cerradas'],
         description: 'Líneas acostadas como el horizonte o el suelo y líneas de pie como un árbol o edificio.',
         xOffset: 0,
+        subcategoryId: 635,
+        additionalQuizzes: [1149],
         behavior: 'quiz_list'
     },
 
@@ -120,6 +134,8 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-u3-figuras'],
         description: 'La figura curva sin esquinas: monedas, platos, ruedas y el sol.',
         xOffset: -50,
+        subcategoryId: 636,
+        additionalQuizzes: [1150],
         behavior: 'quiz_list'
     },
     {
@@ -130,6 +146,8 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-u3-figuras'],
         description: 'Figuras de 4 esquinas rectas: dados, ventanas, cuadros, puertas y cuadernos.',
         xOffset: 50,
+        subcategoryId: 637,
+        additionalQuizzes: [1151],
         behavior: 'quiz_list'
     },
     {
@@ -140,6 +158,8 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-circulo', 'g1-geo-cuadrado-rect'],
         description: 'Figura de 3 lados y 3 puntitas: techos, banderines y trozos de pizza.',
         xOffset: 0,
+        subcategoryId: 638,
+        additionalQuizzes: [1152],
         behavior: 'quiz_list'
     },
     {
@@ -150,6 +170,8 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-triangulo'],
         description: 'Misión visual: descubre qué figuras forman los dibujos y objetos de la casa.',
         xOffset: 0,
+        subcategoryId: 639,
+        additionalQuizzes: [1153],
         behavior: 'quiz_list'
     },
 
@@ -174,7 +196,9 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-u4-solidos'],
         description: 'Pelotas redondas como la esfera y cajas perfectas con caras cuadradas como el cubo.',
         xOffset: -45,
-        behavior: 'quiz_list'
+        behavior: 'quiz_list',
+        subcategoryId: 640,
+        additionalQuizzes: [1154]
     },
     {
         id: 'g1-geo-cilindro-cono',
@@ -184,7 +208,9 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-u4-solidos'],
         description: 'Latas y tambores cilíndricos, y conos de helado o gorros de fiesta.',
         xOffset: 45,
-        behavior: 'quiz_list'
+        behavior: 'quiz_list',
+        subcategoryId: 641,
+        additionalQuizzes: [1155]
     },
     {
         id: 'g1-geo-ruedan-apilan',
@@ -194,7 +220,9 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-esfera-cubo', 'g1-geo-cilindro-cono'],
         description: 'Experimento sensorial: cuáles ruedan por tener curvas y cuáles se pueden apilar en torres.',
         xOffset: 0,
-        behavior: 'quiz_list'
+        behavior: 'quiz_list',
+        subcategoryId: 642,
+        additionalQuizzes: [1156]
     },
 
     // ==========================================
@@ -218,7 +246,9 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-u5-patrones'],
         description: 'Descubre qué figura sigue en collares y trenes: círculo, cuadrado, círculo, ¿qué sigue?',
         xOffset: -45,
-        behavior: 'quiz_list'
+        behavior: 'quiz_list',
+        subcategoryId: 643,
+        additionalQuizzes: [1157]
     },
     {
         id: 'g1-geo-simetria-espejo',
@@ -228,7 +258,9 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-u5-patrones'],
         description: 'Doblar por la mitad: descubre las dos alas iguales de una mariposa y la simetría intuitiva.',
         xOffset: 45,
-        behavior: 'quiz_list'
+        behavior: 'quiz_list',
+        subcategoryId: 644,
+        additionalQuizzes: [1158]
     },
     {
         id: 'g1-geo-comparar-tamanos',
@@ -238,7 +270,9 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         requires: ['g1-geo-secuencias-formas', 'g1-geo-simetria-espejo'],
         description: 'Compara y ordena figuras y objetos por su tamaño y grosor en el espacio.',
         xOffset: 0,
-        behavior: 'quiz_list'
+        behavior: 'quiz_list',
+        subcategoryId: 645,
+        additionalQuizzes: [1159]
     },
 
     // ==========================================
@@ -250,9 +284,11 @@ export const grade1GeometryNodes: ArithmeticNode[] = [
         level: 17,
         type: 'evaluation',
         requires: [],
-        description: '¡El gran desafío final de los pequeños geómetras! Demuestra todo lo que aprendiste sobre formas, líneas y el espacio.',
+        description: 'El gran desafío final de los pequeños geómetras! Demuestra todo lo que aprendiste sobre formas, líneas y el espacio.',
         xOffset: 0,
-        behavior: 'quiz_list'
+        behavior: 'quiz_list',
+        subcategoryId: 646,
+        additionalQuizzes: [1160]
     }
 ];
 
