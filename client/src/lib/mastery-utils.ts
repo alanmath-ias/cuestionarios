@@ -6,6 +6,7 @@ import { statisticsMapNodes } from '../data/statistics-map-data';
 import { geometryMapNodes } from '../data/geometry-map-data';
 import { grade1MapNodes } from '../data/grade-1-map-data';
 import { grade1GeometryNodes } from '../data/grade-1-geometry-map-data';
+import { grade2GeometryNodes } from '../data/grade-2-geometry-map-data';
 import { grade1StatisticsNodes } from '../data/grade-1-statistics-map-data';
 import { grade2MapNodes } from '../data/grade-2-map-data';
 import { grade3MapNodes } from '../data/grade-3-map-data';
@@ -54,6 +55,7 @@ export const CATEGORY_GRADES: Record<number, GradeAwardConfig[]> = {
     ],
     22: [
         { key: 'grade-1', shortLabel: '1°', name: '1° Primero', title: 'Primero de Primaria', icon: '🎨', color: 'from-teal-400 to-emerald-500', nodes: grade1GeometryNodes },
+        { key: 'grade-2', shortLabel: '2°', name: '2° Segundo', title: 'Segundo de Primaria', icon: '📐', color: 'from-blue-400 to-indigo-500', nodes: grade2GeometryNodes },
     ],
     19: [
         { key: 'grade-1', shortLabel: '1°', name: '1° Primero', title: 'Primero de Primaria', icon: '🧸', color: 'from-amber-400 to-orange-500', nodes: grade1StatisticsNodes },
@@ -70,6 +72,7 @@ export function getGradeNodes(gradeLevel?: string | number | null, categoryId?: 
 
     if (cat === 22) {
         if (num === '1') return grade1GeometryNodes;
+        if (num === '2') return grade2GeometryNodes;
         return null;
     }
     if (cat === 19) {

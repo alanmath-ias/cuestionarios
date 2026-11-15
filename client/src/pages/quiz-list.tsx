@@ -36,6 +36,7 @@ import { integralCalculusMapNodes } from '@/data/integral-calculus-map-data';
 import { statisticsMapNodes } from '@/data/statistics-map-data';
 import { geometryMapNodes } from '@/data/geometry-map-data';
 import { grade1GeometryNodes } from '@/data/grade-1-geometry-map-data';
+import { grade2GeometryNodes } from '@/data/grade-2-geometry-map-data';
 import { grade1StatisticsNodes } from '@/data/grade-1-statistics-map-data';
 import {
   DropdownMenu,
@@ -251,7 +252,7 @@ function QuizList() {
   const isGeometry = categoryId === '22' || category?.name?.toLowerCase().includes('geometría') || category?.name?.toLowerCase().includes('geometria');
   const isStatistics = categoryId === '19' || category?.name?.toLowerCase().includes('estadística') || category?.name?.toLowerCase().includes('estadistica');
 
-  const currentMapNodes = isGeometry ? (selectedGrade === '1' ? grade1GeometryNodes : geometryMapNodes) :
+  const currentMapNodes = isGeometry ? (selectedGrade === '1' ? grade1GeometryNodes : selectedGrade === '2' ? grade2GeometryNodes : geometryMapNodes) :
     isStatistics ? (selectedGrade === '1' ? grade1StatisticsNodes : statisticsMapNodes) :
     selectedGrade === '1' ? grade1MapNodes :
     selectedGrade === '2' ? grade2MapNodes :
