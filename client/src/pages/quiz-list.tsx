@@ -221,6 +221,18 @@ function QuizList() {
   const queryClient = useQueryClient();
   const { theme } = useTheme();
   const { categoryId } = useParams<{ categoryId: string }>();
+
+  const { data: category, isLoading: loadingCategory } = useQuery<Category>({
+    queryKey: [`/api/categories/${categoryId}`],
+    queryFn: async () => {
+      const res = await fetch('/api/categories');
+      if (!res.ok) return undefined;
+      const categories = await res.json();
+      if (!Array.isArray(categories)) return undefined;
+      return categories.find((c: Category) => c.id === parseInt(categoryId));
+    },
+  });
+
   const [location, setLocation] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
   const rawInitialGrade = searchParams.get('grade');
@@ -386,18 +398,6 @@ function QuizList() {
   useEffect(() => {
     setQuizSearchQuery("");
   }, [selectedSubcategory]);
-
-
-  const { data: category, isLoading: loadingCategory } = useQuery<Category>({
-    queryKey: [`/api/categories/${categoryId}`],
-    queryFn: async () => {
-      const res = await fetch('/api/categories');
-      if (!res.ok) return undefined;
-      const categories = await res.json();
-      if (!Array.isArray(categories)) return undefined;
-      return categories.find((c: Category) => c.id === parseInt(categoryId));
-    },
-  });
 
   useEffect(() => {
     if (category?.youtubeLink) {
