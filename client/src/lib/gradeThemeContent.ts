@@ -364,10 +364,10 @@ const GEOMETRY_METAS: Record<string, GradeThemeMeta> = {
     }
   },
   '4': {
-    badge: '📐 Geometría Plana y Medición • 4° de Primaria',
+    badge: '📐 Geometría Instrumental y Medición • 4° de Primaria (9 años)',
     title: 'El Templo de las Medidas • 4° Grado',
     emoji: '📐',
-    description: 'Paralelismo, perpendicularidad, transportador, construcción de triángulos, cuadriláteros, perímetros y áreas de rectángulos.',
+    description: 'El transportador, grados sexagesimales, rectas paralelas y perpendiculares, triángulos y suma angular (180°), polígonos, transformaciones en el plano, fórmulas de perímetro y área, y noción de volumen.',
     legend: {
       title: '🗺️ Códice de la Geometría',
       unit: '📐 Dominio Geométrico',
