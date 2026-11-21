@@ -9,6 +9,7 @@ import { grade1GeometryNodes } from '../data/grade-1-geometry-map-data';
 import { grade2GeometryNodes } from '../data/grade-2-geometry-map-data';
 import { grade3GeometryNodes } from '../data/grade-3-geometry-map-data';
 import { grade4GeometryNodes } from '../data/grade-4-geometry-map-data';
+import { grade5GeometryNodes } from '../data/grade-5-geometry-map-data';
 import { grade1StatisticsNodes } from '../data/grade-1-statistics-map-data';
 import { grade2MapNodes } from '../data/grade-2-map-data';
 import { grade3MapNodes } from '../data/grade-3-map-data';
@@ -60,6 +61,7 @@ export const CATEGORY_GRADES: Record<number, GradeAwardConfig[]> = {
         { key: 'grade-2', shortLabel: '2°', name: '2° Segundo', title: 'Segundo de Primaria', icon: '📐', color: 'from-blue-400 to-indigo-500', nodes: grade2GeometryNodes },
         { key: 'grade-3', shortLabel: '3°', name: '3° Tercero', title: 'Tercero de Primaria', icon: '🧭', color: 'from-emerald-400 to-teal-500', nodes: grade3GeometryNodes },
         { key: 'grade-4', shortLabel: '4°', name: '4° Cuarto', title: 'Cuarto de Primaria', icon: '📏', color: 'from-cyan-400 to-blue-500', nodes: grade4GeometryNodes },
+        { key: 'grade-5', shortLabel: '5°', name: '5° Quinto', title: 'Quinto de Primaria', icon: '🏛️', color: 'from-indigo-400 to-purple-500', nodes: grade5GeometryNodes },
     ],
     19: [
         { key: 'grade-1', shortLabel: '1°', name: '1° Primero', title: 'Primero de Primaria', icon: '🧸', color: 'from-amber-400 to-orange-500', nodes: grade1StatisticsNodes },
@@ -79,6 +81,7 @@ export function getGradeNodes(gradeLevel?: string | number | null, categoryId?: 
         if (num === '2') return grade2GeometryNodes;
         if (num === '3') return grade3GeometryNodes;
         if (num === '4') return grade4GeometryNodes;
+        if (num === '5') return grade5GeometryNodes;
         return null;
     }
     if (cat === 19) {

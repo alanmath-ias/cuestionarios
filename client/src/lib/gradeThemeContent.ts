@@ -379,10 +379,10 @@ const GEOMETRY_METAS: Record<string, GradeThemeMeta> = {
     }
   },
   '5': {
-    badge: '📐 Áreas, Volúmenes y Transformaciones • 5° de Primaria',
+    badge: '📐 Geometría Analítica, Medición y Volumen • 5° de Primaria (10 años)',
     title: 'La Ciudadela de las Dimensiones • 5° Grado',
     emoji: '📐',
-    description: 'Áreas de triángulos y polígonos, circunferencia, cuerpos geométricos, volúmenes de prismas y plano cartesiano.',
+    description: 'Relaciones angulares, jerarquía de cuadriláteros, circunferencia y el número π, plano cartesiano y homotecias, áreas de polígonos especiales, área superficial y cálculo formal de volumen con capacidad.',
     legend: {
       title: '🗺️ Códice de la Geometría',
       unit: '📐 Dominio Geométrico',
@@ -390,7 +390,7 @@ const GEOMETRY_METAS: Record<string, GradeThemeMeta> = {
       inProgress: '✏️ En Construcción',
       completed: '🏆 Desafío Conquistado',
       locked: '🔒 Dominio Bloqueado',
-      mastery: '👑 Corona Geométrica de 5°'
+      mastery: '👑 Gran Corona de la Geometría de 5°'
     }
   },
   '6': {
