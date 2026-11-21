@@ -135,12 +135,14 @@ app.use((req, res, next) => {
 import { db } from "./db.js";
 import { sql } from "drizzle-orm";
 import { storage } from "./storage.js";
+import { syncDatabaseSequences } from "./sync-sequences.js";
 
 (async () => {
   try {
+    await syncDatabaseSequences();
     await initializeTestData();
   } catch (error) {
-    console.error("❌ [Error] Durante el arranque (test data):", error);
+    console.error("❌ [Error] Durante el arranque:", error);
   }
 
   registerRoutes(app);

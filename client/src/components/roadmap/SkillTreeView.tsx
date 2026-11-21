@@ -116,6 +116,7 @@ export const SkillTreeView = React.memo(function SkillTreeView({
     // Node configuration state
     const [configNode, setConfigNode] = useState<ArithmeticNode | null>(null);
     const queryClient = useQueryClient();
+    const { toast } = useToast();
 
     const upsertMappingMutation = useMutation({
         mutationFn: async (mapping: any) => {
@@ -125,14 +126,25 @@ export const SkillTreeView = React.memo(function SkillTreeView({
                 body: JSON.stringify(mapping)
             });
             if (!res.ok) {
-                const err = await res.json();
+                const err = await res.json().catch(() => ({}));
                 throw new Error(err.message || 'Error al guardar el vínculo');
             }
             return res.json();
         },
-        onSuccess: () => {
+        onSuccess: (data: any, variables: any) => {
             queryClient.invalidateQueries({ queryKey: [`/api/node-mappings/${categoryId}`] });
             setConfigNode(null);
+            toast({
+                title: "Configuración guardada",
+                description: `Se han actualizado los vínculos para el nodo ${variables?.overrideLabel || 'seleccionado'}.`,
+            });
+        },
+        onError: (err: any) => {
+            toast({
+                title: "Error al guardar",
+                description: err.message || "Ocurrió un error al intentar guardar los cambios.",
+                variant: "destructive"
+            });
         }
     });
 
@@ -2471,10 +2483,6 @@ function NodeConfigDialog({
             additionalQuizzes: additionalQuizzes,
             overrideLabel: overrideLabel,
             isSpecial: isSpecial
-        });
-        toast({
-            title: "Configuración guardada",
-            description: `Se han actualizado los vínculos para el nodo ${overrideLabel || node.label}.`,
         });
     };
 
