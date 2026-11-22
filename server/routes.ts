@@ -4338,37 +4338,14 @@ Ejemplo de formato:
     }
   });
 
-  // Node Mapping routes
-  apiRouter.get("/node-mappings/:mapId", async (req, res) => {
-    const mapId = parseInt(req.params.mapId);
-    const mappings = await storage.getNodeContentMappings(mapId);
-    res.json(mappings);
-  });
-
-  apiRouter.post("/node-mappings", requireAdmin, async (req, res) => {
-    const mapping = req.body;
-    const result = await storage.upsertNodeContentMapping(mapping);
-    res.json(result);
-  });
-
   apiRouter.get("/quizzes/by-subcategory/:subcategoryId", async (req, res) => {
-    const subcategoryId = parseInt(req.params.subcategoryId);
-    const quizzes = await storage.getQuizzesBySubcategory(subcategoryId);
-    res.json(quizzes);
-    let { userId, quizId } = req.body;
-
-    // Fallback to query parameters if body is empty (common in some clients for DELETE)
-    if (!userId && req.query.userId) userId = parseInt(req.query.userId as string);
-    if (!quizId && req.query.quizId) quizId = parseInt(req.query.quizId as string);
-
-    if (!userId || !quizId) return res.status(400).json({ message: "Missing data" });
-
     try {
-      await storage.removeQuizFromUser(userId, quizId);
-      res.status(204).end();
+      const subcategoryId = parseInt(req.params.subcategoryId);
+      const quizzes = await storage.getQuizzesBySubcategory(subcategoryId);
+      res.json(quizzes);
     } catch (err) {
-      console.error("Error removing quiz:", err);
-      res.status(500).json({ message: "Error removing quiz" });
+      console.error("Error fetching quizzes by subcategory:", err);
+      res.status(500).json({ message: "Error fetching quizzes" });
     }
   });
 
