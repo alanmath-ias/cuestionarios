@@ -394,18 +394,18 @@ const GEOMETRY_METAS: Record<string, GradeThemeMeta> = {
     }
   },
   '6': {
-    badge: '📐 Fundamentos Euclidianos y Polígonos • 6° Grado',
+    badge: '📐 Geometría Euclidiana, Isometrías y Sólidos • 6° de Secundaria (11 años)',
     title: 'El Nexo de la Geometría Euclidiana • 6° Grado',
     emoji: '📐',
-    description: 'Conceptos primitivos, ángulos complementarios/suplementarios, polígonos, áreas, perímetros y construcciones con regla y compás.',
+    description: 'Ángulos entre paralelas y transversal, teoremas del triángulo y puntos notables, familias de cuadriláteros, plano cartesiano completo (4 cuadrantes), isometrías, áreas con apotema, círculo, área superficial y volumen de prismas y cilindros.',
     legend: {
-      title: '🗺️ Códice de la Geometría',
+      title: '🗺️ Códice de la Geometría de 6°',
       unit: '📐 Dominio Geométrico',
       ready: '📐 Desafío Geométrico',
       inProgress: '✏️ En Construcción',
       completed: '🏆 Teorema Conquistado',
       locked: '🔒 Dominio Bloqueado',
-      mastery: '👑 Corona Geométrica de 6°'
+      mastery: '👑 Gran Corona de la Geometría de 6°'
     }
   },
   '7': {
