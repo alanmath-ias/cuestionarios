@@ -42,6 +42,7 @@ import { grade4GeometryNodes } from '@/data/grade-4-geometry-map-data';
 import { grade5GeometryNodes } from '@/data/grade-5-geometry-map-data';
 import { grade6GeometryNodes } from '@/data/grade-6-geometry-map-data';
 import { grade7GeometryNodes } from '@/data/grade-7-geometry-map-data';
+import { grade8GeometryNodes } from '@/data/grade-8-geometry-map-data';
 import { grade1StatisticsNodes } from '@/data/grade-1-statistics-map-data';
 import {
   DropdownMenu,
@@ -269,7 +270,7 @@ function QuizList() {
   const isGeometry = categoryId === '22' || category?.name?.toLowerCase().includes('geometría') || category?.name?.toLowerCase().includes('geometria');
   const isStatistics = categoryId === '19' || category?.name?.toLowerCase().includes('estadística') || category?.name?.toLowerCase().includes('estadistica');
 
-  const currentMapNodes = isGeometry ? (selectedGrade === '1' ? grade1GeometryNodes : selectedGrade === '2' ? grade2GeometryNodes : selectedGrade === '3' ? grade3GeometryNodes : selectedGrade === '4' ? grade4GeometryNodes : selectedGrade === '5' ? grade5GeometryNodes : selectedGrade === '6' ? grade6GeometryNodes : selectedGrade === '7' ? grade7GeometryNodes : geometryMapNodes) :
+  const currentMapNodes = isGeometry ? (selectedGrade === '1' ? grade1GeometryNodes : selectedGrade === '2' ? grade2GeometryNodes : selectedGrade === '3' ? grade3GeometryNodes : selectedGrade === '4' ? grade4GeometryNodes : selectedGrade === '5' ? grade5GeometryNodes : selectedGrade === '6' ? grade6GeometryNodes : selectedGrade === '7' ? grade7GeometryNodes : selectedGrade === '8' ? grade8GeometryNodes : geometryMapNodes) :
     isStatistics ? (selectedGrade === '1' ? grade1StatisticsNodes : statisticsMapNodes) :
     selectedGrade === '1' ? grade1MapNodes :
     selectedGrade === '2' ? grade2MapNodes :
