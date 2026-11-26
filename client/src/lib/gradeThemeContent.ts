@@ -613,6 +613,36 @@ const STATISTICS_METAS: Record<string, GradeThemeMeta> = {
       locked: '🔒 Dominio Bloqueado',
       mastery: '👑 Corona Suprema de Estadística de 9°'
     }
+  },
+  '10': {
+    badge: '📊 Modelación Probabilística y Bayes • 10° Grado',
+    title: 'Probabilidad y Estadística • 10° Grado',
+    emoji: '🏛️',
+    description: 'Percentiles, asimetría, Teorema de Bayes, variables aleatorias discretas, valor esperado y distribución binomial.',
+    legend: {
+      title: '🗺️ CÓDICE DE LA ESTADÍSTICA',
+      unit: '📊 Dominio Estadístico',
+      ready: '📈 Misión Estadística',
+      inProgress: '🔍 En Análisis',
+      completed: '🏆 Desafío Conquistado',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Corona de Maestría de 10°'
+    }
+  },
+  '11': {
+    badge: '📊 Distribución Normal e Inferencia • 11° Grado (Saber 11)',
+    title: 'Inferencia y Análisis de Datos • 11° Grado',
+    emoji: '👑',
+    description: 'Distribución normal, puntuaciones Z, correlación de Pearson, regresión lineal, muestreo probabilístico e intervalos de confianza.',
+    legend: {
+      title: '🗺️ CÓDICE DE LA ESTADÍSTICA',
+      unit: '📊 Dominio Estadístico',
+      ready: '📈 Misión Estadística',
+      inProgress: '🔍 En Análisis',
+      completed: '🏆 Desafío Conquistado',
+      locked: '🔒 Dominio Bloqueado',
+      mastery: '👑 Corona Titánica de Estadística de 11°'
+    }
   }
 };
 

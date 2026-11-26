@@ -15,6 +15,16 @@ import { grade7GeometryNodes } from '../data/grade-7-geometry-map-data';
 import { grade8GeometryNodes } from '../data/grade-8-geometry-map-data';
 import { grade9GeometryNodes } from '../data/grade-9-geometry-map-data';
 import { grade1StatisticsNodes } from '../data/grade-1-statistics-map-data';
+import { grade2StatisticsNodes } from '../data/grade-2-statistics-map-data';
+import { grade3StatisticsNodes } from '../data/grade-3-statistics-map-data';
+import { grade4StatisticsNodes } from '../data/grade-4-statistics-map-data';
+import { grade5StatisticsNodes } from '../data/grade-5-statistics-map-data';
+import { grade6StatisticsNodes } from '../data/grade-6-statistics-map-data';
+import { grade7StatisticsNodes } from '../data/grade-7-statistics-map-data';
+import { grade8StatisticsNodes } from '../data/grade-8-statistics-map-data';
+import { grade9StatisticsNodes } from '../data/grade-9-statistics-map-data';
+import { grade10StatisticsNodes } from '../data/grade-10-statistics-map-data';
+import { grade11StatisticsNodes } from '../data/grade-11-statistics-map-data';
 import { grade2MapNodes } from '../data/grade-2-map-data';
 import { grade3MapNodes } from '../data/grade-3-map-data';
 import { grade4MapNodes } from '../data/grade-4-map-data';
@@ -73,13 +83,23 @@ export const CATEGORY_GRADES: Record<number, GradeAwardConfig[]> = {
     ],
     19: [
         { key: 'grade-1', shortLabel: '1°', name: '1° Primero', title: 'Primero de Primaria', icon: '🧸', color: 'from-amber-400 to-orange-500', nodes: grade1StatisticsNodes },
+        { key: 'grade-2', shortLabel: '2°', name: '2° Segundo', title: 'Segundo de Primaria', icon: '📊', color: 'from-yellow-400 to-amber-500', nodes: grade2StatisticsNodes },
+        { key: 'grade-3', shortLabel: '3°', name: '3° Tercero', title: 'Tercero de Primaria', icon: '📈', color: 'from-emerald-400 to-teal-500', nodes: grade3StatisticsNodes },
+        { key: 'grade-4', shortLabel: '4°', name: '4° Cuarto', title: 'Cuarto de Primaria', icon: '🎯', color: 'from-teal-400 to-cyan-500', nodes: grade4StatisticsNodes },
+        { key: 'grade-5', shortLabel: '5°', name: '5° Quinto', title: 'Quinto de Primaria', icon: '🧭', color: 'from-blue-400 to-indigo-500', nodes: grade5StatisticsNodes },
+        { key: 'grade-6', shortLabel: '6°', name: '6° Sexto', title: 'Sexto de Secundaria', icon: '🔬', color: 'from-indigo-400 to-violet-500', nodes: grade6StatisticsNodes },
+        { key: 'grade-7', shortLabel: '7°', name: '7° Séptimo', title: 'Séptimo de Secundaria', icon: '🪐', color: 'from-purple-500 to-pink-500', nodes: grade7StatisticsNodes },
+        { key: 'grade-8', shortLabel: '8°', name: '8° Octavo', title: 'Octavo de Secundaria', icon: '🎲', color: 'from-rose-500 to-red-500', nodes: grade8StatisticsNodes },
+        { key: 'grade-9', shortLabel: '9°', name: '9° Noveno', title: 'Noveno de Secundaria', icon: '🔮', color: 'from-fuchsia-500 to-purple-600', nodes: grade9StatisticsNodes },
+        { key: 'grade-10', shortLabel: '10°', name: '10° Décimo', title: 'Décimo de Educación Media', icon: '🏛️', color: 'from-cyan-500 to-blue-600', nodes: grade10StatisticsNodes },
+        { key: 'grade-11', shortLabel: '11°', name: '11° Undécimo', title: 'Undécimo de Educación Media', icon: '👑', color: 'from-amber-500 to-yellow-600', nodes: grade11StatisticsNodes },
     ]
 };
 
 export function getGradeNodes(gradeLevel?: string | number | null, categoryId?: string | number | null): any[] | null {
     if (!gradeLevel) return null;
     const str = String(gradeLevel).trim().toLowerCase();
-    const match = str.match(/grade-?([1-9])/i) || str.match(/\b([1-9])\b/);
+    const match = str.match(/grade-?(1[0-1]|[1-9])/i) || str.match(/\b(1[0-1]|[1-9])\b/);
     if (!match) return null;
     const num = match[1];
     const cat = Number(categoryId);
@@ -98,6 +118,16 @@ export function getGradeNodes(gradeLevel?: string | number | null, categoryId?: 
     }
     if (cat === 19) {
         if (num === '1') return grade1StatisticsNodes;
+        if (num === '2') return grade2StatisticsNodes;
+        if (num === '3') return grade3StatisticsNodes;
+        if (num === '4') return grade4StatisticsNodes;
+        if (num === '5') return grade5StatisticsNodes;
+        if (num === '6') return grade6StatisticsNodes;
+        if (num === '7') return grade7StatisticsNodes;
+        if (num === '8') return grade8StatisticsNodes;
+        if (num === '9') return grade9StatisticsNodes;
+        if (num === '10') return grade10StatisticsNodes;
+        if (num === '11') return grade11StatisticsNodes;
         return null;
     }
 
@@ -118,7 +148,7 @@ export function getGradeNodes(gradeLevel?: string | number | null, categoryId?: 
 export function isGradeRoadmap(gradeLevel?: string | number | null, nodes?: any[]): boolean {
     if (gradeLevel && getGradeNodes(gradeLevel)) return true;
     if (nodes && nodes.length > 0) {
-        return nodes.some(n => typeof n.id === 'string' && /^g[1-9]-/.test(n.id));
+        return nodes.some(n => typeof n.id === 'string' && /^g\d+-/.test(n.id));
     }
     return false;
 }

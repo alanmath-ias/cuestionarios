@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { QuizCard } from '@/components/dashboard/quiz-card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle, Map as MapIcon, LayoutGrid, Search, CheckCircle2, Ban, Crown, Sparkles, Trophy, Gamepad2, Eye, EyeOff, Link2, Power, Check, Clock, Loader2, ChevronDown, GraduationCap, RotateCcw, Rocket, Compass, Landmark, Zap, Flame, Shield, Layers, Flower2, BarChart2 } from 'lucide-react';
+import { ArrowLeft, Dumbbell, BookOpen, ListChecks, Youtube, AlertTriangle, PlayCircle, Map as MapIcon, LayoutGrid, Search, CheckCircle2, Ban, Crown, Sparkles, Trophy, Gamepad2, Eye, EyeOff, Link2, Power, Check, Clock, Loader2, ChevronDown, GraduationCap, RotateCcw, Rocket, Compass, Landmark, Zap, Flame, Shield, Layers, Flower2, BarChart2, Award } from 'lucide-react';
 import { useParams, useLocation } from 'wouter';
 import { calculatePercentage } from '@/lib/mathUtils';
 import { cn } from '@/lib/utils';
@@ -45,6 +45,16 @@ import { grade7GeometryNodes } from '@/data/grade-7-geometry-map-data';
 import { grade8GeometryNodes } from '@/data/grade-8-geometry-map-data';
 import { grade9GeometryNodes } from '@/data/grade-9-geometry-map-data';
 import { grade1StatisticsNodes } from '@/data/grade-1-statistics-map-data';
+import { grade2StatisticsNodes } from '@/data/grade-2-statistics-map-data';
+import { grade3StatisticsNodes } from '@/data/grade-3-statistics-map-data';
+import { grade4StatisticsNodes } from '@/data/grade-4-statistics-map-data';
+import { grade5StatisticsNodes } from '@/data/grade-5-statistics-map-data';
+import { grade6StatisticsNodes } from '@/data/grade-6-statistics-map-data';
+import { grade7StatisticsNodes } from '@/data/grade-7-statistics-map-data';
+import { grade8StatisticsNodes } from '@/data/grade-8-statistics-map-data';
+import { grade9StatisticsNodes } from '@/data/grade-9-statistics-map-data';
+import { grade10StatisticsNodes } from '@/data/grade-10-statistics-map-data';
+import { grade11StatisticsNodes } from '@/data/grade-11-statistics-map-data';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -272,7 +282,20 @@ function QuizList() {
   const isStatistics = categoryId === '19' || category?.name?.toLowerCase().includes('estadística') || category?.name?.toLowerCase().includes('estadistica');
 
   const currentMapNodes = isGeometry ? (selectedGrade === '1' ? grade1GeometryNodes : selectedGrade === '2' ? grade2GeometryNodes : selectedGrade === '3' ? grade3GeometryNodes : selectedGrade === '4' ? grade4GeometryNodes : selectedGrade === '5' ? grade5GeometryNodes : selectedGrade === '6' ? grade6GeometryNodes : selectedGrade === '7' ? grade7GeometryNodes : selectedGrade === '8' ? grade8GeometryNodes : selectedGrade === '9' ? grade9GeometryNodes : geometryMapNodes) :
-    isStatistics ? (selectedGrade === '1' ? grade1StatisticsNodes : statisticsMapNodes) :
+    isStatistics ? (
+      selectedGrade === '1' ? grade1StatisticsNodes :
+      selectedGrade === '2' ? grade2StatisticsNodes :
+      selectedGrade === '3' ? grade3StatisticsNodes :
+      selectedGrade === '4' ? grade4StatisticsNodes :
+      selectedGrade === '5' ? grade5StatisticsNodes :
+      selectedGrade === '6' ? grade6StatisticsNodes :
+      selectedGrade === '7' ? grade7StatisticsNodes :
+      selectedGrade === '8' ? grade8StatisticsNodes :
+      selectedGrade === '9' ? grade9StatisticsNodes :
+      selectedGrade === '10' ? grade10StatisticsNodes :
+      selectedGrade === '11' ? grade11StatisticsNodes :
+      statisticsMapNodes
+    ) :
     selectedGrade === '1' ? grade1MapNodes :
     selectedGrade === '2' ? grade2MapNodes :
     selectedGrade === '3' ? grade3MapNodes :
@@ -1503,6 +1526,58 @@ function QuizList() {
                       { id: '7', label: 'Séptimo', icon: Flame },
                       { id: '8', label: 'Octavo', icon: Layers },
                       { id: '9', label: 'Noveno', icon: Sparkles },
+                    ].map(g => {
+                      const Icon = g.icon;
+                      const isActive = selectedGrade === g.id;
+                      return (
+                        <DropdownMenuItem
+                          key={g.id}
+                          onClick={() => handleSelectGrade(g.id)}
+                          className={cn(
+                            "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                            isActive ? "bg-amber-600/30 text-amber-200 font-bold" : "hover:bg-amber-500/10 hover:text-amber-300"
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Icon className="h-3.5 w-3.5 text-amber-400" />
+                            {g.label}
+                          </span>
+                          {isActive && (
+                            <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
+                              Activo
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Menú Educación Media Estadística (10° y 11°) */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                        ['10', '11'].includes(selectedGrade || '')
+                          ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                          : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                      )}
+                    >
+                      <Award className="h-3.5 w-3.5 text-amber-400" />
+                      <span>{selectedGrade === '10' ? "Décimo" : selectedGrade === '11' ? "Undécimo" : "Media"}</span>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-50">
+                    <DropdownMenuLabel className="text-[10px] text-amber-400 uppercase tracking-wider font-bold px-2 py-1">
+                      Estadística Media
+                    </DropdownMenuLabel>
+                    {[
+                      { id: '10', label: 'Décimo', icon: Landmark },
+                      { id: '11', label: 'Undécimo', icon: Sparkles },
                     ].map(g => {
                       const Icon = g.icon;
                       const isActive = selectedGrade === g.id;

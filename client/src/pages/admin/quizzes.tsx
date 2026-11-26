@@ -12,7 +12,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, EyeOff, Link2, ListChecks, Folder, UserPlus, Pencil, Save, X, Brain, Search, Map as MapIcon, CheckCircle2, AlertTriangle, Ban, GripVertical, ShieldCheck, Crown, Gamepad2, Power, Check, Sparkles, GraduationCap, RotateCcw, Rocket, Compass, Landmark, Zap, Flame, Layers, BarChart2 } from "lucide-react";
+import { Trash, Clock, BookOpen, Link as LinkIcon, ArrowLeft, ChevronDown, Eye, EyeOff, Link2, ListChecks, Folder, UserPlus, Pencil, Save, X, Brain, Search, Map as MapIcon, CheckCircle2, AlertTriangle, Ban, GripVertical, ShieldCheck, Crown, Gamepad2, Power, Check, Sparkles, GraduationCap, RotateCcw, Rocket, Compass, Landmark, Zap, Flame, Layers, BarChart2, Award } from "lucide-react";
 import { DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -62,6 +62,7 @@ import { geometryMapNodes } from "@/data/geometry-map-data";
 import { grade1GeometryNodes } from "@/data/grade-1-geometry-map-data";
 import { grade1StatisticsNodes } from "@/data/grade-1-statistics-map-data";
 import { getGradeThemeMeta, getGeometryThemeMeta, getStatisticsThemeMeta } from "@/lib/gradeThemeContent";
+import { getGradeNodes } from "@/lib/mastery-utils";
 import { Reorder, AnimatePresence, useDragControls, motion } from "framer-motion";
 
 const difficultyOptions = [
@@ -87,14 +88,14 @@ const getMapData = (catId: any, catName?: string, selectedGrade?: string | null)
   // Geometría General (Cat 22)
   if (id === 22 || name.includes("geometría") || name.includes("geometria")) {
     const meta = getGeometryThemeMeta(selectedGrade);
-    const nodes = selectedGrade === '1' ? grade1GeometryNodes : geometryMapNodes;
+    const nodes = getGradeNodes(selectedGrade, 22) || geometryMapNodes;
     return { nodes, title: meta.title };
   }
 
   // Estadística (Cat 19)
   if (id === 19 || name.includes("estadística") || name.includes("estadistica")) {
     const meta = getStatisticsThemeMeta(selectedGrade);
-    const nodes = selectedGrade === '1' ? grade1StatisticsNodes : statisticsMapNodes;
+    const nodes = getGradeNodes(selectedGrade, 19) || statisticsMapNodes;
     return { nodes, title: meta.title };
   }
 
@@ -2306,6 +2307,58 @@ export default function QuizzesAdmin() {
                           { id: '7', label: 'Séptimo', icon: Flame },
                           { id: '8', label: 'Octavo', icon: Layers },
                           { id: '9', label: 'Noveno', icon: Sparkles },
+                        ].map(g => {
+                          const Icon = g.icon;
+                          const isActive = adminSelectedGrade === g.id;
+                          return (
+                            <DropdownMenuItem
+                              key={g.id}
+                              onClick={() => handleAdminSelectGrade(g.id)}
+                              className={cn(
+                                "text-xs px-2 py-1.5 rounded-lg font-medium cursor-pointer flex items-center justify-between transition-colors",
+                                isActive ? "bg-amber-600/30 text-amber-200 font-bold" : "hover:bg-amber-500/10 hover:text-amber-300"
+                              )}
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <Icon className="h-3.5 w-3.5 text-amber-400" />
+                                {g.label}
+                              </span>
+                              {isActive && (
+                                <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
+                                  Activo
+                                </span>
+                              )}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Menú Educación Media Estadística (10° y 11°) */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
+                            ['10', '11'].includes(adminSelectedGrade || '')
+                              ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                              : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                          )}
+                        >
+                          <Award className="h-3.5 w-3.5 text-amber-400" />
+                          <span>{adminSelectedGrade === '10' ? "Décimo" : adminSelectedGrade === '11' ? "Undécimo" : "Media"}</span>
+                          <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-slate-900/95 border-slate-800 text-slate-200 backdrop-blur-xl rounded-xl min-w-[175px] shadow-2xl p-1.5 z-[100]">
+                        <DropdownMenuLabel className="text-[10px] text-amber-400 uppercase tracking-wider font-bold px-2 py-1">
+                          Estadística Media
+                        </DropdownMenuLabel>
+                        {[
+                          { id: '10', label: 'Décimo', icon: Landmark },
+                          { id: '11', label: 'Undécimo', icon: Sparkles },
                         ].map(g => {
                           const Icon = g.icon;
                           const isActive = adminSelectedGrade === g.id;
