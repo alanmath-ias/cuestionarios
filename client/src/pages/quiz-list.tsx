@@ -1507,13 +1507,13 @@ function QuizList() {
                       size="sm"
                       className={cn(
                         "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
-                        ['6', '7', '8', '9'].includes(selectedGrade || '')
+                        ['6', '7', '8', '9', '10', '11'].includes(selectedGrade || '')
                           ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
                           : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
                       )}
                     >
                       <GraduationCap className="h-3.5 w-3.5 text-amber-400" />
-                      <span>{selectedGrade === '6' ? "Sexto" : selectedGrade === '7' ? "Séptimo" : selectedGrade === '8' ? "Octavo" : selectedGrade === '9' ? "Noveno" : "Secundaria"}</span>
+                      <span>{selectedGrade === '6' ? "Sexto" : selectedGrade === '7' ? "Séptimo" : selectedGrade === '8' ? "Octavo" : selectedGrade === '9' ? "Noveno" : selectedGrade === '10' ? "Décimo" : selectedGrade === '11' ? "Undécimo" : "Secundaria"}</span>
                       <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -1526,6 +1526,8 @@ function QuizList() {
                       { id: '7', label: 'Séptimo', icon: Flame },
                       { id: '8', label: 'Octavo', icon: Layers },
                       { id: '9', label: 'Noveno', icon: Sparkles },
+                      { id: '10', label: 'Décimo', icon: Landmark },
+                      { id: '11', label: 'Undécimo', icon: Sparkles },
                     ].map(g => {
                       const Icon = g.icon;
                       const isActive = selectedGrade === g.id;

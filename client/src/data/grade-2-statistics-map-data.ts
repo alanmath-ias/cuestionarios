@@ -2,45 +2,45 @@ import { ArithmeticNode } from './arithmetic-map-data';
 
 export const grade2StatisticsNodes: ArithmeticNode[] = [
     // ==========================================
-    // UNIDAD 1: RECOLECCIÓN POR ENCUESTAS Y VARIABLES CUALITATIVAS
+    // UNIDAD 1: VARIABLES CUALITATIVAS Y ENCUESTAS ESCOLARES
     // ==========================================
     {
         id: 'g2-stat-u1-encuestas-variables',
-        label: 'Recolección por Encuestas y Variables Cualitativas',
+        label: 'Variables Cualitativas y Encuestas Escolares',
         level: 0,
         type: 'basic',
         requires: [],
-        description: 'Aprende a formular preguntas claras, registrar respuestas y clasificar características cualitativas en grupos.',
+        description: 'Aprende a formular preguntas claras con opciones cerradas, registrar respuestas y agrupar características cualitativas.',
         xOffset: 0,
         behavior: 'container'
     },
     {
         id: 'g2-stat-variables-cualitativas-entorno',
-        label: 'Variables Cualitativas en el Entorno',
+        label: 'Variables Cualitativas en el Entorno Escolar',
         level: 1,
         type: 'basic',
         requires: ['g2-stat-u1-encuestas-variables'],
-        description: 'Identifica características no numéricas: deporte favorito, color de ojos, medio de transporte al colegio.',
+        description: 'Identifica características no numéricas observables: deporte favorito, color de ojos, medio de transporte al colegio.',
         xOffset: -45,
         behavior: 'quiz_list'
     },
     {
         id: 'g2-stat-diseno-encuesta-escolar',
-        label: 'Diseño y Aplicación de Encuestas',
+        label: 'Diseño y Aplicación de Encuestas con Opciones Cerradas',
         level: 1,
         type: 'basic',
         requires: ['g2-stat-u1-encuestas-variables'],
-        description: 'Formula preguntas con opciones fijas (cerradas) para que los compañeros elijan una sola respuesta sin confusiones.',
+        description: 'Formula preguntas con opciones fijas para que los encuestados elijan una sola respuesta clara y sin confusiones.',
         xOffset: 45,
         behavior: 'quiz_list'
     },
     {
         id: 'g2-stat-organizacion-respuestas-listas',
-        label: 'Organización de Respuestas en Listas Ordenadas',
+        label: 'Organización de Respuestas en Listados Ordenados',
         level: 2,
         type: 'applied',
         requires: ['g2-stat-variables-cualitativas-entorno', 'g2-stat-diseno-encuesta-escolar'],
-        description: 'Agrupa respuestas idénticas y cuenta cuántos estudiantes eligieron cada categoría de la encuesta.',
+        description: 'Agrupa respuestas idénticas y cuenta cuántos estudiantes eligieron cada categoría antes de construir tablas.',
         xOffset: 0,
         behavior: 'quiz_list'
     },
@@ -54,213 +54,179 @@ export const grade2StatisticsNodes: ArithmeticNode[] = [
         level: 3,
         type: 'basic',
         requires: ['g2-stat-organizacion-respuestas-listas'],
-        description: 'Formalización del conteo: el número de veces que se repite un dato se llama frecuencia absoluta (f).',
+        description: 'Formalización del conteo: el número de veces que se repite un dato se denomina frecuencia absoluta (f).',
         xOffset: 0,
         behavior: 'container'
     },
     {
         id: 'g2-stat-concepto-frecuencia-absoluta',
-        label: 'La Frecuencia Absoluta (f)',
+        label: 'La Frecuencia Absoluta (f) como Conteo Numérico',
         level: 4,
         type: 'basic',
         requires: ['g2-stat-u2-tablas-frecuencia-absoluta'],
-        description: 'Comprende que la frecuencia absoluta es simplemente el conteo numérico de cuántas veces aparece cada opción.',
+        description: 'Comprende que la frecuencia absoluta es simplemente el número exacto de veces que se repite una opción o respuesta.',
         xOffset: -45,
         behavior: 'quiz_list'
     },
     {
         id: 'g2-stat-total-observaciones-suma',
-        label: 'Suma Total de Datos y Verificación',
+        label: 'Suma Total de Datos y Verificación de Encuestados',
         level: 4,
         type: 'basic',
         requires: ['g2-stat-u2-tablas-frecuencia-absoluta'],
-        description: 'Suma las frecuencias absolutas para verificar que el total coincida exactamente con la cantidad de encuestados.',
+        description: 'Suma todas las frecuencias absolutas para verificar que el total coincida exactamente con la cantidad de personas evaluadas.',
         xOffset: 45,
         behavior: 'quiz_list'
     },
     {
         id: 'g2-stat-interpretacion-diferencias-tablas',
-        label: 'Lectura de Diferencias en Tablas de Frecuencia',
+        label: 'Lectura e Interpretación de Diferencias en Tablas',
         level: 5,
-        type: 'critical',
+        type: 'applied',
         requires: ['g2-stat-concepto-frecuencia-absoluta', 'g2-stat-total-observaciones-suma'],
-        description: 'Responde preguntas a partir de la tabla: ¿cuál tuvo mayor frecuencia? ¿cuántos votos le faltaron al segundo para ganar?',
+        description: 'Responde preguntas de análisis: ¿cuál categoría tuvo mayor frecuencia? ¿cuántos votos le faltaron a otra para empatar?',
         xOffset: 0,
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // UNIDAD 3: PICTOGRAMAS CON ESCALAS Y EQUIVALENCIAS
+    // UNIDAD 3: PICTOGRAMAS Y GRÁFICOS CON ESCALAS NUMÉRICAS
     // ==========================================
     {
-        id: 'g2-stat-u3-pictogramas-escalas',
-        label: 'Pictogramas con Escalas y Equivalencias',
+        id: 'g2-stat-u3-pictogramas-graficos-escalas',
+        label: 'Pictogramas y Gráficos con Escalas Numéricas',
         level: 6,
         type: 'basic',
         requires: ['g2-stat-interpretacion-diferencias-tablas'],
-        description: 'Evolución visual: un solo dibujo ahora puede representar 2, 5 o 10 objetos o personas.',
+        description: 'Evolución visual: un solo dibujo o una graduación en el eje representa 2, 5 o 10 unidades.',
         xOffset: 0,
         behavior: 'container'
     },
     {
         id: 'g2-stat-simbolo-con-equivalencia',
-        label: 'Un Símbolo Vale Más de Uno (Escala 2 y 5)',
+        label: 'Pictogramas con Escala (Un Símbolo Vale 2 o 5)',
         level: 7,
         type: 'basic',
-        requires: ['g2-stat-u3-pictogramas-escalas'],
-        description: 'Aprende a interpretar la clave o leyenda: si cada balón vale 2 goles, 3 balones dibujados significan 6 goles.',
+        requires: ['g2-stat-u3-pictogramas-graficos-escalas'],
+        description: 'Interpreta la leyenda del gráfico: si cada estrella vale 2 votos, 4 estrellas dibujadas representan 8 votos reales.',
         xOffset: -45,
         behavior: 'quiz_list'
     },
     {
         id: 'g2-stat-medio-simbolo-fraccion',
-        label: 'Medios Símbolos en Pictogramas',
+        label: 'Medios Símbolos en Pictogramas y Totales',
         level: 7,
         type: 'basic',
-        requires: ['g2-stat-u3-pictogramas-escalas'],
-        description: 'Descubre qué significa medio dibujo: si un árbol completo vale 2 árboles, medio árbol representa 1.',
+        requires: ['g2-stat-u3-pictogramas-graficos-escalas'],
+        description: 'Interpreta partes de símbolos: si un árbol completo vale 2 árboles, medio árbol dibujado representa 1 árbol.',
         xOffset: 45,
         behavior: 'quiz_list'
-    },
-    {
-        id: 'g2-stat-calculo-totales-pictogramas-escala',
-        label: 'Cálculo de Totales con Pictogramas de Escala',
-        level: 8,
-        type: 'applied',
-        requires: ['g2-stat-simbolo-con-equivalencia', 'g2-stat-medio-simbolo-fraccion'],
-        description: 'Multiplica o suma reiteradamente para obtener las cantidades reales a partir de pictogramas con leyenda.',
-        xOffset: 0,
-        behavior: 'quiz_list'
-    },
-
-    // ==========================================
-    // UNIDAD 4: GRÁFICOS DE BARRAS CON ESCALA NUMÉRICA
-    // ==========================================
-    {
-        id: 'g2-stat-u4-barras-escala-numerica',
-        label: 'Gráficos de Barras con Escala Numérica',
-        level: 9,
-        type: 'basic',
-        requires: ['g2-stat-calculo-totales-pictogramas-escala'],
-        description: 'El eje vertical se gradúa con números (de 1 en 1, de 2 en 2 o de 5 en 5) para leer la altura exacta de las barras.',
-        xOffset: 0,
-        behavior: 'container'
     },
     {
         id: 'g2-stat-eje-frecuencias-escala',
-        label: 'El Eje Numérico de Frecuencias',
-        level: 10,
-        type: 'basic',
-        requires: ['g2-stat-u4-barras-escala-numerica'],
-        description: 'Sigue la línea horizontal desde el tope de la barra hasta el eje vertical para leer la frecuencia sin contar cuadritos.',
-        xOffset: -45,
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'g2-stat-construccion-barras-escala',
-        label: 'Dibujo de Barras hasta la Altura Correcta',
-        level: 10,
-        type: 'basic',
-        requires: ['g2-stat-u4-barras-escala-numerica'],
-        description: 'A partir de una tabla de frecuencia, dibuja y colorea las barras respetando la escala de 2 en 2 o 5 en 5.',
-        xOffset: 45,
+        label: 'El Eje Numérico de Frecuencias en Gráficos de Barras',
+        level: 8,
+        type: 'applied',
+        requires: ['g2-stat-simbolo-con-equivalencia', 'g2-stat-medio-simbolo-fraccion'],
+        description: 'Sigue la línea horizontal desde el tope de la barra hasta el eje vertical graduado de 2 en 2 o 5 en 5 para leer el valor exacto.',
+        xOffset: -35,
         behavior: 'quiz_list'
     },
     {
         id: 'g2-stat-comparacion-entre-categorias',
-        label: 'Comparación y Análisis de Barras',
-        level: 11,
+        label: 'Comparación y Análisis Cuantitativo de Barras',
+        level: 8,
         type: 'applied',
-        requires: ['g2-stat-eje-frecuencias-escala', 'g2-stat-construccion-barras-escala'],
-        description: 'Ordena las categorías de mayor a menor frecuencia, encuentra la moda visual y calcula diferencias cuantitativas.',
-        xOffset: 0,
+        requires: ['g2-stat-simbolo-con-equivalencia', 'g2-stat-medio-simbolo-fraccion'],
+        description: 'Ordena categorías de mayor a menor frecuencia, identifica la moda visual y calcula diferencias exactas entre barras.',
+        xOffset: 35,
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // UNIDAD 5: PROBABILIDAD INTUITIVA: MÁS Y MENOS PROBABLE
+    // UNIDAD 4: AZAR, POSIBILIDAD Y JUEGOS JUSTOS
     // ==========================================
     {
-        id: 'g2-stat-u5-mas-menos-probable',
-        label: 'Probabilidad Intuitiva: Más y Menos Probable',
-        level: 12,
+        id: 'g2-stat-u4-probabilidad-intuitiva-juegos',
+        label: 'Azar, Posibilidad y Juegos Justos',
+        level: 9,
         type: 'basic',
-        requires: ['g2-stat-comparacion-entre-categorias'],
-        description: 'Compara eventos aleatorios para determinar cuál tiene mayor oportunidad de ocurrir según la cantidad de elementos.',
+        requires: ['g2-stat-eje-frecuencias-escala', 'g2-stat-comparacion-entre-categorias'],
+        description: 'Compara eventos aleatorios para determinar cuál tiene mayor o menor oportunidad de ocurrir según la cantidad de elementos.',
         xOffset: 0,
         behavior: 'container'
     },
     {
         id: 'g2-stat-comparar-probabilidades-objetos',
-        label: 'Mayoría de Objetos y Mayor Posibilidad',
-        level: 13,
+        label: 'Mayoría de Objetos y Mayor Probabilidad',
+        level: 10,
         type: 'basic',
-        requires: ['g2-stat-u5-mas-menos-probable'],
-        description: 'Si en una urna hay 8 bolas verdes y 2 amarillas, es más probable sacar verde y menos probable sacar amarilla.',
+        requires: ['g2-stat-u4-probabilidad-intuitiva-juegos'],
+        description: 'Si en una bolsa hay 8 bolas verdes y 2 amarillas, explica por qué es más probable sacar verde y menos probable sacar amarilla.',
         xOffset: -45,
         behavior: 'quiz_list'
     },
     {
         id: 'g2-stat-ruletas-azar-sectores',
         label: 'Ruletas de la Suerte y Tamaño de Sectores',
-        level: 13,
+        level: 10,
         type: 'basic',
-        requires: ['g2-stat-u5-mas-menos-probable'],
-        description: 'Analiza ruletas divididas en colores: el color con la zona más grande tiene más probabilidad de ganar al girar.',
+        requires: ['g2-stat-u4-probabilidad-intuitiva-juegos'],
+        description: 'Analiza ruletas divididas en regiones de distinto tamaño: el sector de mayor área tiene mayor probabilidad de salir.',
         xOffset: 45,
         behavior: 'quiz_list'
     },
     {
         id: 'g2-stat-igualmente-probable-justicia',
-        label: 'Sucesos Igualmente Probables y Juegos Justos',
-        level: 14,
+        label: 'Sucesos Igualmente Probables y Noción de Juego Justo',
+        level: 11,
         type: 'applied',
         requires: ['g2-stat-comparar-probabilidades-objetos', 'g2-stat-ruletas-azar-sectores'],
-        description: 'Identifica cuándo dos jugadores tienen la misma posibilidad de ganar (moneda justa, ruleta con mitades iguales).',
+        description: 'Identifica cuándo dos jugadores tienen la misma oportunidad matemática de ganar (moneda balanceada o ruleta con partes iguales).',
         xOffset: 0,
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // UNIDAD 6: CONTEO SISTEMÁTICO Y GRAN CORONA DE 2.°
+    // UNIDAD 5: TÉCNICAS DE CONTEO Y ÁRBOLES CON DIBUJOS
     // ==========================================
     {
-        id: 'g2-stat-u6-conteo-combinaciones-maestria',
-        label: 'Conteo Sistemático y Gran Corona de 2.°',
-        level: 15,
-        type: 'basic',
+        id: 'g2-stat-u5-conteo-sistematico-arboles',
+        label: 'Técnicas de Conteo y Árboles con Dibujos',
+        level: 12,
+        type: 'advanced',
         requires: ['g2-stat-igualmente-probable-justicia'],
-        description: 'Primeras técnicas de conteo combinatorio con dos características y reto supremo del grado.',
+        description: 'Estructuras iniciales de conteo combinatorio con dos características y diagramas ramificados ilustrados.',
         xOffset: 0,
         behavior: 'container'
     },
     {
-        id: 'g2-stat-combinaciones-dos-conjuntos',
-        label: 'Combinar Prendas y Menús (2 Características)',
-        level: 16,
+        id: 'g2-stat-listados-sistematicos',
+        label: 'Listados Sistemáticos para no Repetir ni Omitir Opciones',
+        level: 13,
         type: 'basic',
-        requires: ['g2-stat-u6-conteo-combinaciones-maestria'],
-        description: 'Si tengo 2 camisetas y 3 pantalones, encuentra todas las formas posibles de vestirme sin repetir.',
-        xOffset: -45,
+        requires: ['g2-stat-u5-conteo-sistematico-arboles'],
+        description: 'Escribe combinaciones siguiendo un orden fijo (fijar una opción y cambiar la otra) para garantizar que la lista esté completa.',
+        xOffset: -40,
+        behavior: 'quiz_list'
+    },
+    {
+        id: 'g2-stat-combinaciones-dos-conjuntos',
+        label: 'Combinar Prendas, Comidas y Rutas (2 Características)',
+        level: 13,
+        type: 'applied',
+        requires: ['g2-stat-u5-conteo-sistematico-arboles'],
+        description: 'Resuelve problemas prácticos: si tienes 2 camisetas y 3 pantalones, encuentra las 6 combinaciones posibles.',
+        xOffset: 40,
         behavior: 'quiz_list'
     },
     {
         id: 'g2-stat-primeros-arboles-dibujo',
-        label: 'Diagramas de Árbol Ilustrados con Dibujos',
-        level: 16,
-        type: 'basic',
-        requires: ['g2-stat-u6-conteo-combinaciones-maestria'],
-        description: 'Dibuja ramas que conectan la primera elección con la segunda para no olvidar ninguna combinación posible.',
-        xOffset: 45,
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'g2-stat-corona-maestria-segundo',
-        label: 'Gran Corona de Maestría de Estadística de 2.° Grado',
-        level: 17,
-        type: 'evaluation',
-        requires: ['g2-stat-combinaciones-dos-conjuntos', 'g2-stat-primeros-arboles-dibujo'],
-        description: '¡Máximo reto de 2.º! Domina encuestas, tablas de frecuencia absoluta, pictogramas con escala, gráficos de barras y combinatoria básica.',
+        label: 'Diagramas de Árbol Ilustrados con Ramas y Dibujos',
+        level: 14,
+        type: 'advanced',
+        requires: ['g2-stat-listados-sistematicos', 'g2-stat-combinaciones-dos-conjuntos'],
+        description: 'Dibuja ramas que conectan la primera elección con cada una de las segundas elecciones para visualizar todo el espacio de opciones.',
         xOffset: 0,
         behavior: 'quiz_list'
     }

@@ -143,6 +143,7 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         requires: ['stat-tablas-intervalos-histogramas', 'stat-tendencia-central'],
         description: 'Regla de la suma y del producto, diagramas de árbol de decisión, conteo por etapas y definición rigurosa del factorial (n!).',
         xOffset: 0,
+        subcategoryId: 791,
         behavior: 'quiz_list'
     },
 
@@ -191,6 +192,7 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         requires: ['stat-dispersion-varianza', 'stat-posicion-boxplots'],
         description: 'El algoritmo de las 3 preguntas: orden, elementos y repetición. Permutaciones lineales/circulares, combinaciones, Pascal y binomio de Newton.',
         xOffset: 0,
+        subcategoryId: 792,
         behavior: 'quiz_list'
     },
 
@@ -215,6 +217,7 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         requires: ['stat-d5'],
         description: 'Unión, intersección, complemento, diferencia de sucesos, regla de la suma general P(A∪B) y tablas de contingencia 2×2.',
         xOffset: -50,
+        subcategoryId: 793,
         behavior: 'quiz_list'
     },
     {
@@ -225,6 +228,7 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         requires: ['stat-d5'],
         description: 'Definición formal P(A|B), regla del producto, pruebas con/sin reemplazo, Teorema de Probabilidad Total y Bayes en diagnóstico médico.',
         xOffset: 50,
+        subcategoryId: 794,
         behavior: 'quiz_list'
     },
     {
@@ -235,6 +239,7 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         requires: ['stat-operaciones-contingencia', 'stat-prob-condicional-bayes'],
         description: 'Función de probabilidad, valor esperado E[X], varianza de una V.A., ensayos de Bernoulli y distribución binomial B(n, p).',
         xOffset: 0,
+        subcategoryId: 795,
         behavior: 'quiz_list'
     },
 
@@ -259,6 +264,7 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         requires: ['stat-d6'],
         description: 'Propiedades de la curva normal de Gauss, regla 68-95-99.7, estandarización Z = (X-μ)/σ y uso de tablas para cálculo de percentiles.',
         xOffset: -50,
+        subcategoryId: 796,
         behavior: 'quiz_list'
     },
     {
@@ -307,6 +313,7 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         requires: ['stat-d7'],
         description: 'Propiedades integrales de f(x), cálculo de P(a≤X≤b), función de distribución acumulada F(x), esperanza y varianza continua.',
         xOffset: -50,
+        subcategoryId: 797,
         behavior: 'quiz_list'
     },
     {
@@ -317,6 +324,7 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         requires: ['stat-d7'],
         description: 'Distribución exponencial (falta de memoria), distribución Gamma, y distribuciones fundamentales del muestreo: Chi-cuadrado, Student y Fisher.',
         xOffset: 50,
+        subcategoryId: 798,
         behavior: 'quiz_list'
     },
     {
@@ -327,9 +335,9 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         requires: ['stat-densidades-continuas-pdf', 'stat-modelos-continuos-teoricos'],
         description: 'Vectores aleatorios continuos, funciones generadoras de momentos (MGF), covarianza y demostración/aplicación formal del CLT.',
         xOffset: 0,
+        subcategoryId: 799,
         behavior: 'quiz_list'
     },
-
     // ==========================================
     // DOMINIO VIII: INFERENCIA PARAMÉTRICA FORMAL Y MODELACIÓN MULTIVARIADA (UNIVERSIDAD)
     // ==========================================
@@ -351,6 +359,7 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         requires: ['stat-d8'],
         description: 'Máxima verosimilitud (MLE), método de momentos, insesgadez, consistencia, suficiencia y cota inferior de Cramér-Rao.',
         xOffset: -50,
+        subcategoryId: 800,
         behavior: 'quiz_list'
     },
     {
@@ -361,6 +370,7 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         requires: ['stat-d8'],
         description: 'Lema de Neyman-Pearson, pruebas Z y t (1 y 2 colas), ANOVA de un factor (F-test), y contrastes Chi-cuadrado de bondad de ajuste e independencia.',
         xOffset: 50,
+        subcategoryId: 801,
         behavior: 'quiz_list'
     },
     {
@@ -371,6 +381,7 @@ export const statisticsMapNodes: ArithmeticNode[] = [
         requires: ['stat-estimacion-mle-propiedades', 'stat-pruebas-hipotesis-anova'],
         description: 'Modelo matricial Y = Xβ + ε, estimación MCO, diagnóstico de residuos (homocedasticidad, normalidad, multicolinealidad VIF) y modelo logístico.',
         xOffset: 0,
+        subcategoryId: 802,
         behavior: 'quiz_list'
     },
 

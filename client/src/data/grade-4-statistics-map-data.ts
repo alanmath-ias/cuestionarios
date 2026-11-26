@@ -26,7 +26,7 @@ export const grade4StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g4-stat-variables-discretas-continuas-intro',
-        label: 'Variables Cuantitativas Discretas y Continuas',
+        label: 'Variables Cuantitativas Discretas vs. Continuas',
         level: 1,
         type: 'basic',
         requires: ['g4-stat-u1-poblacion-muestra-variables'],
@@ -36,17 +36,17 @@ export const grade4StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g4-stat-recoleccion-datos-estructurada',
-        label: 'Diseño de Fichas de Recolección de Datos',
+        label: 'Diseño de Fichas e Instrumentos de Recolección de Datos',
         level: 2,
         type: 'applied',
         requires: ['g4-stat-concepto-poblacion-muestra', 'g4-stat-variables-discretas-continuas-intro'],
-        description: 'Elabora formularios y fichas de campo para recolectar datos ordenados sobre una muestra de personas u objetos.',
+        description: 'Elabora formularios y fichas estructuradas para registrar datos ordenados sobre una muestra sin incurrir en sesgos.',
         xOffset: 0,
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // UNIDAD 2: TABLAS DE FRECUENCIA COMPLETA (ABSOLUTA, RELATIVA Y PORCENTAJE)
+    // UNIDAD 2: TABLAS DE FRECUENCIA COMPLETA: f, h Y %
     // ==========================================
     {
         id: 'g4-stat-u2-tablas-frecuencia-completa',
@@ -80,9 +80,9 @@ export const grade4StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g4-stat-tabla-completa-interpretacion',
-        label: 'Interpretación de Tablas Estadísticas Completas',
+        label: 'Interpretación Integral de Tablas Estadísticas Completas',
         level: 5,
-        type: 'critical',
+        type: 'applied',
         requires: ['g4-stat-frecuencia-relativa-decimal', 'g4-stat-frecuencia-porcentual-calculo'],
         description: 'Extrae conclusiones clave: ¿qué porcentaje prefiere una opción? ¿qué proporción representa más de la mitad del grupo?',
         xOffset: 0,
@@ -90,11 +90,11 @@ export const grade4StatisticsNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // UNIDAD 3: GRÁFICOS DE BARRAS AGRUPADAS Y LECTURA CIRCULAR
+    // UNIDAD 3: GRÁFICOS COMPARATIVOS Y LECTURA CIRCULAR
     // ==========================================
     {
         id: 'g4-stat-u3-graficos-multiples-circulares',
-        label: 'Gráficos de Barras Dobles y Lectura Circular',
+        label: 'Gráficos Comparativos y Lectura Circular',
         level: 6,
         type: 'basic',
         requires: ['g4-stat-tabla-completa-interpretacion'],
@@ -114,7 +114,7 @@ export const grade4StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g4-stat-graficos-circulares-lectura',
-        label: 'Lectura de Gráficos Circulares o de Torta',
+        label: 'Lectura de Gráficos Circulares o de Torta (50%, 25%, 75%)',
         level: 7,
         type: 'basic',
         requires: ['g4-stat-u3-graficos-multiples-circulares'],
@@ -124,7 +124,7 @@ export const grade4StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g4-stat-eleccion-grafico-adecuado',
-        label: 'Elección del Gráfico más Adecuado según los Datos',
+        label: 'Selección del Gráfico más Adecuado según el Tipo de Dato',
         level: 8,
         type: 'applied',
         requires: ['g4-stat-barras-dobles-comparativas', 'g4-stat-graficos-circulares-lectura'],
@@ -148,11 +148,11 @@ export const grade4StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g4-stat-media-aritmetica-formula',
-        label: 'Cálculo Formal de la Media Aritmética (x̄)',
+        label: 'Cálculo Formal de la Media Aritmética (x̄ = ∑x / n)',
         level: 10,
-        type: 'critical',
+        type: 'basic',
         requires: ['g4-stat-u4-tendencia-central-formal'],
-        description: 'Aplica la fórmula x̄ = (∑x) / n: suma de todos los valores dividida entre la cantidad de observaciones.',
+        description: 'Aplica la fórmula formal de la media: suma de todos los valores dividida entre la cantidad total de observaciones.',
         xOffset: -45,
         behavior: 'quiz_list'
     },
@@ -162,31 +162,31 @@ export const grade4StatisticsNodes: ArithmeticNode[] = [
         level: 10,
         type: 'basic',
         requires: ['g4-stat-u4-tendencia-central-formal'],
-        description: 'Ordena los datos y halla el valor central exacto (mediana para cantidad impar de datos) y el dato más frecuente (moda).',
+        description: 'Ordena los datos y halla el valor central exacto (mediana para cantidad impar) y el dato o datos más repetidos (moda).',
         xOffset: 45,
         behavior: 'quiz_list'
     },
     {
         id: 'g4-stat-comparacion-media-mediana-moda',
-        label: 'Comparación y Relación entre Media, Mediana y Moda',
+        label: 'Comparación y Sensibilidad entre Media, Mediana y Moda',
         level: 11,
         type: 'applied',
         requires: ['g4-stat-media-aritmetica-formula', 'g4-stat-mediana-moda-posicion'],
-        description: 'Resuelve problemas prácticos donde los tres estadísticos tienen valores diferentes y explica qué significa cada uno.',
+        description: 'Resuelve problemas prácticos donde los estadísticos difieren y analiza cómo un valor muy alto o bajo altera el promedio.',
         xOffset: 0,
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // UNIDAD 5: PROBABILIDAD TEÓRICA Y REGLA DE LAPLACE
+    // UNIDAD 5: PROBABILIDAD CLÁSICA Y PRINCIPIOS DE CONTEO
     // ==========================================
     {
-        id: 'g4-stat-u5-probabilidad-regla-laplace',
-        label: 'Probabilidad Teórica y Regla de Laplace',
+        id: 'g4-stat-u5-probabilidad-regla-laplace-conteo',
+        label: 'Probabilidad Clásica y Principios de Conteo',
         level: 12,
-        type: 'basic',
+        type: 'advanced',
         requires: ['g4-stat-comparacion-media-mediana-moda'],
-        description: 'Cuantificación matemática formal de la probabilidad en situaciones equiprobables mediante la regla de Laplace.',
+        description: 'Cuantificación matemática formal mediante la regla de Laplace y resolución de conteos por etapas aditivas y multiplicativas.',
         xOffset: 0,
         behavior: 'container'
     },
@@ -194,19 +194,19 @@ export const grade4StatisticsNodes: ArithmeticNode[] = [
         id: 'g4-stat-regla-laplace-fraccion',
         label: 'La Regla de Laplace: P = Favorables / Posibles',
         level: 13,
-        type: 'critical',
-        requires: ['g4-stat-u5-probabilidad-regla-laplace'],
-        description: 'Calcula la probabilidad exacta en fracciones y decimales: probabilidad de sacar un 5 en un dado de 6 caras es 1/6.',
+        type: 'basic',
+        requires: ['g4-stat-u5-probabilidad-regla-laplace-conteo'],
+        description: 'Calcula probabilidades exactas en fracciones y decimales en espacios equiprobables: sacar un 5 en un dado de 6 caras es 1/6.',
         xOffset: -45,
         behavior: 'quiz_list'
     },
     {
         id: 'g4-stat-escala-probabilidad-cero-uno',
-        label: 'La Escala de Probabilidad entre 0 y 1',
+        label: 'La Escala de Probabilidad entre 0 y 1 (o 0% y 100%)',
         level: 13,
         type: 'basic',
-        requires: ['g4-stat-u5-probabilidad-regla-laplace'],
-        description: 'Comprende que P(imposible) = 0, P(seguro) = 1, y todos los sucesos posibles tienen una probabilidad comprendida entre 0 y 1 (o 0% y 100%).',
+        requires: ['g4-stat-u5-probabilidad-regla-laplace-conteo'],
+        description: 'Comprende que P(imposible) = 0, P(seguro) = 1, y todos los sucesos posibles tienen una probabilidad comprendida entre 0 y 1.',
         xOffset: 45,
         behavior: 'quiz_list'
     },
@@ -217,51 +217,17 @@ export const grade4StatisticsNodes: ArithmeticNode[] = [
         type: 'applied',
         requires: ['g4-stat-regla-laplace-fraccion', 'g4-stat-escala-probabilidad-cero-uno'],
         description: 'Compara: ¿por qué lanzar una moneda 10 veces puede dar 7 caras, pero la probabilidad teórica sigue siendo 1/2 (0.5)?',
-        xOffset: 0,
+        xOffset: -30,
         behavior: 'quiz_list'
-    },
-
-    // ==========================================
-    // UNIDAD 6: PRINCIPIOS DE CONTEO Y GRAN CORONA DE 4.°
-    // ==========================================
-    {
-        id: 'g4-stat-u6-principios-conteo-maestria',
-        label: 'Principios de Conteo y Gran Corona de 4.°',
-        level: 15,
-        type: 'basic',
-        requires: ['g4-stat-frecuencia-experimental-vs-teorica'],
-        description: 'Técnicas de conteo aditivo y multiplicativo por etapas y desafío integrador de maestría de cuarto grado.',
-        xOffset: 0,
-        behavior: 'container'
     },
     {
         id: 'g4-stat-principio-aditivo-multiplicativo',
-        label: 'Principio Aditivo vs. Principio Multiplicativo',
-        level: 16,
-        type: 'basic',
-        requires: ['g4-stat-u6-principios-conteo-maestria'],
-        description: '¿Opciones alternativas (sumar) o decisiones consecutivas en etapas (multiplicar)? Resuelve problemas combinatorios de rutas y códigos.',
-        xOffset: -45,
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'g4-stat-arboles-conteo-sistematico',
-        label: 'Diagramas de Árbol Exhaustivos de 3 Etapas',
-        level: 16,
-        type: 'basic',
-        requires: ['g4-stat-u6-principios-conteo-maestria'],
-        description: 'Construye árboles completos para el lanzamiento de dos o tres monedas o la elección de menú con entrada, plato y postre.',
-        xOffset: 45,
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'g4-stat-corona-maestria-cuarto',
-        label: 'Gran Corona de Maestría de Estadística de 4.° Grado',
-        level: 17,
-        type: 'evaluation',
-        requires: ['g4-stat-principio-aditivo-multiplicativo', 'g4-stat-arboles-conteo-sistematico'],
-        description: '¡Máximo reto de 4.º! Domina población y muestra, tablas con porcentajes, media, mediana, moda, regla de Laplace y principios de conteo.',
-        xOffset: 0,
+        label: 'Principio Aditivo vs. Principio Multiplicativo en Árboles',
+        level: 14,
+        type: 'advanced',
+        requires: ['g4-stat-regla-laplace-fraccion', 'g4-stat-escala-probabilidad-cero-uno'],
+        description: '¿Opciones alternativas excluyentes (sumar) o elecciones consecutivas en etapas (multiplicar)? Resuelve problemas de rutas y menús.',
+        xOffset: 30,
         behavior: 'quiz_list'
     }
 ];

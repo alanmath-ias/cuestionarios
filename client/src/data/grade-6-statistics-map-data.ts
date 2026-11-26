@@ -2,15 +2,15 @@ import { ArithmeticNode } from './arithmetic-map-data';
 
 export const grade6StatisticsNodes: ArithmeticNode[] = [
     // ==========================================
-    // UNIDAD 1: FORMALIZACIÓN DE VARIABLES Y RECOLECCIÓN CIENTÍFICA
+    // UNIDAD 1: VARIABLES, MUESTREO Y TABULACIÓN ACUMULADA
     // ==========================================
     {
         id: 'g6-stat-u1-variables-recoleccion-cientifica',
-        label: 'Variables Estadísticas y Recolección Científica',
+        label: 'Variables, Muestreo y Tabulación Acumulada',
         level: 0,
         type: 'basic',
         requires: [],
-        description: 'Inicio formal de la secundaria: taxonomía rigurosa de variables, censos vs. muestreo probabilístico e instrumentos de medición.',
+        description: 'Inicio formal de la secundaria: taxonomía rigurosa de variables, censos vs. muestreo probabilístico y frecuencias acumuladas.',
         xOffset: 0,
         behavior: 'container'
     },
@@ -26,241 +26,207 @@ export const grade6StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g6-stat-censo-vs-muestreo-aleatorio',
-        label: 'Censos Poblacionales vs. Muestreo Aleatorio',
+        label: 'Censos Poblacionales vs. Muestreo Aleatorio y Sesgos',
         level: 1,
         type: 'basic',
         requires: ['g6-stat-u1-variables-recoleccion-cientifica'],
-        description: 'Estudio exhaustivo de toda la población (censo) vs. inferencia a partir de una muestra aleatoria representativa.',
+        description: 'Estudio exhaustivo de toda la población (censo) vs. inferencia por muestra aleatoria, y diseño de preguntas neutrales sin sesgos.',
         xOffset: 45,
         behavior: 'quiz_list'
     },
     {
-        id: 'g6-stat-diseno-encuesta-evitar-sesgos',
-        label: 'Diseño de Instrumentos y Detección de Preguntas Sesgadas',
+        id: 'g6-stat-frecuencia-acumulada-f-h',
+        label: 'Frecuencias Acumuladas (Fᵢ, Hᵢ) y Preguntas de Umbral',
         level: 2,
         type: 'applied',
         requires: ['g6-stat-taxonomia-variables-estadisticas', 'g6-stat-censo-vs-muestreo-aleatorio'],
-        description: 'Aprende a redactar preguntas neutrales y a identificar cómo el sesgo del encuestador puede inducir respuestas falsas.',
+        description: 'Cálculo de la suma acumulativa: Fₖ y Hₖ para responder preguntas de corte (¿qué porcentaje obtuvo al menos 3 aciertos?).',
         xOffset: 0,
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // UNIDAD 2: TABULACIÓN FORMAL Y FRECUENCIAS ACUMULADAS
+    // UNIDAD 2: HISTOGRAMAS, POLÍGONOS Y GRÁFICOS ENGAÑOSOS
     // ==========================================
     {
-        id: 'g6-stat-u2-tabulacion-frecuencias-acumuladas',
-        label: 'Tabulación Formal y Frecuencias Acumuladas',
+        id: 'g6-stat-u2-histogramas-graficos-enganosos',
+        label: 'Histogramas, Polígonos y Gráficos Engañosos',
         level: 3,
         type: 'basic',
-        requires: ['g6-stat-diseno-encuesta-evitar-sesgos'],
-        description: 'Construcción algebraica de tablas estadísticas no agrupadas con cálculo sistemático de frecuencias acumuladas absolutas y relativas.',
-        xOffset: 0,
-        behavior: 'container'
-    },
-    {
-        id: 'g6-stat-frecuencia-absoluta-acumulada-f',
-        label: 'Frecuencia Absoluta Acumulada (Fᵢ = ∑f)',
-        level: 4,
-        type: 'basic',
-        requires: ['g6-stat-u2-tabulacion-frecuencias-acumuladas'],
-        description: 'Cálculo de la suma acumulativa: Fₖ representa el número de observaciones menores o iguales al valor xₖ.',
-        xOffset: -45,
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'g6-stat-frecuencia-relativa-acumulada-h',
-        label: 'Frecuencia Relativa Acumulada (Hᵢ) y Porcentual (%Fᵢ)',
-        level: 4,
-        type: 'basic',
-        requires: ['g6-stat-u2-tabulacion-frecuencias-acumuladas'],
-        description: 'Cálculo de la proporción acumulada Hᵢ = Fᵢ / n y porcentaje acumulado %Fᵢ (el último renglón alcanza siempre 1.0 y 100%).',
-        xOffset: 45,
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'g6-stat-resolucion-problemas-frecuencias-acumuladas',
-        label: 'Interpretación de Umbrales y Límites con Frecuencias Acumuladas',
-        level: 5,
-        type: 'critical',
-        requires: ['g6-stat-frecuencia-absoluta-acumulada-f', 'g6-stat-frecuencia-relativa-acumulada-h'],
-        description: 'Responde preguntas de corte: ¿qué porcentaje obtuvo al menos 3 aciertos? ¿cuántos tuvieron como máximo 7 fallas?',
-        xOffset: 0,
-        behavior: 'quiz_list'
-    },
-
-    // ==========================================
-    // UNIDAD 3: HISTOGRAMAS BÁSICOS, POLÍGONOS Y GRÁFICOS ENGAÑOSOS
-    // ==========================================
-    {
-        id: 'g6-stat-u3-histogramas-graficos-enganosos',
-        label: 'Histogramas, Polígonos y Detección de Gráficos Engañosos',
-        level: 6,
-        type: 'basic',
-        requires: ['g6-stat-resolucion-problemas-frecuencias-acumuladas'],
-        description: 'Visualización estadística formal para datos discretos y cuantitativos continuos, y pensamiento crítico ante gráficas manipuladas.',
+        requires: ['g6-stat-frecuencia-acumulada-f-h'],
+        description: 'Visualización estadística formal para datos continuos y pensamiento crítico ante gráficas manipuladas en medios.',
         xOffset: 0,
         behavior: 'container'
     },
     {
         id: 'g6-stat-histogramas-vs-barras-diferencia',
-        label: 'El Histograma: Barras Continuas Pegadas',
-        level: 7,
+        label: 'El Histograma: Barras Continuas Pegadas vs. Separadas',
+        level: 4,
         type: 'basic',
-        requires: ['g6-stat-u3-histogramas-graficos-enganosos'],
+        requires: ['g6-stat-u2-histogramas-graficos-enganosos'],
         description: 'Distingue entre barras separadas (variables cualitativas/discretas) e histogramas con barras yuxtapuestas contiguas.',
         xOffset: -45,
         behavior: 'quiz_list'
     },
     {
         id: 'g6-stat-poligono-de-frecuencias',
-        label: 'Construcción del Polígono de Frecuencias',
-        level: 7,
+        label: 'Construcción del Polígono de Frecuencias y Silueta de Datos',
+        level: 4,
         type: 'basic',
-        requires: ['g6-stat-u3-histogramas-graficos-enganosos'],
-        description: 'Unión de los puntos medios de las partes superiores de las barras para trazar la silueta geométrica de la distribución.',
+        requires: ['g6-stat-u2-histogramas-graficos-enganosos'],
+        description: 'Unión de los puntos medios superiores de las barras para trazar la silueta geométrica de la distribución de frecuencias.',
         xOffset: 45,
         behavior: 'quiz_list'
     },
     {
         id: 'g6-stat-deteccion-graficos-enganosos',
-        label: 'Lectura Crítica: Detección de Gráficos Engañosos en Medios',
-        level: 8,
-        type: 'critical',
+        label: 'Lectura Crítica: Detección de Gráficos Engañosos en Prensa',
+        level: 5,
+        type: 'applied',
         requires: ['g6-stat-histogramas-vs-barras-diferencia', 'g6-stat-poligono-de-frecuencias'],
-        description: 'Identifica trucos visuales en prensa y publicidad: ejes verticales truncados que exageran diferencias o escalas distorsionadas.',
+        description: 'Identifica trucos visuales en prensa y publicidad: ejes verticales truncados que exageran diferencias y escalas distorsionadas.',
         xOffset: 0,
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // UNIDAD 4: TENDENCIA CENTRAL Y MEDIA PONDERADA
+    // UNIDAD 3: TENDENCIA CENTRAL AVANZADA Y MEDIA PONDERADA
     // ==========================================
     {
-        id: 'g6-stat-u4-tendencia-central-ponderada',
+        id: 'g6-stat-u3-tendencia-central-ponderada',
         label: 'Tendencia Central Avanzada y Media Ponderada',
-        level: 9,
+        level: 6,
         type: 'basic',
         requires: ['g6-stat-deteccion-graficos-enganosos'],
-        description: 'Deducción y cálculo riguroso de MTC a partir de tablas no agrupadas y resolución de problemas con media ponderada.',
+        description: 'Cálculo algebraico riguroso de MTC a partir de tablas no agrupadas y resolución de problemas con media ponderada.',
         xOffset: 0,
         behavior: 'container'
     },
     {
         id: 'g6-stat-media-desde-tabla-frecuencias',
         label: 'Cálculo de la Media desde Tablas: x̄ = ∑(xᵢ·fᵢ) / n',
-        level: 10,
-        type: 'critical',
-        requires: ['g6-stat-u4-tendencia-central-ponderada'],
+        level: 7,
+        type: 'basic',
+        requires: ['g6-stat-u3-tendencia-central-ponderada'],
         description: 'Agiliza el cálculo multiplicando cada valor por su frecuencia absoluta antes de sumar, evitando escribir todos los datos.',
         xOffset: -45,
         behavior: 'quiz_list'
     },
     {
+        id: 'g6-stat-mediana-moda-tablas-no-agrupadas',
+        label: 'Mediana y Moda a partir de Tablas de Frecuencia',
+        level: 7,
+        type: 'basic',
+        requires: ['g6-stat-u3-tendencia-central-ponderada'],
+        description: 'Determina la posición central n/2 en la columna de frecuencias acumuladas para hallar la mediana, y ubica la frecuencia máxima para la moda.',
+        xOffset: 45,
+        behavior: 'quiz_list'
+    },
+    {
         id: 'g6-stat-media-ponderada-pesos-creditos',
         label: 'La Media Ponderada: Calificaciones y Pesos Porcentuales',
-        level: 10,
-        type: 'basic',
-        requires: ['g6-stat-u4-tendencia-central-ponderada'],
-        description: 'Cuando los exámenes tienen distinto peso (el examen final vale 40% y las tareas 20%): x̄_p = ∑(wᵢ·xᵢ) / ∑wᵢ.',
-        xOffset: 45,
+        level: 8,
+        type: 'applied',
+        requires: ['g6-stat-media-desde-tabla-frecuencias', 'g6-stat-mediana-moda-tablas-no-agrupadas'],
+        description: 'Cuando las evaluaciones tienen distinto peso (examen final 40%, talleres 20%): x̄_p = ∑(wᵢ·xᵢ) / ∑wᵢ.',
+        xOffset: -35,
         behavior: 'quiz_list'
     },
     {
         id: 'g6-stat-problemas-inversos-de-promedios',
-        label: 'Problemas Inversos: ¿Qué Nota Necesito para Aprobar?',
-        level: 11,
+        label: 'Problemas Inversos: Despejar la Nota Necesaria para Aprobar',
+        level: 8,
         type: 'applied',
-        requires: ['g6-stat-media-desde-tabla-frecuencias', 'g6-stat-media-ponderada-pesos-creditos'],
-        description: 'Plantea y despeja ecuaciones a partir del promedio deseado: conoce tres notas y halla la cuarta nota necesaria.',
-        xOffset: 0,
+        requires: ['g6-stat-media-desde-tabla-frecuencias', 'g6-stat-mediana-moda-tablas-no-agrupadas'],
+        description: 'Plantea y despeja ecuaciones a partir del promedio deseado: conoce tres notas y calcula la cuarta nota mínima para aprobar.',
+        xOffset: 35,
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // UNIDAD 5: SUCESOS COMPUESTOS Y PROBABILIDAD DEL COMPLEMENTO
+    // UNIDAD 4: FUNDAMENTOS DE PROBABILIDAD Y SUCESOS COMPUESTOS
     // ==========================================
     {
-        id: 'g6-stat-u5-sucesos-compuestos-complemento',
-        label: 'Sucesos Compuestos y Probabilidad del Complemento',
-        level: 12,
+        id: 'g6-stat-u4-sucesos-compuestos-complemento',
+        label: 'Fundamentos de Probabilidad y Sucesos Compuestos',
+        level: 9,
         type: 'basic',
-        requires: ['g6-stat-problemas-inversos-de-promedios'],
-        description: 'Formalización del espacio muestral (S), sucesos elementales, compuestos y el teorema fundamental del suceso contrario.',
+        requires: ['g6-stat-media-ponderada-pesos-creditos', 'g6-stat-problemas-inversos-de-promedios'],
+        description: 'Formalización del espacio muestral (S), sucesos elementales, compuestos y el teorema del suceso complementario.',
         xOffset: 0,
         behavior: 'container'
+    },
+    {
+        id: 'g6-stat-espacio-muestral-laplace-formal',
+        label: 'Experimentos Aleatorios, Espacio Muestral Formal y Laplace',
+        level: 10,
+        type: 'basic',
+        requires: ['g6-stat-u4-sucesos-compuestos-complemento'],
+        description: 'Diferencia experimentos deterministas de aleatorios, define el espacio muestral S y aplica la regla de Laplace con rigor formal.',
+        xOffset: -45,
+        behavior: 'quiz_list'
     },
     {
         id: 'g6-stat-suceso-complementario-formula',
         label: 'El Suceso Complementario: P(Aᶜ) = 1 - P(A)',
-        level: 13,
-        type: 'critical',
-        requires: ['g6-stat-u5-sucesos-compuestos-complemento'],
-        description: 'La poderosa regla del complemento: calcular la probabilidad de que "no ocurra A" restando de 1 la probabilidad de que ocurra.',
-        xOffset: -45,
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'g6-stat-sucesos-compatibles-incompatibles',
-        label: 'Sucesos Compatibles e Incompatibles (Mutuamente Excluyentes)',
-        level: 13,
+        level: 10,
         type: 'basic',
-        requires: ['g6-stat-u5-sucesos-compuestos-complemento'],
-        description: '¿Pueden ocurrir al mismo tiempo? Al tirar un dado: sacar par y sacar impar son incompatibles; sacar par y sacar primo son compatibles (el 2).',
+        requires: ['g6-stat-u4-sucesos-compuestos-complemento'],
+        description: 'La poderosa regla del complemento: calcular la probabilidad de "al menos uno" restando de 1 la probabilidad de "ninguno".',
         xOffset: 45,
         behavior: 'quiz_list'
     },
     {
-        id: 'g6-stat-regla-suma-sucesos-incompatibles',
-        label: 'Regla de la Suma para Sucesos Incompatibles',
-        level: 14,
+        id: 'g6-stat-sucesos-compatibles-incompatibles',
+        label: 'Sucesos Compatibles, Incompatibles y Regla de la Suma',
+        level: 11,
         type: 'applied',
-        requires: ['g6-stat-suceso-complementario-formula', 'g6-stat-sucesos-compatibles-incompatibles'],
-        description: 'Aplica P(A ∪ B) = P(A) + P(B) cuando la intersección es vacía (A ∩ B = ∅) en dados, barajas y urnas.',
+        requires: ['g6-stat-espacio-muestral-laplace-formal', 'g6-stat-suceso-complementario-formula'],
+        description: '¿Pueden ocurrir a la vez? Aplica P(A ∪ B) = P(A) + P(B) cuando la intersección es vacía (sucesos mutuamente excluyentes).',
         xOffset: 0,
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // UNIDAD 6: FACTORIAL Y PERMUTACIONES SIMPLES (GRAN CORONA DE 6.°)
+    // UNIDAD 5: EL FACTORIAL (n!) Y TÉCNICAS FORMALES DE CONTEO
     // ==========================================
     {
-        id: 'g6-stat-u6-factorial-permutaciones-maestria',
-        label: 'El Factorial (n!), Permutaciones y Gran Corona de 6.°',
-        level: 15,
-        type: 'basic',
-        requires: ['g6-stat-regla-suma-sucesos-incompatibles'],
-        description: 'Introducción al simbolismo combinatorio formal: el operador factorial y los ordenamientos completos sin repetición.',
+        id: 'g6-stat-u5-factorial-permutaciones-conteo',
+        label: 'El Factorial (n!) y Técnicas Formales de Conteo',
+        level: 12,
+        type: 'advanced',
+        requires: ['g6-stat-sucesos-compatibles-incompatibles'],
+        description: 'Introducción al simbolismo combinatorio formal: principios por etapas, el operador factorial y ordenamientos lineales.',
         xOffset: 0,
         behavior: 'container'
     },
     {
-        id: 'g6-stat-concepto-operador-factorial',
-        label: 'El Factorial de un Número Natural (n!)',
-        level: 16,
-        type: 'critical',
-        requires: ['g6-stat-u6-factorial-permutaciones-maestria'],
-        description: 'Definición n! = n × (n-1) × ... × 1, convención 0! = 1, simplificación de fracciones con factoriales (7! / 5! = 7 × 6 = 42).',
+        id: 'g6-stat-principios-conteo-por-etapas',
+        label: 'Principios Aditivo y Multiplicativo en Problemas por Etapas',
+        level: 13,
+        type: 'basic',
+        requires: ['g6-stat-u5-factorial-permutaciones-conteo'],
+        description: 'Formalización de diagramas de árbol y tablas cruzadas para resolver problemas combinatorios estructurados en múltiples fases.',
         xOffset: -45,
         behavior: 'quiz_list'
     },
     {
-        id: 'g6-stat-permutaciones-simples-formula',
-        label: 'Permutaciones Simples: Pₙ = n!',
-        level: 16,
+        id: 'g6-stat-concepto-operador-factorial',
+        label: 'El Operador Factorial (n!) y Simplificación de Expresiones',
+        level: 13,
         type: 'basic',
-        requires: ['g6-stat-u6-factorial-permutaciones-maestria'],
-        description: 'Cálculo de todos los arreglos posibles de n objetos distintos en fila: anagramas de palabras sin letras repetidas y ordenamientos.',
+        requires: ['g6-stat-u5-factorial-permutaciones-conteo'],
+        description: 'Definición n! = n × (n-1) × ... × 1, convención 0! = 1, y simplificación algebraica de cocientes como 8! / 6! = 8 × 7 = 56.',
         xOffset: 45,
         behavior: 'quiz_list'
     },
     {
-        id: 'g6-stat-corona-maestria-sexto',
-        label: 'Gran Corona de Maestría de Estadística de 6.° Grado',
-        level: 17,
-        type: 'evaluation',
-        requires: ['g6-stat-concepto-operador-factorial', 'g6-stat-permutaciones-simples-formula'],
-        description: '¡Máximo galardón de 6.º de secundaria! Domina variables, tablas acumuladas, histogramas, media ponderada, probabilidad del complemento y factoriales.',
+        id: 'g6-stat-permutaciones-simples-formula',
+        label: 'Permutaciones Simples: Pₙ = n! (Arreglos y Anagramas)',
+        level: 14,
+        type: 'advanced',
+        requires: ['g6-stat-principios-conteo-por-etapas', 'g6-stat-concepto-operador-factorial'],
+        description: 'Cálculo de todos los arreglos posibles de n objetos distintos en fila: anagramas de palabras sin letras repetidas y ordenamientos de personas.',
         xOffset: 0,
         behavior: 'quiz_list'
     }

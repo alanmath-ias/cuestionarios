@@ -2,15 +2,15 @@ import { ArithmeticNode } from './arithmetic-map-data';
 
 export const grade11StatisticsNodes: ArithmeticNode[] = [
     // ==========================================
-    // UNIDAD 1: LA DISTRIBUCIÓN NORMAL Y PUNTUACIONES Z
+    // UNIDAD 1: LA DISTRIBUCIÓN NORMAL Y ESTANDARIZACIÓN CON Z
     // ==========================================
     {
         id: 'g11-stat-u1-distribucion-normal-z',
-        label: 'La Distribución Normal y Puntuaciones Z',
+        label: 'La Distribución Normal y Estandarización con Z',
         level: 0,
         type: 'basic',
         requires: [],
-        description: 'La reina de las distribuciones: propiedades de la campana de Gauss, regla empírica 68-95-99.7 y tipificación estandarizada con Z.',
+        description: 'La reina de las distribuciones continuas: propiedades de la campana de Gauss, regla empírica 68-95-99.7 y tipificación estandarizada con Z.',
         xOffset: 0,
         behavior: 'container'
     },
@@ -28,7 +28,7 @@ export const grade11StatisticsNodes: ArithmeticNode[] = [
         id: 'g11-stat-tipificacion-puntuaciones-z',
         label: 'Estandarización y Puntuaciones Z: Z = (X - μ) / σ',
         level: 1,
-        type: 'critical',
+        type: 'basic',
         requires: ['g11-stat-u1-distribucion-normal-z'],
         description: 'Transformación a la normal estándar N(0, 1): Z indica a cuántas desviaciones estándar por encima o por debajo de la media se ubica un dato.',
         xOffset: 45,
@@ -60,7 +60,7 @@ export const grade11StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g11-stat-diagramas-dispersion-nube-puntos',
-        label: 'Diagramas de Dispersión y Tipo de Asociación',
+        label: 'Diagramas de Dispersión y Patrones de Asociación Lineal',
         level: 4,
         type: 'basic',
         requires: ['g11-stat-u2-analisis-bivariado-correlacion'],
@@ -72,7 +72,7 @@ export const grade11StatisticsNodes: ArithmeticNode[] = [
         id: 'g11-stat-coeficiente-correlacion-pearson-r',
         label: 'Coeficiente de Correlación Lineal de Pearson (r)',
         level: 4,
-        type: 'critical',
+        type: 'basic',
         requires: ['g11-stat-u2-analisis-bivariado-correlacion'],
         description: 'Propiedades del índice r: -1 ≤ r ≤ +1. Interpretación de correlación perfecta (±1), fuerte (|r| > 0.8), moderada, débil y nula (r ≈ 0).',
         xOffset: 45,
@@ -80,9 +80,9 @@ export const grade11StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g11-stat-correlacion-no-implica-causalidad',
-        label: 'Principio Fundamental: Correlación NO Implica Causalidad',
+        label: 'Principio Crítico: Correlación NO Implica Causalidad',
         level: 5,
-        type: 'critical',
+        type: 'applied',
         requires: ['g11-stat-diagramas-dispersion-nube-puntos', 'g11-stat-coeficiente-correlacion-pearson-r'],
         description: 'Pensamiento crítico científico: variables confusoras (lurking variables) y correlaciones espurias (dos variables que suben juntas por una tercera causa común).',
         xOffset: 0,
@@ -104,31 +104,31 @@ export const grade11StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g11-stat-recta-minimos-cuadrados-ajuste',
-        label: 'La Recta de Regresión: ŷ = mx + b (o ŷ = β₀ + β₁x)',
+        label: 'La Recta de Regresión: ŷ = mx + b por Mínimos Cuadrados',
         level: 7,
         type: 'basic',
         requires: ['g11-stat-u3-regresion-lineal-prediccion'],
-        description: 'Criterio de mínimos cuadrados: minimiza la suma de los errores residuales al cuadrado ∑(yᵢ - ŷᵢ)². Interpretación física de la pendiente m.',
+        description: 'Criterio de mínimos cuadrados: minimiza la suma de los errores residuales al cuadrado ∑(yᵢ - ŷᵢ)². Interpretación física de la pendiente marginal m.',
         xOffset: -45,
         behavior: 'quiz_list'
     },
     {
         id: 'g11-stat-coeficiente-determinacion-r2',
-        label: 'Coeficiente de Determinación (R² = r²)',
+        label: 'Coeficiente de Determinación (R² = r²) y Bondad de Ajuste',
         level: 7,
-        type: 'critical',
+        type: 'basic',
         requires: ['g11-stat-u3-regresion-lineal-prediccion'],
-        description: 'Porcentaje de la variabilidad de la variable respuesta Y que queda explicada por el modelo lineal de X (ejemplo: R² = 0.84 es el 84% de variabilidad explicada).',
+        description: 'Porcentaje de la variabilidad de la variable respuesta Y explicada por el modelo lineal de X (ejemplo: R² = 0.84 es el 84% de variabilidad explicada).',
         xOffset: 45,
         behavior: 'quiz_list'
     },
     {
         id: 'g11-stat-predicciones-interpolacion-extrapolacion',
-        label: 'Predicciones: Interpolación Confiable vs. Peligro de Extrapolación',
+        label: 'Predicciones con el Modelo: Interpolación vs. Peligro de Extrapolación',
         level: 8,
         type: 'applied',
         requires: ['g11-stat-recta-minimos-cuadrados-ajuste', 'g11-stat-coeficiente-determinacion-r2'],
-        description: 'Usa el modelo para predecir dentro del rango observado de datos (interpolación) y reconoce por qué predecir fuera del rango (extrapolación) puede ser absurdo.',
+        description: 'Usa el modelo para predecir dentro del rango observado de datos (interpolación) y reconoce por qué predecir fuera del rango (extrapolación) es peligroso.',
         xOffset: 0,
         behavior: 'quiz_list'
     },
@@ -158,17 +158,17 @@ export const grade11StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g11-stat-tecnicas-muestreo-probabilistico',
-        label: 'Muestreo Aleatorio Simple, Sistemático, Estratificado y Conglomerados',
+        label: 'Técnicas de Muestreo: MAS, Sistemático, Estratificado y Conglomerados',
         level: 10,
-        type: 'critical',
+        type: 'basic',
         requires: ['g11-stat-u4-muestreo-sesgos-representatividad'],
-        description: 'Criterios de aplicación: MAS (todos con igual probabilidad), Sistemático (cada k-ésimo elemento), Estratificado (por grupos homogéneos) y Conglomerados (por áreas).',
+        description: 'Criterios de aplicación: MAS (todos con igual probabilidad), Sistemático (cada k-ésimo elemento), Estratificado (grupos homogéneos) y Conglomerados.',
         xOffset: 45,
         behavior: 'quiz_list'
     },
     {
         id: 'g11-stat-sesgos-muestreo-representatividad',
-        label: 'Sesgos de Muestreo: Selección, No Respuesta y Voluntarios',
+        label: 'Sesgos de Muestreo: Selección, No Respuesta y Autoselección',
         level: 11,
         type: 'applied',
         requires: ['g11-stat-parametros-poblacion-vs-estadisticos', 'g11-stat-tecnicas-muestreo-probabilistico'],
@@ -194,7 +194,7 @@ export const grade11StatisticsNodes: ArithmeticNode[] = [
         id: 'g11-stat-distribucion-muestral-error-estandar',
         label: 'Distribución Muestral y Error Estándar: SE = σ / √n',
         level: 13,
-        type: 'critical',
+        type: 'basic',
         requires: ['g11-stat-u5-intervalos-confianza-hipotesis'],
         description: 'Comprende que al aumentar el tamaño de muestra n, la variabilidad de las medias muestrales se reduce drásticamente por el factor 1/√n.',
         xOffset: -45,
@@ -204,7 +204,7 @@ export const grade11StatisticsNodes: ArithmeticNode[] = [
         id: 'g11-stat-intervalo-confianza-margen-error',
         label: 'Intervalos de Confianza (IC) y Margen de Error: x̄ ± z*·(σ/√n)',
         level: 13,
-        type: 'critical',
+        type: 'basic',
         requires: ['g11-stat-u5-intervalos-confianza-hipotesis'],
         description: 'Construcción e interpretación: un IC del 95% (z* = 1.96) significa que el 95% de los intervalos construidos con muestras aleatorias capturarán el verdadero parámetro μ.',
         xOffset: 45,
@@ -222,45 +222,45 @@ export const grade11StatisticsNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // UNIDAD 6: PROYECTO CIENTÍFICO Y CORONA SUPREMA DE 11.° (SABER 11)
+    // UNIDAD 6: MODELACIÓN AVANZADA Y PENSAMIENTO CRÍTICO SABER 11
     // ==========================================
     {
-        id: 'g11-stat-u6-proyecto-inferencial-maestria-media',
-        label: 'Proyecto Inferencial y Gran Corona Suprema de 11.°',
+        id: 'g11-stat-u6-modelacion-saber11-proyecto',
+        label: 'Modelación Avanzada y Pensamiento Crítico Saber 11',
         level: 15,
-        type: 'basic',
+        type: 'advanced',
         requires: ['g11-stat-contraste-hipotesis-errores-tipo-i-ii'],
-        description: 'Máximo reto integrador de la Educación Media: investigación estadística completa, lectura crítica de información en medios y examen Saber 11.',
+        description: 'Integración culmen de la Educación Media: aproximación normal a la binomial, lectura crítica de información en medios y examen Saber 11.',
         xOffset: 0,
         behavior: 'container'
+    },
+    {
+        id: 'g11-stat-aproximacion-normal-binomial',
+        label: 'Aproximación de la Distribución Normal a la Binomial (np ≥ 5)',
+        level: 16,
+        type: 'basic',
+        requires: ['g11-stat-u6-modelacion-saber11-proyecto'],
+        description: 'Teorema de De Moivre-Laplace: cuando n es grande y p no está cerca de 0 o 1 (np ≥ 5 y nq ≥ 5), la distribución binomial B(n, p) se aproxima a una Normal N(np, √(npq)).',
+        xOffset: -45,
+        behavior: 'quiz_list'
     },
     {
         id: 'g11-stat-lectura-critica-noticias-encuestas',
         label: 'Lectura Crítica de Medios, Encuestas Electorales e Infografías',
         level: 16,
-        type: 'basic',
-        requires: ['g11-stat-u6-proyecto-inferencial-maestria-media'],
+        type: 'applied',
+        requires: ['g11-stat-u6-modelacion-saber11-proyecto'],
         description: 'Auditoría ciudadana: analiza fichas técnicas de encuestas presidenciales (margen de error ±3%, nivel de confianza 95%, tamaño n=1200) y detecta conclusiones falsas.',
-        xOffset: -45,
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'g11-stat-proyecto-estadistico-completo',
-        label: 'El Proyecto Estadístico Completo: Del Problema a la Conclusión',
-        level: 16,
-        type: 'basic',
-        requires: ['g11-stat-u6-proyecto-inferencial-maestria-media'],
-        description: 'Plantea pregunta, diseña muestra, recolecta datos, calcula estadísticos descriptivos, ajusta regresión e infiere conclusiones éticas con margen de error.',
         xOffset: 45,
         behavior: 'quiz_list'
     },
     {
-        id: 'g11-stat-corona-maestria-once',
-        label: 'Gran Corona Suprema de Maestría de Probabilidad y Estadística de 11.° Grado • Cima Escolar',
+        id: 'g11-stat-proyecto-estadistico-completo',
+        label: 'El Proyecto Estadístico Completo: Del Problema a la Conclusión Ética',
         level: 17,
-        type: 'evaluation',
-        requires: ['g11-stat-lectura-critica-noticias-encuestas', 'g11-stat-proyecto-estadistico-completo'],
-        description: '¡Máximo galardón del pensamiento aleatorio y la inferencia escolar! Domina la distribución normal, correlación de Pearson, regresión lineal, muestreo probabilístico, intervalos de confianza y pensamiento crítico de Saber 11.',
+        type: 'advanced',
+        requires: ['g11-stat-aproximacion-normal-binomial', 'g11-stat-lectura-critica-noticias-encuestas'],
+        description: 'Plantea pregunta, diseña muestra, recolecta datos, calcula estadísticos descriptivos, ajusta regresión e infiere conclusiones éticas con margen de error.',
         xOffset: 0,
         behavior: 'quiz_list'
     }

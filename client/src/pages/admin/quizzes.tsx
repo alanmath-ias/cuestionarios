@@ -285,11 +285,10 @@ function PreviewToggleControl({ quiz }: { quiz: Quiz }) {
         type="button"
         onClick={handleToggle}
         title={isPublic ? "Desactivar vista previa pública" : "Activar vista previa pública (copia enlace automáticamente)"}
-        className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold transition-all border ${
-          isPublic
-            ? "bg-amber-500/15 border-amber-500/35 text-amber-300 hover:bg-amber-500/25 shadow-sm"
-            : "bg-slate-700/50 border-slate-600/40 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
-        }`}
+        className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold transition-all border ${isPublic
+          ? "bg-amber-500/15 border-amber-500/35 text-amber-300 hover:bg-amber-500/25 shadow-sm"
+          : "bg-slate-700/50 border-slate-600/40 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+          }`}
       >
         <Power className={`h-3 w-3 ${isPublic ? "text-amber-400" : "text-slate-400"}`} />
         <span>{isPublic ? "Preview ON" : "Preview OFF"}</span>
@@ -404,13 +403,13 @@ const DraggableDialogQuizItem = ({
           </div>
 
           {/* ORDER INPUT */}
-          <div 
-            className="flex items-center gap-1 bg-slate-900/50 border border-white/10 rounded-md px-1.5 py-0.5" 
+          <div
+            className="flex items-center gap-1 bg-slate-900/50 border border-white/10 rounded-md px-1.5 py-0.5"
             title="Posición (orden)"
             onPointerDown={(e) => e.stopPropagation()}
           >
             <span className="text-[10px] text-slate-500 font-bold">#</span>
-            <input 
+            <input
               type="number"
               value={localOrder}
               onChange={(e) => setLocalOrder(e.target.value as any)}
@@ -1115,17 +1114,17 @@ export default function QuizzesAdmin() {
 
     // 1. Get all quizzes in the group sorted by current sortOrder
     const sortedGroup = [...currentGroup].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-    
+
     // 2. Find the quiz being moved
     const quizToMove = sortedGroup.find(q => q.id === quizId);
     if (!quizToMove) return;
 
     // 3. Remove it and insert it at the new position
     const otherQuizzes = sortedGroup.filter(q => q.id !== quizId);
-    
+
     // Clamp new position
     const targetIndex = Math.max(0, Math.min(newOrderVal, otherQuizzes.length));
-    
+
     const newGroupOrder = [...otherQuizzes];
     newGroupOrder.splice(targetIndex, 0, quizToMove);
 
@@ -1959,8 +1958,8 @@ export default function QuizzesAdmin() {
                             adminSelectedGrade === '7'
                               ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
                               : adminSelectedGrade === '6'
-                              ? "border-violet-500/60 bg-violet-500/20 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.3)]"
-                              : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
+                                ? "border-violet-500/60 bg-violet-500/20 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.3)]"
+                                : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
                           )}
                         >
                           {adminSelectedGrade === '7' ? (
@@ -2288,13 +2287,13 @@ export default function QuizzesAdmin() {
                           size="sm"
                           className={cn(
                             "h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm",
-                            ['6', '7', '8', '9'].includes(adminSelectedGrade || '')
+                            ['6', '7', '8', '9', '10', '11'].includes(adminSelectedGrade || '')
                               ? "border-amber-500/60 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
                               : "border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800"
                           )}
                         >
                           <GraduationCap className="h-3.5 w-3.5 text-amber-400" />
-                          <span>{adminSelectedGrade === '6' ? "Sexto" : adminSelectedGrade === '7' ? "Séptimo" : adminSelectedGrade === '8' ? "Octavo" : adminSelectedGrade === '9' ? "Noveno" : "Secundaria"}</span>
+                          <span>{adminSelectedGrade === '6' ? "Sexto" : adminSelectedGrade === '7' ? "Séptimo" : adminSelectedGrade === '8' ? "Octavo" : adminSelectedGrade === '9' ? "Noveno" : adminSelectedGrade === '10' ? "Décimo" : adminSelectedGrade === '11' ? "Undécimo" : "Secundaria"}</span>
                           <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -2307,6 +2306,8 @@ export default function QuizzesAdmin() {
                           { id: '7', label: 'Séptimo', icon: Flame },
                           { id: '8', label: 'Octavo', icon: Layers },
                           { id: '9', label: 'Noveno', icon: Sparkles },
+                          { id: '10', label: 'Décimo', icon: Landmark },
+                          { id: '11', label: 'Undécimo', icon: Sparkles },
                         ].map(g => {
                           const Icon = g.icon;
                           const isActive = adminSelectedGrade === g.id;
@@ -3174,13 +3175,13 @@ const DraggableQuizItem = React.memo(({
                   <GripVertical className="h-5 w-5" />
                 </div>
                 {/* ORDER INPUT */}
-                <div 
-                  className="mt-1 flex items-center gap-1 bg-slate-950/50 border border-white/10 rounded-md px-2 py-0.5 h-7" 
+                <div
+                  className="mt-1 flex items-center gap-1 bg-slate-950/50 border border-white/10 rounded-md px-2 py-0.5 h-7"
                   title="Posición (orden)"
                   onPointerDown={(e) => e.stopPropagation()}
                 >
                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">Orden</span>
-                  <input 
+                  <input
                     type="number"
                     value={localOrder}
                     onChange={(e) => setLocalOrder(e.target.value as any)}

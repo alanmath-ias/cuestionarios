@@ -2,11 +2,11 @@ import { ArithmeticNode } from './arithmetic-map-data';
 
 export const grade9StatisticsNodes: ArithmeticNode[] = [
     // ==========================================
-    // UNIDAD 1: DIAGRAMAS DE CAJA Y BIGOTES (BOXPLOTS) Y OUTLIERS
+    // UNIDAD 1: DIAGRAMAS DE CAJA (BOXPLOTS) Y VALORES ATÍPICOS
     // ==========================================
     {
         id: 'g9-stat-u1-diagramas-caja-outliers',
-        label: 'Diagramas de Caja (Boxplots) y Detección de Outliers',
+        label: 'Diagramas de Caja (Boxplots) y Valores Atípicos',
         level: 0,
         type: 'basic',
         requires: [],
@@ -16,7 +16,7 @@ export const grade9StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g9-stat-resumen-cinco-numeros-caja',
-        label: 'El Resumen de Cinco Números y la Caja Central',
+        label: 'El Resumen de Cinco Números y la Construcción del Boxplot',
         level: 1,
         type: 'basic',
         requires: ['g9-stat-u1-diagramas-caja-outliers'],
@@ -28,15 +28,15 @@ export const grade9StatisticsNodes: ArithmeticNode[] = [
         id: 'g9-stat-regla-1-5-iqr-outliers',
         label: 'Regla del 1.5 × IQR para Valores Atípicos (Outliers)',
         level: 1,
-        type: 'critical',
+        type: 'basic',
         requires: ['g9-stat-u1-diagramas-caja-outliers'],
-        description: 'Fórmula de barreras: límite inferior Q₁ - 1.5×IQR y límite superior Q₃ + 1.5×IQR. Todo dato fuera de estos límites se marca como atípico con un asterisco.',
+        description: 'Fórmula de barreras: límite inferior Q₁ - 1.5×IQR y límite superior Q₃ + 1.5×IQR. Todo dato fuera de estos límites se marca como atípico.',
         xOffset: 45,
         behavior: 'quiz_list'
     },
     {
         id: 'g9-stat-lectura-simetria-sesgo-boxplots',
-        label: 'Interpretación de Simetría, Sesgo y Bigotes en Boxplots',
+        label: 'Interpretación de Simetría, Sesgo y Longitud de Bigotes',
         level: 2,
         type: 'applied',
         requires: ['g9-stat-resumen-cinco-numeros-caja', 'g9-stat-regla-1-5-iqr-outliers'],
@@ -62,19 +62,19 @@ export const grade9StatisticsNodes: ArithmeticNode[] = [
         id: 'g9-stat-calculo-coeficiente-variacion-formula',
         label: 'El Coeficiente de Variación: CV = (s / x̄) × 100%',
         level: 4,
-        type: 'critical',
+        type: 'basic',
         requires: ['g9-stat-u2-coeficiente-variacion-homogeneidad'],
-        description: 'Cociente adimensional entre la desviación estándar y la media aritmética, expresado en porcentaje: cuantifica el riesgo o variabilidad relativa.',
+        description: 'Cociente adimensional entre la desviación estándar y la media aritmética, expresado en porcentaje: cuantifica la variabilidad relativa.',
         xOffset: -45,
         behavior: 'quiz_list'
     },
     {
         id: 'g9-stat-criterio-homogeneidad-poblacional',
-        label: 'Criterio de Homogeneidad: CV ≤ 15% vs. CV > 30%',
+        label: 'Criterio de Homogeneidad (CV ≤ 15% vs. CV > 30%)',
         level: 4,
         type: 'basic',
         requires: ['g9-stat-u2-coeficiente-variacion-homogeneidad'],
-        description: 'Clasifica poblaciones: si CV < 15% los datos son homogéneos y la media es muy confiable; si CV > 30% los datos son heterogéneos.',
+        description: 'Clasifica poblaciones: si CV < 15% los datos son homogéneos y la media es muy confiable; si CV > 30% los datos son muy dispersos.',
         xOffset: 45,
         behavior: 'quiz_list'
     },
@@ -90,7 +90,7 @@ export const grade9StatisticsNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // UNIDAD 3: TÉCNICAS COMBINATORIAS AVANZADAS Y TEOREMA DEL BINOMIO
+    // UNIDAD 3: COMBINATORIA AVANZADA, PASCAL Y BINOMIO DE NEWTON
     // ==========================================
     {
         id: 'g9-stat-u3-combinatoria-avanzada-binomio',
@@ -106,7 +106,7 @@ export const grade9StatisticsNodes: ArithmeticNode[] = [
         id: 'g9-stat-combinaciones-con-repeticion-cr',
         label: 'Combinaciones con Repetición: CR(n, k) = C(n + k - 1, k)',
         level: 7,
-        type: 'critical',
+        type: 'basic',
         requires: ['g9-stat-u3-combinatoria-avanzada-binomio'],
         description: 'Selección de k objetos donde se pueden repetir elementos sin importar el orden: comprar 5 bolas de helado entre 4 sabores disponibles.',
         xOffset: -45,
@@ -114,7 +114,7 @@ export const grade9StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g9-stat-triangulo-pascal-propiedades-numeros-combinatorios',
-        label: 'El Triángulo de Pascal y Propiedades de C(n, k)',
+        label: 'El Triángulo de Pascal y Propiedades de Números Combinatorios',
         level: 7,
         type: 'basic',
         requires: ['g9-stat-u3-combinatoria-avanzada-binomio'],
@@ -124,21 +124,21 @@ export const grade9StatisticsNodes: ArithmeticNode[] = [
     },
     {
         id: 'g9-stat-teorema-binomio-newton-conteo',
-        label: 'El Teorema del Binomio de Newton: (a + b)ⁿ = ∑ C(n, k)·aⁿ⁻ᵏ·bᵏ',
+        label: 'El Teorema del Binomio de Newton y Expansiones Algebraicas',
         level: 8,
         type: 'applied',
         requires: ['g9-stat-combinaciones-con-repeticion-cr', 'g9-stat-triangulo-pascal-propiedades-numeros-combinatorios'],
-        description: 'Conecta el álgebra con la combinatoria: usa coeficientes binomiales para expandir polinomios y encontrar términos específicos sin multiplicar todo.',
+        description: 'Conecta el álgebra con la combinatoria: usa coeficientes binomiales para expandir polinomios y hallar términos específicos sin multiplicar todo.',
         xOffset: 0,
         behavior: 'quiz_list'
     },
 
     // ==========================================
-    // UNIDAD 4: TABLAS DE CONTINGENCIA Y PROBABILIDAD DE SUCESOS COMPUESTOS
+    // UNIDAD 4: TABLAS DE CONTINGENCIA Y PROBABILIDAD CONJUNTA
     // ==========================================
     {
         id: 'g9-stat-u4-contingencia-sucesos-compuestos',
-        label: 'Tablas de Contingencia y Sucesos Compuestos',
+        label: 'Tablas de Contingencia y Probabilidad Conjunta',
         level: 9,
         type: 'basic',
         requires: ['g9-stat-teorema-binomio-newton-conteo'],
@@ -152,7 +152,7 @@ export const grade9StatisticsNodes: ArithmeticNode[] = [
         level: 10,
         type: 'basic',
         requires: ['g9-stat-u4-contingencia-sucesos-compuestos'],
-        description: 'Cruza dos variables cualitativas (fumar / no fumar vs. afección pulmonar): identifica intersecciones y totales marginales por fila y columna.',
+        description: 'Cruza dos variables cualitativas (fumar / no fumar vs. condición médica): identifica intersecciones y totales marginales por fila y columna.',
         xOffset: -45,
         behavior: 'quiz_list'
     },
@@ -160,7 +160,7 @@ export const grade9StatisticsNodes: ArithmeticNode[] = [
         id: 'g9-stat-probabilidades-conjuntas-marginales',
         label: 'Cálculo de Probabilidad Conjunta P(A ∩ B) y Marginal P(A)',
         level: 10,
-        type: 'critical',
+        type: 'basic',
         requires: ['g9-stat-u4-contingencia-sucesos-compuestos'],
         description: 'Divide la casilla interior entre el gran total para la probabilidad conjunta, o el total de la fila/columna para la probabilidad marginal.',
         xOffset: 45,
@@ -178,15 +178,15 @@ export const grade9StatisticsNodes: ArithmeticNode[] = [
     },
 
     // ==========================================
-    // UNIDAD 5: PROBABILIDAD CONDICIONAL E INDEPENDENCIA
+    // UNIDAD 5: PROBABILIDAD CONDICIONAL E INDEPENDENCIA ESTOCÁSTICA
     // ==========================================
     {
         id: 'g9-stat-u5-probabilidad-condicional-independencia',
-        label: 'Probabilidad Condicional e Independencia',
+        label: 'Probabilidad Condicional e Independencia Estocástica',
         level: 12,
-        type: 'basic',
+        type: 'advanced',
         requires: ['g9-stat-regla-adicion-en-contingencia'],
-        description: 'Formalización matemática de la probabilidad dado que ya ocurrió otro suceso: P(A|B), criterio formal de independencia y regla del producto.',
+        description: 'Formalización matemática de la probabilidad condicionada: P(A|B), criterio formal de independencia y regla del producto.',
         xOffset: 0,
         behavior: 'container'
     },
@@ -194,9 +194,9 @@ export const grade9StatisticsNodes: ArithmeticNode[] = [
         id: 'g9-stat-definicion-probabilidad-condicional-formula',
         label: 'La Fórmula de la Probabilidad Condicional: P(A|B) = P(A ∩ B) / P(B)',
         level: 13,
-        type: 'critical',
+        type: 'basic',
         requires: ['g9-stat-u5-probabilidad-condicional-independencia'],
-        description: 'El espacio muestral se reduce a la condición B: calcula la probabilidad de A mirando únicamente dentro de la fila o columna correspondiente a B.',
+        description: 'El espacio muestral se reduce a la condición B: calcula la probabilidad de A mirando únicamente dentro de la fila o columna de B.',
         xOffset: -45,
         behavior: 'quiz_list'
     },
@@ -216,52 +216,18 @@ export const grade9StatisticsNodes: ArithmeticNode[] = [
         level: 14,
         type: 'applied',
         requires: ['g9-stat-definicion-probabilidad-condicional-formula', 'g9-stat-criterio-formal-independencia-estocastica'],
-        description: 'Multiplica a lo largo de ramas: P(A ∩ B) = P(B) · P(A|B). Resuelve problemas médicos, de control de calidad y producción en serie.',
-        xOffset: 0,
+        description: 'Multiplica a lo largo de ramas: P(A ∩ B) = P(B) · P(A|B). Resuelve problemas de diagnóstico y control de calidad en serie.',
+        xOffset: -30,
         behavior: 'quiz_list'
-    },
-
-    // ==========================================
-    // UNIDAD 6: SÍNTESIS DE SECUNDARIA BÁSICA Y GRAN CORONA DE 9.°
-    // ==========================================
-    {
-        id: 'g9-stat-u6-sintesis-maestria-secundaria',
-        label: 'Cierre de Secundaria Básica y Gran Corona de 9.°',
-        level: 15,
-        type: 'basic',
-        requires: ['g9-stat-regla-multiplicacion-dependencia-arboles'],
-        description: 'Reto supremo de culminación del ciclo básico escolar (1.° a 9.°): integración de boxplots, CV, combinatoria y probabilidad condicional.',
-        xOffset: 0,
-        behavior: 'container'
     },
     {
         id: 'g9-stat-analisis-integral-boxplots-cv',
-        label: 'Análisis Multivariado: Boxplots Comparativos y CV',
-        level: 16,
-        type: 'basic',
-        requires: ['g9-stat-u6-sintesis-maestria-secundaria'],
-        description: 'Evalúa simultáneamente la tendencia central, la dispersión relativa y la presencia de valores atípicos en tres grupos en competencia.',
-        xOffset: -45,
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'g9-stat-problemas-integrados-probabilidad-contingencia',
-        label: 'Resolución de Problemas Complejos de Decisión con Probabilidad',
-        level: 16,
-        type: 'basic',
-        requires: ['g9-stat-u6-sintesis-maestria-secundaria'],
-        description: 'Toma de decisiones en contextos de riesgo financiero, diagnóstico de fallas y pruebas diagnósticas con tablas de contingencia.',
-        xOffset: 45,
-        behavior: 'quiz_list'
-    },
-    {
-        id: 'g9-stat-corona-maestria-noveno',
-        label: 'Gran Corona de Maestría de Estadística de 9.° Grado • Cima de Secundaria Básica',
-        level: 17,
-        type: 'evaluation',
-        requires: ['g9-stat-analisis-integral-boxplots-cv', 'g9-stat-problemas-integrados-probabilidad-contingencia'],
-        description: '¡Máximo galardón de la Educación Básica Secundaria! Domina diagramas de caja (outliers), coeficiente de variación, binomio de Newton, tablas de contingencia y probabilidad condicional.',
-        xOffset: 0,
+        label: 'Toma de Decisiones Complejas en Situaciones de Incertidumbre',
+        level: 14,
+        type: 'advanced',
+        requires: ['g9-stat-definicion-probabilidad-condicional-formula', 'g9-stat-criterio-formal-independencia-estocastica'],
+        description: 'Integración de boxplots, coeficientes de variación y árboles de probabilidad condicional para resolver problemas complejos de toma de decisiones.',
+        xOffset: 30,
         behavior: 'quiz_list'
     }
 ];
